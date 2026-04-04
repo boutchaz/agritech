@@ -192,20 +192,20 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
 
           {/* Main Section - Title & Actions */}
           <div className="py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 xl:gap-6">
               {/* Left: Title & Subtitle */}
-              <div className="flex items-center gap-5 min-w-0 flex-1 group">
+              <div className="flex items-start gap-4 sm:gap-5 min-w-0 flex-1 group">
                 {CurrentIcon && (
-                  <div className="flex-shrink-0 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-[1.25rem] shadow-sm border border-emerald-100/50 dark:border-emerald-800/30 group-hover:scale-110 transition-transform duration-500">
-                    <CurrentIcon className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex-shrink-0 p-2.5 sm:p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-[1.25rem] shadow-sm border border-emerald-100/50 dark:border-emerald-800/30 group-hover:scale-110 transition-transform duration-500">
+                    <CurrentIcon className="h-6 w-6 sm:h-7 sm:w-7 text-emerald-600 dark:text-emerald-400" />
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+                  <h1 className="text-2xl sm:text-3xl xl:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase break-words hyphens-auto">
                     {title || currentPage.label}
                   </h1>
                   {subtitle && (
-                    <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400 max-w-2xl truncate">
+                    <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400 max-w-2xl text-pretty line-clamp-2 xl:line-clamp-none">
                       {subtitle}
                     </p>
                   )}
@@ -213,7 +213,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
               </div>
 
               {/* Right: Search & Actions */}
-              <div className="flex items-center gap-4 flex-shrink-0">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0 xl:w-auto xl:flex-shrink-0 xl:justify-end">
                 {/* Search Bar */}
                 {showSearch && (
                   <div className="relative flex-1 lg:w-96">
@@ -246,7 +246,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
 
                 {/* Custom Actions */}
                 {actions && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3 min-w-0">
                     {actions}
                   </div>
                 )}

@@ -166,7 +166,7 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </header> */}
-          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 md:pb-0">
+          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 lg:pb-0">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

@@ -86,7 +86,7 @@ const DashboardSkeleton: React.FC = () => {
           <Skeleton className="h-20 w-full rounded-3xl" />
 
           {/* KPI Tier */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
             {[1, 2, 3, 4].map((i) => (
               <WidgetCardSkeleton key={`row1-${i}`} variant="stat" />
             ))}

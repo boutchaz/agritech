@@ -177,7 +177,7 @@ const AppContent: React.FC = () => {
         title={isLiveMode ? t('liveDashboard.title') : `${t('dashboard.title')}, ${user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''}`}
         subtitle={isLiveMode ? t('liveDashboard.subtitle') : t('dashboard.subtitle')}
         actions={
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0 xl:w-auto">
             {/* Enhanced Live Mode Toggle */}
             <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
               <span className={cn(

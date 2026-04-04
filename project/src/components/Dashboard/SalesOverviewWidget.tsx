@@ -86,7 +86,7 @@ const SalesOverviewWidget: React.FC = () => {
           <Skeleton className="h-8 w-8 rounded-xl" />
         </div>
         <Skeleton className="h-24 w-full rounded-2xl" />
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 min-[520px]:grid-cols-4 gap-2 sm:gap-3">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-16 rounded-xl" />
           ))}
@@ -151,17 +151,17 @@ const SalesOverviewWidget: React.FC = () => {
       </div>
 
       {/* Status Grid */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 min-[520px]:grid-cols-4 gap-2 sm:gap-3 mb-6 min-w-0">
         {[
           { label: 'pending', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
           { label: 'inProgress', value: stats.inProgress, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
           { label: 'shipped', value: stats.shipped, icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
           { label: 'completed', value: stats.completed, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
         ].map((item) => (
-          <div key={item.label} className={cn("text-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105 duration-300", item.bg)}>
-            <item.icon className={cn("h-3.5 w-3.5", item.color)} />
+          <div key={item.label} className={cn("text-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 min-w-0 transition-transform hover:scale-105 duration-300", item.bg)}>
+            <item.icon className={cn("h-3.5 w-3.5 flex-shrink-0", item.color)} />
             <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
-            <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate w-full">
+            <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight leading-tight break-words hyphens-auto px-0.5">
               {t(`dashboard.widgets.sales.${item.label}`)}
             </div>
           </div>

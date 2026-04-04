@@ -264,7 +264,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return cn(
       "w-full text-slate-600 dark:text-slate-400 h-11 min-h-[44px]",
       isCollapsed
-        ? "md:justify-center md:px-2"
+        ? "lg:justify-center lg:px-2"
         : isRTL
           ? "flex-row-reverse justify-end text-right"
           : "justify-start",
@@ -278,7 +278,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     return cn(
       "w-full text-slate-600 dark:text-slate-400 h-10 min-h-[40px] text-sm",
       isCollapsed
-        ? "md:justify-center md:px-2 md:pl-2"
+        ? "lg:justify-center lg:px-2 lg:pl-2"
         : isRTL
           ? "flex-row-reverse justify-end text-right pr-8"
           : "justify-start pl-8",
@@ -290,7 +290,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const getSectionHeaderClassName = () => {
     return cn(
       "w-full justify-between px-3 h-11 min-h-[44px] text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50",
-      isCollapsed && "md:justify-center md:px-2",
+      isCollapsed && "lg:justify-center lg:px-2",
       isRTL && "flex-row-reverse text-right",
     );
   };
@@ -303,7 +303,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <IconComponent
         className={cn(
           "h-4 w-4 flex-shrink-0",
-          isCollapsed ? "md:mx-auto" : isRTL ? "ml-3" : "mr-3",
+          isCollapsed ? "lg:mx-auto" : isRTL ? "ml-3" : "mr-3",
           className,
         )}
       />
@@ -316,7 +316,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={cn(
           "flex-1 truncate",
           isRTL ? "text-right" : "text-left",
-          isCollapsed && "md:hidden",
+          isCollapsed && "lg:hidden",
         )}
       >
         {text}
@@ -329,21 +329,21 @@ const Sidebar: React.FC<SidebarProps> = ({
       <ChevronDown
         className={cn(
           "h-4 w-4 flex-shrink-0 text-slate-400",
-          isCollapsed && "md:hidden",
+          isCollapsed && "lg:hidden",
         )}
       />
     ) : (
       <ChevronRight
         className={cn(
           "h-4 w-4 flex-shrink-0 text-slate-400",
-          isCollapsed && "md:hidden",
+          isCollapsed && "lg:hidden",
         )}
       />
     );
   };
 
   const renderSectionTitle = (text: string) => {
-    return <span className={cn(isCollapsed && "md:hidden")}>{text}</span>;
+    return <span className={cn(isCollapsed && "lg:hidden")}>{text}</span>;
   };
 
   // Component for collapsed section with hover popover
@@ -403,7 +403,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Overlay for mobile — only used if sidebar is somehow opened programmatically */}
       {isMobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -416,8 +416,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           isRTL ? "right-0 border-l" : "left-0 border-r",
           "h-screen bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
-          "hidden md:flex",
-          isCollapsed ? "md:w-16" : "w-64",
+          "hidden lg:flex",
+          isCollapsed ? "lg:w-16" : "w-64",
         )}
         dir={isRTL ? "rtl" : "ltr"}
       >
@@ -425,7 +425,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={cn(
             "flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
-            isCollapsed ? "md:p-2 p-4" : "p-4",
+            isCollapsed ? "lg:p-2 p-4" : "p-4",
             isRTL && "text-right",
           )}
         >
@@ -441,7 +441,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               className={cn(
                 "flex items-center min-w-0 flex-1 gap-3 cursor-pointer bg-transparent border-0 p-0",
                 isRTL && "flex-row-reverse",
-                isCollapsed && "md:justify-center",
+                isCollapsed && "lg:justify-center",
               )}
             >
               <img
@@ -449,7 +449,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 alt="AGROGINA"
                 className="flex-shrink-0 w-10 h-10 object-contain rounded-lg"
               />
-              <div className={cn("min-w-0 flex-1", isCollapsed && "md:hidden")}>
+              <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t("app.name")}
                 </h2>
@@ -462,13 +462,13 @@ const Sidebar: React.FC<SidebarProps> = ({
               className={cn(
                 "flex items-center gap-1",
                 isRTL && "flex-row-reverse",
-                isCollapsed && "md:hidden",
+                isCollapsed && "lg:hidden",
               )}
             >
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden h-11 w-11"
+                className="lg:hidden h-11 w-11"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <X className="h-5 w-5" />
@@ -545,7 +545,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               {/* Stock Management */}
               <div className="space-y-1" data-tour="nav-stock">
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden lg:block">
                     <CollapsedSectionPopover
                       icon={Package}
                       title={t("nav.stock")}
@@ -723,7 +723,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-personnel">
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <CollapsedSectionPopover
                     icon={Users}
                     title={t("nav.personnel")}
@@ -796,7 +796,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-production">
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <CollapsedSectionPopover
                     icon={Wheat}
                     title={t("nav.production")}
@@ -947,7 +947,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Separator className="my-3" />
             <div className="space-y-1" data-tour="nav-compliance">
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <CollapsedSectionPopover
                     icon={ShieldCheck}
                     title={t("nav.compliance")}
@@ -1053,7 +1053,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Separator className="my-3" />
               <div className="space-y-1" data-tour="nav-billing">
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden lg:block">
                     <CollapsedSectionPopover
                       icon={ShoppingCart}
                       title={t("nav.salesPurchasing")}
@@ -1142,7 +1142,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <ProtectedNavItem action="read" subject="Invoice">
               <div className="space-y-1" data-tour="nav-accounting">
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden lg:block">
                     <CollapsedSectionPopover
                       icon={BookOpen}
                       title={t("nav.accounting")}
@@ -1277,7 +1277,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <Separator className="my-3" />
               <div className="space-y-1">
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden lg:block">
                     <CollapsedSectionPopover
                       icon={ShoppingBag}
                       title={t("nav.marketplace")}
@@ -1403,7 +1403,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div
           className={cn(
             "flex-shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1",
-            isCollapsed ? "md:p-2 p-3" : "p-3",
+            isCollapsed ? "lg:p-2 p-3" : "p-3",
           )}
         >
           <ProtectedNavItem action="read" subject="Report">
@@ -1447,7 +1447,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             className={cn(
-              "w-full h-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hidden md:flex",
+              "w-full h-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hidden lg:flex",
               isCollapsed ? "justify-center" : "justify-start",
             )}
             onClick={toggleCollapse}

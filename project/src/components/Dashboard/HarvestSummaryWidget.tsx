@@ -119,28 +119,28 @@ const HarvestSummaryWidget: React.FC = () => {
       {stats.total > 0 ? (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 min-w-0">
+            <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
               <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-              <div className="relative">
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.thisMonth')}</span>
+              <div className="relative min-w-0">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.harvests.thisMonth')}</span>
                 <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
                   {stats.thisMonth}
                 </div>
-                <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1 uppercase tracking-tighter">
+                <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1 uppercase tracking-tight leading-tight break-words">
                   {t('dashboard.widgets.harvests.harvests')}
                 </div>
               </div>
             </div>
 
-            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
+            <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-              <div className="relative">
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.quantity')}</span>
+              <div className="relative min-w-0">
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.harvests.quantity')}</span>
                 <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
                   {stats.thisMonthQuantity.toFixed(0)}
                 </div>
-                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">
+                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tight leading-tight break-words">
                   {t('dashboard.widgets.harvests.kgThisMonth')}
                 </div>
               </div>
