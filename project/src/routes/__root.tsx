@@ -93,7 +93,7 @@ function RootComponent() {
 
   if (isNotFound) {
     return (
-      <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+      <div className="h-screen bg-slate-50 dark:bg-slate-950 overflow-y-auto">
         <Outlet />
         <Toaster richColors position="top-right" />
       </div>
@@ -142,7 +142,7 @@ function RootComponent() {
  * Must NOT render <Outlet /> — that can itself suspend, creating an infinite loop.
  */
 function FallbackShell() {
-  return <div className="h-screen bg-gray-50 dark:bg-gray-900" />;
+  return <div className="h-screen bg-slate-50 dark:bg-slate-950" />;
 }
 
 /**
@@ -150,7 +150,7 @@ function FallbackShell() {
  */
 function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 overflow-y-auto">
       <Outlet />
       <OfflineIndicator />
       <ServiceWorkerUpdate />

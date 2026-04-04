@@ -228,6 +228,13 @@
     @apply w-full max-w-lg rounded-t-2xl sm:rounded-xl bg-white dark:bg-gray-900 shadow-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden max-h-[90vh] sm:max-h-[85vh] overflow-y-auto;
   }
 
+  /**
+   * Module page body — same rhythm as dashboard.tsx and settings content.
+   * Use on route pages below ModernPageHeader for consistent padding and max width.
+   */
+  .app-page-content {
+    @apply w-full max-w-[1600px] mx-auto min-h-0 flex-1 p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8;
+  }
 }
 
 /* Landing page animations */

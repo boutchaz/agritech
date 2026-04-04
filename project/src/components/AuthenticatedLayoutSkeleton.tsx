@@ -19,19 +19,19 @@ export function AuthenticatedLayoutSkeleton() {
 
   return (
     <div className={isDark ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      <div className="h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
         {/* ===== SIDEBAR SKELETON ===== */}
         <div
           className={cn(
-            'fixed inset-y-0 z-50 h-screen bg-white dark:bg-gray-800 flex-col hidden lg:flex',
+            'fixed inset-y-0 z-50 h-screen bg-white dark:bg-slate-900 flex-col hidden lg:flex',
             'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
-            'border-gray-200 dark:border-gray-700',
+            'border-slate-200 dark:border-slate-800',
             isCollapsed ? 'lg:w-16' : 'w-64',
           )}
         >
           {/* Sidebar header / logo */}
-          <div className={cn('flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4', isCollapsed && 'lg:p-2')}>
+          <div className={cn('flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4', isCollapsed && 'lg:p-2')}>
             <div className="flex items-center gap-2">
               <Skeleton className="h-8 w-8 rounded-lg flex-shrink-0" />
               {!isCollapsed && <Skeleton className="h-5 w-24" />}
@@ -50,7 +50,7 @@ export function AuthenticatedLayoutSkeleton() {
 
             {/* Section separator */}
             <div className="py-2">
-              <div className="h-px bg-gray-200 dark:bg-gray-700" />
+              <div className="h-px bg-slate-200 dark:bg-slate-800" />
             </div>
 
             {/* Section header */}
@@ -71,7 +71,7 @@ export function AuthenticatedLayoutSkeleton() {
 
             {/* Another section */}
             <div className="py-2">
-              <div className="h-px bg-gray-200 dark:bg-gray-700" />
+              <div className="h-px bg-slate-200 dark:bg-slate-800" />
             </div>
 
             {!isCollapsed && (
@@ -90,7 +90,7 @@ export function AuthenticatedLayoutSkeleton() {
           </div>
 
           {/* Sidebar footer */}
-          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 p-3">
+          <div className="flex-shrink-0 border-t border-slate-200 dark:border-slate-800 p-3">
             <div className={cn('flex items-center gap-2', isCollapsed && 'justify-center')}>
               <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />
               {!isCollapsed && (
@@ -108,9 +108,9 @@ export function AuthenticatedLayoutSkeleton() {
           className="flex flex-col h-screen transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
-          <main className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 lg:pb-0">
+          <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 lg:pb-0">
             {/* ===== PAGE HEADER SKELETON ===== */}
-            <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
+            <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm">
               {/* Mobile header */}
               <div className="lg:hidden">
                 <div className="flex gap-2 py-2 px-3 items-center">
@@ -172,7 +172,7 @@ export function AuthenticatedLayoutSkeleton() {
               {/* Stat cards row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                  <div key={i} className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between mb-4">
                       <Skeleton className="h-10 w-10 rounded-lg" />
                     </div>
@@ -186,7 +186,7 @@ export function AuthenticatedLayoutSkeleton() {
               {/* Content cards row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
+                  <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-10 w-10 rounded-xl" />
@@ -207,7 +207,7 @@ export function AuthenticatedLayoutSkeleton() {
               {/* Another row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
+                  <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-10 w-10 rounded-xl" />
@@ -234,7 +234,7 @@ export function AuthenticatedLayoutSkeleton() {
         </div>
 
         {/* ===== MOBILE BOTTOM NAV SKELETON ===== */}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-around px-2 py-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-1 px-3 py-1">

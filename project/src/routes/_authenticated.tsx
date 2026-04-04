@@ -134,7 +134,7 @@ function AuthenticatedLayout() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      <div className="h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
         <Sidebar
           modules={modules}
           activeModule={activeModule}
@@ -166,7 +166,7 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </header> */}
-          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 md:pb-0">
+          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 md:pb-0">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

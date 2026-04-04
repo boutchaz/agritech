@@ -262,34 +262,34 @@ const Sidebar: React.FC<SidebarProps> = ({
     additionalClasses?: string,
   ) => {
     return cn(
-      "w-full text-gray-600 dark:text-gray-400 h-11 min-h-[44px]",
+      "w-full text-slate-600 dark:text-slate-400 h-11 min-h-[44px]",
       isCollapsed
         ? "md:justify-center md:px-2"
         : isRTL
           ? "flex-row-reverse justify-end text-right"
           : "justify-start",
       isActive &&
-        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
+        "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30",
       additionalClasses,
     );
   };
 
   const getSubItemClassName = (isActive: boolean) => {
     return cn(
-      "w-full text-gray-600 dark:text-gray-400 h-10 min-h-[40px] text-sm",
+      "w-full text-slate-600 dark:text-slate-400 h-10 min-h-[40px] text-sm",
       isCollapsed
         ? "md:justify-center md:px-2 md:pl-2"
         : isRTL
           ? "flex-row-reverse justify-end text-right pr-8"
           : "justify-start pl-8",
       isActive &&
-        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
+        "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30",
     );
   };
 
   const getSectionHeaderClassName = () => {
     return cn(
-      "w-full justify-between px-3 h-11 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
+      "w-full justify-between px-3 h-11 min-h-[44px] text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50",
       isCollapsed && "md:justify-center md:px-2",
       isRTL && "flex-row-reverse text-right",
     );
@@ -328,14 +328,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     return isOpen ? (
       <ChevronDown
         className={cn(
-          "h-4 w-4 flex-shrink-0 text-gray-400",
+          "h-4 w-4 flex-shrink-0 text-slate-400",
           isCollapsed && "md:hidden",
         )}
       />
     ) : (
       <ChevronRight
         className={cn(
-          "h-4 w-4 flex-shrink-0 text-gray-400",
+          "h-4 w-4 flex-shrink-0 text-slate-400",
           isCollapsed && "md:hidden",
         )}
       />
@@ -358,7 +358,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             className={cn(
-              "w-full h-9 justify-center px-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
+              "w-full h-9 justify-center px-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/50",
             )}
           >
             <Icon className="h-4 w-4" />
@@ -368,9 +368,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           side={isRTL ? "left" : "right"}
           align="start"
           sideOffset={8}
-          className="w-48 p-1 bg-white dark:bg-gray-800"
+          className="w-48 p-1 bg-white dark:bg-slate-900"
         >
-          <div className="px-2 py-1.5 text-sm font-medium text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 mb-1">
+          <div className="px-2 py-1.5 text-sm font-medium text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 mb-1">
             {title}
           </div>
           <div className="space-y-0.5">{children}</div>
@@ -388,9 +388,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     <Button
       variant="ghost"
       className={cn(
-        "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400",
+        "w-full h-8 justify-start text-sm text-slate-600 dark:text-slate-400",
         isActive &&
-          "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400",
+          "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400",
       )}
       onClick={(e) => handleNavigation(path, e)}
     >
@@ -414,7 +414,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={cn(
           "fixed inset-y-0 z-50",
           isRTL ? "right-0 border-l" : "left-0 border-r",
-          "h-screen bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
+          "h-screen bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
           "hidden md:flex",
           isCollapsed ? "md:w-16" : "w-64",
@@ -424,7 +424,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Header */}
         <div
           className={cn(
-            "flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
+            "flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
             isCollapsed ? "md:p-2 p-4" : "p-4",
             isRTL && "text-right",
           )}
@@ -450,10 +450,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className="flex-shrink-0 w-10 h-10 object-contain rounded-lg"
               />
               <div className={cn("min-w-0 flex-1", isCollapsed && "md:hidden")}>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate text-start">
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t("app.name")}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-start">
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-start">
                   {appConfig.name} Platform
                 </p>
               </div>
@@ -1306,7 +1306,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <Button
                           variant="ghost"
                           className={cn(
-                            "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group",
+                            "w-full h-8 justify-start text-sm text-slate-600 dark:text-slate-400 group",
                           )}
                         >
                           <div className="flex items-center w-full">
@@ -1402,7 +1402,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* ========== FOOTER ========== */}
         <div
           className={cn(
-            "flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1",
+            "flex-shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1",
             isCollapsed ? "md:p-2 p-3" : "p-3",
           )}
         >
@@ -1428,7 +1428,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             variant="ghost"
             className={getButtonClassName(
               false,
-              "hover:text-gray-900 dark:hover:text-gray-100",
+              "hover:text-slate-900 dark:hover:text-slate-100",
             )}
             onClick={onThemeToggle}
             title={
@@ -1447,7 +1447,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             className={cn(
-              "w-full h-9 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hidden md:flex",
+              "w-full h-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hidden md:flex",
               isCollapsed ? "justify-center" : "justify-start",
             )}
             onClick={toggleCollapse}

@@ -247,7 +247,7 @@ const MobileBottomNav: React.FC = () => {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700"
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         <div className="flex items-stretch h-16 max-w-lg mx-auto">
@@ -264,8 +264,8 @@ const MobileBottomNav: React.FC = () => {
                   "flex flex-col items-center justify-center flex-1 min-w-0 py-2 relative",
                   "transition-colors duration-200",
                   active
-                    ? "text-green-600 dark:text-green-400"
-                    : "text-gray-500 dark:text-gray-400",
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-slate-500 dark:text-slate-400",
                 )}
                 aria-label={getLabel(item.labelKey, item.fallback)}
                 aria-current={active ? "page" : undefined}
@@ -282,7 +282,7 @@ const MobileBottomNav: React.FC = () => {
                   {getLabel(item.labelKey, item.fallback)}
                 </span>
                 {active && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-green-600 dark:bg-green-400 rounded-full" />
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
                 )}
               </Button>
             );
@@ -295,8 +295,8 @@ const MobileBottomNav: React.FC = () => {
               "flex flex-col items-center justify-center flex-1 min-w-0 py-2 relative",
               "transition-colors duration-200",
               isMoreActive || isMoreOpen
-                ? "text-green-600 dark:text-green-400"
-                : "text-gray-500 dark:text-gray-400",
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-slate-500 dark:text-slate-400",
             )}
             aria-label={t("mobileNav.more", "More")}
           >
@@ -305,7 +305,7 @@ const MobileBottomNav: React.FC = () => {
               {t("mobileNav.more", "More")}
             </span>
             {isMoreActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-green-600 dark:bg-green-400 rounded-full" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
             )}
           </Button>
         </div>
@@ -313,7 +313,7 @@ const MobileBottomNav: React.FC = () => {
 
       <Drawer open={isMoreOpen} onOpenChange={setIsMoreOpen}>
         <DrawerContent side="bottom" hideClose className="max-h-[70vh] rounded-t-2xl p-0">
-          <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <DrawerHeader className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-base font-semibold">
                 {t("mobileNav.allModules", "All Modules")}
@@ -321,10 +321,10 @@ const MobileBottomNav: React.FC = () => {
               <Button
                 type="button"
                 onClick={() => setIsMoreOpen(false)}
-                className="p-2 -mr-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="p-2 -mr-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                 aria-label={t("common.close", "Close")}
               >
-                <X className="h-5 w-5 text-gray-500" />
+                <X className="h-5 w-5 text-slate-500" />
               </Button>
             </div>
           </DrawerHeader>
@@ -345,8 +345,8 @@ const MobileBottomNav: React.FC = () => {
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl min-h-[72px] transition-colors",
                       active
-                        ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50",
+                        ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400"
+                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50",
                     )}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
