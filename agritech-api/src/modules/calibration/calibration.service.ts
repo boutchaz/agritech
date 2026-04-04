@@ -1372,6 +1372,36 @@ export class CalibrationService {
       const gddLatitude = this.roundCoordinate(gddCentroid.latitude, 2);
       const gddLongitude = this.roundCoordinate(gddCentroid.longitude, 2);
 
+      // Build NIRv time-series from satellite images for the two-phase model.
+      const nirvSeries: Array<{ date: string; value: number }> = [];
+      for (const img of satelliteImages) {
+        const indices = img.indices as Record<string, number> | undefined;
+        const nirvVal = indices?.NIRv ?? indices?.nirv;
+        if (img.date && nirvVal != null) {
+          nirvSeries.push({ date: String(img.date), value: Number(nirvVal) });
+        }
+      }
+
+      // Fetch variety-specific chill threshold for olive two-phase model.
+      let chillThreshold: number | null = null;
+      if (parcel.cropType === "olivier" && parcel.variety) {
+        try {
+          const supabase = this.databaseService.getAdminClient();
+          const { data: varietyData } = await supabase
+            .from("crop_varieties")
+            .select("chill_hours_requirement")
+            .ilike("name", parcel.variety)
+            .maybeSingle();
+          if (varietyData?.chill_hours_requirement) {
+            chillThreshold = Number(varietyData.chill_hours_requirement);
+          }
+        } catch {
+          this.logger.warn(
+            `Could not fetch chill threshold for variety "${parcel.variety}", using default`,
+          );
+        }
+      }
+
       const precomputeGdd = (await this.satelliteProxy.proxy(
         "POST",
         "/calibration/v2/precompute-gdd",
@@ -1380,6 +1410,9 @@ export class CalibrationService {
             latitude: gddLatitude,
             longitude: gddLongitude,
             crop_type: parcel.cropType,
+            variety: parcel.variety,
+            chill_threshold: chillThreshold,
+            nirv_series: nirvSeries,
             rows: weatherRows.map((row) => ({ ...row })),
           },
           organizationId,

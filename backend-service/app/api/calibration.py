@@ -284,6 +284,9 @@ class PrecomputeGddRequest(BaseModel):
     latitude: float
     longitude: float
     crop_type: str
+    variety: str | None = None
+    chill_threshold: int | None = None
+    nirv_series: list[dict[str, Any]] = Field(default_factory=list)
     rows: list[dict[str, Any]] = Field(default_factory=list)
 
 
@@ -473,7 +476,13 @@ async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
 async def precompute_gdd_v2(request: PrecomputeGddRequest):
     request.crop_type = _normalize_crop_type(request.crop_type)
 
-    updated_list, count = precompute_gdd_rows(list(request.rows), request.crop_type)
+    updated_list, count = precompute_gdd_rows(
+        list(request.rows),
+        request.crop_type,
+        variety=request.variety,
+        chill_threshold=request.chill_threshold,
+        nirv_series=request.nirv_series,
+    )
 
     return PrecomputeGddResponse(
         crop_type=request.crop_type,

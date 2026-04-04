@@ -13,6 +13,7 @@ export type NotificationRedirect =
   | { to: '/workers/$workerId'; params: { workerId: string } }
   | { to: '/parcels/$parcelId/ai/recommendations'; params: ParcelIdParam }
   | { to: '/parcels/$parcelId/ai/alerts'; params: ParcelIdParam }
+  | { to: '/parcels/$parcelId/ai/calibration'; params: ParcelIdParam }
   | { to: '/production/intelligence' }
   | { to: '/production/soil-analysis' }
   | { to: '/quality-control' }
@@ -74,6 +75,13 @@ export function getNotificationRedirect(notification: NotificationData): Notific
         return { to: '/parcels/$parcelId/ai/alerts', params: { parcelId } };
       }
       return { to: '/production/intelligence' };
+    case 'calibration_complete':
+    case 'calibration_failed':
+    case 'satellite_download_complete':
+      if (parcelId) {
+        return { to: '/parcels/$parcelId/ai/calibration', params: { parcelId } };
+      }
+      return null;
     case 'soil_analysis_completed':
       if (parcelId) {
         return { to: '/parcels/$parcelId', params: { parcelId } };

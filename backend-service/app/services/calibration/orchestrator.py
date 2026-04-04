@@ -20,6 +20,7 @@ from .step1_satellite_extraction import (
 from .step2_weather_extraction import extract_weather_history
 from .step3_percentile_calculation import calculate_percentiles
 from .step4_phenology_detection import detect_phenology
+from .gdd_service import TBASE_BY_CROP
 from .types import (
     CalibrationInput,
     CalibrationMetadata,
@@ -29,14 +30,6 @@ from .types import (
     MaturityPhase,
     Recommendation,
 )
-
-
-TBASE_BY_CROP = {
-    "olivier": 10.0,
-    "agrumes": 13.0,
-    "avocatier": 10.0,
-    "palmier_dattier": 18.0,
-}
 
 FROST_THRESHOLD_BY_CROP = {
     "olivier": -2.0,
@@ -159,13 +152,17 @@ def run_calibration_pipeline(
         storage=storage,
     )
 
+    from .gdd_service import TUPPER_BY_CROP
+
     tbase = TBASE_BY_CROP.get(calibration_input.crop_type, 10.0)
+    tupper = TUPPER_BY_CROP.get(calibration_input.crop_type)
     frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)
     step2 = extract_weather_history(
         weather_data=weather_rows,
         crop_type=calibration_input.crop_type,
         tbase=tbase,
         frost_threshold=frost_threshold,
+        tupper=tupper,
     )
 
     step3 = calculate_percentiles(

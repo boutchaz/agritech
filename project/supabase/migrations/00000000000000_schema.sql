@@ -5680,7 +5680,7 @@ DO $$
 BEGIN
   INSERT INTO crop_types (name, name_fr, name_ar, scientific_name, family, tbase, frost_threshold, heat_threshold, chill_hours_min, chill_hours_max, is_system)
   SELECT * FROM (VALUES
-    ('olive', 'Olivier', 'الزيتون', 'Olea europaea', 'Oleaceae', 10.0::numeric, -5.0::numeric, 40.0::numeric, 200, 1000, true),
+    ('olive', 'Olivier', 'الزيتون', 'Olea europaea', 'Oleaceae', 7.5::numeric, -5.0::numeric, 40.0::numeric, 200, 1000, true),
     ('avocado', 'Avocatier', 'الأفوكادو', 'Persea americana', 'Lauraceae', 10.0, -1.0, 35.0, 100, 400, true),
     ('citrus', 'Agrumes', 'الحوامض', 'Citrus spp.', 'Rutaceae', 13.0, -3.0, 38.0, 100, 500, true),
     ('almond', 'Amandier', 'اللوز', 'Prunus dulcis', 'Rosaceae', 4.5, -2.0, 38.0, 400, 800, true),
@@ -5696,7 +5696,7 @@ BEGIN
     SELECT 1 FROM crop_types WHERE crop_types.name = v.name AND crop_types.organization_id IS NULL
   );
 
-  UPDATE crop_types SET scientific_name = 'Olea europaea', family = 'Oleaceae', tbase = 10.0, frost_threshold = -5.0, heat_threshold = 40.0, chill_hours_min = 200, chill_hours_max = 1000, is_system = true, name_fr = 'Olivier', name_ar = 'الزيتون' WHERE name = 'olive' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Olea europaea', family = 'Oleaceae', tbase = 7.5, frost_threshold = -5.0, heat_threshold = 40.0, chill_hours_min = 200, chill_hours_max = 1000, is_system = true, name_fr = 'Olivier', name_ar = 'الزيتون' WHERE name = 'olive' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Persea americana', family = 'Lauraceae', tbase = 10.0, frost_threshold = -1.0, heat_threshold = 35.0, chill_hours_min = 100, chill_hours_max = 400, is_system = true, name_fr = 'Avocatier', name_ar = 'الأفوكادو' WHERE name = 'avocado' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Citrus spp.', family = 'Rutaceae', tbase = 13.0, frost_threshold = -3.0, heat_threshold = 38.0, chill_hours_min = 100, chill_hours_max = 500, is_system = true, name_fr = 'Agrumes', name_ar = 'الحوامض' WHERE name = 'citrus' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Prunus dulcis', family = 'Rosaceae', tbase = 4.5, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 800, is_system = true, name_fr = 'Amandier', name_ar = 'اللوز' WHERE name = 'almond' AND organization_id IS NULL;
