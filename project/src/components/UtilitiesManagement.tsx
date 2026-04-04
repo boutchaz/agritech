@@ -166,22 +166,22 @@ const UtilitiesManagement: React.FC = () => {
 
    // Helper function to upload invoice file
    const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
-     try {
-       if (!currentFarm?.id) return null;
+      try {
+        if (!currentOrganization?.id) return null;
 
-       const fileExt = file.name.split('.').pop();
-       const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentOrganization.id}/invoices/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-       const { publicUrl } = await storageApi.upload('invoices', fileName, file, {
-         cacheControl: '3600',
-         upsert: false
-       });
+        const { publicUrl } = await storageApi.upload('invoices', fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-       return { url: publicUrl, path: fileName };
-     } catch (error) {
-       console.error('Error uploading file:', error);
-       return null;
-     }
+        return { url: publicUrl, path: fileName };
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        return null;
+      }
    };
 
   // Helper function to download invoice file

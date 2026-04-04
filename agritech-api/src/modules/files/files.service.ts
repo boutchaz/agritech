@@ -482,7 +482,7 @@ export class FilesService {
    * Sync existing files from storage to registry
    */
   async syncExistingFiles(organizationId: string): Promise<{ synced: number; skipped: number }> {
-    const buckets = ['products', 'invoices', 'documents', 'avatars'];
+    const buckets = ['products', 'invoices', 'files', 'compliance-documents', 'agritech-documents', 'reports'];
     let synced = 0;
     let skipped = 0;
 
@@ -491,9 +491,8 @@ export class FilesService {
         const { data: files, error } = await this.databaseService.getAdminClient()
           .storage
           .from(bucket)
-          .list('', {
+          .list(organizationId, {
             limit: 1000,
-            search: organizationId
           });
 
         if (error) {
@@ -502,11 +501,12 @@ export class FilesService {
         }
 
         for (const file of files || []) {
-          // Check if already registered
+          const filePath = `${organizationId}/${file.name}`;
+          
           const { data: existing } = await this.databaseService.getAdminClient()
             .from('file_registry')
             .select('id')
-            .eq('file_path', file.name)
+            .eq('file_path', filePath)
             .eq('organization_id', organizationId)
             .single();
 
@@ -515,13 +515,12 @@ export class FilesService {
             continue;
           }
 
-          // Register the file
           await this.databaseService.getAdminClient()
             .from('file_registry')
             .insert({
               organization_id: organizationId,
               bucket_name: bucket,
-              file_path: `${organizationId}/${file.name}`,
+              file_path: filePath,
               file_name: file.name.split('/').pop() || file.name,
               file_size: file.metadata?.size || 0,
               mime_type: file.metadata?.mimetype || 'application/octet-stream',

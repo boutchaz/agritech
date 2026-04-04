@@ -1,10 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-export interface MatchedModule {
-  key: Exclude<keyof ContextNeeds, 'farm' | 'worker' | 'matchedModules'>;
-  score: number;
-}
-
 export interface ContextNeeds {
   farm: boolean;
   worker: boolean;
@@ -29,10 +24,17 @@ export interface ContextNeeds {
   matchedModules?: MatchedModule[];
 }
 
+export type ContextModuleKey = Exclude<keyof ContextNeeds, 'farm' | 'worker' | 'matchedModules'>;
+
+export interface MatchedModule {
+  key: ContextModuleKey;
+  score: number;
+}
+
 @Injectable()
 export class ContextRouterService {
   private readonly logger = new Logger(ContextRouterService.name);
-  private readonly modulePatterns: Record<MatchedModule['key'], RegExp> = {
+  private readonly modulePatterns: Record<ContextModuleKey, RegExp> = {
     accounting: /invoice|payment|expense|revenue|profit|cost|fiscal|tax|accounting|financial|budget|journal|account|total|spend|how much|facture|paiement|dépense|revenu|coût|comptabilité|financier|combien|total des|فاتورة|دفعة|مصروف|إيراد|تكلفة|محاسبة|مالي|كم|إجمالي/,
     inventory: /stock|inventory|warehouse|item|product|material|reception|supply|inventaire|entrepôt|article|produit|matériel|approvisionnement|مخزون|مستودع|منتج|مادة/,
     production: /harvest|yield|production|quality|delivery|crop cycle|récolte|rendement|contrôle qualité|livraison|cycle de culture|حصاد|محصول|إنتاج|مراقبة الجودة|تسليم/,
@@ -62,11 +64,16 @@ export class ContextRouterService {
   analyzeQuery(query: string): ContextNeeds {
     const lowerQuery = query.toLowerCase();
     const matchedModules = this.getMatchedModulesForQuery(lowerQuery);
+    return this.createContextNeeds(query, matchedModules);
+  }
+
+  createContextNeeds(query: string, matchedModules: MatchedModule[]): ContextNeeds {
+    const lowerQuery = query.toLowerCase();
     this.matchedModules = matchedModules;
 
     const contextNeeds: ContextNeeds = {
-      farm: true, // Always load
-      worker: true, // Always load
+      farm: true,
+      worker: true,
       accounting: matchedModules.some((module) => module.key === 'accounting'),
       inventory: matchedModules.some((module) => module.key === 'inventory'),
       production: matchedModules.some((module) => module.key === 'production'),
@@ -126,6 +133,10 @@ export class ContextRouterService {
 
   getMatchedModules(): MatchedModule[] {
     return this.matchedModules;
+  }
+
+  setMatchedModules(matchedModules: MatchedModule[]): void {
+    this.matchedModules = matchedModules;
   }
 
   private getMatchedModulesForQuery(query: string): MatchedModule[] {

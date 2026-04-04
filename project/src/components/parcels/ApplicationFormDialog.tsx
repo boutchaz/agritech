@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { useAuthStore } from '@/stores/authStore';
 import { storageApi } from '@/lib/api/storage';
+import { filesApi } from '@/lib/api/files';
 import { tasksApi } from '@/lib/api/tasks';
 import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -145,6 +146,20 @@ export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
          cacheControl: '31536000',
          upsert: false
        });
+
+       try {
+         await filesApi.register({
+           bucket_name: 'products',
+           file_path: fileName,
+           file_name: file.name,
+           file_size: file.size,
+           mime_type: file.type,
+           entity_type: 'product-application',
+           field_name: 'images',
+         }, currentOrganization?.id);
+       } catch (registerError) {
+         console.error('Failed to register file in tracking system:', registerError);
+       }
 
        return publicUrl;
     } catch (error: any) {

@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { useUpdateCertification } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { storageApi } from '@/lib/api/storage';
+import { filesApi } from '@/lib/api/files';
 import { type CertificationResponseDto, type DocumentDto } from '@/lib/api/compliance';
 
 const ALLOWED_MIME_TYPES = [
@@ -152,26 +153,41 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
     setUploading(true);
 
     try {
-       const timestamp = Date.now();
-       const randomId = Math.random().toString(36).substring(2, 8);
-       const sanitizedName = selectedFile.name
-         .replace(/[^a-zA-Z0-9.-]/g, '_')
-         .substring(0, 50);
-       const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const sanitizedName = selectedFile.name
+        .replace(/[^a-zA-Z0-9.-]/g, '_')
+        .substring(0, 50);
+      const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
 
-       const { publicUrl } = await storageApi.upload('compliance-documents', filePath, selectedFile, {
-         cacheControl: '31536000',
-         upsert: false,
-       });
+      const { publicUrl } = await storageApi.upload('compliance-documents', filePath, selectedFile, {
+        cacheControl: '31536000',
+        upsert: false,
+      });
 
-       const newDocument: DocumentDto = {
-         type: values.type,
-         url: publicUrl,
-         uploaded_at: new Date().toISOString(),
-         name: selectedFile.name,
-         size: selectedFile.size,
-         mime_type: selectedFile.type,
-       };
+      try {
+        await filesApi.register({
+          bucket_name: 'compliance-documents',
+          file_path: filePath,
+          file_name: selectedFile.name,
+          file_size: selectedFile.size,
+          mime_type: selectedFile.type,
+          entity_type: 'certification',
+          entity_id: certification.id,
+          field_name: 'documents',
+        }, currentOrganization.id);
+      } catch (registerError) {
+        console.error('Failed to register file in tracking system:', registerError);
+      }
+
+      const newDocument: DocumentDto = {
+        type: values.type,
+        url: publicUrl,
+        uploaded_at: new Date().toISOString(),
+        name: selectedFile.name,
+        size: selectedFile.size,
+        mime_type: selectedFile.type,
+      };
 
       const existingDocuments = certification.documents || [];
 

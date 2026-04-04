@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { ContextRouterService, ContextNeeds } from './context-router.service';
+import { MatchedModule } from './context-router.service';
+import { SemanticContextRouterService } from './semantic-context-router.service';
 import { WeatherProvider, WeatherForecast } from '../providers/weather.provider';
 import { AgromindiaContextService, AgromindiaParcelContext } from './agromindia-context.service';
 
@@ -454,10 +455,11 @@ interface ProductionIntelligenceContext {
 export class ContextBuilderService {
   private readonly logger = new Logger(ContextBuilderService.name);
   private readonly SUMMARY_LIMIT = 3;
+  private readonly DEEP_LIMIT = 10;
 
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly contextRouter: ContextRouterService,
+    private readonly contextRouter: SemanticContextRouterService,
     private weatherProvider?: WeatherProvider,
   ) {}
 
@@ -484,9 +486,11 @@ export class ContextBuilderService {
     ): Promise<BuiltContext> {
       const client = this.databaseService.getAdminClient();
 
-      // Analyze query using simple keyword-based routing (no AI call - performance optimization)
-      // Eliminates 1 AI call per message, reducing latency by 1-2 seconds
-      const contextNeeds = this.contextRouter.analyzeQuery(query);
+      const contextNeeds = await this.contextRouter.analyzeQuery(query);
+      const topModules = this.contextRouter
+        .getMatchedModules()
+        .slice(0, 2)
+        .map((module) => module.key);
 
      // Get current date and season
      const now = new Date();
@@ -531,71 +535,71 @@ export class ContextBuilderService {
          this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
          return null;
        }),
-       contextNeeds.accounting
-         ? this.getAccountingContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load accounting context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.accounting
+          ? this.getAccountingContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load accounting context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.inventory
-         ? this.getInventoryContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load inventory context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.inventory
+          ? this.getInventoryContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load inventory context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.production
-         ? this.getProductionContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load production context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.production
+          ? this.getProductionContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load production context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.supplierCustomer
-         ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.supplierCustomer
+          ? this.getSupplierCustomerContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.campaigns
-         ? this.getCampaignsContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load campaigns context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.campaigns
+          ? this.getCampaignsContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load campaigns context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.reception
-         ? this.getReceptionBatchesContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load reception batches context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.reception
+          ? this.getReceptionBatchesContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load reception batches context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.compliance
-         ? this.getComplianceContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load compliance context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.compliance
+          ? this.getComplianceContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load compliance context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.utilities
-         ? this.getUtilitiesContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load utilities context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.utilities
+          ? this.getUtilitiesContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load utilities context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.reports
-         ? this.getReportsContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load reports context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.reports
+          ? this.getReportsContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load reports context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.marketplace
-         ? this.getMarketplaceContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load marketplace context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.marketplace
+          ? this.getMarketplaceContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load marketplace context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.orchards
-         ? this.getOrchardContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load orchards context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.orchards
+          ? this.getOrchardContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load orchards context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
        (contextNeeds.satellite || contextNeeds.weather)
          ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
@@ -891,6 +895,13 @@ export class ContextBuilderService {
     }
   }
 
+  private getLimitForModule(
+    moduleName: MatchedModule['key'],
+    topModules: MatchedModule['key'][],
+  ): number {
+    return topModules.includes(moduleName) ? this.DEEP_LIMIT : this.SUMMARY_LIMIT;
+  }
+
   private async getWorkerContext(
     client: any,
     organizationId: string,
@@ -1006,15 +1017,17 @@ export class ContextBuilderService {
   private async getAccountingContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<AccountingContext> {
     try {
-       // Get chart of accounts summary
-       const { data: accounts, error: accountsError, count: accountsCount } = await client
+       const limit = this.getLimitForModule('accounting', topModules);
+        // Get chart of accounts summary
+        const { data: accounts, error: accountsError, count: accountsCount } = await client
          .from('accounts')
-         .select('id, name, account_type, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, account_type, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (accountsError) {
         this.logger.error(`Error fetching accounts: ${accountsError.message}`);
@@ -1031,9 +1044,9 @@ export class ContextBuilderService {
          .gte(
            'invoice_date',
            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('invoice_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          )
+          .order('invoice_date', { ascending: false })
+          .limit(limit);
       
       if (invoicesError) {
         this.logger.error(`Error fetching invoices: ${invoicesError.message}`);
@@ -1047,9 +1060,9 @@ export class ContextBuilderService {
          .gte(
            'payment_date',
            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('payment_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          )
+          .order('payment_date', { ascending: false })
+          .limit(limit);
       
       if (paymentsError) {
         this.logger.error(`Error fetching payments: ${paymentsError.message}`);
@@ -1155,8 +1168,10 @@ export class ContextBuilderService {
   private async getInventoryContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<InventoryContext> {
     try {
+      const limit = this.getLimitForModule('inventory', topModules);
       // Get stock levels from stock_valuation view (actual stock quantities)
       // This is the same approach used by getFarmStockLevels in items.service.ts
       const { data: stockData, error: stockError } = await client
@@ -1295,21 +1310,21 @@ export class ContextBuilderService {
 
       return {
         items_count: items.length,
-        items_recent: items.slice(0, this.SUMMARY_LIMIT),
-        items_has_more: items.length > this.SUMMARY_LIMIT,
+        items_recent: items.slice(0, limit),
+        items_has_more: items.length > limit,
         warehouses_count: warehousesList.length,
         warehouses_recent:
-          warehousesList.slice(0, this.SUMMARY_LIMIT).map((w: any) => ({
+          warehousesList.slice(0, limit).map((w: any) => ({
             id: w.id,
             name: w.name,
             location: w.location || 'N/A',
             farm_name: w.farm?.name,
           })),
-        warehouses_has_more: warehousesList.length > this.SUMMARY_LIMIT,
+        warehouses_has_more: warehousesList.length > limit,
         recent_stock_movements_count: stockEntries?.length || 0,
         low_stock_count: lowStockItems.length,
-        low_stock_items_recent: lowStockItems.slice(0, this.SUMMARY_LIMIT),
-        low_stock_items_has_more: lowStockItems.length > this.SUMMARY_LIMIT,
+        low_stock_items_recent: lowStockItems.slice(0, limit),
+        low_stock_items_has_more: lowStockItems.length > limit,
         total_inventory_value: totalInventoryValue,
       };
     } catch (error) {
@@ -1333,8 +1348,10 @@ export class ContextBuilderService {
   private async getProductionContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ProductionContext> {
     try {
+      const limit = this.getLimitForModule('production', topModules);
       const { data: harvests, error: harvestsError, count: harvestsCount } = await client
         .from('harvest_records')
         .select(`
@@ -1354,7 +1371,7 @@ export class ContextBuilderService {
           new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
         )
         .order('harvest_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (harvestsError) {
         this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
@@ -1445,15 +1462,17 @@ export class ContextBuilderService {
   private async getSupplierCustomerContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<SupplierCustomerContext> {
     try {
-       // Get all suppliers, not just active ones (summary)
+       const limit = this.getLimitForModule('supplierCustomer', topModules);
+        // Get all suppliers, not just active ones (summary)
        const { data: suppliers, error: suppliersError, count: suppliersCount } = await client
          .from('suppliers')
-         .select('id, name, supplier_type, is_active, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, supplier_type, is_active, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (suppliersError) {
         this.logger.error(`Error fetching suppliers: ${suppliersError.message}`);
@@ -1462,10 +1481,10 @@ export class ContextBuilderService {
        // Get all customers, not just active ones (summary)
        const { data: customers, error: customersError, count: customersCount } = await client
          .from('customers')
-         .select('id, name, customer_type, is_active, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, customer_type, is_active, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (customersError) {
         this.logger.error(`Error fetching customers: ${customersError.message}`);
@@ -1474,10 +1493,10 @@ export class ContextBuilderService {
        const { data: salesOrders, error: salesOrdersError, count: salesOrdersCount } = await client
          .from('sales_orders')
          .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .in('status', ['draft', 'confirmed', 'partial'])
-         .order('order_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .eq('organization_id', organizationId)
+          .in('status', ['draft', 'confirmed', 'partial'])
+          .order('order_date', { ascending: false })
+          .limit(limit);
       
       if (salesOrdersError) {
         this.logger.error(`Error fetching sales orders: ${salesOrdersError.message}`);
@@ -1486,10 +1505,10 @@ export class ContextBuilderService {
        const { data: purchaseOrders, error: purchaseOrdersError, count: purchaseOrdersCount } = await client
          .from('purchase_orders')
          .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .in('status', ['draft', 'confirmed', 'partial'])
-         .order('order_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .eq('organization_id', organizationId)
+          .in('status', ['draft', 'confirmed', 'partial'])
+          .order('order_date', { ascending: false })
+          .limit(limit);
       
       if (purchaseOrdersError) {
         this.logger.error(`Error fetching purchase orders: ${purchaseOrdersError.message}`);
@@ -1560,8 +1579,10 @@ export class ContextBuilderService {
   private async getCampaignsContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<CampaignsContext> {
     try {
+      const limit = this.getLimitForModule('campaigns', topModules);
       const { count: campaignsCount, error: campaignsCountError } = await client
         .from('campaigns')
         .select('*', { count: 'exact', head: true })
@@ -1596,7 +1617,7 @@ export class ContextBuilderService {
         .select('id, name, type, status, start_date, end_date, priority', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('start_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (campaignsError) {
         this.logger.error(`Error fetching campaigns: ${campaignsError.message}`);
@@ -1633,8 +1654,10 @@ export class ContextBuilderService {
   private async getReceptionBatchesContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ReceptionBatchesContext> {
     try {
+      const limit = this.getLimitForModule('reception', topModules);
       const { count: batchesCount, error: batchesCountError } = await client
         .from('reception_batches')
         .select('*', { count: 'exact', head: true })
@@ -1662,7 +1685,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('reception_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (batchesError) {
         this.logger.error(`Error fetching reception batches: ${batchesError.message}`);
@@ -1697,8 +1720,10 @@ export class ContextBuilderService {
   private async getComplianceContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ComplianceContext> {
     try {
+      const limit = this.getLimitForModule('compliance', topModules);
       const { count: certificationsCount, error: certificationsCountError } = await client
         .from('certifications')
         .select('*', { count: 'exact', head: true })
@@ -1749,7 +1774,7 @@ export class ContextBuilderService {
         .select('id, certification_type, status, expiry_date', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('expiry_date', { ascending: true })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (certificationsError) {
         this.logger.error(`Error fetching certifications: ${certificationsError.message}`);
@@ -1770,7 +1795,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('check_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (checksError) {
         this.logger.error(`Error fetching compliance checks: ${checksError.message}`);
@@ -1820,8 +1845,10 @@ export class ContextBuilderService {
   private async getUtilitiesContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<UtilitiesContext> {
     try {
+      const limit = this.getLimitForModule('utilities', topModules);
       const { count: utilitiesCount, error: utilitiesCountError } = await client
         .from('utilities')
         .select('*', { count: 'exact', head: true })
@@ -1859,7 +1886,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('billing_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (utilitiesError) {
         this.logger.error(`Error fetching utilities: ${utilitiesError.message}`);
@@ -1896,8 +1923,10 @@ export class ContextBuilderService {
   private async getReportsContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ReportsContext> {
     try {
+      const limit = this.getLimitForModule('reports', topModules);
       const { count: reportsCount, error: reportsCountError } = await client
         .from('parcel_reports')
         .select('*', { count: 'exact', head: true })
@@ -1934,7 +1963,7 @@ export class ContextBuilderService {
         })
         .eq('organization_id', organizationId)
         .order('generated_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (reportsError) {
         this.logger.error(`Error fetching reports: ${reportsError.message}`);
@@ -1970,8 +1999,10 @@ export class ContextBuilderService {
   private async getMarketplaceContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<MarketplaceContext> {
     try {
+      const limit = this.getLimitForModule('marketplace', topModules);
       const { count: listingsCount, error: listingsCountError } = await client
         .from('marketplace_listings')
         .select('*', { count: 'exact', head: true })
@@ -2026,7 +2057,7 @@ export class ContextBuilderService {
         .select('id, title, status, price, currency, quantity_available', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (listingsError) {
         this.logger.error(`Error fetching marketplace listings: ${listingsError.message}`);
@@ -2039,7 +2070,7 @@ export class ContextBuilderService {
         })
         .or(ordersFilter)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (ordersError) {
         this.logger.error(`Error fetching marketplace orders: ${ordersError.message}`);
@@ -2052,7 +2083,7 @@ export class ContextBuilderService {
         })
         .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (quoteRequestsError) {
         this.logger.error(`Error fetching marketplace quote requests: ${quoteRequestsError.message}`);
@@ -2115,8 +2146,10 @@ export class ContextBuilderService {
   private async getOrchardContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<OrchardContext> {
     try {
+      const limit = this.getLimitForModule('orchards', topModules);
       const orchardAssetTypes = ['bearer_plant', 'consumable_plant'];
 
       const { count: orchardAssetsCount, error: orchardAssetsCountError } = await client
@@ -2163,7 +2196,7 @@ export class ContextBuilderService {
         .eq('organization_id', organizationId)
         .in('asset_type', orchardAssetTypes)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (orchardAssetsError) {
         this.logger.error(`Error fetching orchard assets: ${orchardAssetsError.message}`);
@@ -2175,7 +2208,7 @@ export class ContextBuilderService {
         .eq('organization_id', organizationId)
         .eq('task_type', 'pruning')
         .order('due_date', { ascending: true })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (pruningTasksListError) {
         this.logger.error(`Error fetching pruning tasks: ${pruningTasksListError.message}`);

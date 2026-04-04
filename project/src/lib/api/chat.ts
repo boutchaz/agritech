@@ -8,6 +8,7 @@ export interface SendMessageDto {
   query: string;
   language?: 'en' | 'fr' | 'ar';
   save_history?: boolean;
+  image?: string;
 }
 
 export interface ChatContextSummary {
@@ -41,6 +42,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   suggestions?: string[];
+  image?: string;
 }
 
 export interface ChatHistoryResponse {

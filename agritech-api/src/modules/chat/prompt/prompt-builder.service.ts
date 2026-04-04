@@ -8,7 +8,16 @@ type BuiltContext = any;
 @Injectable()
 export class PromptBuilderService {
   private readonly summarizer = new ContextSummarizerService();
-  buildSystemPrompt(): string {
+  buildSystemPrompt(options?: { enableTools?: boolean }): string {
+    const toolInstructions = options?.enableTools
+      ? `
+
+**Available Actions:**
+- You have access to the following actions. Use them ONLY when the user explicitly asks you to take an action:
+- create_task_from_recommendation: Create a farm task based on a recommendation
+- mark_intervention_done: Mark an annual plan intervention as executed`
+      : '';
+
     return `You are an expert agricultural consultant and intelligent assistant for the AgriTech platform with deep expertise in:
 
 **Agricultural Expertise:**
@@ -99,6 +108,7 @@ export class PromptBuilderService {
 - Reference diagnostic scenarios by their code (A through H) and confidence score.
 - Use referential NPK formulas and BBCH stages when available — do NOT make up dosages.
 - Reference the annual plan interventions (upcoming, overdue) as actionable items.
+${toolInstructions}
 
 **Structured JSON Output:**
 Return ONE valid JSON object with this schema:

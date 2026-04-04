@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { storageApi } from '@/lib/api/storage';
+import { filesApi } from '@/lib/api/files';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -51,15 +52,32 @@ export default function ProductImageUpload({
       }
 
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-       const itemFolder = itemId || 'temp-' + Date.now();
-       const fileName = `${organizationId}/${itemFolder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const itemFolder = itemId || 'temp-' + Date.now();
+      const fileName = `${organizationId}/${itemFolder}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-       const { publicUrl } = await storageApi.upload('products', fileName, file, {
-         cacheControl: '31536000', // 1 year cache
-         upsert: false
-       });
+      const { publicUrl } = await storageApi.upload('products', fileName, file, {
+        cacheControl: '31536000',
+        upsert: false
+      });
 
-       return publicUrl;
+      // Register file in the tracking system
+      try {
+        await filesApi.register({
+          bucket_name: 'products',
+          file_path: fileName,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          entity_type: 'stock-item',
+          entity_id: itemId,
+          field_name: 'images',
+        }, organizationId);
+      } catch (registerError) {
+        // Log registration error but don't fail the upload
+        console.error('Failed to register file in tracking system:', registerError);
+      }
+
+      return publicUrl;
     } catch (error: any) {
       console.error('Failed to upload image:', error);
       toast.error(t('items.marketplace.uploadFailed', 'Failed to upload image'));

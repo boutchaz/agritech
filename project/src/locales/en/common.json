@@ -5916,6 +5916,9 @@
       "voiceNotSupported": "Voice input is not supported in this browser",
       "clear": "Clear",
       "send": "Send",
+      "imageUpload": "Upload image",
+      "imageRemove": "Remove image",
+      "analyzingImage": "Analyzing image...",
       "error": "Error sending message",
       "retry": "Retry",
       "suggestions": {

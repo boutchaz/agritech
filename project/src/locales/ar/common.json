@@ -5570,6 +5570,9 @@
       "voiceNotSupported": "الإدخال الصوتي غير مدعوم في هذا المتصفح",
       "clear": "مسح",
       "send": "إرسال",
+      "imageUpload": "رفع صورة",
+      "imageRemove": "إزالة الصورة",
+      "analyzingImage": "جارٍ تحليل الصورة...",
       "error": "خطأ في إرسال الرسالة",
       "retry": "إعادة المحاولة",
       "suggestions": {

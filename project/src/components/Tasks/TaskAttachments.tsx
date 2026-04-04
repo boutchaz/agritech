@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { storageApi } from '@/lib/api/storage';
+import { filesApi } from '@/lib/api/files';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -145,6 +146,21 @@ export default function TaskAttachments({
           upsert: false,
         }
       );
+
+      try {
+        await filesApi.register({
+          bucket_name: STORAGE_BUCKET,
+          file_path: filePath,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+          entity_type: 'task',
+          entity_id: taskId,
+          field_name: 'attachments',
+        }, organizationId);
+      } catch (registerError) {
+        console.error('Failed to register file in tracking system:', registerError);
+      }
 
       return {
         url: publicUrl,

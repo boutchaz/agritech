@@ -5735,6 +5735,9 @@
       "voiceNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
       "clear": "Effacer",
       "send": "Envoyer",
+      "imageUpload": "Téléverser une image",
+      "imageRemove": "Retirer l'image",
+      "analyzingImage": "Analyse de l'image...",
       "error": "Erreur lors de l'envoi du message",
       "retry": "Réessayer",
       "suggestions": {
