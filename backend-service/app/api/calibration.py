@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import datetime
 import logging
 from typing import Any, SupportsFloat, TypedDict, cast
 
@@ -6,7 +6,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 
-from ..services.calibration.gdd_service import precompute_gdd
+from ..services.calibration.gdd_service import precompute_gdd_rows
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
 
@@ -290,6 +290,7 @@ class PrecomputeGddRequest(BaseModel):
 class PrecomputeGddResponse(BaseModel):
     crop_type: str
     updated_rows: int
+    rows: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def _build_v2_error(step: str, reason: str) -> dict[str, str]:
@@ -472,15 +473,13 @@ async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
 async def precompute_gdd_v2(request: PrecomputeGddRequest):
     request.crop_type = _normalize_crop_type(request.crop_type)
 
-    updated_rows = precompute_gdd(
-        latitude=request.latitude,
-        longitude=request.longitude,
-        crop_type=request.crop_type,
-        rows=request.rows,
-        as_of=date.today(),
-    )
+    updated_list, count = precompute_gdd_rows(list(request.rows), request.crop_type)
 
-    return PrecomputeGddResponse(crop_type=request.crop_type, updated_rows=updated_rows)
+    return PrecomputeGddResponse(
+        crop_type=request.crop_type,
+        updated_rows=count,
+        rows=updated_list,
+    )
 
 
 @router.post("/v2/extract-raster", response_model=ExtractRasterResponse)

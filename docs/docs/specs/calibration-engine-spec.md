@@ -149,7 +149,16 @@ Le calibrage se déroule en 8 étapes séquentielles. Chaque étape doit être c
 
 ### 3.1 Étape 1 : Extraction historique satellite
 
-Objectif : Récupérer toutes les données satellite disponibles pour la parcelle sur 12 à 36 mois.
+Objectif : Récupérer toutes les données satellite disponibles pour la parcelle. La profondeur historique dépend de l'âge de la parcelle (`planting_year`) :
+
+| Âge de la parcelle | Profondeur historique |
+|---|---|
+| ≥ 3 ans | 36 mois |
+| 2–3 ans | 24 mois |
+| < 2 ans | Depuis le 1er janvier de l'année de plantation |
+| `planting_year` non renseigné | 24 mois (par défaut) |
+
+Cette logique est implémentée par `getCalibrationLookbackDate()` dans `calibration.service.ts`, identique à la stratégie de delta sync satellite (voir [Delta Sync Strategy](../features/cron-jobs.md#delta-sync-strategy)).
 
 Processus détaillé :
 

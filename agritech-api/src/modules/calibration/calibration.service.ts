@@ -1367,21 +1367,37 @@ export class CalibrationService {
       weatherRows.length &&
       this.hasMissingGdd(weatherRows, parcel.cropType)
     ) {
-      const firstRow = weatherRows[0];
-      const latitude = this.toNumber(firstRow?.latitude) ?? 0;
-      const longitude = this.toNumber(firstRow?.longitude) ?? 0;
+      const wgs84ForGdd = WeatherProvider.ensureWGS84(parcel.boundary);
+      const gddCentroid = WeatherProvider.calculateCentroid(wgs84ForGdd);
+      const gddLatitude = this.roundCoordinate(gddCentroid.latitude, 2);
+      const gddLongitude = this.roundCoordinate(gddCentroid.longitude, 2);
 
-      await this.satelliteProxy.proxy("POST", "/calibration/v2/precompute-gdd", {
-        body: {
-          crop_type: parcel.cropType,
-          planting_date: parcel.plantingYear ? String(parcel.plantingYear) : undefined,
-          start_date: getCalibrationLookbackDate(parcel.plantingYear),
-          end_date: new Date().toISOString().split("T")[0],
+      const precomputeGdd = (await this.satelliteProxy.proxy(
+        "POST",
+        "/calibration/v2/precompute-gdd",
+        {
+          body: {
+            latitude: gddLatitude,
+            longitude: gddLongitude,
+            crop_type: parcel.cropType,
+            rows: weatherRows.map((row) => ({ ...row })),
+          },
+          organizationId,
+          timeout: 120000,
+          authToken,
         },
-        organizationId,
-        timeout: 120000,
-        authToken,
-      });
+      )) as {
+        crop_type?: string;
+        updated_rows?: number;
+        rows?: WeatherDailyRow[];
+      };
+
+      if (
+        Array.isArray(precomputeGdd.rows) &&
+        precomputeGdd.rows.length === weatherRows.length
+      ) {
+        weatherRows = precomputeGdd.rows;
+      }
     }
 
     emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
