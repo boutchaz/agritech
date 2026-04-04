@@ -289,4 +289,11 @@ export class FilesController {
     await this.filesService.trackFileAccess(fileId, organizationId);
     return { success: true };
   }
+
+  @Post('sync')
+  @ApiOperation({ summary: 'Sync existing files from storage to registry' })
+  @ApiResponse({ status: 200, description: 'Files synced successfully' })
+  async syncExistingFiles(@Headers('x-organization-id') organizationId: string) {
+    return this.filesService.syncExistingFiles(organizationId);
+  }
 }

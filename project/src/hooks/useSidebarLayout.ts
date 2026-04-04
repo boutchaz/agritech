@@ -8,13 +8,13 @@ const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed'
  */
 export function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(() =>
-    typeof window !== 'undefined' && window.innerWidth >= 768
+    typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 768px)').matches
   )
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(min-width: 768px)')
     const handleChange = (e: MediaQueryListEvent) => setIsDesktop(e.matches)
-    setIsDesktop(mediaQuery.matches)
     mediaQuery.addEventListener('change', handleChange)
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
@@ -51,8 +51,8 @@ export function useSidebarMargin(isRTL = false) {
   const isDesktop = useIsDesktop()
   const isSidebarCollapsed = useSidebarCollapsed()
 
-  // Calculate sidebar margin for desktop (64px collapsed, 256px expanded)
-  const sidebarWidth = isDesktop ? (isSidebarCollapsed ? 64 : 256) : 0
+  // Calculate sidebar margin for desktop (80px collapsed = w-20, matches settings rail)
+  const sidebarWidth = isDesktop ? (isSidebarCollapsed ? 80 : 256) : 0
 
   return {
     marginLeft: isRTL ? 0 : sidebarWidth,

@@ -324,7 +324,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                 "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300",
                 active
                   ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20"
-                  : "text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600"
+                  : "text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
               )}
             >
               <Icon className="h-5 w-5 flex-shrink-0" />
@@ -348,7 +348,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
           "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 group",
           active
             ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 shadow-sm"
-            : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent"
+            : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-900 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent"
         )}
       >
         <div className={cn(
@@ -382,11 +382,11 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
             >
               <ChevronDown
                 className={cn(
-                  "h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200",
+                  "h-3.5 w-3.5 shrink-0 text-slate-900 transition-transform duration-200 dark:text-slate-100",
                   !isSectionExpanded(section.id) && "-rotate-90",
                 )}
               />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 truncate">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100 truncate">
                 {section.label}
               </span>
             </button>
@@ -414,7 +414,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
-            "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-100 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
+            "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
             /* Match parent row height (inside main), not 100dvh — dvh was taller than the scroll
                port and clipped the collapse footer on tablet / devtools iPad frames. */
             "md:flex md:min-h-0 md:h-full md:max-h-full md:self-stretch",
@@ -430,7 +430,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                   variant="ghost"
                   size="icon"
                   onClick={() => navigate({ to: "/dashboard" })}
-                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-400 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:hover:text-emerald-400"
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
                   aria-label={t("settings.backToDashboard", "Return to Dashboard")}
                 >
                   <Home className="h-5 w-5" />
@@ -440,7 +440,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                   variant="ghost"
                   size="icon"
                   onClick={toggleCollapse}
-                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-400 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:hover:text-emerald-400"
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
                   aria-label={t("sidebar.expand", "Expand sidebar")}
                 >
                   <PanelLeft className="h-5 w-5" />
@@ -466,7 +466,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                   variant="ghost"
                   size="icon"
                   onClick={toggleCollapse}
-                  className="h-10 w-10 shrink-0 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  className="h-10 w-10 shrink-0 rounded-xl text-slate-900 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   aria-label={t("sidebar.collapse", "Collapse sidebar")}
                 >
                   <PanelLeftClose className="h-5 w-5" />
@@ -496,7 +496,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
               type="button"
               variant="ghost"
               className={cn(
-                "h-11 w-full rounded-2xl text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-900 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:h-12",
+                "h-11 w-full rounded-2xl text-slate-900 transition-all hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:h-12",
                 isCollapsed ? "justify-center px-0" : "justify-start px-3 sm:px-4",
               )}
               onClick={toggleCollapse}

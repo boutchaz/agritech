@@ -96,6 +96,19 @@ export function FileManagement() {
     enabled: !!currentOrganization?.id && showOrphansOnly,
   });
 
+  // Sync existing files mutation
+  const syncFilesMutation = useMutation({
+    mutationFn: () => filesApi.syncExisting(currentOrganization?.id),
+    onSuccess: (data) => {
+      toast.success(`${data.synced} fichiers synchronisés, ${data.skipped} ignorés`);
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      queryClient.invalidateQueries({ queryKey: ['file-stats'] });
+    },
+    onError: () => {
+      toast.error('Erreur lors de la synchronisation des fichiers');
+    },
+  });
+
   // Mark orphaned files mutation
   const markOrphanedMutation = useMutation({
     mutationFn: () => filesApi.markOrphaned(currentOrganization?.id),
@@ -248,6 +261,15 @@ export function FileManagement() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncFilesMutation.mutate()}
+              disabled={syncFilesMutation.isPending}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Synchroniser les fichiers
+            </Button>
             <Button
               variant="outline"
               size="sm"

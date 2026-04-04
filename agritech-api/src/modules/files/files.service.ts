@@ -477,4 +477,65 @@ export class FilesService {
       this.logger.warn(`Failed to track file access: ${updateError.message}`);
     }
   }
+
+  /**
+   * Sync existing files from storage to registry
+   */
+  async syncExistingFiles(organizationId: string): Promise<{ synced: number; skipped: number }> {
+    const buckets = ['products', 'invoices', 'documents', 'avatars'];
+    let synced = 0;
+    let skipped = 0;
+
+    for (const bucket of buckets) {
+      try {
+        const { data: files, error } = await this.databaseService.getAdminClient()
+          .storage
+          .from(bucket)
+          .list('', {
+            limit: 1000,
+            search: organizationId
+          });
+
+        if (error) {
+          this.logger.error(`Failed to list files in bucket ${bucket}:`, error);
+          continue;
+        }
+
+        for (const file of files || []) {
+          // Check if already registered
+          const { data: existing } = await this.databaseService.getAdminClient()
+            .from('file_registry')
+            .select('id')
+            .eq('file_path', file.name)
+            .eq('organization_id', organizationId)
+            .single();
+
+          if (existing) {
+            skipped++;
+            continue;
+          }
+
+          // Register the file
+          await this.databaseService.getAdminClient()
+            .from('file_registry')
+            .insert({
+              organization_id: organizationId,
+              bucket_name: bucket,
+              file_path: `${organizationId}/${file.name}`,
+              file_name: file.name.split('/').pop() || file.name,
+              file_size: file.metadata?.size || 0,
+              mime_type: file.metadata?.mimetype || 'application/octet-stream',
+              is_orphan: true,
+              uploaded_at: file.created_at || new Date().toISOString(),
+            });
+
+          synced++;
+        }
+      } catch (error) {
+        this.logger.error(`Error syncing bucket ${bucket}:`, error);
+      }
+    }
+
+    return { synced, skipped };
+  }
 }

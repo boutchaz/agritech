@@ -27,7 +27,7 @@ export function AuthenticatedLayoutSkeleton() {
             'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             'border-slate-200 dark:border-slate-800',
-            isCollapsed ? 'md:w-16' : 'w-64',
+            isCollapsed ? 'md:w-20' : 'w-64',
           )}
         >
           {/* Sidebar header / logo */}

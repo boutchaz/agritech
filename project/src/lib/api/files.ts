@@ -162,4 +162,11 @@ export const filesApi = {
   async trackAccess(fileId: string, organizationId?: string): Promise<{ success: boolean }> {
     return apiClient.post(`${BASE_URL}/${fileId}/access`, {}, {}, organizationId);
   },
+
+  /**
+   * Sync existing files from storage to registry
+   */
+  async syncExisting(organizationId?: string): Promise<{ synced: number; skipped: number }> {
+    return apiClient.post(`${BASE_URL}/sync`, {}, {}, organizationId);
+  },
 };
