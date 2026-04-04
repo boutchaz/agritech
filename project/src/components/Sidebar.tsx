@@ -36,6 +36,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
 import { isRTLLocale } from "../lib/is-rtl-locale";
+import { useSidebarMargin } from "../hooks/useSidebarLayout";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface SidebarProps {
@@ -127,6 +128,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const { t, i18n } = useTranslation("common");
   const { currentOrganization } = useAuth();
   const isRTL = isRTLLocale(i18n.language);
+  const { bothRailsCollapsed } = useSidebarMargin(isRTL);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
@@ -441,7 +443,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           "h-screen bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
           "hidden md:flex",
-          isCollapsed ? "md:w-20" : "w-64",
+          isCollapsed
+            ? bothRailsCollapsed
+              ? "md:w-16"
+              : "md:w-20"
+            : "w-64",
         )}
         dir={isRTL ? "rtl" : "ltr"}
       >

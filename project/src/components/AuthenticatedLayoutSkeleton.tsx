@@ -15,7 +15,11 @@ export function AuthenticatedLayoutSkeleton() {
   const { i18n } = useTranslation();
   const isRTL = isRTLLocale(i18n.language);
   const isDark = localStorage.getItem('darkMode') === 'true';
-  const { style: sidebarStyle, isSidebarCollapsed: isCollapsed } = useSidebarMargin(isRTL);
+  const {
+    style: sidebarStyle,
+    isSidebarCollapsed: isCollapsed,
+    sidebarWidth,
+  } = useSidebarMargin(isRTL);
 
   return (
     <div className={isDark ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -27,8 +31,17 @@ export function AuthenticatedLayoutSkeleton() {
             'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             'border-slate-200 dark:border-slate-800',
-            isCollapsed ? 'md:w-20' : 'w-64',
+            !isCollapsed && 'w-64',
           )}
+          style={
+            isCollapsed && sidebarWidth > 0
+              ? {
+                  width: sidebarWidth,
+                  minWidth: sidebarWidth,
+                  maxWidth: sidebarWidth,
+                }
+              : undefined
+          }
         >
           {/* Sidebar header / logo */}
           <div className={cn('flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4', isCollapsed && 'md:p-2')}>

@@ -38,6 +38,7 @@ import {
 import { ALL_ROLES, ADMIN_ROLES, ADMIN_AND_MANAGER_ROLES } from "../types/auth";
 import type { RoleName } from "../types/auth";
 import { cn } from "../lib/utils";
+import { useSidebarCollapsed } from "../hooks/useSidebarLayout";
 
 interface SettingsMenuItem {
   id: string;
@@ -78,10 +79,12 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const { userRole } = useAuth();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mainSidebarCollapsed = useSidebarCollapsed();
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem(SETTINGS_COLLAPSED_KEY);
     return saved === "true";
   });
+  const bothRailsCollapsed = mainSidebarCollapsed && isCollapsed;
   const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
     loadCollapsedSectionIds,
   );
@@ -90,6 +93,11 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     const newValue = !isCollapsed;
     setIsCollapsed(newValue);
     localStorage.setItem(SETTINGS_COLLAPSED_KEY, String(newValue));
+    window.dispatchEvent(
+      new CustomEvent("settingsSidebarCollapse", {
+        detail: { collapsed: newValue },
+      }),
+    );
   };
 
   const toggleSectionOpen = (sectionId: string) => {
@@ -418,7 +426,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
             /* Match parent row height (inside main), not 100dvh — dvh was taller than the scroll
                port and clipped the collapse footer on tablet / devtools iPad frames. */
             "md:flex md:min-h-0 md:h-full md:max-h-full md:self-stretch",
-            isCollapsed ? "w-20" : "w-80",
+            isCollapsed ? (bothRailsCollapsed ? "w-16" : "w-20") : "w-80",
           )}
         >
           {/* Header */}
