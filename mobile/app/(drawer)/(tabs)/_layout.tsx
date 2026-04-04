@@ -131,36 +131,40 @@ export default function TabsLayout() {
           const tabCfg = tabs.find((t) => t.name === screenName);
           const isVisible = visibleTabs.has(screenName);
 
+          const title = tabCfg?.title ?? screenName;
+          const a11yLabel = `Switch to ${title.toLowerCase()} tab`;
+
           return (
             <Tabs.Screen
               key={screenName}
               name={screenName}
               options={{
-                title: tabCfg?.title ?? screenName,
-                href: isVisible ? undefined : null,
-                tabBarIcon: tabCfg
-                  ? ({ color }) => (
-                      <TabIcon
-                        name={tabCfg.icon}
-                        color={color}
-                      />
-                    )
-                  : undefined,
-                tabBarAccessibilityLabel: `Switch to ${(tabCfg?.title ?? screenName).toLowerCase()} tab`,
-                tabBarButton: (props) => {
-                  const { accessibilityState, ref: _ignoredRef, ...buttonProps } = props as any;
-                  return (
-                    <Pressable
-                      {...buttonProps}
-                      accessibilityRole="tab"
-                      accessibilityLabel={`Switch to ${(tabCfg?.title ?? screenName).toLowerCase()} tab`}
-                      accessibilityState={{
-                        ...accessibilityState,
-                        selected: Boolean(accessibilityState?.selected),
-                      }}
-                    />
-                  );
-                },
+                title,
+                // Expo Router: `href` and `tabBarButton` cannot be used on the same screen.
+                ...(isVisible
+                  ? {
+                      tabBarIcon: tabCfg
+                        ? ({ color }) => (
+                            <TabIcon name={tabCfg.icon} color={color} />
+                          )
+                        : undefined,
+                      tabBarAccessibilityLabel: a11yLabel,
+                      tabBarButton: (props) => {
+                        const { accessibilityState, ref: _ignoredRef, ...buttonProps } = props as any;
+                        return (
+                          <Pressable
+                            {...buttonProps}
+                            accessibilityRole="tab"
+                            accessibilityLabel={a11yLabel}
+                            accessibilityState={{
+                              ...accessibilityState,
+                              selected: Boolean(accessibilityState?.selected),
+                            }}
+                          />
+                        );
+                      },
+                    }
+                  : { href: null }),
               }}
             />
           );

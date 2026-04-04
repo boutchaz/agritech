@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useChatHistory, useClearChatHistory, useStreamMessage } from '@/hooks/useChat';
@@ -13,7 +13,6 @@ import { AssistantMessage } from './AssistantMessage';
 import { ChatInput } from './ChatInput';
 import { WelcomeState } from './WelcomeState';
 import { FollowUpSuggestions } from './FollowUpSuggestions';
-import { sanitizeMarkdownHtml } from '@/lib/sanitize';
 import { AiQuotaExceededModal, useAiQuotaError } from '@/components/ai/AiQuotaExceededModal';
 
 interface ChatMessage {
@@ -22,6 +21,7 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   suggestions?: string[];
+  image?: string;
 }
 
 export function ChatInterface() {
@@ -53,6 +53,7 @@ export function ChatInterface() {
   const { quotaError, handleError: handleQuotaError, closeModal: closeQuotaModal } = useAiQuotaError();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | undefined>();
   const [voiceMode, setVoiceMode] = useState(false);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
@@ -105,29 +106,40 @@ export function ChatInterface() {
     // Pages: index 0 = latest page, previous pages are prepended
     // We need to combine them in chronological order
     const pages = [...historyData.pages].reverse();
-    for (const page of pages) {
-      for (const m of page.messages) {
-        allMessages.push({
-          id: m.id,
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-          timestamp: new Date(m.timestamp),
-          suggestions: m.suggestions,
-        });
+      for (const page of pages) {
+        for (const m of page.messages) {
+          allMessages.push({
+            id: m.id,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: new Date(m.timestamp),
+            suggestions: m.suggestions,
+          });
+        }
       }
-    }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: sync server history into local state
-    setMessages((prev) => {
-      // Keep local-only messages (sent but not yet in server history)
-      const localOnly = prev.filter((lm) =>
-        !allMessages.some((h) =>
-          h.content === lm.content && h.role === lm.role &&
-          Math.abs(lm.timestamp.getTime() - h.timestamp.getTime()) < 5000
-        )
-      );
-      return [...allMessages, ...localOnly];
-    });
+      setMessages((prev) => {
+        const withImages = allMessages.map((historyMessage) => {
+          const matchingLocalImage = prev.find((localMessage) =>
+            localMessage.role === 'user' &&
+            !!localMessage.image &&
+            localMessage.content === historyMessage.content &&
+            Math.abs(localMessage.timestamp.getTime() - historyMessage.timestamp.getTime()) < 5000,
+          )?.image;
+
+          return matchingLocalImage ? { ...historyMessage, image: matchingLocalImage } : historyMessage;
+        });
+
+        // Keep local-only messages (sent but not yet in server history)
+        const localOnly = prev.filter((lm) =>
+          !withImages.some((h) =>
+            h.content === lm.content && h.role === lm.role &&
+            Math.abs(lm.timestamp.getTime() - h.timestamp.getTime()) < 5000
+          )
+        );
+        return [...withImages, ...localOnly];
+      });
   }, [historyData]);
 
   // Initial scroll to bottom once history loads
@@ -152,6 +164,8 @@ export function ChatInterface() {
 
   // Auto-scroll on new messages / streaming (only if user is near bottom)
   useEffect(() => {
+    void messages.length;
+    void streamedContent;
     if (shouldAutoScroll) {
       requestAnimationFrame(() => scrollToBottom());
     }
@@ -203,6 +217,7 @@ export function ChatInterface() {
 
   // Replace placeholder with final content
   useEffect(() => {
+    void messages.length;
     setMessages((prev) => {
       const idx = prev.findIndex((m) => m.content === '__STREAM_COMPLETE__');
       if (idx === -1) return prev;
@@ -228,18 +243,20 @@ export function ChatInterface() {
   }, [voiceMode, handleQuotaError]);
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setMessages/setInput/setShouldAutoScroll are stable React setters
-  const proceedWithSend = useCallback((messageText: string) => {
+  const proceedWithSend = useCallback((messageText: string, image?: string) => {
     // Always auto-scroll when user sends a message
     setShouldAutoScroll(true);
-    setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', content: messageText, timestamp: new Date(), image }]);
     setInput('');
+    setSelectedImage(undefined);
     if (voiceMode) resetTranscript();
     resetStream();
 
     streamMessage(
-      { query: messageText, language: currentLanguage, save_history: true },
+      { query: messageText, language: currentLanguage, save_history: true, image },
       (metadata) => {
-        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: '__STREAM_COMPLETE__', timestamp: new Date(metadata.timestamp), suggestions: metadata.suggestions }]);
+        const typedMetadata = metadata as { timestamp: string; suggestions?: string[] };
+        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: '__STREAM_COMPLETE__', timestamp: new Date(typedMetadata.timestamp), suggestions: typedMetadata.suggestions }]);
         if (voiceMode && !isListening) {
           setTimeout(() => { resetTranscript(); lastSentTranscriptRef.current = ''; startListening(); }, browserTTS.isSpeaking || zaiTTS.isPlaying ? 2000 : 1000);
         }
@@ -250,9 +267,9 @@ export function ChatInterface() {
 
   const handleSend = () => {
     const trimmed = input.trim();
-    if (!trimmed || isSending) return;
+    if ((!trimmed && !selectedImage) || isSending) return;
     if (isListening) stopListening();
-    proceedWithSend(trimmed);
+    proceedWithSend(trimmed || t('chat.analyzingImage', 'Analyzing image...'), selectedImage);
   };
 
   // Voice mode auto-send
@@ -307,7 +324,7 @@ export function ChatInterface() {
   }, [messages, streamSuggestions]);
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between py-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <Bot className="w-5 h-5" />
@@ -358,15 +375,16 @@ export function ChatInterface() {
 
               {messages.map((message) =>
                 message.role === 'user' ? (
-                  <UserMessage
-                    key={message.id}
-                    content={message.content}
-                    timestamp={message.timestamp}
-                    avatarUrl={profile?.avatar_url}
-                    firstName={profile?.first_name}
-                    lastName={profile?.last_name}
-                    email={user?.email}
-                  />
+                    <UserMessage
+                      key={message.id}
+                      content={message.content}
+                      timestamp={message.timestamp}
+                      image={message.image}
+                      avatarUrl={profile?.avatar_url ?? undefined}
+                      firstName={profile?.first_name ?? undefined}
+                      lastName={profile?.last_name ?? undefined}
+                      email={user?.email}
+                    />
                 ) : (
                   <AssistantMessage
                     key={message.id}
@@ -378,15 +396,16 @@ export function ChatInterface() {
               )}
 
               {isStreaming && streamedContent && (
-                <div className="flex gap-3 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
-                    <div className="text-sm chat-markdown" dangerouslySetInnerHTML={{ __html: sanitizeMarkdownHtml(streamedContent) }} />
-                    <div className="flex items-center gap-1 mt-1">
+                <div className="space-y-2">
+                  <AssistantMessage
+                    content={streamedContent}
+                    timestamp={new Date()}
+                    language={currentLanguage}
+                  />
+                  <div className="flex gap-3 justify-start pl-11">
+                    <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                       <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">{t('chat.loading.generating', 'Generating...')}</span>
+                      <span className="text-xs text-muted-foreground">{selectedImage ? t('chat.analyzingImage', 'Analyzing image...') : t('chat.loading.generating', 'Generating...')}</span>
                     </div>
                   </div>
                 </div>
@@ -399,7 +418,7 @@ export function ChatInterface() {
                   </div>
                   <div className="bg-muted rounded-lg px-4 py-2 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm text-muted-foreground animate-pulse">{t('chat.loading.analyzing', 'Analyzing your question...')}</span>
+                    <span className="text-sm text-muted-foreground animate-pulse">{selectedImage ? t('chat.analyzingImage', 'Analyzing image...') : t('chat.loading.analyzing', 'Analyzing your question...')}</span>
                   </div>
                 </div>
               )}
@@ -455,6 +474,8 @@ export function ChatInterface() {
           value={input}
           onChange={setInput}
           onSend={handleSend}
+          image={selectedImage}
+          onImageChange={setSelectedImage}
           isLoading={isSending}
           voiceMode={voiceMode}
           isListening={isListening}

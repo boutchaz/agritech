@@ -24,7 +24,7 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <>
+    <div className="flex min-h-0 w-full flex-1 flex-col">
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
@@ -35,12 +35,12 @@ const ChatPage: React.FC = () => {
         subtitle={t('chat.subtitle', 'Ask questions about your farm, workers, accounting, and more')}
       />
 
-      <div className="p-3 sm:p-4 lg:p-6">
-        <div className="max-w-4xl mx-auto" style={{ height: 'calc(100vh - 12rem)' }}>
+      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 lg:p-6">
+        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col">
           <ChatInterface />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
