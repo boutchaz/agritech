@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
  * Users can upgrade or downgrade at any time
  */
 export const ExperienceLevelSelector: React.FC = () => {
-  const { level: currentLevel, setLevel, config } = useExperienceLevel();
+  const { level: currentLevel, setLevel } = useExperienceLevel();
   const { t } = useTranslation();
   const [selectedLevel, setSelectedLevel] = React.useState(currentLevel);
   const [isSaving, setIsSaving] = React.useState(false);

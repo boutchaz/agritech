@@ -10,6 +10,7 @@ import {
   Loader2,
   LandPlot,
   RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -31,6 +32,9 @@ import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
 import { subscriptionsService } from '@/services/subscriptionsService';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 const SubscriptionSettings: React.FC = () => {
   const { data: subscription, isLoading } = useSubscription();

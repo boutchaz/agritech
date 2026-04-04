@@ -15,13 +15,10 @@ import {
   Edit2,
   Trash2,
   Check,
-  X,
   Search,
   Filter,
   BarChart3,
   Boxes,
-  Loader2,
-  AlertCircle,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -32,13 +29,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { workUnitsApi } from '@/lib/api/work-units';
 import { SectionLoader } from '@/components/ui/loader';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 import type {

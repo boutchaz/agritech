@@ -3,7 +3,7 @@ import {
   Check, X, Boxes, Lock, ExternalLink, Loader2, AlertCircle,
   TreeDeciduous, Droplets, Waves, Sprout, Flower2, Fish,
   Bird, ChevronDown, ChevronRight, Wheat,
-  Settings2,
+  Settings2, ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import TreeManagement from './TreeManagement';
@@ -16,6 +16,9 @@ import type { OrganizationModule } from '../lib/api/modules';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 // Icon mapping for activity modules
 const MODULE_ICONS: Record<string, LucideIcon> = {

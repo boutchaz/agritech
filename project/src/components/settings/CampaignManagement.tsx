@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Pause,
   AlertCircle,
-  TrendingUp,
   Leaf,
 } from 'lucide-react';
 
