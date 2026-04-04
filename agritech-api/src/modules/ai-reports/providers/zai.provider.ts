@@ -13,7 +13,7 @@ import {
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-  private readonly defaultModel = 'GLM-4.5-Flash';
+  private readonly defaultModel = 'GLM-4.7-Flash';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.ZAI);

@@ -13,6 +13,7 @@ import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { ConversationService } from './conversation/conversation.service';
 import { AgromindiaContextService } from './context/agromindia-context.service';
 import { FollowUpService } from './prompt/follow-up.service';
+import { StructuredResponseService } from './prompt/structured-response.service';
 import { AiQuotaModule } from '../ai-quota/ai-quota.module';
 import { AiDiagnosticsModule } from '../ai-diagnostics/ai-diagnostics.module';
 import { AiRecommendationsModule } from '../ai-recommendations/ai-recommendations.module';
@@ -40,6 +41,7 @@ import { CalibrationModule } from '../calibration/calibration.module';
     ConversationService,
     AgromindiaContextService,
     FollowUpService,
+    StructuredResponseService,
     ZaiProvider,
     ZaiTTSProvider,
     WeatherProvider,

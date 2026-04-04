@@ -100,21 +100,32 @@ export class PromptBuilderService {
 - Use referential NPK formulas and BBCH stages when available — do NOT make up dosages.
 - Reference the annual plan interventions (upcoming, overdue) as actionable items.
 
-**Structured Data Cards:**
-When presenting structured data, use code blocks with the format \\\`\\\`\\\`json:TYPE where TYPE is one of:
-- \`recommendation-card\` — for recommendations: {"constat":"...", "diagnostic":"...", "action":"...", "priority":"high|medium|low", "valid_from":"...", "valid_until":"..."}
-- \`diagnostic-card\` — for diagnostics: {"scenario_code":"A-H", "scenario":"...", "confidence":0.85, "zone_classification":"optimal|normal|stressed"}
-- \`farm-summary\` — for farm overview: {"farms_count":N, "parcels_count":N, "workers_count":N, "pending_tasks":N}
-- \`plan-calendar\` — for annual plan: {"upcoming":[{"month":N, "intervention_type":"...", "description":"...", "status":"planned"}], "overdue":[...], "summary":{"total":N, "executed":N, "planned":N}}
-- \`stock-alert\` — for low stock: {"items":[{"item_name":"...", "current_quantity":N, "min_quantity":N, "unit":"..."}]}
-- \`financial-snapshot\` — for finance: {"revenue":N, "expenses":N, "currency":"MAD", "period":"..."}
+**Structured JSON Output:**
+Return ONE valid JSON object with this schema:
+\`\`\`json
+{
+  "text": "The main response text with markdown formatting...",
+  "suggestions": ["Follow-up question 1", "Follow-up question 2", "Follow-up question 3"],
+  "data_cards": [
+    {"type": "recommendation-card", "data": {"constat": "...", "diagnostic": "...", "action": "...", "priority": "high"}},
+    {"type": "farm-summary", "data": {"farms_count": 5, "parcels_count": 12}}
+  ]
+}
+\`\`\`
 
-Use these cards when presenting recommendations, diagnostics, plans, summaries, stock alerts, or financial data. Mix text and cards naturally.
-
-**Follow-Up Suggestions:**
-At the end of EVERY response, append exactly this block:
----SUGGESTIONS---
-["suggestion 1", "suggestion 2", "suggestion 3"]
+- The \`text\` field contains the main response and may use markdown.
+- The \`suggestions\` field must contain 2-3 contextual follow-up questions in the same language as the reply.
+- The \`data_cards\` field replaces inline card code blocks and must be an array of objects with shape \`{ "type": string, "data": object }\`.
+- Only use these supported \`data_cards.type\` values:
+  * \`recommendation-card\` — {"constat":"...", "diagnostic":"...", "action":"...", "priority":"high|medium|low", "valid_from":"...", "valid_until":"..."}
+  * \`diagnostic-card\` — {"scenario_code":"A-H", "scenario":"...", "confidence":0.85, "zone_classification":"optimal|normal|stressed"}
+  * \`farm-summary\` — {"farms_count":N, "parcels_count":N, "workers_count":N, "pending_tasks":N}
+  * \`plan-calendar\` — {"upcoming":[{"month":N, "intervention_type":"...", "description":"...", "status":"planned"}], "overdue":[...], "summary":{"total":N, "executed":N, "planned":N}}
+  * \`stock-alert\` — {"items":[{"item_name":"...", "current_quantity":N, "min_quantity":N, "unit":"..."}]}
+  * \`financial-snapshot\` — {"revenue":N, "expenses":N, "currency":"MAD", "period":"..."}
+- Use \`data_cards\` when presenting recommendations, diagnostics, plans, summaries, stock alerts, or financial data.
+- Do NOT use the old \`---SUGGESTIONS---\` marker.
+- Do NOT wrap the full response in markdown code fences.
 
 Generate 2-3 contextual follow-up questions the user might want to ask next. Make them specific to the conversation topic and the user's farm data. Write them in the same language the user is using.
 - Compare current indices against calibration baselines when available.
@@ -124,7 +135,9 @@ Generate 2-3 contextual follow-up questions the user might want to ask next. Mak
 - You MUST reply in the EXACT language specified in the user prompt's language instruction.
 - Supported languages: English (en), French (fr), Arabic (ar).
 - Your ENTIRE response must be in that language — do not mix languages.
-- If the user writes in a different language than the one specified, still respond in the specified language.`;
+- If the user writes in a different language than the one specified, still respond in the specified language.
+
+You MUST respond with valid JSON matching the specified schema.`;
   }
 
   buildUserPrompt(

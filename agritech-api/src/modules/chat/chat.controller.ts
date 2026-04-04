@@ -37,8 +37,8 @@ export class ChatController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Send chat message and get AI response',
-    description:
-      'Queries all modules and provides intelligent responses using Z.ai GLM-4.5-Flash model',
+      description:
+        'Queries all modules and provides intelligent responses using Z.ai GLM-4.7-Flash model',
   })
   @ApiParam({
     name: 'organizationId',

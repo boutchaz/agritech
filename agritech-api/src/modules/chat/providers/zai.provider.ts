@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import * as jwt from 'jsonwebtoken';
@@ -13,7 +13,7 @@ import {
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-  private readonly defaultModel = 'GLM-4.5-Flash';
+  private readonly defaultModel = 'GLM-4.7-Flash';
 
   constructor(configService: ConfigService) {
     super(configService, 'zai' as AIProvider);
@@ -125,6 +125,7 @@ export class ZaiProvider extends BaseAIProvider {
               messages: this.buildMessages(request.systemPrompt, request.userPrompt),
               temperature: request.config.temperature ?? 0.7,
               max_tokens: request.config.maxTokens ?? 8192,
+              response_format: { type: 'json_object' },
             },
             {
               headers: {
@@ -160,11 +161,6 @@ export class ZaiProvider extends BaseAIProvider {
       });
     }
 
-    /**
-     * Generate response with simulated streaming
-     * Splits the full response into words and yields them with delays
-     * for a more natural streaming experience
-     */
     async generateStream(request: {
       systemPrompt: string;
       userPrompt: string;
@@ -174,30 +170,165 @@ export class ZaiProvider extends BaseAIProvider {
       onError: (error: Error) => void;
     }): Promise<void> {
       try {
-        // Use existing generate() to get full response
-        const response = await this.generate({
-          systemPrompt: request.systemPrompt,
-          userPrompt: request.userPrompt,
-          config: request.config,
-        });
+        const model = request.config.model || this.defaultModel;
+        const apiKey = this.getEffectiveApiKey();
 
-        // Simulate streaming by splitting into words
-        const words = response.content.split(' ');
-
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          // Add space after word except for the last word
-          const token = i < words.length - 1 ? word + ' ' : word;
-
-          // Emit token
-          request.onToken(token);
-
-          // Delay between words for realistic streaming (50ms = ~20 words per second)
-          await new Promise(resolve => setTimeout(resolve, 50));
+        if (!this.validateConfig()) {
+          throw new Error('Z.ai API key is not configured');
         }
 
-        // Streaming complete
-        request.onComplete();
+        this.logger.log(`Streaming with Z.ai model: ${model}`);
+
+        const response = await this.retryWithBackoff(async () => {
+          try {
+            return await axios.post(
+              this.apiUrl,
+              {
+                model,
+                messages: this.buildMessages(request.systemPrompt, request.userPrompt),
+                temperature: request.config.temperature ?? 0.7,
+                max_tokens: request.config.maxTokens ?? 8192,
+                stream: true,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                timeout: 180000,
+                responseType: 'stream',
+              },
+            );
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              const errorMessage = (error as AxiosError).response?.data
+                ? JSON.stringify((error as AxiosError).response?.data)
+                : error.message;
+              this.logger.error(`Z.ai streaming API error: ${errorMessage}`);
+              throw new Error(`Z.ai streaming API error: ${errorMessage}`);
+            }
+
+            throw error;
+          }
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          const stream = response.data as NodeJS.ReadableStream;
+          let buffer = '';
+          let isSettled = false;
+          let isComplete = false;
+
+          const cleanup = () => {
+            stream.removeListener('data', onData);
+            stream.removeListener('end', onEnd);
+            stream.removeListener('error', onStreamError);
+          };
+
+          const finishSuccess = () => {
+            if (isSettled) {
+              return;
+            }
+
+            isSettled = true;
+            isComplete = true;
+            cleanup();
+            request.onComplete();
+            resolve();
+          };
+
+          const finishError = (error: Error) => {
+            if (isSettled) {
+              return;
+            }
+
+            isSettled = true;
+            cleanup();
+            reject(error);
+          };
+
+          const processSseLine = (line: string) => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine.startsWith('data:')) {
+              return;
+            }
+
+            const data = trimmedLine.slice(5).trim();
+            if (!data) {
+              return;
+            }
+
+            if (data === '[DONE]') {
+              finishSuccess();
+              return;
+            }
+
+            let parsed: any;
+            try {
+              parsed = JSON.parse(data);
+            } catch (error) {
+              finishError(new Error(`Failed to parse Z.ai stream chunk: ${error instanceof Error ? error.message : String(error)}`));
+              return;
+            }
+
+            if (parsed.error) {
+              const message = typeof parsed.error === 'string'
+                ? parsed.error
+                : parsed.error.message || JSON.stringify(parsed.error);
+              finishError(new Error(`Z.ai stream error: ${message}`));
+              return;
+            }
+
+            if (Array.isArray(parsed.choices) && parsed.choices.length === 0 && parsed.finish_reason === 'stop') {
+              finishSuccess();
+              return;
+            }
+
+            const token = parsed.choices?.[0]?.delta?.content;
+            if (typeof token === 'string' && token.length > 0) {
+              request.onToken(token);
+            }
+          };
+
+          const onData = (chunk: Buffer | string) => {
+            if (isSettled) {
+              return;
+            }
+
+            buffer += chunk.toString();
+            const lines = buffer.split(/\r?\n/);
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              processSseLine(line);
+              if (isSettled) {
+                return;
+              }
+            }
+          };
+
+          const onEnd = () => {
+            if (isSettled) {
+              return;
+            }
+
+            if (buffer.trim()) {
+              processSseLine(buffer);
+              buffer = '';
+            }
+
+            if (!isComplete && !isSettled) {
+              finishError(new Error('Z.ai stream ended unexpectedly before completion'));
+            }
+          };
+
+          const onStreamError = (error: Error) => {
+            finishError(new Error(`Z.ai stream interrupted: ${error.message}`));
+          };
+
+          stream.on('data', onData);
+          stream.on('end', onEnd);
+          stream.on('error', onStreamError);
+        });
       } catch (error) {
         this.logger.error(`Streaming failed: ${error.message}`, error.stack);
         request.onError(error instanceof Error ? error : new Error(String(error)));

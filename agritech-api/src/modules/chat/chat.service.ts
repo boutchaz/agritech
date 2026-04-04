@@ -13,6 +13,7 @@ import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { ConversationService } from './conversation/conversation.service';
 import { AgromindiaContextService } from './context/agromindia-context.service';
 import { FollowUpService } from './prompt/follow-up.service';
+import { StructuredResponseService } from './prompt/structured-response.service';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
 
 @Injectable()
@@ -28,6 +29,7 @@ export class ChatService implements OnModuleInit {
     private readonly conversationService: ConversationService,
     private readonly agromindiaContextService: AgromindiaContextService,
     private readonly followUpService: FollowUpService,
+    private readonly structuredResponseService: StructuredResponseService,
     private readonly aiQuotaService: AiQuotaService,
   ) {
     this.zaiProvider = new ZaiProvider(configService);
@@ -94,7 +96,7 @@ export class ChatService implements OnModuleInit {
         userPrompt,
         config: {
           provider: 'zai' as any,
-          model: 'GLM-4.5-Flash',
+          model: 'GLM-4.7-Flash',
           temperature: 0.7,
           maxTokens: 8192,
         },
@@ -112,8 +114,14 @@ export class ChatService implements OnModuleInit {
       // Log AI usage (fire-and-forget)
       this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', response.model, response.tokensUsed, false).catch(() => {});
 
-      // Parse follow-up suggestions from response
-      const { cleanText, suggestions } = this.followUpService.parseSuggestions(response.content);
+      const structuredResponse = this.structuredResponseService.parseStructuredResponse(response.content);
+      const fallbackResponse =
+        structuredResponse.text === response.content && structuredResponse.suggestions.length === 0
+          ? this.followUpService.parseSuggestions(response.content)
+          : null;
+
+      const cleanText = fallbackResponse?.cleanText ?? structuredResponse.text;
+      const suggestions = fallbackResponse?.suggestions ?? structuredResponse.suggestions;
 
       if (shouldSaveHistory) {
         await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
@@ -215,7 +223,7 @@ export class ChatService implements OnModuleInit {
       userPrompt,
       config: {
         provider: 'zai' as any,
-        model: 'GLM-4.5-Flash',
+          model: 'GLM-4.7-Flash',
         temperature: 0.7,
         maxTokens: 8192,
       },
@@ -228,18 +236,18 @@ export class ChatService implements OnModuleInit {
         const { cleanText, suggestions } = this.followUpService.parseSuggestions(fullResponse);
 
         // Log AI usage (fire-and-forget)
-        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', 'GLM-4.5-Flash', null, false).catch(() => {});
+        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', 'GLM-4.7-Flash', null, false).catch(() => {});
 
         if (shouldSaveHistory) {
           await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
             provider: 'zai',
-            model: 'GLM-4.5-Flash',
+            model: 'GLM-4.7-Flash',
             streamed: true,
           });
         }
         callbacks.onComplete({
           provider: 'zai',
-          model: 'GLM-4.5-Flash',
+          model: 'GLM-4.7-Flash',
           timestamp: new Date(),
           suggestions,
         });
