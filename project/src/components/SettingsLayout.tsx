@@ -409,13 +409,15 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     ));
 
   return (
-    <div className="relative flex min-h-0 w-full flex-1 flex-col bg-slate-50/50 dark:bg-slate-900/50 md:flex-row md:overflow-hidden">
+    <div className="relative flex min-h-0 h-full min-w-0 w-full flex-1 flex-col bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
       {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
             "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-100 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
-            "md:flex md:h-[100dvh] md:max-h-[100dvh] md:min-h-0 md:sticky md:top-0 md:self-start",
+            /* Match parent row height (inside main), not 100dvh — dvh was taller than the scroll
+               port and clipped the collapse footer on tablet / devtools iPad frames. */
+            "md:flex md:min-h-0 md:h-full md:max-h-full md:self-stretch",
             isCollapsed ? "w-20" : "w-80",
           )}
         >
