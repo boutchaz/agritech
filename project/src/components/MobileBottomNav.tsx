@@ -209,7 +209,7 @@ const moreMenuItems: MoreMenuItem[] = [
     labelKey: "nav.settings",
     fallback: "Settings",
     icon: Settings,
-    path: "/settings/profile",
+    path: "/settings/account",
   },
 ];
 
@@ -234,6 +234,10 @@ const MobileBottomNav: React.FC = () => {
       (location.pathname === "/" || location.pathname === "/dashboard")
     ) {
       return true;
+    }
+    if (item.id === "settings") {
+      const p = location.pathname.replace(/\/$/, "") || "/";
+      return p === "/settings" || p.startsWith("/settings/");
     }
     return location.pathname.startsWith(item.path);
   };

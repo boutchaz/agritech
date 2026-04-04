@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 interface UserAvatarProps {
   src?: string | null;
@@ -19,6 +19,7 @@ const sizeMap: Record<AvatarSize, { container: string; text: string; icon: strin
   md: { container: 'w-10 h-10', text: 'text-sm', icon: 'h-5 w-5' },
   lg: { container: 'w-16 h-16', text: 'text-xl', icon: 'h-8 w-8' },
   xl: { container: 'w-24 h-24', text: 'text-2xl', icon: 'h-10 w-10' },
+  '2xl': { container: 'w-32 h-32', text: 'text-4xl', icon: 'h-12 w-12' },
 };
 
 function getInitials(firstName?: string | null, lastName?: string | null, email?: string | null): string {

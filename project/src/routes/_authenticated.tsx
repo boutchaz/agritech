@@ -114,7 +114,9 @@ function AuthenticatedLayout() {
   // Check if subscription is valid
   // Allow access to settings pages even without valid subscription
   const hasValidSubscription = isSubscriptionValid(subscription)
-  const isOnSettingsPage = window.location.pathname.includes('/settings/')
+  const settingsPath = window.location.pathname.replace(/\/$/, '') || '/'
+  const isOnSettingsPage =
+    settingsPath === '/settings' || settingsPath.startsWith('/settings/')
 
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {

@@ -70,7 +70,7 @@ const TOUR_ROUTES: Record<TourId, string> = {
   'accounting': '/accounting',
   'satellite': '/satellite-analysis',
   'reports': '/reports',
-  'settings': '/settings',
+  'settings': '/settings/account',
 };
 
 const tourStyles = {

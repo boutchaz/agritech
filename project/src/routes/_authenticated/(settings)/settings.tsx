@@ -1,5 +1,5 @@
 import React from 'react'
-import { createFileRoute, Outlet, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
@@ -67,5 +67,13 @@ const SettingsLayoutComponent: React.FC = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings')({
+  beforeLoad: ({ location }) => {
+    // Index lives at `/settings/`; `/settings` alone can leave the outlet empty or confuse the matcher.
+    const normalized =
+      location.pathname.replace(/\/$/, '') || '/'
+    if (normalized === '/settings') {
+      throw redirect({ to: '/settings/account', replace: true })
+    }
+  },
   component: SettingsLayoutComponent,
 })

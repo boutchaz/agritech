@@ -143,7 +143,7 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
         icon: <Settings className="h-4 w-4" />,
         shortcut: ['g', 't'],
         keywords: ['settings', 'organization'],
-        onSelect: () => navigate({ to: '/settings' }),
+        onSelect: () => navigate({ to: '/settings/account' }),
       },
     ],
     [navigate],

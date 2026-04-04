@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usersApi } from '@/lib/api/users';
-import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +67,33 @@ interface PasswordChangeData {
 }
 
 type TabId = 'profile' | 'preferences' | 'security';
+
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar', 'es']);
+
+/** Radix Select throws if value is not among SelectItems; API/i18n may send e.g. en-US */
+function normalizeProfileLanguage(lang: string | undefined, i18nFallback: string): string {
+  const match = (raw: string) => {
+    const lower = raw.toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(lower)) return lower;
+    const base = lower.split('-')[0];
+    return SUPPORTED_LANGUAGES.has(base) ? base : null;
+  };
+  return match(lang || '') || match(i18nFallback || '') || 'fr';
+}
+
+const SUPPORTED_TIMEZONES = new Set([
+  'UTC',
+  'Africa/Casablanca',
+  'Europe/Paris',
+  'Europe/Madrid',
+  'Africa/Tunis',
+  'Africa/Algiers',
+]);
+
+function normalizeProfileTimezone(tz: string | undefined): string {
+  if (tz && SUPPORTED_TIMEZONES.has(tz)) return tz;
+  return 'UTC';
+}
 
 const AccountSettings: React.FC = () => {
   const { user, currentOrganization, userRole } = useAuth();
@@ -147,7 +173,11 @@ const AccountSettings: React.FC = () => {
         const data = await usersApi.getMe();
 
         if (data) {
-          setProfile(data);
+          setProfile({
+            ...data,
+            language: normalizeProfileLanguage(data.language, i18n.language),
+            timezone: normalizeProfileTimezone(data.timezone),
+          });
           // Initialize notifications from profile if available
           if (data.notification_preferences) {
             setNotifications({
@@ -162,7 +192,7 @@ const AccountSettings: React.FC = () => {
             id: user.id,
             email: user.email,
             timezone: 'UTC',
-            language: i18n.language || 'fr',
+            language: normalizeProfileLanguage(undefined, i18n.language),
           });
         }
       } catch (err) {
@@ -174,8 +204,7 @@ const AccountSettings: React.FC = () => {
     };
 
     fetchProfile();
-   
-  }, [user?.id, i18n.language]);
+  }, [user, i18n.language, t]);
 
   // Handle language change — immediately apply + persist to DB
   const handleLanguageChange = async (newLanguage: string) => {
@@ -569,6 +598,12 @@ const AccountSettings: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {avatarError && (
+                    <p className="text-center text-xs font-medium text-rose-600 dark:text-rose-400 mb-4 max-w-xs px-2">
+                      {avatarError}
+                    </p>
+                  )}
 
                   <div className="text-center space-y-2 mb-8">
                     <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
