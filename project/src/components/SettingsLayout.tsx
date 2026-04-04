@@ -59,6 +59,18 @@ interface SettingsLayoutProps {
 }
 
 const SETTINGS_COLLAPSED_KEY = "settingsSidebarCollapsed";
+const SETTINGS_SECTIONS_COLLAPSED_KEY = "settingsSectionsCollapsed";
+
+function loadCollapsedSectionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(SETTINGS_SECTIONS_COLLAPSED_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
 
 const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
@@ -70,12 +82,35 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     const saved = localStorage.getItem(SETTINGS_COLLAPSED_KEY);
     return saved === "true";
   });
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
+    loadCollapsedSectionIds,
+  );
 
   const toggleCollapse = () => {
     const newValue = !isCollapsed;
     setIsCollapsed(newValue);
     localStorage.setItem(SETTINGS_COLLAPSED_KEY, String(newValue));
   };
+
+  const toggleSectionOpen = (sectionId: string) => {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      try {
+        localStorage.setItem(
+          SETTINGS_SECTIONS_COLLAPSED_KEY,
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const isSectionExpanded = (sectionId: string) =>
+    !collapsedSectionIds.has(sectionId);
 
   useEffect(() => {
     const mainEl = document.querySelector('[data-main-scroll]');
@@ -338,16 +373,38 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     visibleSections.map((section, sectionIndex) => (
       <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
         {!isCollapsed && (
-          <div className="px-3 mb-2 flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-              {section.label}
-            </span>
-            {sectionIndex === 0 && <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 ml-4 opacity-50" />}
+          <div className="px-3 mb-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSectionOpen(section.id)}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1.5 ps-0 pe-2 text-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
+              aria-expanded={isSectionExpanded(section.id)}
+            >
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200",
+                  !isSectionExpanded(section.id) && "-rotate-90",
+                )}
+              />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 truncate">
+                {section.label}
+              </span>
+            </button>
+            {sectionIndex === 0 && (
+              <div className="h-px min-w-[2rem] flex-1 bg-slate-100 dark:bg-slate-800 opacity-50" />
+            )}
           </div>
         )}
-        <div className={cn("space-y-1", isCollapsed && "flex flex-col items-center gap-2")}>
-          {section.items.map(renderItem)}
-        </div>
+        {(isCollapsed || isSectionExpanded(section.id)) && (
+          <div
+            className={cn(
+              "space-y-1",
+              isCollapsed && "flex flex-col items-center gap-2",
+            )}
+          >
+            {section.items.map(renderItem)}
+          </div>
+        )}
       </div>
     ));
 
@@ -357,7 +414,7 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
-            "hidden lg:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 transition-all duration-500 ease-in-out z-20",
+            "hidden md:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 transition-all duration-500 ease-in-out z-20 shrink-0",
             isCollapsed ? "w-20" : "w-80",
           )}
         >
@@ -423,11 +480,11 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
       {/* Main Content Area — extra bottom padding on small screens (global bottom nav + safe area) */}
       <div
-        className="flex-1 overflow-auto w-full flex flex-col min-h-0 min-w-0 bg-slate-50/30 dark:bg-slate-900/30 pb-[env(safe-area-inset-bottom,0px)] lg:pb-0"
+        className="flex-1 overflow-auto w-full flex flex-col min-h-0 min-w-0 bg-slate-50/30 dark:bg-slate-900/30 pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
         data-main-scroll
       >
         {/* Mobile section title bar */}
-        <div className="lg:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}

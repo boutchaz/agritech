@@ -58,7 +58,7 @@ const InlineFarmSelector: React.FC<InlineFarmSelectorProps> = ({
         </div>
         
         <div className="flex items-center gap-3">
-          <div className="hidden lg:flex flex-col items-end px-4 border-r border-slate-100 dark:border-slate-700">
+          <div className="hidden md:flex flex-col items-end px-4 border-r border-slate-100 dark:border-slate-700">
             <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Surface</span>
             <span className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums">{currentFarm.total_area?.toFixed(2) || '0.00'} HA</span>
           </div>

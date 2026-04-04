@@ -23,15 +23,15 @@ export function AuthenticatedLayoutSkeleton() {
         {/* ===== SIDEBAR SKELETON ===== */}
         <div
           className={cn(
-            'fixed inset-y-0 z-50 h-screen bg-white dark:bg-slate-900 flex-col hidden lg:flex',
+            'fixed inset-y-0 z-50 h-screen bg-white dark:bg-slate-900 flex-col hidden md:flex',
             'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             'border-slate-200 dark:border-slate-800',
-            isCollapsed ? 'lg:w-16' : 'w-64',
+            isCollapsed ? 'md:w-16' : 'w-64',
           )}
         >
           {/* Sidebar header / logo */}
-          <div className={cn('flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4', isCollapsed && 'lg:p-2')}>
+          <div className={cn('flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4', isCollapsed && 'md:p-2')}>
             <div className="flex items-center gap-2">
               <Skeleton className="h-8 w-8 rounded-lg flex-shrink-0" />
               {!isCollapsed && <Skeleton className="h-5 w-24" />}
@@ -108,11 +108,11 @@ export function AuthenticatedLayoutSkeleton() {
           className="flex flex-col h-screen transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
-          <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 lg:pb-0">
+          <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-16 md:pb-0">
             {/* ===== PAGE HEADER SKELETON ===== */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm">
               {/* Mobile header */}
-              <div className="lg:hidden">
+              <div className="md:hidden">
                 <div className="flex gap-2 py-2 px-3 items-center">
                   <Skeleton className="h-8 w-8 rounded" />
                   <div className="flex items-center gap-1.5 flex-1">
@@ -128,7 +128,7 @@ export function AuthenticatedLayoutSkeleton() {
               </div>
 
               {/* Desktop header */}
-              <div className="hidden lg:block">
+              <div className="hidden md:block">
                 <div className="px-4 sm:px-6 lg:px-8">
                   {/* Breadcrumbs row */}
                   <div className="flex items-center justify-between py-1.5">
@@ -234,7 +234,7 @@ export function AuthenticatedLayoutSkeleton() {
         </div>
 
         {/* ===== MOBILE BOTTOM NAV SKELETON ===== */}
-        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-around px-2 py-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex flex-col items-center gap-1 px-3 py-1">
