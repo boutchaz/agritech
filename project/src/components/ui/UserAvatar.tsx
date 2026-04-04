@@ -32,6 +32,11 @@ function getInitials(firstName?: string | null, lastName?: string | null, email?
   return '?';
 }
 
+function resolveSize(size: AvatarSize | undefined): AvatarSize {
+  if (size != null && size in sizeMap) return size;
+  return 'sm';
+}
+
 const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
   firstName,
@@ -41,7 +46,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   className,
 }) => {
   const [imgError, setImgError] = useState(false);
-  const s = sizeMap[size];
+  const s = sizeMap[resolveSize(size)];
   const showImage = src && !imgError;
 
   if (showImage) {
