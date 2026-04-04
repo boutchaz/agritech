@@ -18,6 +18,11 @@ export class SatelliteProxyService {
       this.configService.get<string>('INTERNAL_SERVICE_TOKEN') ?? ''
     ).trim();
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
+    this.logger.log(
+      this.internalServiceToken.length > 0
+        ? `Satellite proxy auth: INTERNAL_SERVICE_TOKEN loaded (${this.internalServiceToken.length} chars) — used for all outbound satellite requests`
+        : 'Satellite proxy auth: INTERNAL_SERVICE_TOKEN NOT SET — satellite calls use user JWT only; mismatch with FastAPI INTERNAL_SERVICE_TOKEN causes 401',
+    );
   }
 
   /**

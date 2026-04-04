@@ -20,6 +20,9 @@ from .api import (
 )
 from .core.config import settings
 from .middleware.auth import close_http_client
+import logging
+
+_startup_logger = logging.getLogger(__name__)
 
 
 class NormalizePathMiddleware(BaseHTTPMiddleware):
@@ -67,6 +70,17 @@ app.add_middleware(
 app.add_middleware(NormalizePathMiddleware)
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Log auth config without exposing secrets (length only)."""
+    t = (settings.INTERNAL_SERVICE_TOKEN or "").strip()
+    _startup_logger.info(
+        "INTERNAL_SERVICE_TOKEN: %s (char_length=%s)",
+        "loaded" if t else "NOT SET",
+        len(t),
+    )
+
+
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up shared resources on application shutdown."""
@@ -82,6 +96,18 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(calibration.router, prefix="/api/calibration", tags=["calibration"])
+
+
+@app.get("/health")
+async def health_probe():
+    """Alias for operators that probe `/health`. Canonical route: GET /api/health/."""
+    return {"status": "healthy", "version": settings.VERSION}
+
+
+@app.get("/ready")
+async def ready_probe():
+    """Alias for readiness probes. Canonical route: GET /api/health/ready."""
+    return {"ready": True}
 
 
 @app.get("/")

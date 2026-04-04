@@ -1,4 +1,4 @@
-from fastapi import HTTPException, Depends, Header
+from fastapi import HTTPException, Depends, Header, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 import asyncio
@@ -88,17 +88,50 @@ async def get_optional_user(
 
 
 async def get_current_user_or_service(
+    request: Request,
     authorization: Optional[str] = Header(None, alias="Authorization"),
 ) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
+        logger.warning(
+            "Satellite auth: missing or non-Bearer Authorization on %s %s "
+            "(use Supabase JWT or set INTERNAL_SERVICE_TOKEN on API + satellite and send it as Bearer)",
+            request.method,
+            request.url.path,
+        )
         raise HTTPException(status_code=401, detail="Not authenticated")
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
+        logger.warning(
+            "Satellite auth: empty Bearer token on %s %s",
+            request.method,
+            request.url.path,
+        )
         raise HTTPException(status_code=401, detail="Not authenticated")
     internal_expected = (settings.INTERNAL_SERVICE_TOKEN or "").strip()
     if internal_expected and token == internal_expected:
         return {"user": {"id": "internal-service"}, "token": token, "is_internal": True}
-    user = await verify_token_with_supabase(token)
+    try:
+        user = await verify_token_with_supabase(token)
+    except HTTPException:
+        if internal_expected:
+            logger.warning(
+                "Satellite auth: bearer token != INTERNAL_SERVICE_TOKEN (length sent=%s expected=%s) "
+                "and Supabase rejected it on %s %s — copy the exact same secret into api + satellite "
+                "or fix quotes/newlines in Dokploy env",
+                len(token),
+                len(internal_expected),
+                request.method,
+                request.url.path,
+            )
+        else:
+            logger.warning(
+                "Satellite auth: token rejected by Supabase on %s %s "
+                "(check JWT expiry and that SUPABASE_URL/ANON_KEY match the token issuer; "
+                "or set INTERNAL_SERVICE_TOKEN on satellite and send it from Nest)",
+                request.method,
+                request.url.path,
+            )
+        raise
     return {"user": user, "token": token}
 
 
