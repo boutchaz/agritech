@@ -318,6 +318,8 @@ export class SatelliteCacheService {
   startParcelSync(
     body: Record<string, unknown>,
     organizationId?: string,
+    /** User JWT for satellite when INTERNAL_SERVICE_TOKEN is unset on the API */
+    authToken?: string,
   ): ParcelSyncProgress {
     const parcelId = body.parcel_id as string;
     const farmId = body.farm_id as string | undefined;
@@ -367,6 +369,7 @@ export class SatelliteCacheService {
       indices,
       body,
       organizationId,
+      authToken,
     );
 
     return progress;
@@ -381,6 +384,7 @@ export class SatelliteCacheService {
     indices: string[],
     originalBody: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<void> {
     const progress = this.parcelSyncProgress.get(parcelId)!;
 
@@ -411,6 +415,7 @@ export class SatelliteCacheService {
             organizationId,
             undefined,
             300_000,
+            authToken,
           )) as Record<string, unknown>;
 
           const points = (result.data as TimeSeriesPoint[]) || [];
