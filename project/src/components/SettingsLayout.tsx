@@ -113,10 +113,10 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     !collapsedSectionIds.has(sectionId);
 
   useEffect(() => {
-    const mainEl = document.querySelector('[data-main-scroll]');
-    if (mainEl) {
-      mainEl.scrollTo({ top: 0 });
-    }
+    const el =
+      document.querySelector("[data-settings-content-scroll]") ??
+      document.querySelector("[data-main-scroll]");
+    el?.scrollTo({ top: 0 });
   }, [location.pathname]);
 
   // Define menu sections with grouped items
@@ -409,57 +409,93 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     ));
 
   return (
-    <div className="flex h-full relative bg-slate-50/50 dark:bg-slate-900/50">
-      {/* Desktop Settings Sidebar */}
+    <div className="relative flex min-h-0 w-full flex-1 flex-col bg-slate-50/50 dark:bg-slate-900/50 md:flex-row md:overflow-hidden">
+      {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
       <TooltipProvider delayDuration={200}>
         <div
           className={cn(
-            "hidden md:flex flex-col bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 transition-all duration-500 ease-in-out z-20 shrink-0",
+            "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-100 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
+            "md:flex md:h-[100dvh] md:max-h-[100dvh] md:min-h-0 md:sticky md:top-0 md:self-start",
             isCollapsed ? "w-20" : "w-80",
           )}
         >
           {/* Header */}
-          <div className={cn("flex-shrink-0 p-6", isCollapsed && "px-4")}>
+          <div className={cn("flex-shrink-0 p-4 pt-5 sm:p-6", isCollapsed && "px-3")}>
             {isCollapsed ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate({ to: "/dashboard" })}
-                className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-emerald-600 transition-all"
-              >
-                <Home className="h-5 w-5" />
-              </Button>
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate({ to: "/dashboard" })}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-400 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:hover:text-emerald-400"
+                  aria-label={t("settings.backToDashboard", "Return to Dashboard")}
+                >
+                  <Home className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-400 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:hover:text-emerald-400"
+                  aria-label={t("sidebar.expand", "Expand sidebar")}
+                >
+                  <PanelLeft className="h-5 w-5" />
+                </Button>
+              </div>
             ) : (
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl border border-emerald-100 dark:border-emerald-800">
-                  <Menu className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 dark:border-emerald-800 dark:bg-emerald-900/30 sm:p-3">
+                    <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400 sm:h-6 sm:w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg font-black uppercase leading-none tracking-tight text-slate-900 dark:text-white sm:text-xl">
+                      {t("settings.title")}
+                    </h1>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Workspace Management
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase leading-none">
-                    {t("settings.title")}
-                  </h1>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">
-                    Workspace Management
-                  </p>
-                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-10 w-10 shrink-0 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  aria-label={t("sidebar.collapse", "Collapse sidebar")}
+                >
+                  <PanelLeftClose className="h-5 w-5" />
+                </Button>
               </div>
             )}
           </div>
 
-          <Separator className="mx-6 w-auto opacity-50" />
+          <Separator
+            className={cn("w-auto opacity-50", isCollapsed ? "mx-3" : "mx-6")}
+          />
 
           {/* Navigation */}
-          <nav className={cn("flex-1 overflow-y-auto no-scrollbar py-6", isCollapsed ? "px-4" : "px-4")} data-tour="settings-menu">
+          <nav
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto py-4 no-scrollbar sm:py-6",
+              isCollapsed ? "px-3" : "px-4",
+            )}
+            data-tour="settings-menu"
+          >
             {renderSections()}
           </nav>
 
-          {/* Collapse Toggle */}
-          <div className="p-4 mt-auto">
+          {/* Collapse Toggle (duplicate control for mouse users) */}
+          <div className="flex-shrink-0 border-t border-slate-100 p-3 dark:border-slate-800 sm:p-4">
             <Button
+              type="button"
               variant="ghost"
               className={cn(
-                "w-full h-12 rounded-2xl text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-all",
-                isCollapsed ? "justify-center px-0" : "justify-start px-4",
+                "h-11 w-full rounded-2xl text-slate-400 transition-all hover:bg-slate-50 hover:text-slate-900 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:h-12",
+                isCollapsed ? "justify-center px-0" : "justify-start px-3 sm:px-4",
               )}
               onClick={toggleCollapse}
             >
@@ -467,8 +503,8 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                 <PanelLeft className="h-5 w-5" />
               ) : (
                 <>
-                  <PanelLeftClose className="h-5 w-5 mr-3 shrink-0" />
-                  <span className="text-[11px] font-black uppercase tracking-widest truncate">
+                  <PanelLeftClose className="mr-2 h-5 w-5 shrink-0 sm:mr-3" />
+                  <span className="truncate text-[10px] font-black uppercase tracking-widest sm:text-[11px]">
                     {t("sidebar.collapse", "Collapse Sidebar")}
                   </span>
                 </>
@@ -478,10 +514,10 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
         </div>
       </TooltipProvider>
 
-      {/* Main Content Area — extra bottom padding on small screens (global bottom nav + safe area) */}
+      {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex-1 overflow-auto w-full flex flex-col min-h-0 min-w-0 bg-slate-50/30 dark:bg-slate-900/30 pb-[env(safe-area-inset-bottom,0px)] md:pb-0"
-        data-main-scroll
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
+        data-settings-content-scroll
       >
         {/* Mobile section title bar */}
         <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">

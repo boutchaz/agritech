@@ -25,7 +25,10 @@ const SettingsLayoutComponent: React.FC = () => {
   }
 
   return (
-    <PageLayout activeModule="settings">
+    <PageLayout
+      activeModule="settings"
+      className="min-h-0 flex-1 flex-col overflow-hidden"
+    >
       {/* Mobile-optimized header */}
       <div className="sticky top-0 z-30 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between gap-4">
