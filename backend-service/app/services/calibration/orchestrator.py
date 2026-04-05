@@ -191,9 +191,7 @@ def run_calibration_pipeline(
 
     from .step2a_signal_classification import classify_signal
 
-    signal_classification = classify_signal(
-        step1, step2, calibration_input.crop_type
-    )
+    signal_classification = classify_signal(step1, step2, calibration_input.crop_type)
 
     step3 = calculate_percentiles(
         step1,
@@ -227,6 +225,9 @@ def run_calibration_pipeline(
         harvest_records=calibration_input.harvest_records,
         maturity_phase=maturity_phase,
         satellite_data=step1,
+        plant_count=calibration_input.plant_count,
+        area_hectares=calibration_input.area_hectares,
+        density_per_hectare=calibration_input.density_per_hectare,
     )
 
     ndvi_points = step1.index_time_series.get("NDVI", [])

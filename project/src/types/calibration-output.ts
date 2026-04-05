@@ -67,6 +67,7 @@ export interface YieldPotential {
   method: string;
   reference_bracket: string;
   historical_average?: number | null;
+  unit?: string;
 }
 
 export interface ZoneSummary {

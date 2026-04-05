@@ -138,6 +138,9 @@ interface ParcelContext {
   variety: string | null;
   plantingYear: number | null;
   plantCount: number | null;
+  area: number | null;
+  areaUnit: string | null;
+  densityPerHectare: number | null;
   irrigationType: string | null;
   waterSource: string | null;
   irrigationFrequency: string | null;
@@ -998,6 +1001,8 @@ export class CalibrationService {
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
       plant_count: parcel.plantCount,
+      area_hectares: this.toHectares(parcel.area, parcel.areaUnit),
+      density_per_hectare: parcel.densityPerHectare,
       irrigation_frequency:
         dto.irrigation_frequency ?? parcel.irrigationFrequency,
       volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
@@ -1495,6 +1500,8 @@ export class CalibrationService {
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
       plant_count: parcel.plantCount,
+      area_hectares: this.toHectares(parcel.area, parcel.areaUnit),
+      density_per_hectare: parcel.densityPerHectare,
       irrigation_frequency:
         dto.irrigation_frequency ?? parcel.irrigationFrequency,
       volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
@@ -2877,7 +2884,7 @@ export class CalibrationService {
     const { data: parcel, error } = await supabase
       .from("parcels")
       .select(
-        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, langue, farms(organization_id)",
+        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, langue, area, area_unit, density_per_hectare, farms(organization_id)",
       )
       .eq("id", parcelId)
       .single();
@@ -2916,6 +2923,10 @@ export class CalibrationService {
       plantingYear:
         typeof parcel.planting_year === "number" ? parcel.planting_year : null,
       plantCount: this.toNumber(parcel.plant_count),
+      area: this.toNumber(parcel.area),
+      areaUnit:
+        typeof parcel.area_unit === "string" ? parcel.area_unit : null,
+      densityPerHectare: this.toNumber(parcel.density_per_hectare),
       irrigationType:
         typeof parcel.irrigation_type === "string"
           ? parcel.irrigation_type
@@ -3743,6 +3754,21 @@ export class CalibrationService {
     }
 
     return null;
+  }
+
+  private toHectares(
+    area: number | null,
+    areaUnit: string | null,
+  ): number | null {
+    const value = this.toNumber(area);
+    if (value === null || value <= 0) {
+      return null;
+    }
+    const unit = (areaUnit ?? "").toLowerCase();
+    if (unit === "m2" || unit === "m²" || unit === "sqm" || unit === "square meters") {
+      return value / 10_000;
+    }
+    return value;
   }
 
   async getIrrigationRecommendation(

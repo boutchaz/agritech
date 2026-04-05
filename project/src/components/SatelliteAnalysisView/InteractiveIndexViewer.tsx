@@ -149,6 +149,7 @@ const InteractiveIndexViewer = ({
   const [rightTemporalData, setRightTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dateMismatch, setDateMismatch] = useState<{requested: string; actual: string} | null>(null);
+  const [sameActualDateWarning, setSameActualDateWarning] = useState(false);
 
   // Overlay opacity control (per index)
   const [overlayOpacity, setOverlayOpacity] = useState<Map<VegetationIndexType, number>>(
@@ -341,6 +342,7 @@ const InteractiveIndexViewer = ({
     setIsLoading(true);
     setError(null);
     setDateMismatch(null);
+    setSameActualDateWarning(false);
 
     try {
       const aoi = {
@@ -360,11 +362,16 @@ const InteractiveIndexViewer = ({
           satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
         ]);
 
-        if (leftResult.metadata?.requested_date && leftResult.date !== leftResult.metadata.requested_date) {
-          setDateMismatch({ requested: leftResult.metadata.requested_date, actual: leftResult.date });
-        } else if (rightResult.metadata?.requested_date && rightResult.date !== rightResult.metadata.requested_date) {
-          setDateMismatch({ requested: rightResult.metadata.requested_date, actual: rightResult.date });
+        const leftActualDate = leftResult.date;
+        const rightActualDate = rightResult.date;
+
+        if (leftActualDate !== selectedDate) {
+          setDateMismatch({ requested: selectedDate, actual: leftActualDate });
+        } else if (rightActualDate !== compareDate) {
+          setDateMismatch({ requested: compareDate, actual: rightActualDate });
         }
+
+        setSameActualDateWarning(leftActualDate === rightActualDate);
 
         setLeftTemporalData(leftResult);
         setRightTemporalData(rightResult);
@@ -817,6 +824,20 @@ const InteractiveIndexViewer = ({
             </Alert>
           )}
 
+          {sameActualDateWarning && leftTemporalData && rightTemporalData && (
+            <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-sm font-bold">{t('satellite:heatmap.warnings.sameActualDateTitle', 'Same satellite image detected')}</AlertTitle>
+              <AlertDescription className="text-xs">
+                <Trans
+                  i18nKey="satellite:heatmap.warnings.sameActualDateDescription"
+                  values={{ actual: leftTemporalData.date, date1: selectedDate, date2: compareDate }}
+                  components={{ strong: <strong /> }}
+                />
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!data && multiData.size === 0 && !leftTemporalData && !isLoading && (
             <div className="h-[600px] flex flex-col items-center justify-center text-slate-300 gap-4 bg-white rounded-xl border-2 border-dashed border-slate-100 shadow-sm">
               <div className="p-5 bg-slate-50 rounded-full shadow-inner">
@@ -1052,6 +1073,9 @@ const InteractiveIndexViewer = ({
                       <div className="flex items-center gap-2">
                         <Badge className={cn(side.color, "text-white text-[9px] font-bold uppercase tracking-tighter px-1.5 h-5")}>{side.label}</Badge>
                         <span className="text-xs font-bold text-slate-700">{side.date}</span>
+                        {side.data.date !== side.date && (
+                          <span className="text-[10px] text-slate-400 ml-1">({side.data.date})</span>
+                        )}
                       </div>
                       <span className="text-[10px] font-bold text-slate-400">MEAN: {(side.data.statistics?.mean ?? 0).toFixed(3)}</span>
                     </CardHeader>
@@ -1090,8 +1114,18 @@ const InteractiveIndexViewer = ({
                     <TableHeader className="bg-slate-50/30">
                       <TableRow className="border-b-slate-100">
                         <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6">{t('satellite:heatmap.stats.statistic')}</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{selectedDate}</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{compareDate}</TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">
+                          {selectedDate}
+                          {leftTemporalData.date !== selectedDate && (
+                            <span className="text-[9px] text-slate-400 ml-1">({leftTemporalData.date})</span>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">
+                          {compareDate}
+                          {rightTemporalData.date !== compareDate && (
+                            <span className="text-[9px] text-slate-400 ml-1">({rightTemporalData.date})</span>
+                          )}
+                        </TableHead>
                         <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{t('satellite:heatmap.stats.delta')}</TableHead>
                         <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider pr-6">{t('satellite:heatmap.stats.variation')}</TableHead>
                       </TableRow>

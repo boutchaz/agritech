@@ -359,7 +359,7 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
               <span className="text-xl font-bold text-gray-900 dark:text-white">
                 {yieldPotential.minimum} – {yieldPotential.maximum}
               </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">t/ha</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{yieldPotential.unit ?? 't/ha'}</span>
             </div>
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
               Method: {(yieldPotential.method ?? '').replace(/_/g, ' ')} · Bracket: {(yieldPotential.reference_bracket ?? '').replace(/_/g, ' ')}

@@ -172,6 +172,21 @@ def _detect_olive_alternance(
     )
 
 
+def _kg_per_tree_to_t_per_ha(
+    kg_per_tree: float,
+    *,
+    density_per_hectare: int | None = None,
+    plant_count: int | None = None,
+    area_hectares: float | None = None,
+) -> float:
+    density = density_per_hectare
+    if density is None and plant_count and area_hectares and area_hectares > 0:
+        density = int(round(plant_count / area_hectares))
+    if not density or density <= 0:
+        return kg_per_tree
+    return kg_per_tree * density / 1000
+
+
 def calculate_yield_potential(
     *,
     planting_year: int | None,
@@ -182,6 +197,9 @@ def calculate_yield_potential(
     maturity_phase: MaturityPhase | None = None,
     current_year: int | None = None,
     satellite_data: Step1Output | None = None,
+    plant_count: int | None = None,
+    area_hectares: float | None = None,
+    density_per_hectare: int | None = None,
 ) -> Step6Output:
     _ = (crop_type, maturity_phase)
 
@@ -193,6 +211,7 @@ def calculate_yield_potential(
     if isinstance(varieties, list):
         # Parcel variety (from calibration_input) is matched to referential varietes by nom or code.
         normalized_variety = (variety or "").strip().lower()
+        matched_item: dict[str, Any] | None = None
         for item in varieties:
             if not isinstance(item, dict):
                 continue
@@ -200,22 +219,42 @@ def calculate_yield_potential(
             code = str(item.get("code", "")).strip().lower()
             if normalized_variety and normalized_variety not in {name, code}:
                 continue
-            candidate = item.get("rendement_kg_arbre")
+            matched_item = item
+            break
+
+        # Fallback: when variety doesn't match any referential entry,
+        # use the first variety that has rendement_kg_arbre data.
+        if matched_item is None:
+            for item in varieties:
+                if isinstance(item, dict) and isinstance(
+                    item.get("rendement_kg_arbre"), dict
+                ):
+                    matched_item = item
+                    break
+
+        if matched_item is not None:
+            candidate = matched_item.get("rendement_kg_arbre")
             if isinstance(candidate, dict):
                 rendement_map = candidate
-                break
 
     bracket, (min_ref, max_ref) = _resolve_bracket(age, rendement_map)
     historical_avg = _historical_average(harvest_records)
 
-    min_value = min_ref
-    max_value = max_ref
+    convert = lambda v: _kg_per_tree_to_t_per_ha(
+        v,
+        density_per_hectare=density_per_hectare,
+        plant_count=plant_count,
+        area_hectares=area_hectares,
+    )
+
+    min_value = convert(min_ref)
+    max_value = convert(max_ref)
     method = "reference_only"
 
     if historical_avg is not None:
         method = "reference_and_history"
-        min_value = min(min_ref, historical_avg)
-        max_value = max(max_ref, historical_avg)
+        min_value = min(min_value, convert(historical_avg))
+        max_value = max(max_value, convert(historical_avg))
 
     alternance: AlternanceInfo | None = None
     if crop_type == "olivier" and satellite_data is not None:
@@ -228,12 +267,19 @@ def calculate_yield_potential(
         elif alternance.detected and alternance.current_year_type == "off":
             min_value = min_value * 0.7
 
+    has_density = (density_per_hectare is not None and density_per_hectare > 0) or (
+        plant_count and area_hectares and area_hectares > 0
+    )
+
     yield_potential = YieldPotential(
         minimum=round(min_value, 4),
         maximum=round(max_value, 4),
         method=method,
         reference_bracket=bracket,
-        historical_average=None if historical_avg is None else round(historical_avg, 4),
+        historical_average=(
+            None if historical_avg is None else round(convert(historical_avg), 4)
+        ),
+        unit="t/ha" if has_density else "kg/tree",
     )
 
     return Step6Output(yield_potential=yield_potential, alternance=alternance)

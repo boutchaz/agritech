@@ -102,6 +102,7 @@ class YieldPotential(BaseModel):
     method: str
     reference_bracket: str
     historical_average: float | None = Field(default=None, ge=0)
+    unit: str = "kg/tree"
 
     @model_validator(mode="after")
     def validate_range(self) -> "YieldPotential":
@@ -255,6 +256,8 @@ class CalibrationInput(BaseModel):
     volume_per_tree_liters: float | None = None
     water_source: str | None = None
     plant_count: int | None = None
+    area_hectares: float | None = None
+    density_per_hectare: int | None = None
     harvest_regularity: str | None = None
     cultural_history: dict[str, object] = Field(default_factory=dict)
     maturity_phase: MaturityPhase | None = None
