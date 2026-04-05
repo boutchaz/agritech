@@ -585,12 +585,13 @@ export class AnnualPlanService {
   async regeneratePlan(
     parcelId: string,
     organizationId: string,
-    year = new Date().getUTCFullYear(),
+    season?: string | number,
   ): Promise<AnnualPlanWithInterventions> {
+    const effectiveSeason = String(season ?? new Date().getUTCFullYear());
     const existingPlan = await this.findPlanByParcelAndYear(
       parcelId,
       organizationId,
-      year,
+      effectiveSeason,
     );
 
     if (existingPlan && existingPlan.status !== 'draft') {
@@ -626,7 +627,7 @@ export class AnnualPlanService {
       }
     }
 
-    const templatePlan = await this.generatePlan(parcelId, organizationId, year);
+    const templatePlan = await this.generatePlan(parcelId, organizationId, effectiveSeason);
 
     // Try to enrich from the latest AI annual plan report
     const aiSections = await this.findLatestAIPlanSections(parcelId);
@@ -913,7 +914,7 @@ export class AnnualPlanService {
       .select('*')
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .order('year', { ascending: false })
+      .order('season', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -1227,7 +1228,7 @@ export class AnnualPlanService {
   }
 
   private buildAnnualPlanTaskDueDate(
-    year: number,
+    seasonOrYear: string | number,
     month: number,
     week: number | null,
   ): string | null {
@@ -1235,6 +1236,9 @@ export class AnnualPlanService {
       return null;
     }
 
+    const year = typeof seasonOrYear === 'number'
+      ? seasonOrYear
+      : parseInt(String(seasonOrYear).slice(0, 4), 10) || new Date().getUTCFullYear();
     const day = week && week > 0 ? Math.min(28, week * 7) : 1;
     return new Date(Date.UTC(year, month - 1, day)).toISOString().split('T')[0];
   }

@@ -17,7 +17,7 @@ interface CalibrationExportRecord {
   status: string;
   confidence_score: number | string | null;
   phenology_stage: string | null;
-  calibration_data: unknown;
+  profile_snapshot: unknown;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -28,7 +28,7 @@ interface CalibrationHistoryRow {
   status: string;
   health_score: number | null;
   confidence_score: number | null;
-  maturity_phase: string | null;
+  phase_age: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -66,7 +66,7 @@ export class CalibrationExportService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, parcel_id, organization_id, status, confidence_score, phenology_stage, calibration_data, created_at, updated_at, completed_at",
+        "id, parcel_id, organization_id, status, confidence_score, phenology_stage, profile_snapshot, created_at, updated_at, completed_at",
       )
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
@@ -81,12 +81,12 @@ export class CalibrationExportService {
     }
 
     const record = data as CalibrationExportRecord;
-    const calibrationData = this.toJsonObject(record.calibration_data);
+    const calibrationData = this.toJsonObject(record.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
 
     const { data: historyRows, error: historyError } = await supabase
       .from("calibrations")
-      .select("id, status, health_score, confidence_score, maturity_phase, created_at, completed_at")
+      .select("id, status, health_score, confidence_score, phase_age, created_at, completed_at")
       .eq("parcel_id", record.parcel_id)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
@@ -109,14 +109,14 @@ export class CalibrationExportService {
       status: record.status,
       parcel_phase:
         record.phenology_stage ??
-        (typeof output.maturity_phase === "string" ? output.maturity_phase : "unknown"),
+        (typeof output.phase_age === "string" ? output.phase_age : "unknown"),
       organization_id: record.organization_id,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,
         health_score: item.health_score,
         confidence_score: item.confidence_score,
-        maturity_phase: item.maturity_phase ?? "unknown",
+        phase_age: item.phase_age ?? "unknown",
         status: item.status,
       })),
     };

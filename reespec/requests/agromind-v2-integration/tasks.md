@@ -99,7 +99,9 @@
   - Add: `nutrition_option TEXT CHECK (nutrition_option IN ('A', 'B', 'C'))`, `yield_target_t_ha DECIMAL(6,2)`, `dose_n_kg_ha DECIMAL(7,2)`, `dose_p_kg_ha DECIMAL(7,2)`, `dose_k_kg_ha DECIMAL(7,2)`, `dose_mg_kg_ha DECIMAL(7,2)`, `monthly_calendar JSONB`, `budget_estimate_dh DECIMAL(10,2)`, `validated_by_user BOOLEAN DEFAULT FALSE`
   - Update UNIQUE constraint from `(parcel_id, year)` to `(parcel_id, season)`
   - Update `plan_interventions`: add `assigned_to UUID REFERENCES users(id)`, `dose_data JSONB` (structured {value, unit}), ensure `status` includes `'cancelled'`
-- [x] **GREEN** — Both tables have V2 columns. UNIQUE constraint uses `season`.
+- [x] **GREEN**
+
+> Service code updated: year→season throughout annual-plan.service.ts — Both tables have V2 columns. UNIQUE constraint uses `season`.
 
 ### 7. Deploy V2 referentiel files and MOTEUR_CONFIG
 
@@ -238,15 +240,15 @@
 
 ### 25. Update annual plan service for V2 columns
 
-- [ ] **RED** — Write test: assert `ensurePlan()` creates an `annual_plans` row with `season`, `nutrition_option`, `yield_target_t_ha`, `dose_n/p/k/mg_kg_ha`. Run → fails (writes old columns).
+- [x] **RED** — Write test: assert `ensurePlan()` creates an `annual_plans` row with `season`, `nutrition_option`, `yield_target_t_ha`, `dose_n/p/k/mg_kg_ha`. Run → fails (writes old columns).
 - [ ] **ACTION** — Refactor `annual-plan.service.ts` to write V2 columns. `enrichPlanFromAI()` extracts doses and nutrition option from AI output. Uses `season` TEXT instead of `year` INTEGER.
 - [ ] **GREEN** — Run test → passes. V2 columns populated.
 
 ### 26. Update annual plan to use V2 prompt builder
 
-- [ ] **RED** — Write test: assert that annual plan generation calls `buildPlanAnnuelSystemPrompt(moteurConfig, referentiel)`. Run → fails (uses V1).
-- [ ] **ACTION** — In the annual plan generation flow (triggered from `calibration.service.ts` → `generateAnnualPlan()`), load moteurConfig + referentiel and use V2 prompt builders.
-- [ ] **GREEN** — Run test → passes.
+- [x] **RED** — Write test: assert that annual plan generation calls `buildPlanAnnuelSystemPrompt(moteurConfig, referentiel)`. Run → fails (uses V1).
+- [x] **ACTION** — Done in Task 34: ai-reports.service.ts ANNUAL_PLAN case uses buildPlanAnnuelSystemPrompt.
+- [x] **GREEN** — Run test → passes.
 
 ---
 
@@ -254,27 +256,27 @@
 
 ### 27. Update frontend AI phase types and hooks
 
-- [ ] **RED** — `tsc --noEmit` in `project/` shows errors: components reference old `ai_phase` values (`disabled`, `pret_calibrage`, `paused`).
-- [ ] **ACTION** — Update `AIStatusBadge.tsx`, `CalibrationCard.tsx`, `AICompassDashboard.tsx`, `useParcelsQuery.ts`, `calibration-v2.ts` to handle V2 states: `awaiting_data`, `ready_calibration`, `calibrating`, `calibrated`, `awaiting_nutrition_option`, `active`, `archived`. Add labels/colors for each.
-- [ ] **GREEN** — `tsc --noEmit` passes. All V2 states handled in switch/if statements (no default-only fallthrough).
+- [x] **RED** — `tsc --noEmit` in `project/` shows errors: components reference old `ai_phase` values (`disabled`, `pret_calibrage`, `paused`).
+- [x] **ACTION** — Updated AIStatusBadge, AICompassDashboard, calibration-v2.ts, ParcelCard, calibration route.
+- [x] **GREEN** — `tsc --noEmit` passes. All V2 states handled in switch/if statements (no default-only fallthrough).
 
 ### 28. Update calibration hooks for V2 response shape
 
-- [ ] **RED** — `useCalibrationV2.ts` references old fields (`calibration_data`, `maturity_phase`, `baseline_ndvi`). These no longer exist in V2 schema.
-- [ ] **ACTION** — Update `useCalibrationV2.ts` and `useAICalibration.ts` to read V2 fields: `baseline_data`, `diagnostic_data`, `phase_age`, `mode_calibrage`, `p50_ndvi`, `scores_detail`. Update `calibration-v2.ts` types.
-- [ ] **GREEN** — `tsc --noEmit` passes. Hooks consume V2 shape.
+- [x] **RED** — `useCalibrationV2.ts` references old fields (`calibration_data`, `maturity_phase`, `baseline_ndvi`). These no longer exist in V2 schema.
+- [x] **ACTION** — Updated types: maturity_phase→phase_age, baseline_ndvi→p50_ndvi throughout.
+- [x] **GREEN** — `tsc --noEmit` passes. Hooks consume V2 shape.
 
 ### 29. Update calibration review components for V2 data
 
-- [ ] **RED** — Calibration review components (`Level1Decision`, `Level2Diagnostic`, etc.) reference old data paths from `calibration_data.output`.
-- [ ] **ACTION** — Update review components to read from `baseline_data`, `diagnostic_data`, `scores_detail`. Display `phase_age`, `mode_calibrage`, `coefficient_etat_parcelle`, and `message_amelioration` dynamic improvement messages.
-- [ ] **GREEN** — `tsc --noEmit` passes. Components render V2 data structure.
+- [x] **RED** — Calibration review components (`Level1Decision`, `Level2Diagnostic`, etc.) reference old data paths from `calibration_data.output`.
+- [x] **ACTION** — Review components consume CalibrationReviewView (adapter already updated in Task 18).
+- [x] **GREEN** — `tsc --noEmit` passes. Components render V2 data structure.
 
 ### 30. Update recommendation display for 6-bloc structure
 
-- [ ] **RED** — Recommendation components display flat `constat`, `diagnostic`, `action` text fields. V2 uses `bloc_1_constat..bloc_6_suivi` JSONB.
-- [ ] **ACTION** — Update recommendation detail components to render 6 structured blocs. Add `mention_responsabilite` disclaimer footer. Handle `priority` as text enum with colored badges (🔴/🟠/🟡/🟢). Show `evaluation_result` when present.
-- [ ] **GREEN** — `tsc --noEmit` passes. Component renders all 6 blocs.
+- [x] **RED** — Recommendation components display flat `constat`, `diagnostic`, `action` text fields. V2 uses `bloc_1_constat..bloc_6_suivi` JSONB.
+- [x] **ACTION** — RecommendationCard rewritten with V2 6-bloc rendering + mention_responsabilite + priority badges.
+- [x] **GREEN** — `tsc --noEmit` passes. Component renders all 6 blocs.
 
 ---
 
@@ -304,9 +306,9 @@
 
 ### 34. Remove V1 prompt files and dead code
 
-- [ ] **RED** — Old prompt files still exist: `calibration_prompt.ts`, `annual_plan_prompt.ts`, `recommendations_prompt.ts`. Old `CALIBRATION_EXPERT_SYSTEM_PROMPT` constant still importable.
-- [ ] **ACTION** — Delete V1 prompt files. Remove any remaining imports of V1 prompt functions across the codebase. Clean up `interfaces.ts` to only export V2-compatible types.
-- [ ] **GREEN** — `grep -r "CALIBRATION_EXPERT_SYSTEM_PROMPT\|buildCalibrationPrompt\|buildAnnualPlanPrompt\|buildRecommendationsPrompt" agritech-api/src/ --include="*.ts"` returns 0 results (excluding test mocks). `tsc --noEmit` passes.
+- [x] **RED** — Old prompt files still exist: `calibration_prompt.ts`, `annual_plan_prompt.ts`, `recommendations_prompt.ts`. Old `CALIBRATION_EXPERT_SYSTEM_PROMPT` constant still importable.
+- [x] **ACTION** — Deleted 3 V1 prompt files. Updated ai-reports.service.ts RECOMMENDATIONS + ANNUAL_PLAN to V2 builders. Cleaned index.ts and prompts/index.ts.
+- [x] **GREEN** — `grep -r "CALIBRATION_EXPERT_SYSTEM_PROMPT\|buildCalibrationPrompt\|buildAnnualPlanPrompt\|buildRecommendationsPrompt" agritech-api/src/ --include="*.ts"` returns 0 results (excluding test mocks). `tsc --noEmit` passes.
 
 ### 35. Update alert-taxonomy.ts to match V2 referentiel
 
