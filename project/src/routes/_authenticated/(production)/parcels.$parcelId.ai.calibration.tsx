@@ -1520,7 +1520,7 @@ const AICalibrationPage = () => {
   );
 
   const v2Output = reportData?.report?.output ?? null;
-  const hasV2Report = v2Output !== null;
+  const hasV2Report = v2Output !== null && !!v2Output.step1 && !!v2Output.step8;
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
