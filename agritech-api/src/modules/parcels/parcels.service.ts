@@ -733,7 +733,7 @@ export class ParcelsService {
 
   /**
    * Warm satellite cache after parcel creation. Intentionally does not change
-   * ai_phase — calibration readiness is enforced separately when the user starts calibration.
+   * ai_phase - calibration readiness is enforced separately when the user starts calibration.
    */
   private triggerProactiveSatelliteDownload(
     parcelId: string,
@@ -752,15 +752,45 @@ export class ParcelsService {
         endDate: new Date().toISOString().split("T")[0],
         indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
       })
-      .then((syncResult) => {
+      .then(async (syncResult) => {
         this.logger.log(
           `Satellite download completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
         );
+
+        // V2 lifecycle: transition awaiting_data → ready_calibration
+        try {
+          const { data: parcelRow } = await this.supabaseAdmin
+            .from("parcels")
+            .select("ai_phase")
+            .eq("id", parcelId)
+            .eq("organization_id", organizationId)
+            .maybeSingle();
+
+          if (parcelRow?.ai_phase === "awaiting_data") {
+            const { error: transitionError } = await this.supabaseAdmin
+              .from("parcels")
+              .update({ ai_phase: "ready_calibration" })
+              .eq("id", parcelId)
+              .eq("organization_id", organizationId)
+              .eq("ai_phase", "awaiting_data");
+
+            if (!transitionError) {
+              this.logger.log(
+                `Parcel ${parcelId} transitioned to ready_calibration after satellite sync`,
+              );
+            }
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Failed to transition parcel ${parcelId} to ready_calibration: ${err instanceof Error ? err.message : "unknown"}`,
+          );
+        }
+
         return this.notifyOrganizationUsers(
           organizationId,
           NotificationType.SATELLITE_DOWNLOAD_COMPLETE,
           "Données satellite prêtes",
-          "Les données satellite de votre parcelle sont en cache. Complétez l’assistant de calibrage et lancez le calibrage lorsque les conditions de préparation sont remplies.",
+          "Les données satellite de votre parcelle sont disponibles. Vous pouvez lancer le calibrage.",
           { parcel_id: parcelId },
         );
       })

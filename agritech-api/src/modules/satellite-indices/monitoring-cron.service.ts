@@ -44,8 +44,8 @@ export class MonitoringCronService {
         .select("id, organization_id, farm_id, crop_type, ai_phase, planting_year")
         .in("ai_phase", [
           "active",
-          "pret_calibrage",
-          "awaiting_validation",
+          "ready_calibration",
+          "calibrated",
           "awaiting_nutrition_option",
         ])
         .not("boundary", "is", null);
