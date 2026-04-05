@@ -1,14 +1,8 @@
 import React, { useState } from 'react';
 import { apiClient } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface FarmImportDialogProps {
   open: boolean;
@@ -125,18 +119,19 @@ const FarmImportDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Importer des fermes
-          </DialogTitle>
-          <DialogDescription>
-            Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI.
-          </DialogDescription>
-        </DialogHeader>
-
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleClose}
+      title={
+        <div className="flex items-center gap-2">
+          <Upload className="w-5 h-5" />
+          Importer des fermes
+        </div>
+      }
+      description="Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI."
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <div className="space-y-6 py-4">
           {/* File Selection */}
           <div className="space-y-2">
@@ -222,10 +217,8 @@ const FarmImportDialog = ({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 
 export default FarmImportDialog;
-

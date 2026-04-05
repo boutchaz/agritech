@@ -35,14 +35,13 @@ import {
   CardTitle,
 } from "../ui/card";
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
 import { FormField } from "../ui/FormField";
 import { Input } from "../ui/Input";
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -379,8 +378,13 @@ const ParcelManagementModal = ({
 
   return (
     <>
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <ResponsiveDialog
+        open={true}
+        onOpenChange={(open) => !open && onClose()}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
               {t("farmHierarchy.parcel.management")}
@@ -1017,8 +1021,7 @@ const ParcelManagementModal = ({
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Archive Parcel Confirmation Dialog */}
       <AlertDialog

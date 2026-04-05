@@ -49,7 +49,9 @@
     "actions": {
       "refreshCache": "Actualiser le cache",
       "fetchFromSatellite": "Récupérer depuis satellite",
-      "launching": "Lancement..."
+      "launching": "Lancement...",
+      "selectAllIndices": "Tout sélectionner",
+      "unselectAllIndices": "Tout désélectionner"
     },
     "indexDescriptions": {
       "NIRvP": "NIRvP — Productivité photosynthétique (NIRv × PAR)",

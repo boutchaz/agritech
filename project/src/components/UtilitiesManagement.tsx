@@ -13,7 +13,8 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
+import { Dialog, DialogFooter } from './ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
@@ -1438,7 +1439,7 @@ const UtilitiesManagement = () => {
       )}
 
       {/* Add/Edit Modal */}
-      <Dialog
+      <ResponsiveDialog
         open={showAddModal || !!editingUtility}
         onOpenChange={(open) => {
           if (!open) {
@@ -1446,19 +1447,33 @@ const UtilitiesManagement = () => {
             setEditingUtility(null);
           }
         }}
+        title={editingUtility ? 'Modifier la Charge' : 'Nouvelle Charge'}
+        description={editingUtility
+          ? 'Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.'
+          : 'Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre.'}
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+        footer={
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingUtility(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button variant="green" type="button" onClick={editingUtility ? handleUpdateUtility : handleAddUtility} disabled={uploading} >
+              {uploading && (
+                <ButtonLoader />
+              )}
+              {uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}
+            </Button>
+          </DialogFooter>
+        }
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingUtility ? 'Modifier la Charge' : 'Nouvelle Charge'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingUtility
-                ? 'Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.'
-                : 'Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre.'}
-            </DialogDescription>
-          </DialogHeader>
-
             <div className="space-y-4">
               <FormField label="Type de charge" htmlFor="util_type">
                 <Select
@@ -1748,27 +1763,7 @@ const UtilitiesManagement = () => {
                 )}
               </div>
             </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowAddModal(false);
-                setEditingUtility(null);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button variant="green" type="button" onClick={editingUtility ? handleUpdateUtility : handleAddUtility} disabled={uploading} >
-              {uploading && (
-                <ButtonLoader />
-              )}
-              {uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

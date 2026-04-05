@@ -49,7 +49,9 @@
     "actions": {
       "refreshCache": "تحديث ذاكرة التخزين المؤقت",
       "fetchFromSatellite": "استرجاع من القمر الصناعي",
-      "launching": "جارٍ الإطلاق..."
+      "launching": "جارٍ الإطلاق...",
+      "selectAllIndices": "تحديد الكل",
+      "unselectAllIndices": "إلغاء التحديد"
     },
     "indexDescriptions": {
       "NIRvP": "NIRvP — الإنتاجية الضوئية (NIRv × PAR)",

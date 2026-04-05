@@ -21,7 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -782,15 +781,15 @@ export const ChartOfAccounts = () => {
       </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">{t('accountingModule.accounts.delete.title')}</DialogTitle>
-            <DialogDescription className="text-sm">
-              {t('accountingModule.accounts.delete.confirmation', { name: deletingAccount?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+      <ResponsiveDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title={<span className="text-lg sm:text-xl">{t('accountingModule.accounts.delete.title')}</span>}
+        description={<span className="text-sm">{t('accountingModule.accounts.delete.confirmation', { name: deletingAccount?.name })}</span>}
+        size="md"
+        className="w-[calc(100vw-2rem)]"
+        footer={
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
@@ -806,9 +805,11 @@ export const ChartOfAccounts = () => {
             >
               {t('accountingModule.accounts.delete.button')}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        <></>
+      </ResponsiveDialog>
     </div>
   );
 };

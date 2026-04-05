@@ -455,14 +455,24 @@ const TimeSeriesChart = ({
   }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue, startDate, endDate]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
-    setSelectedIndices(prev => {
+    setSelectedIndices((prev) => {
       if (prev.includes(index)) {
-        if (prev.length === 1) return prev;
-        return prev.filter(i => i !== index);
+        return prev.filter((i) => i !== index);
       }
       return [...prev, index];
     });
   };
+
+  const selectAllVegetationIndices = useCallback(() => {
+    setSelectedIndices([...TIME_SERIES_INDICES]);
+  }, []);
+
+  const clearAllVegetationIndices = useCallback(() => {
+    setSelectedIndices([]);
+  }, []);
+
+  const brushPreviewIndex = (selectedIndices[0] ??
+    TIME_SERIES_INDICES[0]) as TimeSeriesIndexType;
 
   const calculateStatistics = (index: TimeSeriesIndexType): IndexStats | null => {
     const values = chartData.map(d => d[index] as number).filter(v => typeof v === 'number' && !isNaN(v));
@@ -501,7 +511,11 @@ const TimeSeriesChart = ({
   const dataIsSparse = stats.total > 0 && stats.total < 10;
   const isLoading = isLoadingCache || isSyncing;
   const emptyIndices = selectedIndices.filter(index => (stats.perIndexCount[index] || 0) === 0);
-  const showNoDataWarning = !isLoading && cachedData !== undefined && emptyIndices.length === selectedIndices.length;
+  const showNoDataWarning =
+    selectedIndices.length > 0 &&
+    !isLoading &&
+    cachedData !== undefined &&
+    emptyIndices.length === selectedIndices.length;
 
   return (
     <TooltipProvider>
@@ -692,8 +706,8 @@ const TimeSeriesChart = ({
                           <LineChart>
                             <Line
                               type="monotone"
-                              dataKey={selectedIndices[0]}
-                              stroke={getIndexColor(selectedIndices[0])}
+                              dataKey={brushPreviewIndex}
+                              stroke={getIndexColor(brushPreviewIndex)}
                               strokeWidth={1}
                               dot={false}
                             />
@@ -789,11 +803,38 @@ const TimeSeriesChart = ({
           <div className="lg:col-span-4 space-y-6">
             {/* Index Selection Card */}
             <Card className="border-slate-200 shadow-sm overflow-hidden">
-              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3">
-                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5" />
-                  {t('timeSeries.labels.vegetationIndices')}
-                </CardTitle>
+              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3 space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                    {t('timeSeries.labels.vegetationIndices')}
+                  </CardTitle>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide"
+                      onClick={selectAllVegetationIndices}
+                    >
+                      {t('timeSeries.actions.selectAllIndices', 'Select all')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                      onClick={clearAllVegetationIndices}
+                    >
+                      {t('timeSeries.actions.unselectAllIndices', 'Clear all')}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[10px] font-medium text-slate-500">
+                  {t('timeSeries.labels.indicesSelected', {
+                    count: selectedIndices.length,
+                  })}
+                </p>
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[280px]">
@@ -802,6 +843,7 @@ const TimeSeriesChart = ({
                       const isSelected = selectedIndices.includes(vegIndex);
                       return (
                         <button
+                          type="button"
                           key={vegIndex}
                           onClick={() => toggleIndex(vegIndex)}
                           className={cn(

@@ -71,7 +71,7 @@ export function ResponsiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(sizeClasses[size], className)}>
+      <DialogContent className={cn(sizeClasses[size], contentClassName, className)}>
         {(title || description) && (
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}

@@ -2,11 +2,6 @@ import {  useState, useEffect, useMemo  } from "react";
 import { useTranslation } from "react-i18next";
 import { Banknote, Calculator, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -41,6 +36,7 @@ import {
   PAYMENT_METHOD_LABELS,
   formatCurrency,
 } from "../../types/payments";
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface WorkerPaymentDialogProps {
   open: boolean;
@@ -272,22 +268,36 @@ const WorkerPaymentDialog = ({
   const isLoading = calculatePayment.isPending || createPayment.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <Banknote className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <DialogTitle>{t("dialogs.workerPayment.title")}</DialogTitle>
-              <DialogDescription>
-                {worker.first_name} {worker.last_name}
-              </DialogDescription>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(isOpen) => !isOpen && onClose()}
+      title={
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+            <Banknote className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <div>{t("dialogs.workerPayment.title")}</div>
+            <div className="text-sm font-normal text-muted-foreground">
+              {worker.first_name} {worker.last_name}
             </div>
           </div>
-        </DialogHeader>
-
+        </div>
+      }
+      size="lg"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+      footer={
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto"
+          >
+            {t("app.cancel")}
+          </Button>
+        </DialogFooter>
+      }
+    >
         <div className="space-y-6 py-4">
           {error && (
             <Alert variant="destructive">
@@ -677,18 +687,7 @@ const WorkerPaymentDialog = ({
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            {t("app.cancel")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 
