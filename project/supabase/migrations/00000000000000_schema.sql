@@ -2181,7 +2181,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_user ON workers(user_id) WHERE user_id IS
 -- Work Units (for piece-work tracking)
 CREATE TABLE IF NOT EXISTS work_units (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   code TEXT NOT NULL,
   name TEXT NOT NULL,
   name_ar TEXT,
