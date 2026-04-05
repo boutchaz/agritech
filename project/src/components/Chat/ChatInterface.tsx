@@ -340,7 +340,6 @@ export function ChatInterface() {
   }, [messages, streamSuggestions]);
 
   return (
-    /* overflow-y visible: overflow-hidden clips the composer when the flex chain is loose on tablet */
     <Card className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible">
       <CardHeader className="flex flex-row items-center justify-between py-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
@@ -355,7 +354,7 @@ export function ChatInterface() {
 
       {/* min-h-0 is required: default min-height:auto would size this to all messages + composer,
           preventing shrink so the scroll region eats the viewport and hides the input */}
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 pt-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-visible p-4 pt-0">
         {/* Scrollable chat area — native div instead of ScrollArea for reliable scroll control */}
         <div className="relative min-h-0 flex-1">
           <div
