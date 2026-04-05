@@ -9,7 +9,7 @@ import type {
   QuoteItemInput,
   CreateQuoteInput,
   UpdateQuoteInput,
-} from '../../types/quotes';
+} from '@/types/quotes';
 
 const BASE_URL = '/api/v1/quotes';
 
@@ -22,7 +22,7 @@ export type {
   QuoteItemInput,
   CreateQuoteInput,
   UpdateQuoteInput,
-} from '../../types/quotes';
+} from '@/types/quotes';
 
 // Transform frontend input to API format
 function transformQuoteForApi(data: CreateQuoteInput) {

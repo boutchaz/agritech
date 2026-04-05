@@ -10,7 +10,7 @@ import type {
   UpdateQuoteStatusParams,
   PaginatedQuoteQuery,
   PaginatedResponse,
-} from '../types/quotes';
+} from '@/types/quotes';
 
 export type {
   QuoteResponse as Quote,
@@ -21,7 +21,7 @@ export type {
   UpdateQuoteFormInput,
   UpdateQuoteMutationParams,
   UpdateQuoteStatusParams,
-} from '../types/quotes';
+} from '@/types/quotes';
 
 export function useQuotes(status?: QuoteResponse['status']) {
   const { currentOrganization } = useAuth();
