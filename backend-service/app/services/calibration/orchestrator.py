@@ -189,6 +189,12 @@ def run_calibration_pipeline(
         tupper=tupper,
     )
 
+    from .step2a_signal_classification import classify_signal
+
+    signal_classification = classify_signal(
+        step1, step2, calibration_input.crop_type
+    )
+
     step3 = calculate_percentiles(
         step1,
         reference_data=calibration_input.reference_data,
@@ -310,6 +316,7 @@ def run_calibration_pipeline(
         step6=step6,
         step7=step7,
         step8=step8,
+        signal_classification=signal_classification,
         recommendations=recommendations,
         confidence=ConfidenceScore(
             total_score=confidence.total_score,

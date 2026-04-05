@@ -63,6 +63,15 @@ const formatTooltipValue = (value: number) => {
   return value?.toFixed(3) ?? 'N/A';
 };
 
+/** YYYY-MM-DD in the user's local calendar (avoids UTC-only "today" cutting off local acquisitions). */
+function localCalendarISODate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CustomTooltip = ({ active, payload, label, showTemperature, t }: {
   active?: boolean;

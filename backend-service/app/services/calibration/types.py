@@ -226,6 +226,22 @@ class Step8Output(BaseModel):
     health_score: HealthScore
 
 
+class SignalClassificationOutput(BaseModel):
+    """Output of REGLE_2_X signal classification (Section 2 of protocol)."""
+
+    signal_state: str  # SIGNAL_PUR | MIXTE_MODERE | DOMINE_ADVENTICES
+    mode: str  # NORMAL | AMORCAGE
+    cycles_available: int
+    precip_30j: float
+    tmax_30j_pct: float
+    tmoy_30j: float
+    ratio_nirv_ndvi_current: float | None = None
+    ratio_nirv_ndvi_baseline: float | None = None
+    ndvi_peak_baseline: float | None = None
+    clarification_reached: bool = False
+    note: str | None = None
+
+
 class CalibrationInput(BaseModel):
     parcel_id: str
     organization_id: str
@@ -268,6 +284,7 @@ class CalibrationOutput(BaseModel):
     step6: Step6Output
     step7: Step7Output
     step8: Step8Output
+    signal_classification: SignalClassificationOutput | None = None
     recommendations: list[Recommendation] = Field(default_factory=list)
     confidence: ConfidenceScore
     metadata: CalibrationMetadata

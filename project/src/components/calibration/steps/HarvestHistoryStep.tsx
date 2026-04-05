@@ -28,22 +28,23 @@ export function HarvestHistoryStep({ form }: HarvestHistoryStepProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600 dark:text-gray-400">Renseignez entre 3 et 5 annees de recolte.</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-gray-600 dark:text-gray-400 sm:text-sm">Renseignez entre 3 et 5 annees de recolte.</p>
         <Button
           type="button"
           variant="outline"
           size="sm"
           disabled={!canAddRow}
           onClick={() => append({ year: new Date().getFullYear(), yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' })}
+          className="self-start"
         >
           <Plus className="w-4 h-4" />
           Ajouter
         </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-        <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <div className="-mx-3 overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 px-3 sm:mx-0 sm:px-0">
+        <Table className="min-w-[540px] w-full divide-y divide-gray-200 dark:divide-gray-700">
           <TableHeader className="bg-gray-50 dark:bg-gray-900/60">
             <TableRow>
               <TableHead className="px-3 py-2 text-left text-xs font-semibold text-gray-600 dark:text-gray-300">Annee</TableHead>

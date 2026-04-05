@@ -103,13 +103,13 @@ export function AnnualRecalibrationWizard({
 
   return (
     <div
-      className="min-w-0 max-w-full space-y-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:space-y-6 sm:p-5"
+      className="min-w-0 max-w-full space-y-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:space-y-4 sm:p-4"
       data-testid="calibration-annual-wizard"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage annuel</h3>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">Assistant de recalibrage annuel</h3>
+          <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
             Validation post-campagne et mise a jour du profil agronomique de reference.
           </p>
         </div>
@@ -119,12 +119,14 @@ export function AnnualRecalibrationWizard({
       </div>
 
       <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40 sm:p-4">
-        <div className="space-y-2 md:hidden">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Étape {currentStep} sur {STEPS.length}</p>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">Etape {currentStep} sur {STEPS.length}</p>
+          </div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words mb-2">
             {STEPS[currentStep - 1]?.title}
           </p>
-          <div className="flex gap-1 pt-1" role="presentation">
+          <div className="flex gap-1" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={STEPS.length}>
             {STEPS.map((step) => {
               const isActive = currentStep === step.number;
               const isCompleted = currentStep > step.number;
@@ -182,10 +184,10 @@ export function AnnualRecalibrationWizard({
         </div>
       </div>
 
-      <div className="min-w-0 space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+      <div className="min-w-0 space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:space-y-4 sm:p-4">
         <div className="min-w-0">{renderStep()}</div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-3 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between sm:pt-4">
           <Button
             type="button"
             variant="outline"

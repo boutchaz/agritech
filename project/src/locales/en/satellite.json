@@ -144,6 +144,12 @@
       "regenerate": "Regenerate",
       "loading": "Loading..."
     },
+    "loading": {
+      "processingImagery": "Processing imagery…",
+      "connectingGee": "Connecting to Google Earth Engine",
+      "connectingCdse": "Connecting to Copernicus Data Space",
+      "connectingGeneric": "Connecting to satellite data…"
+    },
     "multiGrid": {
       "title": "Index Comparison - {{date}}",
       "meanComparison": "Average Comparison",

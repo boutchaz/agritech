@@ -1639,7 +1639,8 @@ const AICalibrationPage = () => {
           )}
           {(phase === 'awaiting_nutrition_option' ||
             calibration?.status === 'validated' ||
-            calibrationCompletedButPhaseStuck) && (
+            calibrationCompletedButPhaseStuck) &&
+            parcelData?.ai_phase !== 'active' && (
           <NutritionOptionSelector
             parcelId={parcelId}
             calibrationId={reportData.calibration.id}
@@ -1671,7 +1672,7 @@ const AICalibrationPage = () => {
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
         <div data-testid="calibration-partial-recalibration-dialog">
-          <div className="p-4 sm:p-6">
+          <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
             <RecalibrationWizard
               parcelId={parcelId}
               baselineData={reportData}
@@ -1695,7 +1696,7 @@ const AICalibrationPage = () => {
         className="p-0"
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
-          <div className="p-4 sm:p-6">
+          <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
             <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
           </div>
       </ResponsiveDialog>

@@ -9,7 +9,6 @@ import {
 import { useStartPartialRecalibration } from '@/hooks/useCalibrationReport';
 import {
   MotifSelectionStep,
-  RECALIBRATION_MOTIFS,
 } from './steps/MotifSelectionStep';
 import { BlockUpdateStep } from './steps/BlockUpdateStep';
 import {
@@ -525,23 +524,25 @@ export function RecalibrationWizard({
   };
 
   return (
-    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage partiel</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+    <div className="min-w-0 max-w-full space-y-3 sm:space-y-4">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">Assistant de recalibrage partiel</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:text-sm">
           Met a jour un bloc specifique sans relancer un recalibrage complet de la parcelle.
         </p>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-        <div className="space-y-2 md:hidden">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Étape {currentStep} sur {STEPS.length}
-          </p>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              Etape {currentStep} sur {STEPS.length}
+            </p>
+          </div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words mb-2">
             {STEPS[currentStep - 1]?.title}
           </p>
-          <div className="flex gap-1.5 pt-1" role="presentation">
+          <div className="flex gap-1.5" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={STEPS.length}>
             {STEPS.map((step) => {
               const isActive = currentStep === step.number;
               const isCompleted = currentStep > step.number;
@@ -599,7 +600,7 @@ export function RecalibrationWizard({
         </div>
       </div>
 
-      <div className="min-w-0 space-y-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+      <div className="min-w-0 space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:space-y-6 sm:p-4">
         <div className="min-w-0">{renderStep()}</div>
 
         {currentStep < 4 && (
@@ -627,25 +628,16 @@ export function RecalibrationWizard({
       </div>
 
       {currentStep === 2 && selectedMotif !== 'parcel_restructure' && modifiedParameters.length === 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-xs text-amber-700 dark:text-amber-300 px-1">
           Modifiez au moins un parametre pour continuer vers la previsualisation d&apos;impact.
         </p>
       )}
 
       {currentStep === 1 && selectedMotif === 'other' && motifDetail.trim().length < 5 && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">
+        <p className="text-xs text-amber-700 dark:text-amber-300 px-1">
           Precisez le motif en 5 caracteres minimum pour continuer.
         </p>
       )}
-
-      <div className="text-xs text-gray-500 dark:text-gray-400">
-        {selectedMotif && (
-          <span>
-            Motif selectionne: {RECALIBRATION_MOTIFS.find((motif) => motif.value === selectedMotif)?.label ?? selectedMotif}
-          </span>
-        )}
-        <span className="ml-2">Parcelle: {parcelId}</span>
-      </div>
     </div>
   );
 }

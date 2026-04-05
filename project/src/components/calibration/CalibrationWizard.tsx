@@ -472,14 +472,14 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   const activeStepDef = STEPS[currentStep - 1];
 
   return (
-    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6" data-testid="calibration-initial-wizard">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('calibration.wizard.title')}</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+    <div className="min-w-0 max-w-full space-y-3 sm:space-y-4" data-testid="calibration-initial-wizard">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4">
+        <h3 className="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">{t('calibration.wizard.title')}</h3>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 sm:text-sm">
           {t('calibration.wizard.subtitle')}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-4 text-[11px]">
+        <div className="mt-2 flex flex-wrap gap-3 text-[10px] sm:gap-4 sm:text-[11px]">
           <span className="flex items-center gap-1.5 text-rose-500 dark:text-rose-400">
             <span className="w-2 h-2 rounded-full bg-rose-500 dark:bg-rose-400" />
             {t('calibration.wizard.legendRequired')}
@@ -495,17 +495,45 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
         </div>
       </div>
 
-      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4 sm:px-4 sm:py-5">
-        <div className="mb-3 min-w-0 md:hidden">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('calibration.wizard.stepProgress', { current: currentStep, total: STEPS.length })}
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white break-words">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:px-4 sm:py-4">
+        <div className="md:hidden">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+              {t('calibration.wizard.stepProgress', { current: currentStep, total: STEPS.length })}
+            </p>
+            <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300">
+              {STATUS_LABELS[activeStepDef?.status ?? 'required']}
+            </p>
+          </div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words mb-2">
             {activeStepDef?.title}
           </p>
+          <div className="flex gap-1" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={STEPS.length}>
+            {STEPS.map((step) => {
+              const isActive = currentStep === step.number;
+              const isCompleted = isStepCompleted(step.number);
+              return (
+                <button
+                  key={step.number}
+                  type="button"
+                  data-testid={`calibration-wizard-step-${step.number}`}
+                  onClick={() => setStep(step.number)}
+                  className={`h-1.5 min-w-0 flex-1 rounded-full transition-colors cursor-pointer ${
+                    isActive
+                      ? 'bg-blue-600'
+                      : isCompleted
+                        ? 'bg-green-500'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                  }`}
+                  title={step.title}
+                />
+              );
+            })}
+          </div>
         </div>
-        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-gutter:stable] snap-x snap-mandatory touch-pan-x md:snap-none">
-          <div className="flex min-w-max items-start md:min-w-0 md:flex-wrap md:justify-center md:gap-y-3 lg:flex-nowrap lg:justify-start">
+
+        <div className="hidden md:block -mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-gutter:stable]">
+          <div className="flex min-w-max items-start lg:min-w-0 lg:flex-wrap lg:justify-center lg:gap-y-3 xl:flex-nowrap xl:justify-start">
             {STEPS.map((step, index) => {
               const isActive = currentStep === step.number;
               const isCompleted = isStepCompleted(step.number);
@@ -522,18 +550,16 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
 
               return (
                 <div key={step.number} className="flex items-start">
-                  {/* Step */}
                   <button
                     type="button"
                     data-testid={`calibration-wizard-step-${step.number}`}
                     onClick={() => setStep(step.number)}
-                    className={`flex min-w-[5.25rem] shrink-0 snap-center flex-col items-center gap-2 px-2 pt-1 pb-2 rounded-xl transition-all duration-150 cursor-pointer group sm:min-w-[5.5rem] sm:px-3 md:min-w-[5.5rem] ${
+                    className={`flex min-w-[5.5rem] shrink-0 flex-col items-center gap-2 px-3 pt-1 pb-2 rounded-xl transition-all duration-150 cursor-pointer group lg:min-w-[5.5rem] ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-200 dark:ring-blue-800'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
                     }`}
                   >
-                    {/* Circle */}
                     <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 text-sm font-semibold shadow-sm transition-all ${
                       isCompleted
                         ? 'bg-emerald-500 border-emerald-500 text-white shadow-emerald-200 dark:shadow-emerald-900'
@@ -544,8 +570,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
                       {isCompleted ? <Check className="w-4 h-4 stroke-[2.5]" /> : <span>{step.number}</span>}
                     </div>
 
-                    {/* Label */}
-                    <span className={`max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-[6.5rem] sm:text-[11px] ${
+                    <span className={`max-w-[6.5rem] text-center text-[11px] font-medium leading-tight ${
                       isActive
                         ? 'text-blue-700 dark:text-blue-300'
                         : isCompleted
@@ -555,14 +580,12 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
                       {step.title}
                     </span>
 
-                    {/* Status badge */}
                     <span className={`flex items-center gap-1 text-[10px] font-medium ${statusColor}`}>
                       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot}`} />
                       {STATUS_LABELS[step.status]}
                     </span>
                   </button>
 
-                  {/* Connector line */}
                   {index < STEPS.length - 1 && (
                     <div className="flex items-center self-start mt-5 flex-shrink-0">
                       <div className={`h-0.5 w-5 transition-colors ${
@@ -586,11 +609,11 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
             void handleNext();
           }
         }}
-        className="min-w-0 space-y-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5"
+        className="min-w-0 space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:space-y-6 sm:p-4"
       >
         <div className="min-w-0">{renderStepContent()}</div>
 
-        <div className="flex flex-col gap-3 border-t border-gray-200 pt-2 dark:border-gray-700 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t border-gray-200 pt-2 dark:border-gray-700 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
           <Button
             type="button"
             variant="outline"

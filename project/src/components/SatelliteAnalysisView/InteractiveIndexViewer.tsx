@@ -67,6 +67,20 @@ interface InteractiveIndexViewerProps {
 type VisualizationType = 'leaflet' | 'scatter';
 type ViewMode = 'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare';
 
+/** Optional build-time hint; should match backend `SATELLITE_PROVIDER` (gee | cdse | auto). */
+function satelliteLoadingBackendLabel(
+  t: (key: string) => string,
+): string {
+  const p = (
+    import.meta.env.VITE_SATELLITE_PROVIDER as string | undefined
+  )
+    ?.trim()
+    .toLowerCase();
+  if (p === 'gee') return t('heatmap.loading.connectingGee');
+  if (p === 'cdse') return t('heatmap.loading.connectingCdse');
+  return t('heatmap.loading.connectingGeneric');
+}
+
 // Color palette configurations
 export type ColorPalette = 'viridis' | 'red-green' | 'blue-red' | 'rainbow' | 'terrain' | 'green-red-inverted' | 'blue-red-inverted';
 
@@ -821,8 +835,12 @@ const InteractiveIndexViewer = ({
                 <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
               </div>
               <div className="text-center animate-pulse">
-                <p className="font-bold text-emerald-700 uppercase tracking-widest text-xs">Processing Imagery...</p>
-                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">Connecting to Copernicus Hub</p>
+                <p className="font-bold text-emerald-700 uppercase tracking-widest text-xs">
+                  {t('heatmap.loading.processingImagery')}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">
+                  {satelliteLoadingBackendLabel(t)}
+                </p>
               </div>
             </div>
           )}

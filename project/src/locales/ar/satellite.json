@@ -144,6 +144,12 @@
       "regenerate": "إعادة الإنشاء",
       "loading": "جارٍ التحميل..."
     },
+    "loading": {
+      "processingImagery": "جارٍ معالجة الصور…",
+      "connectingGee": "الاتصال بـ Google Earth Engine",
+      "connectingCdse": "الاتصال بـ Copernicus Data Space",
+      "connectingGeneric": "الاتصال بخدمة بيانات الأقمار الصناعية…"
+    },
     "multiGrid": {
       "title": "مقارنة المؤشرات - {{date}}",
       "meanComparison": "مقارنة المتوسطات",

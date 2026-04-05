@@ -67,6 +67,18 @@ export class ParcelDto {
   @ApiProperty({ description: 'AI calibration phase', required: false })
   ai_phase?: string;
 
+  @ApiProperty({ description: 'AI features enabled for parcel', required: false })
+  ai_enabled?: boolean;
+
+  @ApiProperty({ description: 'AI observation-only mode', required: false })
+  ai_observation_only?: boolean;
+
+  @ApiProperty({ description: 'Selected nutrition option (A/B/C)', required: false })
+  ai_nutrition_option?: string;
+
+  @ApiProperty({ description: 'Current AI calibration record id', required: false })
+  ai_calibration_id?: string;
+
   @ApiProperty({ description: 'Is active' })
   is_active: boolean;
 

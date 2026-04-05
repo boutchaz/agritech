@@ -270,6 +270,10 @@ export function useConfirmNutritionOption(parcelId: string) {
         currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
+        queryKey: queryKeys.calibration.history(parcelId,
+        currentOrganization?.id,),
+      });
+      queryClient.invalidateQueries({
         queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
         currentOrganization?.id,),
       });
@@ -278,6 +282,9 @@ export function useConfirmNutritionOption(parcelId: string) {
       });
       queryClient.invalidateQueries({
         queryKey: parcelsKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["ai-calibration", parcelId],
       });
       toast.success(i18n.t("toasts.nutritionConfirmed", { ns: "ai" }));
     },

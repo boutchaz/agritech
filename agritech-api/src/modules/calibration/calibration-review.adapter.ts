@@ -121,25 +121,38 @@ export class CalibrationReviewAdapter {
     const healthScore = this.asRecord(step8.health_score);
     const healthComponents = this.asRecord(healthScore.components);
 
-    const historyCount = input.calibration_history?.length ?? 0;
-    const mode = historyCount < 3 ? "AMORCAGE" : "NORMAL";
+    const signalClassification = this.asRecord(output.signal_classification);
+    const signalState = this.asString(signalClassification?.signal_state) || "NON_DISPONIBLE";
+    const signalNote = this.asString(signalClassification?.note) || (
+      signalState === "NON_DISPONIBLE"
+        ? "Classification du signal non disponible"
+        : undefined
+    );
+
+    const cyclesAvailable = this.asNumber(signalClassification?.cycles_available, input.calibration_history?.length ?? 0);
+    const mode = (this.asString(signalClassification?.mode) ?? (cyclesAvailable < 3 ? "AMORCAGE" : "NORMAL")) as "NORMAL" | "AMORCAGE" | "OBSERVATION";
     const modeDetail =
       mode === "AMORCAGE"
-        ? `${historyCount} cycles disponibles, minimum 3 recommandé`
-        : `${historyCount} cycles disponibles`;
+        ? `${cyclesAvailable} cycles disponibles, minimum 3 recommandé`
+        : `${cyclesAvailable} cycles disponibles`;
 
     const currentPhase =
       this.formatPhaseName(this.asString(output.phase_age) ?? input.parcel_phase) || "Phase non disponible";
 
+    const annotations: string[] = [];
+    if (mode === "AMORCAGE") {
+      annotations.push("Mode observation pure: aucune recommandation d'action en phase calibrage");
+    }
+    if (signalNote) {
+      annotations.push(signalNote);
+    }
+
     return {
-      signal_state: "NON_DISPONIBLE",
-      signal_state_note: "Classification du signal non implémentée en Phase 1",
+      signal_state: signalState as Level2Diagnostic["signal_state"],
+      signal_state_note: signalNote,
       mode,
       mode_detail: modeDetail,
-      annotations: [
-        "Mode observation pure: aucune recommandation d'action en phase calibrage",
-        "État du signal protocolaire indisponible",
-      ],
+      annotations,
       phase_diagnostics: {
         [currentPhase]: {
           status: "estimated",
@@ -257,6 +270,8 @@ export class CalibrationReviewAdapter {
   buildExpertAudit(input: CalibrationSnapshotInput): ExpertAudit {
     const output = this.getOutput(input);
     const step1 = this.getStep(output, "step1");
+    const signalClassification = this.asRecord(output.signal_classification);
+    const signalState = this.asString(signalClassification?.signal_state) || "NON_DISPONIBLE";
 
     const indexSeries = this.asRecord(step1.index_time_series);
     const retained = this.asArray(indexSeries.NDVI).length;
@@ -285,14 +300,16 @@ export class CalibrationReviewAdapter {
       {
         rule_id: "REGLE_1_6",
         name: "Lissage Whittaker/Savitzky-Golay",
-        status: "not_implemented",
-        detail: "Non implémenté",
+        status: "applied",
+        detail: "Savitzky-Golay appliqué (window=7, polyorder=2)",
       },
       {
         rule_id: "REGLE_2_X",
         name: "Classification du signal",
-        status: "not_implemented",
-        detail: "signal_state renvoyé à NON_DISPONIBLE",
+        status: signalState !== "NON_DISPONIBLE" ? "applied" : "not_implemented",
+        detail: signalState !== "NON_DISPONIBLE"
+          ? `Signal classifié: ${signalState}`
+          : "signal_state renvoyé à NON_DISPONIBLE",
       },
       {
         rule_id: "REGLE_3_X",
