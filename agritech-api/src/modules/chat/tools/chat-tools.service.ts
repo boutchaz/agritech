@@ -1,13 +1,13 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import {
   IsDateString,
-  IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -45,7 +45,7 @@ class CreateTaskFromRecommendationParams {
   @IsString()
   description: string;
 
-  @IsEnum(['high', 'medium', 'low'])
+  @IsIn(['high', 'medium', 'low'])
   priority: 'high' | 'medium' | 'low';
 
   @IsUUID()
@@ -238,7 +238,7 @@ export class ChatToolsService {
     parameters: Record<string, any>,
   ): Promise<T> {
     if (!parameters || typeof parameters !== 'object' || Array.isArray(parameters)) {
-      throw new UnauthorizedException('Tool parameters must be a JSON object');
+      throw new BadRequestException('Tool parameters must be a JSON object');
     }
 
     const instance = plainToInstance(cls, parameters);

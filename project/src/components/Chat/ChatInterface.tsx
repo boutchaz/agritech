@@ -336,9 +336,11 @@ export function ChatInterface() {
         </Button>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col gap-4 p-4 pt-0 overflow-hidden">
+      {/* min-h-0 is required: default min-height:auto would size this to all messages + composer,
+          preventing shrink so the scroll region eats the viewport and hides the input */}
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden p-4 pt-0">
         {/* Scrollable chat area — native div instead of ScrollArea for reliable scroll control */}
-        <div className="relative flex-1 min-h-0">
+        <div className="relative min-h-0 flex-1">
           <div
             ref={scrollContainerRef}
             className="h-full overflow-y-auto pr-2 scroll-smooth"
@@ -441,6 +443,7 @@ export function ChatInterface() {
           )}
         </div>
 
+        <div className="flex shrink-0 flex-col gap-4 border-t border-border/40 bg-card pt-3">
         {/* Follow-up suggestions */}
         {!isStreaming && lastSuggestions.length > 0 && (
           <FollowUpSuggestions suggestions={lastSuggestions} onSend={proceedWithSend} disabled={isSending} />
@@ -486,6 +489,7 @@ export function ChatInterface() {
 
         {!isSupported && <p className="text-xs text-muted-foreground text-center">{t('chat.voiceNotSupported', 'Voice input is not supported in this browser')}</p>}
         {voiceError && <p className="text-xs text-destructive text-center">{voiceError}</p>}
+        </div>
       </CardContent>
 
       <AiQuotaExceededModal
