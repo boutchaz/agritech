@@ -1976,7 +1976,7 @@ export class CalibrationService {
       step5: {
         anomalies: calibration.anomalies_data ?? [],
       },
-      step6: {
+      step6: snapshotOutput.step6 ?? {
         yield_potential: {
           minimum: this.toNumber(calibration.yield_potential_min),
           maximum: this.toNumber(calibration.yield_potential_max),
