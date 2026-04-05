@@ -430,12 +430,8 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      previousPhase,
-      "calibrating",
-      organizationId,
-    );
+    // V2 lifecycle: transition through intermediate states if needed
+    await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
       .from("calibrations")
@@ -597,12 +593,8 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      previousPhase,
-      "calibrating",
-      organizationId,
-    );
+    // V2 lifecycle: transition through intermediate states if needed
+    await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
       .from("calibrations")
@@ -1574,7 +1566,7 @@ export class CalibrationService {
       await supabase
         .from("calibrations")
         .update({
-          status: "calibrated",
+          status: "awaiting_validation",
           completed_at: completedAt,
           mode_calibrage: this.extractModeCalibrage(v2Output),
           phase_age: this.extractPhaseAge(v2Output, parcel),
@@ -2253,9 +2245,9 @@ export class CalibrationService {
       );
     }
 
-    if (existingCalibration.status !== "completed") {
+    if (existingCalibration.status !== "awaiting_validation" && existingCalibration.status !== "completed") {
       throw new BadRequestException(
-        "Only completed calibrations can be validated",
+        "Only awaiting_validation calibrations can be validated",
       );
     }
 
@@ -2277,7 +2269,9 @@ export class CalibrationService {
     };
 
     const updatePayload: Record<string, unknown> = {
-      status: "completed",
+      status: "validated",
+      validated_by_user: true,
+      validated_at: validatedAt,
       profile_snapshot: calibrationData,
     };
 
@@ -2607,6 +2601,23 @@ export class CalibrationService {
     }
 
     return previousPhase === "active";
+  }
+
+  /**
+   * V2 lifecycle: transitions a parcel to 'calibrating', going through
+   * intermediate states if needed (awaiting_data → ready_calibration → calibrating).
+   */
+  private async transitionToCalibrating(
+    parcelId: string,
+    currentPhase: AiPhase,
+    organizationId: string,
+  ): Promise<void> {
+    let phase = currentPhase;
+    if (phase === "awaiting_data") {
+      await this.stateMachine.transitionPhase(parcelId, "awaiting_data", "ready_calibration", organizationId);
+      phase = "ready_calibration" as AiPhase;
+    }
+    await this.stateMachine.transitionPhase(parcelId, phase, "calibrating", organizationId);
   }
 
   private buildObservationModeContext(confidenceScore: number | null): {
