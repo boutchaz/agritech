@@ -290,12 +290,14 @@ function normalizeConfidenceScore(score: number): number {
 }
 
 const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
-  const health = output.step8.health_score;
+  const health = output.step8?.health_score;
   const confidence = output.confidence;
-  const normalizedConfidence = normalizeConfidenceScore(confidence.normalized_score);
-  const yieldPotential = output.step6.yield_potential;
-  const alternance = output.step6.alternance;
-  const zones = output.step7.zone_summary;
+  const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
+  const yieldPotential = output.step6?.yield_potential;
+  const alternance = output.step6?.alternance;
+  const zones = output.step7?.zone_summary;
+
+  if (!health) return null;
 
   return (
     <div className="space-y-6" data-testid="calibration-executive-summary">
@@ -316,7 +318,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
           </div>
 
           <div className="mt-4 space-y-2">
-            {Object.entries(health.components).map(([key, value]) => (
+            {Object.entries(health.components ?? {}).map(([key, value]) => (
               <div key={key} className="flex items-center space-x-3">
                 <span className="text-xs text-gray-500 dark:text-gray-400 w-24">{HEALTH_COMPONENT_LABELS[key] ?? key}</span>
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
@@ -559,12 +561,18 @@ const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> =
 };
 
 const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
-  const ndviData = output.step1.index_time_series.NDVI;
-  const ndmiData = output.step1.index_time_series.NDMI;
-  const ndreData = output.step1.index_time_series.NDRE;
-  const ndviPercentiles = output.step3.global_percentiles.NDVI;
-  const ndmiPercentiles = output.step3.global_percentiles.NDMI;
-  const ndrePercentiles = output.step3.global_percentiles.NDRE;
+  const step1 = output.step1;
+  const step2 = output.step2;
+  const step3 = output.step3;
+  const step4 = output.step4;
+  const step7 = output.step7;
+
+  const ndviData = step1?.index_time_series?.NDVI;
+  const ndmiData = step1?.index_time_series?.NDMI;
+  const ndreData = step1?.index_time_series?.NDRE;
+  const ndviPercentiles = step3?.global_percentiles?.NDVI;
+  const ndmiPercentiles = step3?.global_percentiles?.NDMI;
+  const ndrePercentiles = step3?.global_percentiles?.NDRE;
 
   return (
     <div className="space-y-4">
@@ -593,8 +601,8 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
             percentiles={ndrePercentiles}
           />
         )}
-        {output.step7.zone_summary.length > 1 ? (
-          <ZonePieChart zones={output.step7.zone_summary} t={t} />
+        {step7?.zone_summary && step7.zone_summary.length > 1 ? (
+          <ZonePieChart zones={step7.zone_summary} t={t} />
         ) : (
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
@@ -620,10 +628,10 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
           </p>
         </div>
       )}
-      <PhenologyTimeline dates={output.step4.mean_dates as unknown as Record<string, string>} />
+      <PhenologyTimeline dates={step4?.mean_dates as unknown as Record<string, string>} />
 
-      {output.step2.monthly_aggregates.length > 0 && (
-        <MonthlyWeatherChart aggregates={output.step2.monthly_aggregates} />
+      {step2?.monthly_aggregates && step2.monthly_aggregates.length > 0 && (
+        <MonthlyWeatherChart aggregates={step2.monthly_aggregates} />
       )}
     </div>
   );
@@ -777,7 +785,7 @@ const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ 
 const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceComponent> }> = ({ components }) => {
   return (
     <div className="space-y-2">
-      {Object.entries(components).map(([name, comp]) => {
+      {Object.entries(components ?? {}).map(([name, comp]) => {
         const pct = comp.max_score > 0 ? (comp.score / comp.max_score) * 100 : 0;
         return (
           <div key={name} className="flex items-center space-x-3">
@@ -835,6 +843,10 @@ const CalibrationImprovement: React.FC<{
 }> = ({ output, report }) => {
   const flags = output?.metadata?.data_quality_flags;
   const conf = output.confidence;
+  const step1 = output.step1;
+
+  if (!conf || !step1) return null;
+
   const satelliteImages = getRunSatelliteImages(report);
   const runCloudValues = satelliteImages
     .map((image) => toFiniteNumber(image.cloud_coverage))
@@ -843,10 +855,10 @@ const CalibrationImprovement: React.FC<{
     ? runCloudValues.reduce((sum, value) => sum + value, 0) / runCloudValues.length
     : null;
   const retainedImageCount = satelliteImages.length > 0
-    ? Math.max(0, satelliteImages.length - output.step1.filtered_image_count)
-    : output.step1.index_time_series.NDVI?.filter((point) => !point.interpolated).length ?? 0;
+    ? Math.max(0, satelliteImages.length - (step1.filtered_image_count ?? 0))
+    : step1.index_time_series?.NDVI?.filter((point) => !point.interpolated).length ?? 0;
   const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
-  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && output.step1.filtered_image_count === 0;
+  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && (step1.filtered_image_count ?? 0) === 0;
 
   return (
     <div className="space-y-6">
@@ -864,7 +876,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Avg Input Cloud</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {(averageInputCloudCoverage ?? output.step1.cloud_coverage_mean).toFixed(1)}%
+            {(averageInputCloudCoverage ?? step1.cloud_coverage_mean).toFixed(1)}%
           </span>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Across cached satellite readings used for this run
@@ -888,7 +900,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Rejected for Clouds</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {output.step1.filtered_image_count}
+            {step1.filtered_image_count ?? 0}
           </span>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Images above the 20% cloud threshold
@@ -900,7 +912,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Outliers Removed</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {output.step1.outlier_count}
+            {step1.outlier_count ?? 0}
           </span>
         </div>
       </div>
@@ -1520,7 +1532,7 @@ const AICalibrationPage = () => {
   );
 
   const v2Output = reportData?.report?.output ?? null;
-  const hasV2Report = v2Output !== null && !!v2Output.step1 && !!v2Output.step8;
+  const hasV2Report = v2Output !== null;
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
