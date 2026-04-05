@@ -11904,7 +11904,8 @@ COMMENT ON COLUMN account_translations.language_code IS 'ISO 639-1 language code
 CREATE TABLE IF NOT EXISTS tax_configurations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   country_code VARCHAR(2),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  -- NULL = system default rates per country; set for org-specific overrides
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   tax_name VARCHAR(255) NOT NULL,
   tax_code VARCHAR(50),
   tax_rate DECIMAL(5,2) NOT NULL,
