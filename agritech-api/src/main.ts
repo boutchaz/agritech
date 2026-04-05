@@ -7,7 +7,7 @@ import * as Sentry from '@sentry/nestjs';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import { json } from 'express';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
@@ -34,6 +34,14 @@ class AllExceptionsFilter implements ExceptionFilter {
       } else {
         message = exceptionResponse;
       }
+      stack = exception.stack || '';
+    } else if (
+      exception instanceof Error &&
+      (exception.constructor.name === 'PayloadTooLargeError' ||
+        (exception as { type?: string }).type === 'entity.too.large')
+    ) {
+      status = 413;
+      message = exception.message || 'Request body too large';
       stack = exception.stack || '';
     } else if (exception instanceof Error) {
       message = exception.message;
@@ -77,6 +85,8 @@ class AllExceptionsFilter implements ExceptionFilter {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    // Use our own express.json() below so we can set BODY_JSON_LIMIT (Nest default is ~100kb).
+    bodyParser: false,
   });
 
   const logger = new Logger('Bootstrap');
@@ -84,12 +94,21 @@ async function bootstrap() {
   // Get config service
   const configService = app.get(ConfigService);
 
-  // Capture raw body for webhook signature verification
-  app.use(json({
-    verify: (req, _res, buf) => {
-      (req as any).rawBody = buf.toString('utf8');
-    },
-  }));
+  const bodyJsonLimit =
+    configService.get<string>('BODY_JSON_LIMIT') ?? '50mb';
+
+  // Capture raw body for webhook signature verification.
+  // Default Express JSON limit is 100kb — too small for org demo-data import payloads.
+  app.use(
+    json({
+      limit: bodyJsonLimit,
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = buf.toString('utf8');
+      },
+    }),
+  );
+  app.use(urlencoded({ extended: true, limit: bodyJsonLimit }));
+  logger.log(`JSON / urlencoded body size limit: ${bodyJsonLimit}`);
 
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
