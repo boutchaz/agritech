@@ -5,11 +5,14 @@ import {
   AlertTriangle,
   BrainCircuit,
   Calendar,
+  Check,
   ChevronRight,
   Cloud,
   Compass,
+  Leaf,
   Lightbulb,
   Settings,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   Minus,
@@ -27,6 +30,16 @@ import { SectionLoader } from '@/components/ui/loader';
 type AIStatusBadgeStatus = ComponentProps<typeof AIStatusBadge>['status'];
 
 type CompassPhaseKey = 'active' | 'calibrated' | 'awaiting_nutrition_option' | 'calibrating' | 'ready_calibration' | 'awaiting_data' | 'archived' | 'default';
+
+type WorkflowStep = {
+  key: string;
+  label: string;
+  description: string;
+  done: boolean;
+  current: boolean;
+  icon: typeof Settings;
+  href?: '/parcels/$parcelId/ai/calibration';
+};
 
 function compassPhaseKey(phase: string | null | undefined): CompassPhaseKey {
   switch (phase) {
@@ -70,6 +83,122 @@ function trendIcon(trend: string) {
     return <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" aria-hidden />;
   }
   return <Minus className="w-4 h-4 text-slate-500" aria-hidden />;
+}
+
+function WorkflowStepper({ parcelId, aiPhase }: { parcelId: string; aiPhase: string | null }) {
+  const { t } = useTranslation('ai');
+
+  const calibrationDone = aiPhase === 'calibrated' || aiPhase === 'awaiting_nutrition_option' || aiPhase === 'active' || aiPhase === 'archived';
+  const nutritionDone = aiPhase === 'active' || aiPhase === 'archived';
+  const isActive = aiPhase === 'active';
+
+  const calibrationCurrent = !calibrationDone && aiPhase !== null && aiPhase !== 'archived';
+  const nutritionCurrent = calibrationDone && !nutritionDone;
+
+  const steps: WorkflowStep[] = [
+    {
+      key: 'calibration',
+      label: t('compass.stepper.calibration'),
+      description: t('compass.stepper.calibrationDesc'),
+      done: calibrationDone,
+      current: calibrationCurrent,
+      icon: Settings,
+      href: '/parcels/$parcelId/ai/calibration',
+    },
+    {
+      key: 'nutrition',
+      label: t('compass.stepper.nutrition'),
+      description: t('compass.stepper.nutritionDesc'),
+      done: nutritionDone,
+      current: nutritionCurrent,
+      icon: Leaf,
+      href: '/parcels/$parcelId/ai/calibration',
+    },
+    {
+      key: 'active',
+      label: t('compass.stepper.active'),
+      description: t('compass.stepper.activeDesc'),
+      done: isActive,
+      current: false,
+      icon: Sparkles,
+    },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+      <div className="flex items-center gap-2 mb-5">
+        <Compass className="h-5 w-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {t('compass.stepper.title')}
+        </h3>
+      </div>
+      <div className="relative flex flex-col gap-0 sm:flex-row sm:gap-0">
+        {steps.map((step, i) => {
+          const Icon = step.icon;
+          const isLast = i === steps.length - 1;
+
+          return (
+            <div key={step.key} className="flex-1">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      step.done
+                        ? 'border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-600'
+                        : step.current
+                          ? 'border-emerald-500 bg-white text-emerald-600 dark:border-emerald-400 dark:bg-slate-800 dark:text-emerald-400 ring-4 ring-emerald-500/20'
+                          : 'border-slate-300 bg-slate-50 text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'
+                    }`}
+                  >
+                    {step.done ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                  </div>
+                  {!isLast && (
+                    <div
+                      className={`h-full w-0.5 min-h-[2rem] sm:h-0.5 sm:w-full sm:min-w-[2rem] mt-1 sm:mt-0 sm:ml-0 ${
+                        step.done
+                          ? 'bg-emerald-400 dark:bg-emerald-600'
+                          : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
+                    />
+                  )}
+                </div>
+                <div className="pb-6 sm:pb-0 sm:pt-1">
+                  <p
+                    className={`text-sm font-semibold ${
+                      step.done
+                        ? 'text-emerald-700 dark:text-emerald-300'
+                        : step.current
+                          ? 'text-slate-900 dark:text-white'
+                          : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {step.current && step.href ? (
+                      <Link
+                        to="/parcels/$parcelId/ai/calibration"
+                        params={{ parcelId }}
+                        className="hover:underline underline-offset-2"
+                      >
+                        {step.label}
+                      </Link>
+                    ) : (
+                      step.label
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export interface AICompassDashboardProps {
@@ -284,6 +413,9 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
           </details>
         )}
       </section>
+
+      {/* Workflow stepper */}
+      <WorkflowStepper parcelId={parcelId} aiPhase={aiPhase} />
 
       {/* KPI row */}
       <section>
