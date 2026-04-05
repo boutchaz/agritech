@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
+import { safeJsonStringifyForError } from '../../../common/utils/safe-json-stringify';
 import * as jwt from 'jsonwebtoken';
 import { BaseAIProvider } from './base-ai.provider';
 import {
@@ -106,8 +107,8 @@ export class ZaiProvider extends BaseAIProvider {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const errorMessage = (error as AxiosError).response?.data
-          ? JSON.stringify((error as AxiosError).response?.data)
-          : error.message;
+          ? safeJsonStringifyForError((error as AxiosError).response?.data)
+          : (error as Error).message;
         this.logger.error(`Z.ai API error: ${errorMessage}`);
         throw new Error(`Z.ai API error: ${errorMessage}`);
       }

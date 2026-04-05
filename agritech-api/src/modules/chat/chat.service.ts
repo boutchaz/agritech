@@ -16,6 +16,7 @@ import { FollowUpService } from './prompt/follow-up.service';
 import { StructuredResponseService } from './prompt/structured-response.service';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
 import { ChatToolsService } from './tools/chat-tools.service';
+import { safeJsonStringifyForError } from '../../common/utils/safe-json-stringify';
 import {
   ZaiChatMessage,
   ZaiToolCall,
@@ -165,7 +166,16 @@ export class ChatService implements OnModuleInit {
           role: 'tool',
           tool_call_id: toolCall.id,
           name: toolCall.function.name,
-          content: JSON.stringify(result),
+          content: (() => {
+            try {
+              return JSON.stringify(result);
+            } catch {
+              return JSON.stringify({
+                error: 'Tool result could not be serialized',
+                detail: safeJsonStringifyForError(result, 500),
+              });
+            }
+          })(),
         });
       }
 

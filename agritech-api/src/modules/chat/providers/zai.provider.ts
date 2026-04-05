@@ -9,6 +9,10 @@ import {
   AIProvider,
 } from '../../ai-reports/interfaces';
 import { ToolDefinition } from '../tools/chat-tools.service';
+import {
+  safeJsonStringifyForError,
+  streamApiErrorMessage,
+} from '../../../common/utils/safe-json-stringify';
 
 export interface ZaiToolCall {
   id?: string;
@@ -188,8 +192,8 @@ export class ZaiProvider extends BaseAIProvider {
         } catch (error) {
           if (axios.isAxiosError(error)) {
             const errorMessage = (error as AxiosError).response?.data
-              ? JSON.stringify((error as AxiosError).response?.data)
-              : error.message;
+              ? safeJsonStringifyForError((error as AxiosError).response?.data)
+              : (error as Error).message;
             this.logger.error(`Z.ai API error: ${errorMessage}`);
             throw new Error(`Z.ai API error: ${errorMessage}`);
           }
@@ -254,8 +258,8 @@ export class ZaiProvider extends BaseAIProvider {
         } catch (error) {
           if (axios.isAxiosError(error)) {
             const errorMessage = (error as AxiosError).response?.data
-              ? JSON.stringify((error as AxiosError).response?.data)
-              : error.message;
+              ? safeJsonStringifyForError((error as AxiosError).response?.data)
+              : (error as Error).message;
             this.logger.error(`Z.ai API tool error: ${errorMessage}`);
             throw new Error(`Z.ai API error: ${errorMessage}`);
           }
@@ -305,7 +309,7 @@ export class ZaiProvider extends BaseAIProvider {
           } catch (error) {
             if (axios.isAxiosError(error)) {
               const errorMessage = (error as AxiosError).response?.data
-                ? JSON.stringify((error as AxiosError).response?.data)
+                ? safeJsonStringifyForError((error as AxiosError).response?.data)
                 : error.message;
               this.logger.error(`Z.ai streaming API error: ${errorMessage}`);
               throw new Error(`Z.ai streaming API error: ${errorMessage}`);
@@ -374,9 +378,7 @@ export class ZaiProvider extends BaseAIProvider {
             }
 
             if (parsed.error) {
-              const message = typeof parsed.error === 'string'
-                ? parsed.error
-                : parsed.error.message || JSON.stringify(parsed.error);
+              const message = streamApiErrorMessage(parsed.error);
               finishError(new Error(`Z.ai stream error: ${message}`));
               return;
             }
@@ -483,7 +485,7 @@ export class ZaiProvider extends BaseAIProvider {
           } catch (error) {
             if (axios.isAxiosError(error)) {
               const errorMessage = (error as AxiosError).response?.data
-                ? JSON.stringify((error as AxiosError).response?.data)
+                ? safeJsonStringifyForError((error as AxiosError).response?.data)
                 : error.message;
               this.logger.error(`Z.ai streaming API tool error: ${errorMessage}`);
               throw new Error(`Z.ai streaming API error: ${errorMessage}`);
@@ -589,9 +591,7 @@ export class ZaiProvider extends BaseAIProvider {
             }
 
             if (parsed.error) {
-              const message = typeof parsed.error === 'string'
-                ? parsed.error
-                : parsed.error.message || JSON.stringify(parsed.error);
+              const message = streamApiErrorMessage(parsed.error);
               finishError(new Error(`Z.ai tool stream error: ${message}`));
               return;
             }
@@ -709,7 +709,7 @@ export class ZaiProvider extends BaseAIProvider {
         } catch (error) {
           if (axios.isAxiosError(error)) {
             const errorMessage = (error as AxiosError).response?.data
-              ? JSON.stringify((error as AxiosError).response?.data)
+              ? safeJsonStringifyForError((error as AxiosError).response?.data)
               : error.message;
             this.logger.error(`Z.ai vision API error: ${errorMessage}`);
             throw new Error(`Z.ai vision API error: ${errorMessage}`);
@@ -763,7 +763,7 @@ export class ZaiProvider extends BaseAIProvider {
           } catch (error) {
             if (axios.isAxiosError(error)) {
               const errorMessage = (error as AxiosError).response?.data
-                ? JSON.stringify((error as AxiosError).response?.data)
+                ? safeJsonStringifyForError((error as AxiosError).response?.data)
                 : error.message;
               this.logger.error(`Z.ai vision streaming API error: ${errorMessage}`);
               throw new Error(`Z.ai vision streaming API error: ${errorMessage}`);
@@ -832,9 +832,7 @@ export class ZaiProvider extends BaseAIProvider {
             }
 
             if (parsed.error) {
-              const message = typeof parsed.error === 'string'
-                ? parsed.error
-                : parsed.error.message || JSON.stringify(parsed.error);
+              const message = streamApiErrorMessage(parsed.error);
               finishError(new Error(`Z.ai vision stream error: ${message}`));
               return;
             }

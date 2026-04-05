@@ -26,6 +26,29 @@ import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Res } from '@nestjs/common';
 import { Response } from 'express';
 
+function buildChatStreamDoneMetadata(metadata: Record<string, unknown> | undefined) {
+  const m = metadata ?? {};
+  return {
+    provider: typeof m.provider === 'string' ? m.provider : 'zai',
+    model: typeof m.model === 'string' ? m.model : '',
+    timestamp:
+      m.timestamp instanceof Date
+        ? m.timestamp.toISOString()
+        : typeof m.timestamp === 'string'
+          ? m.timestamp
+          : new Date().toISOString(),
+    suggestions: Array.isArray(m.suggestions)
+      ? m.suggestions.filter((s): s is string => typeof s === 'string')
+      : [],
+    cleanText: typeof m.cleanText === 'string' ? m.cleanText : undefined,
+  };
+}
+
+function chatStreamErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
+
 @ApiTags('Chat')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/chat')
@@ -208,17 +231,26 @@ export class ChatController {
         onToken: (token: string) => {
           res.write(`data: ${JSON.stringify({ type: 'token', content: token })}\n\n`);
         },
-        onComplete: (metadata: any) => {
-          res.write(`data: ${JSON.stringify({ type: 'done', metadata })}\n\n`);
+        onComplete: (metadata: unknown) => {
+          const safe = buildChatStreamDoneMetadata(
+            metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+              ? (metadata as Record<string, unknown>)
+              : undefined,
+          );
+          res.write(`data: ${JSON.stringify({ type: 'done', metadata: safe })}\n\n`);
           res.end();
         },
         onError: (error: Error) => {
-          res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+          res.write(
+            `data: ${JSON.stringify({ type: 'error', message: chatStreamErrorMessage(error) })}\n\n`,
+          );
           res.end();
         },
       });
     } catch (error) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: error.message })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', message: chatStreamErrorMessage(error) })}\n\n`,
+      );
       res.end();
     }
   }

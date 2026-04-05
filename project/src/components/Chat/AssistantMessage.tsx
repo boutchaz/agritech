@@ -6,7 +6,7 @@ import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
 import { marked } from 'marked';
 import { sanitizeMarkdownHtml } from '@/lib/sanitize';
-import { DEEP_LINK_MAP } from './chat-utils';
+import { DEEP_LINK_MAP, formatChatMessageTimestamp } from './chat-utils';
 import { cardRegistry } from './cards';
 import { Button } from '@/components/ui/button';
 import { unwrapStructuredAssistantJson } from '@/lib/chat/unwrapStructuredAssistantJson';
@@ -158,7 +158,7 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
               );
             })}
             <span className="text-xs opacity-70 mt-1 block">
-              {timestamp.toLocaleTimeString()}
+              {formatChatMessageTimestamp(timestamp, language)}
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">

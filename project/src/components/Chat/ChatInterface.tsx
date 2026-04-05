@@ -237,6 +237,8 @@ export function ChatInterface() {
       : errorMsg.includes('Connection error') || errorMsg.includes('Failed to fetch')
       ? "I'm having trouble connecting to the server."
       : errorMsg.includes('Z.ai API') ? 'The AI service is currently unavailable.'
+      : errorMsg.includes('circular structure') || errorMsg.includes('Converting circular structure')
+      ? 'The AI service returned an invalid error payload. Please try again.'
       : `I encountered an error: ${errorMsg}. Please try again.`;
     setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: errorContent, timestamp: new Date() }]);
     if (!voiceMode) setInput(messageText);

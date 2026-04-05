@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { safeJsonStringifyForError } from '../../../common/utils/safe-json-stringify';
 
 type StructuredCardType =
   | 'recommendation-card'
@@ -85,6 +86,10 @@ export class StructuredResponseService {
   }
 
   private formatCard(card: StructuredCard): string {
-    return `\`\`\`json:${card.type}\n${JSON.stringify(card.data, null, 2)}\n\`\`\``;
+    try {
+      return `\`\`\`json:${card.type}\n${JSON.stringify(card.data, null, 2)}\n\`\`\``;
+    } catch {
+      return `\`\`\`json:${card.type}\n${safeJsonStringifyForError(card.data, 8000)}\n\`\`\``;
+    }
   }
 }
