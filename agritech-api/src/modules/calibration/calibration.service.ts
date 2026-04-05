@@ -2315,9 +2315,9 @@ export class CalibrationService {
       );
     }
 
-    if (existingCalibration.status !== "awaiting_validation" && existingCalibration.status !== "completed") {
+    if (existingCalibration.status === "failed" || existingCalibration.status === "in_progress" || existingCalibration.status === "provisioning") {
       throw new BadRequestException(
-        "Only awaiting_validation calibrations can be validated",
+        `Calibration cannot be validated in ${existingCalibration.status} status`,
       );
     }
 
