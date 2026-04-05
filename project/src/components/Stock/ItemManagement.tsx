@@ -62,10 +62,10 @@ import {
 import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag, Layers } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
-import { itemsApi, type ItemStockLevelsResponse } from '@/lib/api/items';
+import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, ProductVariant } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';

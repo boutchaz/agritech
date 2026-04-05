@@ -1,74 +1,23 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import { type InvoiceItemInput } from '../lib/taxCalculations';
-import { quotesApi, type PaginatedQuoteQuery, type PaginatedResponse } from '../lib/api/quotes';
+import { quotesApi } from '../lib/api/quotes';
 import { extractApiResponse } from '../lib/api/types';
+import type {
+  QuoteResponse,
+  QuoteWithItems,
+  QuoteFormItemInput,
+  PaginatedQuoteQuery,
+  PaginatedResponse,
+} from '../types/quotes';
 
-interface QuoteItemInput extends InvoiceItemInput {
-  item_id?: string;
-  unit_price?: number;
-}
+export type {
+  QuoteResponse as Quote,
+  QuoteItemResponse as QuoteItem,
+  QuoteWithItems,
+  QuoteFormItemInput as QuoteItemInput,
+} from '../types/quotes';
 
-export interface Quote {
-  id: string;
-  organization_id: string;
-  quote_number: string;
-  quote_date: string;
-  valid_until: string;
-  customer_id: string | null;
-  customer_name: string;
-  contact_person: string | null;
-  contact_email: string | null;
-  contact_phone: string | null;
-  subtotal: number;
-  tax_total: number;
-  discount_amount: number;
-  grand_total: number;
-  currency_code: string;
-  exchange_rate: number;
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
-  payment_terms: string | null;
-  delivery_terms: string | null;
-  terms_and_conditions: string | null;
-  notes: string | null;
-  reference_number: string | null;
-  sales_order_id: string | null;
-  farm_id: string | null;
-  parcel_id: string | null;
-  created_at: string;
-  updated_at: string;
-  created_by: string | null;
-  sent_at: string | null;
-  sent_by: string | null;
-  accepted_at: string | null;
-  converted_at: string | null;
-  converted_by: string | null;
-}
-
-export interface QuoteItem {
-  id: string;
-  quote_id: string;
-  line_number: number;
-  item_name: string;
-  description: string | null;
-  quantity: number;
-  unit_of_measure: string;
-  unit_price: number;
-  amount: number;
-  discount_percent: number;
-  discount_amount: number;
-  tax_id: string | null;
-  tax_rate: number;
-  tax_amount: number;
-  line_total: number;
-  account_id: string | null;
-}
-
-export interface QuoteWithItems extends Quote {
-  items?: QuoteItem[];
-}
-
-export function useQuotes(status?: Quote['status']) {
+export function useQuotes(status?: QuoteResponse['status']) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -86,7 +35,7 @@ export function useQuotes(status?: Quote['status']) {
         },
         currentOrganization.id
       );
-      return extractApiResponse<Quote>(response);
+      return extractApiResponse<QuoteResponse>(response);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -97,12 +46,12 @@ export function usePaginatedQuotes(query: PaginatedQuoteQuery) {
 
   return useQuery({
     queryKey: ['quotes', 'paginated', currentOrganization?.id, query],
-    queryFn: async (): Promise<PaginatedResponse<Quote>> => {
+    queryFn: async (): Promise<PaginatedResponse<QuoteResponse>> => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
 
-      return quotesApi.getPaginated(query, currentOrganization.id) as unknown as PaginatedResponse<Quote>;
+      return quotesApi.getPaginated(query, currentOrganization.id) as unknown as PaginatedResponse<QuoteResponse>;
     },
     enabled: !!currentOrganization?.id,
     placeholderData: keepPreviousData,
@@ -141,7 +90,7 @@ export function useCreateQuote() {
       customer_id: string;
       quote_date: string;
       valid_until: string;
-      items: QuoteItemInput[];
+       items: QuoteFormItemInput[];
       payment_terms?: string;
       delivery_terms?: string;
       terms_and_conditions?: string;
@@ -203,7 +152,7 @@ export function useUpdateQuote() {
           customer_id?: string;
           quote_date?: string;
           valid_until?: string;
-          items?: QuoteItemInput[];
+           items?: QuoteFormItemInput[];
           payment_terms?: string;
           delivery_terms?: string;
           terms_and_conditions?: string;
@@ -232,7 +181,7 @@ export function useUpdateQuote() {
       };
 
       const data = await quotesApi.update(quoteId, transformedData, currentOrganization.id);
-      return data as unknown as Quote;
+      return data as unknown as QuoteResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
@@ -248,7 +197,7 @@ export function useUpdateQuoteStatus() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ quoteId, status }: { quoteId: string; status: Quote['status'] }) => {
+    mutationFn: async ({ quoteId, status }: { quoteId: string; status: QuoteResponse['status'] }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
@@ -258,7 +207,7 @@ export function useUpdateQuoteStatus() {
         { status },
         currentOrganization.id
       );
-      return data as unknown as Quote;
+      return data as unknown as QuoteResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });

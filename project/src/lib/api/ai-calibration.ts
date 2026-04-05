@@ -7,7 +7,7 @@ const BASE_URL = '/api/v1/parcels';
 export interface AICalibration {
   id: string;
   parcel_id: string;
-  status: 'pending' | 'provisioning' | 'in_progress' | 'completed' | 'failed';
+  status: 'pending' | 'provisioning' | 'in_progress' | 'awaiting_validation' | 'validated' | 'completed' | 'failed';
   confidence_score: number;
   zone_classification: 'optimal' | 'normal' | 'stressed' | null;
   error_message: string | null;

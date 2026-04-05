@@ -180,6 +180,9 @@ export function useValidateCalibration(parcelId: string) {
         queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
         currentOrganization?.id,),
       });
+      queryClient.invalidateQueries({
+        queryKey: ['ai-calibration', parcelId],
+      });
       toast.success(i18n.t("toasts.calibrationValidated", { ns: "ai" }));
     },
     onError: (error) => {

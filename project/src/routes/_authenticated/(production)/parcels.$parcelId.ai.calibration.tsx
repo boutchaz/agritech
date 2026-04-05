@@ -1622,7 +1622,7 @@ const AICalibrationPage = () => {
         (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) &&
         reportData?.calibration?.id && (
         <div className="space-y-4" data-testid="calibration-action-panels">
-          {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && (
+          {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && calibration?.status !== 'validated' && hasV2Report && v2Output && (
             <ValidationPanel
               calibrationId={reportData.calibration.id}
               parcelId={parcelId}

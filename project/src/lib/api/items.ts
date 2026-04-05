@@ -17,27 +17,16 @@ import type {
   ItemGroupFilters,
   FarmStockLevelsByItem,
   ItemUsageSummary,
+  ItemStockLevelsResponse,
 } from '../../types/items';
 
 const BASE_URL = '/api/v1/items';
 
-export interface ItemStockLevelWarehouse {
-  warehouse_id: string;
-  warehouse_name: string;
-  farm_id: string | null;
-  farm_name: string | null;
-  quantity: number;
-  value: number;
-}
-
-export interface ItemStockLevelSummary {
-  total_quantity: number;
-  total_value: number;
-  is_low_stock?: boolean;
-  warehouses?: ItemStockLevelWarehouse[];
-}
-
-export type ItemStockLevelsResponse = Record<string, ItemStockLevelSummary>;
+export type {
+  ItemStockLevelWarehouse,
+  ItemStockLevelSummary,
+  ItemStockLevelsResponse,
+} from '../../types/items';
 
 const baseCrud = createCrudApi<Item, CreateItemInput, ItemFilters, UpdateItemInput>(BASE_URL);
 

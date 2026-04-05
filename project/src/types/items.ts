@@ -607,3 +607,21 @@ export interface ItemUsageSummary {
   total_quantity_used: number;
   by_farm: ItemFarmUsage[];
 }
+
+export interface ItemStockLevelWarehouse {
+  warehouse_id: string;
+  warehouse_name: string;
+  farm_id: string | null;
+  farm_name: string | null;
+  quantity: number;
+  value: number;
+}
+
+export interface ItemStockLevelSummary {
+  total_quantity: number;
+  total_value: number;
+  is_low_stock?: boolean;
+  warehouses?: ItemStockLevelWarehouse[];
+}
+
+export type ItemStockLevelsResponse = Record<string, ItemStockLevelSummary>;
