@@ -10,31 +10,37 @@ export class PromptBuilderService {
   private readonly summarizer = new ContextSummarizerService();
 
   /**
-   * Explains why forecast rows may be missing so the model does not falsely blame "no parcel coordinates".
+   * Internal instructions when no forecast table is attached. Must not contain env vars, API names,
+   * or flag names — the model must not parrot these to end users.
    */
-  private weatherForecastUnavailableExplanation(context: BuiltContext): string {
+  private weatherForecastMissingAssistantInstructions(context: BuiltContext): string {
     const d = context.satelliteWeather?.weather_forecast?.diagnostics;
-    if (!d) {
-      return 'No forecast rows were attached. Do not insist that parcels lack GPS or AOI unless farm data in context clearly shows unmappable parcels.';
+    let scenario: 'none' | 'upstream' | 'geometry' | 'transient' = 'none';
+    if (d) {
+      if (!d.openweather_configured) {
+        scenario = 'upstream';
+      } else if (d.parcels_loaded > 0 && d.parcels_resolved_location === 0) {
+        scenario = 'geometry';
+      } else if (d.parcels_resolved_location > 0 && d.forecasts_returned === 0) {
+        scenario = 'transient';
+      }
     }
-    const bits: string[] = [
-      `openweather_configured=${d.openweather_configured}`,
-      `parcels_loaded=${d.parcels_loaded}`,
-      `parcels_with_resolved_location=${d.parcels_resolved_location}`,
-      `forecasts_returned=${d.forecasts_returned}`,
-    ];
-    if (!d.openweather_configured) {
-      bits.push('Likely cause: OpenWeatherMap API key is not set on the server.');
-    } else if (d.parcels_loaded > 0 && d.parcels_resolved_location === 0) {
-      bits.push(
-        'Likely cause: no location could be built from parcel boundary JSON, PostGIS centroid/boundary_geom, or satellite AOI geometry.',
-      );
-    } else if (d.parcels_resolved_location > 0 && d.forecasts_returned === 0) {
-      bits.push(
-        'Likely cause: weather API error, rate limit, or empty response despite resolved coordinates.',
-      );
-    }
-    return `System diagnostics: ${bits.join('; ')}`;
+    const scenarioHint =
+      scenario === 'upstream'
+        ? 'The detailed short-term forecast is not available in this assistant response (service not supplying it).'
+        : scenario === 'geometry'
+          ? 'No parcel location could be resolved for forecast in this pipeline run.'
+          : scenario === 'transient'
+            ? 'Locations were resolved but no forecast rows were returned (temporary or upstream issue).'
+            : 'No forecast rows were attached to this message.';
+
+    return [
+      scenarioHint,
+      'In your `text` reply: use one or two short, friendly sentences only.',
+      'Do NOT mention: API keys, environment variable names, frontend build prefixes, backend framework names, servers, "diagnostics", booleans, or any internal field names.',
+      'Do NOT blame the user for "missing coordinates" if farm/parcel summaries in context clearly show parcels with mapping or area.',
+      'Optionally suggest they open the parcel Weather tab in the app for charts if that fits the product; do not claim the app lacks weather elsewhere.',
+    ].join(' ');
   }
 
   buildSystemPrompt(options?: { enableTools?: boolean }): string {
@@ -115,6 +121,7 @@ export class PromptBuilderService {
   * Don't repeat the same information multiple times
   * Don't write long paragraphs explaining what they need to do - be concise
 - If you don't have sufficient data, clearly state what information is missing briefly
+- **Never disclose to end users:** API keys, environment variable names, cloud provider names for weather, server configuration, or any internal "diagnostics" / debug flags. If a feature is unavailable, say so in plain language only
 - Use professional agricultural terminology while remaining accessible
 - Be specific with references to actual data (parcel names, amounts, dates, indices) when available
 - For complex analyses, break down your response clearly
@@ -209,9 +216,7 @@ You MUST respond with valid JSON matching the specified schema.`;
 
 If the user asks "will it rain tomorrow", check the "Tomorrow" forecast entry for precipitation > 0mm or rain probability > 0%. Answer directly based on this data.`
         : weatherIntent && satelliteOrWeatherLoaded && !hasWeatherForecast
-          ? `\n\n⚠️ NOTE: The user is asking about weather, but no usable forecast rows were attached below. ${this.weatherForecastUnavailableExplanation(context)}
-
-Explain the limitation briefly using the diagnostics above. Do **not** claim parcels lack coordinates or AOI if \`parcels_with_resolved_location\` is greater than zero.`
+          ? `\n\n⚠️ NOTE: The user is asking about weather, but no forecast table appears under SATELLITE & WEATHER DATA below. ${this.weatherForecastMissingAssistantInstructions(context)}`
           : '';
 
     return `${langInstruction}${weatherEmphasis}
@@ -419,7 +424,7 @@ ${p.forecasts.map((f, idx) => {
   const dayLabel = idx === 0 ? 'Today' : isTomorrow ? 'Tomorrow' : `Day ${idx + 1}`;
   return `  ${dayLabel} (${f.date}): ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}${f.humidity !== undefined ? `, Humidity: ${f.humidity}%` : ''}${f.windSpeed !== undefined ? `, Wind: ${f.windSpeed} km/h` : ''}`;
 }).join('\n')}
-`).join('\n') : `[No per-parcel forecast rows] ${this.weatherForecastUnavailableExplanation(context)}`}
+`).join('\n') : 'No short-term forecast data is included in this assistant context.'}
 ` : 'No satellite/weather data available.'}
 
 ====================================================
