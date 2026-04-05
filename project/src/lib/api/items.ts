@@ -18,6 +18,9 @@ import type {
   FarmStockLevelsByItem,
   ItemUsageSummary,
   ItemStockLevelsResponse,
+  ItemSelectionFilters,
+  FarmStockLevelFilters,
+  StockLevelFilters,
 } from '../../types/items';
 
 const BASE_URL = '/api/v1/items';
@@ -113,12 +116,7 @@ export const itemsApi = {
   /**
    * Get items for selection (lightweight for dropdowns)
    */
-  async getForSelection(filters?: {
-    is_sales_item?: boolean;
-    is_purchase_item?: boolean;
-    is_stock_item?: boolean;
-    search?: string;
-  }, organizationId?: string): Promise<ItemSelectionOption[]> {
+  async getForSelection(filters?: ItemSelectionFilters, organizationId?: string): Promise<ItemSelectionOption[]> {
     const params = new URLSearchParams();
 
     if (filters?.is_sales_item !== undefined) {
@@ -144,11 +142,7 @@ export const itemsApi = {
    * Get stock levels grouped by farm with warehouse relationships
    */
   async getFarmStockLevels(
-    filters?: {
-      farm_id?: string;
-      item_id?: string;
-      low_stock_only?: boolean;
-    },
+    filters?: FarmStockLevelFilters,
     organizationId?: string,
   ): Promise<FarmStockLevelsByItem[]> {
     const params = new URLSearchParams();
@@ -171,10 +165,7 @@ export const itemsApi = {
    * Get stock levels for items with farm context
    */
   async getStockLevels(
-    filters?: {
-      farm_id?: string;
-      item_id?: string;
-    },
+    filters?: StockLevelFilters,
     organizationId?: string,
   ): Promise<ItemStockLevelsResponse> {
     const params = new URLSearchParams();

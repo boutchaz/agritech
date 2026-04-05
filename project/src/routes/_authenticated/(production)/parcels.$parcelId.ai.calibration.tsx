@@ -1224,7 +1224,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId, phase }: {
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
-  const canConfirmNutrition = phase === 'awaiting_nutrition_option' || phase === 'validated';
+  const canConfirmNutrition = phase === 'awaiting_nutrition_option';
 
   if (isSuggestionLoading) {
     return (

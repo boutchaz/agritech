@@ -92,6 +92,16 @@ export type UpdateQuoteFormInput = Omit<UpdateQuoteInput, 'items'> & {
   items?: QuoteFormItemInput[];
 };
 
+export interface UpdateQuoteMutationParams {
+  quoteId: string;
+  quoteData: UpdateQuoteFormInput;
+}
+
+export interface UpdateQuoteStatusParams {
+  quoteId: string;
+  status: QuoteStatus;
+}
+
 export interface QuoteFormItemInput extends InvoiceItemInput {
   item_id?: string;
   unit_price?: number;

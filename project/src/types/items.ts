@@ -625,3 +625,21 @@ export interface ItemStockLevelSummary {
 }
 
 export type ItemStockLevelsResponse = Record<string, ItemStockLevelSummary>;
+
+export interface ItemSelectionFilters {
+  is_sales_item?: boolean;
+  is_purchase_item?: boolean;
+  is_stock_item?: boolean;
+  search?: string;
+}
+
+export interface FarmStockLevelFilters {
+  farm_id?: string;
+  item_id?: string;
+  low_stock_only?: boolean;
+}
+
+export interface StockLevelFilters {
+  farm_id?: string;
+  item_id?: string;
+}

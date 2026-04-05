@@ -6,7 +6,8 @@ import type {
   QuoteResponse,
   QuoteWithItems,
   CreateQuoteFormInput,
-  UpdateQuoteFormInput,
+  UpdateQuoteMutationParams,
+  UpdateQuoteStatusParams,
   PaginatedQuoteQuery,
   PaginatedResponse,
 } from '../types/quotes';
@@ -18,6 +19,8 @@ export type {
   QuoteFormItemInput as QuoteItemInput,
   CreateQuoteFormInput,
   UpdateQuoteFormInput,
+  UpdateQuoteMutationParams,
+  UpdateQuoteStatusParams,
 } from '../types/quotes';
 
 export function useQuotes(status?: QuoteResponse['status']) {
@@ -139,7 +142,7 @@ export function useUpdateQuote() {
     mutationFn: async ({
       quoteId,
       quoteData,
-    }: { quoteId: string; quoteData: UpdateQuoteFormInput }) => {
+    }: UpdateQuoteMutationParams) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
@@ -177,7 +180,7 @@ export function useUpdateQuoteStatus() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ quoteId, status }: { quoteId: string; status: QuoteResponse['status'] }) => {
+    mutationFn: async ({ quoteId, status }: UpdateQuoteStatusParams) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
