@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { getMoteurConfig } from './crop-reference-loader';
 
 type NutritionOption = 'A' | 'B' | 'C';
 
@@ -180,22 +181,28 @@ export class NutritionOptionService {
   }
 
   private getWaterSalinityThreshold(cropType: string): number {
-    if (cropType === 'olivier') {
-      return 2.5;
-    }
-    if (cropType === 'palmier_dattier') {
-      return 6.0;
-    }
+    // Try MOTEUR_CONFIG thresholds first
+    const config = getMoteurConfig();
+    const cultureCfg = (config?.cultures as Record<string, any>)?.[cropType];
+    const fromConfig = cultureCfg?.specificites?.salinite_seuil_option_C_CE_eau;
+    if (typeof fromConfig === 'number') return fromConfig;
+
+    // Fallback hardcoded
+    if (cropType === 'olivier') return 2.5;
+    if (cropType === 'palmier_dattier') return 6.0;
     return 1.5;
   }
 
   private getSoilSalinityThreshold(cropType: string): number {
-    if (cropType === 'olivier') {
-      return 3.0;
-    }
-    if (cropType === 'palmier_dattier') {
-      return 8.0;
-    }
+    // Try MOTEUR_CONFIG thresholds first
+    const config = getMoteurConfig();
+    const cultureCfg = (config?.cultures as Record<string, any>)?.[cropType];
+    const fromConfig = cultureCfg?.specificites?.salinite_seuil_option_C_CE_sol;
+    if (typeof fromConfig === 'number') return fromConfig;
+
+    // Fallback hardcoded
+    if (cropType === 'olivier') return 3.0;
+    if (cropType === 'palmier_dattier') return 8.0;
     return 2.0;
   }
 

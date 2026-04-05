@@ -989,10 +989,56 @@ export class AIReportsService {
           dto.data_end_date,
         );
 
+        // V2: load moteur config + culture referentiel for config-driven prompt
+        const { getMoteurConfig, getLocalCropReference } = await import(
+          '../../modules/calibration/crop-reference-loader'
+        );
+        const { buildCalibrageSystemPrompt: buildV3System, buildCalibrageUserPrompt: buildV3User } = await import(
+          '../../libs/agromind-ia/prompts/calibrage.prompt.v3'
+        );
+        const moteurConfig = getMoteurConfig() ?? {};
+        const cropType = calibrationData.parcel?.cropType ?? calibrationData.parcel?.treeType ?? 'olivier';
+        const referentiel = getLocalCropReference(cropType) ?? {};
+
+        // Build V2 user input from aggregated data
+        const v3Input = {
+          profil: {
+            parcelle_id: dto.parcel_id,
+            culture: cropType as any,
+            variete: calibrationData.parcel?.variety ?? 'inconnue',
+            systeme: (calibrationData.parcel?.plantingSystem ?? 'intensif') as any,
+            age_ans: calibrationData.parcel?.plantingYear
+              ? new Date().getFullYear() - Number(calibrationData.parcel.plantingYear)
+              : 0,
+            densite_arbres_ha: calibrationData.parcel?.treeCount && calibrationData.parcel?.area
+              ? Math.round(Number(calibrationData.parcel.treeCount) / Number(calibrationData.parcel.area))
+              : 0,
+            surface_ha: Number(calibrationData.parcel?.area ?? 0),
+            irrigation: {
+              type: calibrationData.parcel?.irrigationType ?? 'inconnu',
+              efficience: 0.9,
+            },
+            localisation: { lat: 0, lng: 0, region: '' },
+            langue: (language ?? 'fr') as any,
+          },
+          satellite_history: (calibrationData.satelliteHistory?.timeSeries?.NDVI ?? []).map((pt: any) => ({
+            date: pt.date,
+            indices: { NDVI: pt.value, NIRv: 0, NDMI: 0, NDRE: 0 },
+            nb_pixels_purs: 50,
+            couverture_nuageuse_pct: 10,
+          })),
+          meteo_history: [],
+          analyses: {},
+          historique_rendements: (calibrationData.yieldHistory ?? []).map((y: any) => ({
+            annee: y.year,
+            rendement_t_ha: y.yieldPerHa ?? 0,
+          })),
+        };
+
         return {
           reportType,
-          systemPrompt: CALIBRATION_EXPERT_SYSTEM_PROMPT,
-          userPrompt: buildCalibrationPrompt(calibrationData, language),
+          systemPrompt: buildV3System(moteurConfig, referentiel),
+          userPrompt: buildV3User(v3Input as any),
           parcelName: calibrationData.parcel.name,
           dataSnapshot: calibrationData,
         };
