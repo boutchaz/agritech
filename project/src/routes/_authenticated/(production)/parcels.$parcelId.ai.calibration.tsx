@@ -384,11 +384,11 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
         </div>
       </div>
 
-      {zones.length > 1 && (
+      {(zones?.length ?? 0) > 1 && (
         <div>
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('calibrationZones.zoneDistribution')}</div>
           <div className="flex items-center space-x-2">
-            {zones.map((zone) => (
+            {(zones ?? []).map((zone) => (
               <div
                 key={zone.class_name}
                 className="flex-1 text-center"
@@ -498,7 +498,7 @@ const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => 
   );
 };
 
-const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
+const PhenologyTimeline = ({ dates }: { dates: Record<string, string> | undefined }) => {
   const stages = [
     { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
     { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
@@ -512,7 +512,7 @@ const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Phenological Timeline</h4>
       <div className="flex items-center justify-between">
         {stages.map((stage, i) => {
-          const dateStr = dates[stage.key];
+          const dateStr = dates?.[stage.key];
           return (
             <div key={stage.key} className="flex flex-col items-center text-center flex-1">
               <div className="flex items-center w-full">
@@ -841,7 +841,8 @@ function getRunSatelliteImages(report: Record<string, unknown> | null | undefine
 
 const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
   report?: Record<string, unknown> | null; }) => {
-  const flags = output?.metadata?.data_quality_flags;
+  const flagsRaw = output?.metadata?.data_quality_flags;
+  const flags = Array.isArray(flagsRaw) ? flagsRaw : [];
   const conf = output.confidence;
   const step1 = output.step1;
 
@@ -856,7 +857,7 @@ const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
     : null;
   const retainedImageCount = satelliteImages.length > 0
     ? Math.max(0, satelliteImages.length - (step1.filtered_image_count ?? 0))
-    : step1.index_time_series?.NDVI?.filter((point) => !point.interpolated).length ?? 0;
+    : (step1.index_time_series?.NDVI?.filter((point) => !point.interpolated) ?? []).length;
   const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
   const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && (step1.filtered_image_count ?? 0) === 0;
 
