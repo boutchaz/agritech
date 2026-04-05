@@ -39,8 +39,8 @@ const ParcelOverview = () => {
     return value.toFixed(2);
   };
 
-  // Check if we have satellite data
-  const hasSatelliteData = indices?.ndvi !== null || indices?.ndmi !== null;
+  // Check if we have satellite data (hide banner while loading or when data exists)
+  const hasSatelliteData = _isLoadingIndices || (indices?.ndvi != null || indices?.ndmi != null);
 
   const data = {
     irrigation: irrigationIndex,
