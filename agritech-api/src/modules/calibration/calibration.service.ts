@@ -1961,11 +1961,14 @@ export class CalibrationService {
     const diagnosticData = this.toJsonObject(calibration.diagnostic_data);
     const scoresDetail = this.toJsonObject(calibration.scores_detail);
     const profileSnapshot = this.toJsonObject(calibration.profile_snapshot);
+    const snapshotOutput = this.toJsonObject(profileSnapshot?.output);
 
     const output = {
       parcel_id: calibration.parcel_id,
       phase_age: calibration.phase_age,
       mode_calibrage: calibration.mode_calibrage,
+      step1: snapshotOutput.step1 ?? null,
+      step2: snapshotOutput.step2 ?? null,
       step3: {
         global_percentiles: baselineData.percentiles ?? null,
       },
