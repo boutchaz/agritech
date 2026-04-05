@@ -1,4 +1,4 @@
-import React from "react";
+
 import { useCurrentFrame, useVideoConfig, interpolate } from "remotion";
 
 interface AnimatedNumberProps {
@@ -8,7 +8,7 @@ interface AnimatedNumberProps {
   suffix?: string;
 }
 
-export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({ value, label, prefix = "", suffix = "" }) => {
+export const AnimatedNumber = ({ value, label, prefix = "", suffix = "" }: AnimatedNumberProps) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 

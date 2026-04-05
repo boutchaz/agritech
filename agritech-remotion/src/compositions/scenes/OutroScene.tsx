@@ -1,8 +1,8 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 import { moroccanData } from "../../data/mock-data";
 
-export const OutroScene: React.FC = () => {
+export const OutroScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -195,9 +195,9 @@ export const OutroScene: React.FC = () => {
                 </div>
 
                 <div style={{ marginBottom: 20 }}>
-                  {plan.features.map((feature, i) => (
+                  {plan.features.map((feature, itemIdx) => (
                     <div
-                      key={i}
+                      key={"item-" + itemIdx}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -235,14 +235,14 @@ export const OutroScene: React.FC = () => {
 
         {/* Trust badges */}
         <div style={{ marginTop: 50, display: "flex", gap: 30, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-          {moroccanData.trustBadges.map((badge, i) => {
-            const badgeOpacity = interpolate(frame, [140 + i * 10, 165 + i * 10], [0, 1], {
+          {moroccanData.trustBadges.map((badge, itemIdx) => {
+            const badgeOpacity = interpolate(frame, [140 + itemIdx * 10, 165 + itemIdx * 10], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   display: "flex",
                   alignItems: "center",

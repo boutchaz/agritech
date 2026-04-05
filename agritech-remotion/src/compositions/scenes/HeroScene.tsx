@@ -1,7 +1,7 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 
-export const HeroScene: React.FC = () => {
+export const HeroScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -68,18 +68,18 @@ export const HeroScene: React.FC = () => {
         }}
       >
         {/* Floating crop icons */}
-        {crops.map((crop, i) => {
-          const floatOffset = Math.sin((frame / 30) * 2 + i) * 15;
-          const cropOpacity = interpolate(frame, [30 + i * 10, 60 + i * 10], [0, 1], {
-            extrapolateRight: "clamp",
-          });
-          const cropScale = interpolate(frame, [30 + i * 10, 70 + i * 10], [0, 1], {
-            extrapolateRight: "clamp",
-          });
+        {crops.map((crop, itemIdx) => {
+          const floatOffset = Math.sin((frame / 30) * 2 + itemIdx) * 15;
+          const cropOpacity = interpolate(frame, [30 + itemIdx * 10, 60 + itemIdx * 10], [0, 1], {
+              extrapolateRight: "clamp",
+            });
+          const cropScale = interpolate(frame, [30 + itemIdx * 10, 70 + itemIdx * 10], [0, 1], {
+              extrapolateRight: "clamp",
+            });
 
           return (
             <div
-              key={i}
+              key={"item-" + itemIdx}
               style={{
                 position: "absolute",
                 left: crop.x * width,
@@ -153,7 +153,7 @@ export const HeroScene: React.FC = () => {
             maxWidth: 700,
           }}
         >
-          {painPoints.map((point, i) => {
+          {painPoints.map((point, itemIdx) => {
             const pointOpacity = interpolate(
               frame,
               [60 + point.delay, 90 + point.delay],
@@ -169,7 +169,7 @@ export const HeroScene: React.FC = () => {
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   fontSize: 22,
                   color: "#64748b",
@@ -245,23 +245,23 @@ export const HeroScene: React.FC = () => {
             maxWidth: 900,
           }}
         >
-          {features.map((feature, i) => {
+          {features.map((feature, itemIdx) => {
             const pillOpacity = interpolate(
               frame,
-              [100 + i * 15, 130 + i * 15],
+              [100 + itemIdx * 15, 130 + itemIdx * 15],
               [0, 1],
               { extrapolateRight: "clamp" }
             );
             const pillY = interpolate(
               frame,
-              [100 + i * 15, 130 + i * 15],
+              [100 + itemIdx * 15, 130 + itemIdx * 15],
               [20, 0],
               { extrapolateRight: "clamp" }
             );
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   backgroundColor: feature.color,
                   color: "#ffffff",
@@ -292,8 +292,8 @@ export const HeroScene: React.FC = () => {
           }}
         >
           <div style={{ display: "flex" }}>
-            {[...Array(5)].map((_, i) => (
-              <span key={i} style={{ fontSize: 24 }}>
+            {[...Array(5)].map((_, spanIdx) => (
+              <span key={"span-" + spanIdx} style={{ fontSize: 24 }}>
                 ⭐
               </span>
             ))}

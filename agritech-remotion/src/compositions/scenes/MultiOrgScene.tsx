@@ -1,8 +1,8 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 import { moroccanData } from "../../data/mock-data";
 
-export const MultiOrgScene: React.FC = () => {
+export const MultiOrgScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -226,14 +226,14 @@ export const MultiOrgScene: React.FC = () => {
             justifyContent: "center",
           }}
         >
-          {moroccanData.trustBadges.map((badge, i) => {
-            const badgeOpacity = interpolate(frame, [130 + i * 10, 155 + i * 10], [0, 1], {
+          {moroccanData.trustBadges.map((badge, itemIdx) => {
+            const badgeOpacity = interpolate(frame, [130 + itemIdx * 10, 155 + itemIdx * 10], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   display: "flex",
                   alignItems: "center",

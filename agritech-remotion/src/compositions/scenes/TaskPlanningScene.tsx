@@ -1,9 +1,9 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { moroccanData } from "../../data/mock-data";
 
-export const TaskPlanningScene: React.FC = () => {
+export const TaskPlanningScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -200,14 +200,14 @@ export const TaskPlanningScene: React.FC = () => {
             "🗣️ Arabic Voice Notes",
             "📸 Photo Reports",
             "📍 GPS Tracking",
-          ].map((feature, i) => {
-            const featureOpacity = interpolate(frame, [100 + i * 8, 125 + i * 8], [0, 1], {
+          ].map((feature, itemIdx) => {
+            const featureOpacity = interpolate(frame, [100 + itemIdx * 8, 125 + itemIdx * 8], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   backgroundColor: "#166534",
                   color: "#ffffff",

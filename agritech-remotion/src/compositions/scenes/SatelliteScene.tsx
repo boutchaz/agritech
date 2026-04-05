@@ -1,9 +1,9 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { moroccanData } from "../../data/mock-data";
 
-export const SatelliteScene: React.FC = () => {
+export const SatelliteScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -116,15 +116,15 @@ export const SatelliteScene: React.FC = () => {
             </svg>
 
             {/* Alert indicators */}
-            {alerts.map((alert, i) => {
-              const alertOpacity = interpolate(frame, [60 + i * 20, 90 + i * 20], [0, 1], {
+            {alerts.map((alert, itemIdx) => {
+              const alertOpacity = interpolate(frame, [60 + itemIdx * 20, 90 + itemIdx * 20], [0, 1], {
                 extrapolateRight: "clamp",
               });
-              const alertPulse = Math.sin(frame / 15 + i) * 0.2 + 1;
+              const alertPulse = Math.sin(frame / 15 + itemIdx) * 0.2 + 1;
 
               return (
                 <div
-                  key={i}
+                  key={"item-" + itemIdx}
                   style={{
                     position: "absolute",
                     left: alert.x * 100 + "%",
@@ -247,14 +247,14 @@ export const SatelliteScene: React.FC = () => {
             "💧 Prévision irrigation",
             "🦠 Détection maladies",
             "📱 Notifications SMS",
-          ].map((feature, i) => {
-            const featureOpacity = interpolate(frame, [100 + i * 10, 125 + i * 10], [0, 1], {
+          ].map((feature, itemIdx) => {
+            const featureOpacity = interpolate(frame, [100 + itemIdx * 10, 125 + itemIdx * 10], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   backgroundColor: "#22c55e",
                   color: "#ffffff",
