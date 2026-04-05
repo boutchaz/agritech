@@ -2470,9 +2470,27 @@ export class CalibrationService {
         "awaiting_nutrition_option",
         organizationId,
       );
+    } else if (parcel.aiPhase === "awaiting_data" || parcel.aiPhase === "ready_calibration") {
+      await this.transitionToCalibrating(
+        calibration.parcel_id,
+        parcel.aiPhase,
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrating",
+        "calibrated",
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
     } else if (parcel.aiPhase !== "awaiting_nutrition_option") {
       throw new BadRequestException(
-        `Nutrition option can only be confirmed in calibrated or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Nutrition option can only be confirmed when calibration data exists (current: ${parcel.aiPhase})`,
       );
     }
 

@@ -85,10 +85,10 @@ function trendIcon(trend: string) {
   return <Minus className="w-4 h-4 text-slate-500" aria-hidden />;
 }
 
-function WorkflowStepper({ parcelId, aiPhase }: { parcelId: string; aiPhase: string | null }) {
+function WorkflowStepper({ parcelId, aiPhase, hasCalibrationData }: { parcelId: string; aiPhase: string | null; hasCalibrationData: boolean }) {
   const { t } = useTranslation('ai');
 
-  const calibrationDone = aiPhase === 'calibrated' || aiPhase === 'awaiting_nutrition_option' || aiPhase === 'active' || aiPhase === 'archived';
+  const calibrationDone = aiPhase === 'calibrated' || aiPhase === 'awaiting_nutrition_option' || aiPhase === 'active' || aiPhase === 'archived' || hasCalibrationData;
   const nutritionDone = aiPhase === 'active' || aiPhase === 'archived';
   const isActive = aiPhase === 'active';
 
@@ -415,7 +415,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
       </section>
 
       {/* Workflow stepper */}
-      <WorkflowStepper parcelId={parcelId} aiPhase={aiPhase} />
+      <WorkflowStepper parcelId={parcelId} aiPhase={aiPhase} hasCalibrationData={!calibrationIncomplete && !!calibration} />
 
       {/* KPI row */}
       <section>

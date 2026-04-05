@@ -1526,6 +1526,7 @@ const AICalibrationPage = () => {
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
+  const calibrationCompletedButPhaseStuck = (phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress';
   const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
@@ -1608,7 +1609,7 @@ const AICalibrationPage = () => {
         />
       )}
 
-      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active') && (
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || calibrationCompletedButPhaseStuck) && (
         <CalibrationReviewSection parcelId={parcelId} />
       )}
 
@@ -1776,7 +1777,7 @@ const AICalibrationPage = () => {
         </CollapsibleSection>
       )}
 
-      {phase === 'calibrated' && hasV2Report && v2Output && reportData?.calibration?.id && (
+      {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && reportData?.calibration?.id && (
         <ValidationPanel
           calibrationId={reportData.calibration.id}
           parcelId={parcelId}
@@ -1786,7 +1787,7 @@ const AICalibrationPage = () => {
         />
       )}
 
-      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option') && reportData?.calibration?.id && (
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) && reportData?.calibration?.id && (
         <NutritionOptionSelector
           parcelId={parcelId}
           calibrationId={reportData.calibration.id}
