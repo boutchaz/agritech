@@ -17,6 +17,11 @@ DEFAULT_PERIODS: dict[str, set[int]] = {
     "maturation": {8, 9, 10, 11},
 }
 
+# Minimum observations for meaningful percentile statistics.
+# Below this threshold, P10/P90 are unreliable noise.
+MIN_PERCENTILE_SAMPLES = 10
+MIN_PERIOD_SAMPLES = 5
+
 
 def _as_percentile_set(values: list[float]) -> PercentileSet:
     arr = np.array(values, dtype=np.float64)
@@ -68,6 +73,9 @@ def calculate_percentiles(
 
         values = [value for _, value in valid]
 
+        if len(values) < MIN_PERCENTILE_SAMPLES:
+            continue
+
         global_percentiles[index] = _as_percentile_set(values)
 
         first_date = min(point_date for point_date, _ in valid)
@@ -79,7 +87,7 @@ def calculate_percentiles(
         if month_span > 24:
             for period_name, months in periods.items():
                 period_values = _collect_period_values(valid, months)
-                if period_values:
+                if len(period_values) >= MIN_PERIOD_SAMPLES:
                     period_percentiles[period_name][index] = _as_percentile_set(
                         period_values,
                     )

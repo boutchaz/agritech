@@ -6,17 +6,10 @@ import { Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -120,23 +113,20 @@ export function UpdateActionStatusDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       {controlledOpen === undefined && (
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {t('dialogs.updateStatus.button')}
-          </Button>
-        </DialogTrigger>
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {t('dialogs.updateStatus.button')}
+        </Button>
       )}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.updateStatus.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.updateStatus.description')}
-          </DialogDescription>
-        </DialogHeader>
-
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.updateStatus.title')}
+        description={t('dialogs.updateStatus.description')}
+        size="sm"
+      >
         <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm">
           <p className="font-medium mb-1">{action.finding_description}</p>
           <p className="text-muted-foreground">{action.action_description}</p>
@@ -213,7 +203,7 @@ export function UpdateActionStatusDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

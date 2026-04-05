@@ -13,7 +13,10 @@ import {
   AnnualPlanWithInterventions,
 } from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
-import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import {
+  CALIBRATION_SATELLITE_INDICES,
+  SatelliteCacheService,
+} from "../satellite-indices/satellite-cache.service";
 import { SatelliteProxyService } from "../satellite-indices/satellite-proxy.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
@@ -1304,10 +1307,28 @@ export class CalibrationService {
 
     let satelliteImages = initialSatelliteImages;
 
-    if (satelliteImages.length === 0) {
+    const missingSatelliteIndices =
+      await this.getMissingSatelliteIndexNames(
+        parcelId,
+        organizationId,
+        calibrationDataStart,
+        CALIBRATION_SATELLITE_INDICES,
+      );
+
+    const needsSatelliteSync =
+      satelliteImages.length === 0 || missingSatelliteIndices.length > 0;
+
+    if (needsSatelliteSync) {
       emitProgress(2, "satellite_sync", "Synchronisation des images satellite...");
+      const indicesToSync =
+        satelliteImages.length === 0
+          ? [...CALIBRATION_SATELLITE_INDICES]
+          : missingSatelliteIndices;
+
       this.logger.log(
-        `No satellite data for parcel ${parcelId}, auto-syncing from satellite service`,
+        satelliteImages.length === 0
+          ? `No satellite rows for parcel ${parcelId}, syncing ${indicesToSync.length} indices from GEE`
+          : `Parcel ${parcelId} missing ${missingSatelliteIndices.length} index series (${missingSatelliteIndices.join(", ")}), syncing from GEE`,
       );
 
       const syncResult =
@@ -1316,15 +1337,15 @@ export class CalibrationService {
           organizationId,
           undefined,
           {
-            startDate: getCalibrationLookbackDate(parcel.plantingYear),
+            startDate: calibrationDataStart,
             endDate: new Date().toISOString().split("T")[0],
-            indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+            indices: indicesToSync,
             authToken,
           },
         );
 
       this.logger.log(
-        `Auto-sync completed for parcel ${parcelId}: ${syncResult.totalPoints} total points`,
+        `Satellite sync for parcel ${parcelId}: ${syncResult.totalPoints} total points persisted`,
       );
 
       satelliteImages = await this.fetchSatelliteImages(
@@ -3037,6 +3058,43 @@ export class CalibrationService {
       }
       return values;
     }, []);
+  }
+
+  /**
+   * Returns index names that have no rows in satellite_indices_data for this parcel
+   * in the calibration window (so GEE was never synced for them).
+   */
+  private async getMissingSatelliteIndexNames(
+    parcelId: string,
+    organizationId: string,
+    sinceDate: string,
+    required: readonly string[],
+  ): Promise<string[]> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("satellite_indices_data")
+      .select("index_name")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId)
+      .gte("date", sinceDate);
+
+    if (error) {
+      this.logger.warn(
+        `getMissingSatelliteIndexNames query failed for ${parcelId}: ${error.message}; will sync all indices`,
+      );
+      return [...required];
+    }
+
+    if (!data?.length) {
+      return [...required];
+    }
+
+    const present = new Set(
+      data
+        .map((row: { index_name: string }) => row.index_name)
+        .filter(Boolean),
+    );
+    return required.filter((name) => !present.has(name));
   }
 
   private async fetchSatelliteImages(

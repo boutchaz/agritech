@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -259,20 +259,17 @@ export function FiscalYearManagement() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingYear
-                ? t('fiscalYears.edit.title', 'Edit Fiscal Year')
-                : t('fiscalYears.create.title', 'Create Fiscal Year')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingYear
-                ? t('fiscalYears.edit.description', 'Update the fiscal year details.')
-                : t('fiscalYears.create.description', 'Add a new fiscal year for financial reporting.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingYear
+          ? t('fiscalYears.edit.title', 'Edit Fiscal Year')
+          : t('fiscalYears.create.title', 'Create Fiscal Year')}
+        description={editingYear
+          ? t('fiscalYears.edit.description', 'Update the fiscal year details.')
+          : t('fiscalYears.create.description', 'Add a new fiscal year for financial reporting.')}
+        size="md"
+      >
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -360,8 +357,7 @@ export function FiscalYearManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       <AlertDialog open={!!closingYear} onOpenChange={() => setClosingYear(null)}>
         <AlertDialogContent>

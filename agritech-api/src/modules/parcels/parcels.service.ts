@@ -18,7 +18,10 @@ import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
-import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import {
+  CORE_INDICES,
+  SatelliteCacheService,
+} from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../notifications/dto/notification.dto";
 
@@ -750,7 +753,7 @@ export class ParcelsService {
       .syncParcelSatelliteData(parcelId, organizationId, undefined, {
         startDate: startDate.toISOString().split("T")[0],
         endDate: new Date().toISOString().split("T")[0],
-        indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+        indices: CORE_INDICES,
       })
       .then(async (syncResult) => {
         this.logger.log(

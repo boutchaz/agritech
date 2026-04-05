@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, cloneElement, isValidElement, type MouseEvent, type ReactNode } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,16 +6,9 @@ import { Loader2, Pencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -114,24 +107,30 @@ export function UpdateComplianceCheckDialog({
     );
   }
 
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button variant="ghost" size="sm">
-            <Pencil className="mr-2 h-4 w-4" />
-            {t('dialogs.updateCheck.button')}
-          </Button>
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.updateCheck.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.updateCheck.description')}
-          </DialogDescription>
-        </DialogHeader>
+  const renderedTrigger = trigger && isValidElement<{ onClick?: (event: MouseEvent<HTMLElement>) => void }>(trigger)
+    ? cloneElement(trigger, {
+        onClick: (event: MouseEvent<HTMLElement>) => {
+          trigger.props.onClick?.(event);
+          setOpen(true);
+        },
+      })
+    : (
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          {t('dialogs.updateCheck.button')}
+        </Button>
+      );
 
+  return (
+    <>
+      {renderedTrigger}
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.updateCheck.title')}
+        description={t('dialogs.updateCheck.description')}
+        size="sm"
+      >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Controller
@@ -228,7 +227,7 @@ export function UpdateComplianceCheckDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/radix-select';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -71,6 +70,7 @@ import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -428,14 +428,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{item ? t('items.editItem') : t('items.createItem')}</DialogTitle>
-          <DialogDescription>
-            {item ? t('items.updateItemDescription') : t('items.createItemDescription')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={item ? t('items.editItem') : t('items.createItem')}
+      description={item ? t('items.updateItemDescription') : t('items.createItemDescription')}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -919,13 +919,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
              </Button>
            </div>
         </form>
-        <ItemGroupForm
-          open={showGroupForm}
-          onOpenChange={setShowGroupForm}
-          onSuccess={handleGroupCreated}
-        />
-      </DialogContent>
-    </Dialog>
+      <ItemGroupForm
+        open={showGroupForm}
+        onOpenChange={setShowGroupForm}
+        onSuccess={handleGroupCreated}
+      />
+    </ResponsiveDialog>
   );
 }
 
@@ -1086,16 +1085,14 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t('items.variants.title', 'Variants')} - {item?.item_name}
-          </DialogTitle>
-          <DialogDescription>
-            {t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`${t('items.variants.title', 'Variants')} - ${item?.item_name ?? ''}`}
+      description={t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <div className="space-y-6">
           <form id="variant-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1355,8 +1352,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
@@ -1763,14 +1759,14 @@ export default function ItemManagement() {
 
       {/* Item Details Dialog */}
       {selectedItemForDetails && (
-        <Dialog open={!!selectedItemForDetails} onOpenChange={(open) => !open && setSelectedItemForDetails(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedItemForDetails.item_name}</DialogTitle>
-              <DialogDescription>
-                {t('items.itemDetails', 'Item Details and Stock Information')}
-              </DialogDescription>
-            </DialogHeader>
+        <ResponsiveDialog
+          open={!!selectedItemForDetails}
+          onOpenChange={(open) => !open && setSelectedItemForDetails(null)}
+          title={selectedItemForDetails.item_name}
+          description={t('items.itemDetails', 'Item Details and Stock Information')}
+          size="4xl"
+          contentClassName="max-h-[90vh] overflow-y-auto"
+        >
             <div className="space-y-6 mt-4">
               {/* Stock Levels by Farm */}
               <div>
@@ -1784,8 +1780,7 @@ export default function ItemManagement() {
                 <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+        </ResponsiveDialog>
       )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

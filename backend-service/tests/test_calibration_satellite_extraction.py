@@ -6,6 +6,7 @@ step1_module = import_module("app.services.calibration.step1_satellite_extractio
 storage_module = import_module("app.services.calibration.raster_storage")
 
 extract_satellite_history = getattr(step1_module, "extract_satellite_history")
+SUPPORTED_INDICES = getattr(step1_module, "SUPPORTED_INDICES")
 CalibrationRasterStorage = getattr(storage_module, "CalibrationRasterStorage")
 RasterStorageConfig = getattr(storage_module, "RasterStorageConfig")
 
@@ -27,7 +28,7 @@ def _build_images(total: int, cloudy_every: int = 5) -> list[dict[str, object]]:
                     "NDMI": base - 0.06,
                     "NDRE": base - 0.08,
                     "EVI": base - 0.09,
-                    "MSAVI": base - 0.07,
+                    "MSAVI2": base - 0.07,
                     "MSI": 0.95 - (base / 5),
                     "GCI": 1.1 + base,
                 },
@@ -52,16 +53,7 @@ def test_step1_extracts_index_time_series_and_paths() -> None:
         max_cloud_coverage=20.0,
     )
 
-    assert set(output.index_time_series.keys()) == {
-        "NDVI",
-        "NIRv",
-        "NDMI",
-        "NDRE",
-        "EVI",
-        "MSAVI",
-        "MSI",
-        "GCI",
-    }
+    assert set(output.index_time_series.keys()) == set(SUPPORTED_INDICES)
     assert len(output.index_time_series["NDVI"]) >= 40
     assert output.filtered_image_count > 0
     assert len(output.raster_paths["NDVI"]) >= 40
@@ -93,7 +85,7 @@ def test_step1_interpolates_missing_dates_within_gap_limit() -> None:
                 "NDMI": 0.2,
                 "NDRE": 0.25,
                 "EVI": 0.28,
-                "MSAVI": 0.3,
+                "MSAVI2": 0.3,
                 "MSI": 0.9,
                 "GCI": 1.2,
             },
@@ -107,7 +99,7 @@ def test_step1_interpolates_missing_dates_within_gap_limit() -> None:
                 "NDMI": 0.3,
                 "NDRE": 0.35,
                 "EVI": 0.38,
-                "MSAVI": 0.4,
+                "MSAVI2": 0.4,
                 "MSI": 0.8,
                 "GCI": 1.3,
             },

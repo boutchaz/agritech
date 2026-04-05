@@ -2,19 +2,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Plus, Upload, FileText, X } from 'lucide-react';
+import { Loader2, Plus, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { FormField } from '@/components/ui/FormField';
 import {
   Select,
@@ -220,23 +213,18 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <Plus className="mr-2 h-4 w-4" />
-          {t('dialogs.addDocument.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            {t('dialogs.addDocument.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('dialogs.addDocument.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('dialogs.addDocument.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={t('dialogs.addDocument.title')}
+        description={t('dialogs.addDocument.description')}
+        size="md"
+      >
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
@@ -346,7 +334,7 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

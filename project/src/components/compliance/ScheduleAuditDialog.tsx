@@ -6,16 +6,9 @@ import { Loader2, CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -105,25 +98,32 @@ export function ScheduleAuditDialog({ certification }: ScheduleAuditDialogProps)
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="w-full">
-          <CalendarClock className="mr-2 h-4 w-4" />
-          {t('dialogs.scheduleAudit.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-blue-600" />
-            {t('dialogs.scheduleAudit.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('dialogs.scheduleAudit.description')}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <>
+      <Button size="sm" className="w-full" onClick={() => setOpen(true)}>
+        <CalendarClock className="mr-2 h-4 w-4" />
+        {t('dialogs.scheduleAudit.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.scheduleAudit.title')}
+        description={t('dialogs.scheduleAudit.description')}
+        size="sm"
+        footer={(
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              {t('dialogs.scheduleAudit.cancel')}
+            </Button>
+            <Button type="submit" form="schedule-audit-form" disabled={updateCertification.isPending}>
+              {updateCertification.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {t('dialogs.scheduleAudit.save')}
+            </Button>
+          </div>
+        )}
+      >
+        <form id="schedule-audit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
             name="next_audit_date"
@@ -178,20 +178,8 @@ export function ScheduleAuditDialog({ certification }: ScheduleAuditDialogProps)
               </FormField>
             )}
           />
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              {t('dialogs.scheduleAudit.cancel')}
-            </Button>
-            <Button type="submit" disabled={updateCertification.isPending}>
-              {updateCertification.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {t('dialogs.scheduleAudit.save')}
-            </Button>
-          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

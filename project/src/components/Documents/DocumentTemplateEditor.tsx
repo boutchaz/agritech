@@ -3,14 +3,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
@@ -329,8 +328,13 @@ export function DocumentTemplateEditor({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] p-0">
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="full"
+      className="max-w-5xl p-0"
+      contentClassName="max-h-[95vh] p-0"
+    >
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-green-600" />
@@ -957,7 +961,6 @@ export function DocumentTemplateEditor({
             </DialogFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

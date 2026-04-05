@@ -824,6 +824,7 @@ class CDSEProvider(ISatelliteProvider):
             "MNDWI": ["B03", "B11"],
             "MCARI": ["B03", "B04", "B05"],
             "TCARI": ["B04", "B05"],
+            "TCARI_OSAVI": ["B03", "B04", "B05", "B08"],
         }
 
         return list(set(base_bands + index_specific.get(index, [])))
@@ -896,8 +897,18 @@ class CDSEProvider(ISatelliteProvider):
                 * (1 + L)
                 / (datacube.band("B08") + datacube.band("B04") + L)
             )
+        elif index == "TCARI_OSAVI":
+            # Match GEE earth_engine.calculate_vegetation_indices: TCARI / max(OSAVI, eps)
+            re = datacube.band("B05")
+            r = datacube.band("B04")
+            g = datacube.band("B03")
+            nir = datacube.band("B08")
+            eps = 1e-10
+            tcari = 3 * (re - r - (re - g) * 0.2 * (re / (r + eps)))
+            osavi = (nir - r) / (nir + r + 0.16 + eps)
+            return tcari / (osavi + eps)
         else:
             raise ValueError(
                 f"Index '{index}' is not implemented in the CDSE provider. "
-                f"Supported indices: NDVI, NIRv, EVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, MSI, MCARI, TCARI"
+                f"Supported indices: NDVI, NIRv, EVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, MSI, MCARI, TCARI, TCARI_OSAVI"
             )

@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { usePaginatedPayments, usePaymentStats, type Payment } from '@/hooks/useAccountingPayments';
 import { PaymentForm } from '@/components/Accounting/PaymentForm';
 import { PaymentDetailDialog } from '@/components/Accounting/PaymentDetailDialog';
 import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
 import { PageLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 const AppContent = () => {
@@ -416,20 +417,19 @@ const AppContent = () => {
       </div>
 
       {/* Create Payment Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Record New Payment</DialogTitle>
-            <DialogDescription>
-              Record a payment received from a customer or a payment made to a supplier
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        title="Record New Payment"
+        description="Record a payment received from a customer or a payment made to a supplier"
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <PaymentForm
             onSuccess={() => setCreateDialogOpen(false)}
             onCancel={() => setCreateDialogOpen(false)}
           />
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Payment Detail Dialog */}
       <PaymentDetailDialog

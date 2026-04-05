@@ -3,14 +3,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
-  Dialog, 
-  DialogContent, 
   DialogDescription, 
   DialogHeader, 
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { 
   Select, 
   SelectContent, 
@@ -75,14 +74,19 @@ export function CreatePestReportDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
           Nouveau Signalement
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        size="lg"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
         <DialogHeader>
           <DialogTitle>Signaler un Ravageur ou une Maladie</DialogTitle>
           <DialogDescription>
@@ -277,7 +281,7 @@ export function CreatePestReportDialog() {
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

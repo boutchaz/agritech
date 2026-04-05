@@ -11,12 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -310,8 +309,12 @@ export default function SupplierManagement() {
       )}
 
       {/* Form Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog
+        open={showForm}
+        onOpenChange={setShowForm}
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <DialogHeader>
             <DialogTitle>
               {selectedSupplier ? t('suppliers.edit') : t('suppliers.create')}
@@ -506,8 +509,7 @@ export default function SupplierManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

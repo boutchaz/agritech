@@ -20,22 +20,8 @@ import {
 import { useCreateWorker, useUpdateWorker } from "../../hooks/useWorkers";
 import { useCurrency } from "../../hooks/useCurrency";
 import { useFormErrors } from "../../hooks/useFormErrors";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "../ui/drawer";
+import { ResponsiveDialog } from "../ui/responsive-dialog";
 import { Button } from "../ui/button";
-import { useIsMobile } from "@/hooks/useMediaQuery";
 import { ButtonLoader } from '@/components/ui/loader';
 import { Switch } from '@/components/ui/switch';
 
@@ -134,8 +120,6 @@ const WorkerForm = ({
   const createWorker = useCreateWorker();
   const updateWorker = useUpdateWorker();
   const { symbol: currencySymbol } = useCurrency();
-  const isMobile = useIsMobile();
-
   const [specialtyInput, setSpecialtyInput] = useState("");
   const [certificationInput, setCertificationInput] = useState("");
   const [grantPlatformAccess, setGrantPlatformAccess] = useState(
@@ -233,7 +217,7 @@ const WorkerForm = ({
       });
       setGrantPlatformAccess(false);
     }
-  }, [worker, open, reset]);
+  }, [worker, reset]);
 
   const watchEmail = watch("email");
   const workerType = watch("worker_type");
@@ -300,9 +284,9 @@ const WorkerForm = ({
       // Clear the manual error if platform access is disabled
       clearErrors("email");
     }
-  }, [grantPlatformAccess, watchEmail]);
+  }, [clearErrors, errors.email?.type, grantPlatformAccess, setError, t, watchEmail]);
 
-  const onSubmit = async (data: WorkerFormData, bypassDuplicateCheck = false) => {
+  const submitWorker = async (data: WorkerFormData, bypassDuplicateCheck = false) => {
     // Duplicate check — only on create, skip if user already confirmed
     if (!isEditing && !bypassDuplicateCheck) {
       const firstName = data.first_name.trim().toLowerCase();
@@ -497,7 +481,9 @@ const WorkerForm = ({
   const formContent = (
     <form
       id="worker-form"
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => {
+        void submitWorker(data);
+      })}
       className="space-y-6"
     >
       {/* Error Summary */}
@@ -570,7 +556,7 @@ const WorkerForm = ({
                 <Button variant="amber" type="button" size="sm" onClick={() => {
                     const data = duplicateWarning.pendingData;
                     setDuplicateWarning(null);
-                    onSubmit(data, true);
+                    submitWorker(data, true);
                   }}
                 >
                   {t("workers.confirmations.duplicateContinue")}
@@ -583,9 +569,9 @@ const WorkerForm = ({
 
       {/* Worker Type */}
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           {t("workers.form.fields.workerType")} *
-        </label>
+        </div>
         <select
           {...register("worker_type")}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -610,9 +596,9 @@ const WorkerForm = ({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.firstName")} *
-            </label>
+            </div>
             <input
               {...register("first_name")}
               type="text"
@@ -627,9 +613,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.lastName")} *
-            </label>
+            </div>
             <input
               {...register("last_name")}
               type="text"
@@ -644,9 +630,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.cin")}
-            </label>
+            </div>
             <input
               {...register("cin")}
               type="text"
@@ -656,9 +642,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.phone")}
-            </label>
+            </div>
             <input
               {...register("phone")}
               type="tel"
@@ -668,9 +654,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.email")}
-            </label>
+            </div>
             <input
               {...register("email")}
               type="email"
@@ -685,9 +671,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.dateOfBirth")}
-            </label>
+            </div>
             <input
               {...register("date_of_birth")}
               type="date"
@@ -696,9 +682,9 @@ const WorkerForm = ({
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.address")}
-            </label>
+            </div>
             <textarea
               {...register("address")}
               rows={2}
@@ -759,9 +745,9 @@ const WorkerForm = ({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.position")}
-            </label>
+            </div>
             <input
               {...register("position")}
               type="text"
@@ -771,9 +757,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.farm")}
-            </label>
+            </div>
             <select
               {...register("farm_id")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -793,9 +779,9 @@ const WorkerForm = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.hireDate")} *
-            </label>
+            </div>
             <input
               {...register("hire_date")}
               type="date"
@@ -828,9 +814,9 @@ const WorkerForm = ({
         </div>
         {isCnssDecl && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.cnssNumber")}
-            </label>
+            </div>
             <input
               {...register("cnss_number")}
               type="text"
@@ -850,12 +836,12 @@ const WorkerForm = ({
         {/* Fixed Salary */}
         {workerType === "fixed_salary" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("workers.form.fields.monthlySalary", {
-                currency: currencySymbol,
-              })}{" "}
-              *
-            </label>
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("workers.form.fields.monthlySalary", {
+                  currency: currencySymbol,
+                })}{" "}
+                *
+              </div>
             <input
               {...register("monthly_salary", { valueAsNumber: true })}
               type="number"
@@ -879,9 +865,9 @@ const WorkerForm = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {t("workers.form.fields.paymentModes", "Modes de paiement acceptés")}
-              </label>
+              </div>
               <div className="space-y-2">
                 {[
                   { value: 'daily' as const, label: t("workers.form.paymentMode.daily", "Journalier") },
@@ -918,9 +904,9 @@ const WorkerForm = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workers.form.fields.metayageType")} *
-                </label>
+                </div>
                 <select
                   {...register("metayage_type")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -939,9 +925,9 @@ const WorkerForm = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workers.form.fields.metayagePercentage")} *
-                </label>
+                </div>
                 <input
                   {...register("metayage_percentage", { valueAsNumber: true })}
                   type="number"
@@ -962,9 +948,9 @@ const WorkerForm = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t("workers.form.fields.calculationBasis")}
-              </label>
+              </div>
               <select
                 {...register("calculation_basis")}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -1014,9 +1000,9 @@ const WorkerForm = ({
           {/* Payment Frequency — hidden for daily workers (they use payment_frequencies checkboxes) */}
           {workerType !== "daily_worker" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.paymentFrequency")}
-            </label>
+            </div>
             <select
               {...register("payment_frequency")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -1030,8 +1016,7 @@ const WorkerForm = ({
                 // "daily" for daily workers and fixed salary
 
                 if (
-                  option.value === "per_task" &&
-                  workerType !== "daily_worker"
+                  option.value === "per_task"
                 ) {
                   return null; // Hide "À la tâche" for non-daily workers
                 }
@@ -1061,8 +1046,6 @@ const WorkerForm = ({
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {workerType === "fixed_salary" &&
                 t("workers.form.paymentFrequencyHint.fixedSalary")}
-              {workerType === "daily_worker" &&
-                t("workers.form.paymentFrequencyHint.dailyWorker")}
               {workerType === "metayage" &&
                 t("workers.form.paymentFrequencyHint.metayage")}
             </p>
@@ -1071,9 +1054,9 @@ const WorkerForm = ({
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.paymentMethod")}
-            </label>
+            </div>
             <select
               {...register("payment_method")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -1096,9 +1079,9 @@ const WorkerForm = ({
 
           {/* Bank Account (conditional) */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.bankAccount")}
-            </label>
+            </div>
             <input
               {...register("bank_account")}
               type="text"
@@ -1171,9 +1154,9 @@ const WorkerForm = ({
 
         {/* Specialties */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t("workers.form.fields.specialties")}
-          </label>
+          </div>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -1210,9 +1193,9 @@ const WorkerForm = ({
 
         {/* Certifications */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t("workers.form.fields.certifications")}
-          </label>
+          </div>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -1250,9 +1233,9 @@ const WorkerForm = ({
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t("workers.form.fields.notes")}
-        </label>
+        </div>
         <textarea
           {...register("notes")}
           rows={3}
@@ -1263,35 +1246,18 @@ const WorkerForm = ({
     </form>
   );
 
-  // Render Drawer on mobile, Dialog on desktop
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[90vh] bg-white dark:bg-gray-800">
-          <DrawerHeader>
-            <DrawerTitle>{headerContent}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-10rem)]">
-            {formContent}
-          </div>
-          <DrawerFooter className="flex-row justify-end gap-2">
-            {footerContent}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-        <DialogHeader>
-          <DialogTitle>{headerContent}</DialogTitle>
-        </DialogHeader>
-        {formContent}
-        <DialogFooter>{footerContent}</DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onClose}
+      title={headerContent}
+      size="2xl"
+      className="bg-white dark:bg-gray-800"
+      contentClassName="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800"
+      footer={<div className="flex w-full flex-row justify-end gap-2">{footerContent}</div>}
+    >
+      {formContent}
+    </ResponsiveDialog>
   );
 };
 

@@ -10,7 +10,22 @@ from scipy.signal import savgol_filter
 from .types import IndexTimePoint, Step1Output
 
 
-SUPPORTED_INDICES = ("NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI", "MSI", "GCI")
+SUPPORTED_INDICES = (
+    "NDVI",
+    "NIRv",
+    "NDMI",
+    "NDRE",
+    "EVI",
+    "MSAVI2",
+    "MSI",
+    "GCI",
+    "OSAVI",
+    "SAVI",
+    "MNDWI",
+    "MCARI",
+    "TCARI",
+    "TCARI_OSAVI",
+)
 
 
 def _to_number(value: object) -> float:
@@ -23,6 +38,16 @@ def _to_number(value: object) -> float:
         if numeric_values:
             return mean(numeric_values)
     return 0.0
+
+
+def _raw_index_value(indices: dict, index: str) -> object | None:
+    """Read index from row; support legacy MSAVI key for MSAVI2."""
+    v = indices.get(index)
+    if v is not None:
+        return v
+    if index == "MSAVI2":
+        return indices.get("MSAVI")
+    return None
 
 
 def _to_number_or_none(value: object) -> float | None:
@@ -41,20 +66,50 @@ def _to_number_or_none(value: object) -> float | None:
 
 
 def _mark_outliers(values: list[IndexTimePoint]) -> int:
+    """Flag outliers using seasonal IQR (interquartile range).
+
+    Points are grouped by quarter (Q1-Q4) and tested against 1.5*IQR within
+    each quarter.  This prevents normal seasonal variation (e.g. dormancy vs
+    peak) from being flagged as anomalous — a key problem with global sigma.
+
+    Falls back to global IQR when a quarter has < 5 points.
+    """
     if len(values) < 5:
         return 0
 
-    raw_values = [point.value for point in values]
-    sigma = pstdev(raw_values)
-    if sigma == 0:
-        return 0
+    # Group indices by quarter (Jan-Mar=1, Apr-Jun=2, Jul-Sep=3, Oct-Dec=4)
+    quarters: dict[int, list[int]] = {1: [], 2: [], 3: [], 4: []}
+    for i, point in enumerate(values):
+        q = (point.date.month - 1) // 3 + 1
+        quarters[q].append(i)
 
-    avg = mean(raw_values)
+    # Pre-compute global IQR as fallback
+    all_vals = np.array([p.value for p in values], dtype=np.float64)
+    g_q1, g_q3 = float(np.percentile(all_vals, 25)), float(np.percentile(all_vals, 75))
+    g_iqr = g_q3 - g_q1
+
     count = 0
-    for point in values:
-        if abs(point.value - avg) > 3 * sigma:
-            point.outlier = True
-            count += 1
+    for _q, indices in quarters.items():
+        if not indices:
+            continue
+
+        if len(indices) >= 5:
+            arr = np.array([values[i].value for i in indices], dtype=np.float64)
+            q1, q3 = float(np.percentile(arr, 25)), float(np.percentile(arr, 75))
+            iqr = q3 - q1
+        else:
+            q1, q3, iqr = g_q1, g_q3, g_iqr
+
+        if iqr == 0:
+            continue
+
+        lower = q1 - 1.5 * iqr
+        upper = q3 + 1.5 * iqr
+        for i in indices:
+            if values[i].value < lower or values[i].value > upper:
+                values[i].outlier = True
+                count += 1
+
     return count
 
 
@@ -146,7 +201,7 @@ def extract_satellite_history(
         indices = raw_indices if isinstance(raw_indices, dict) else {}
 
         for index in SUPPORTED_INDICES:
-            index_value = _to_number_or_none(indices.get(index))
+            index_value = _to_number_or_none(_raw_index_value(indices, index))
             if index_value is None:
                 continue
             index_points[index].append(

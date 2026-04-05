@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -477,20 +477,18 @@ export function BiologicalAssetsManagement() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAsset
-                ? t('biologicalAssets.edit.title', 'Edit Biological Asset')
-                : t('biologicalAssets.create.title', 'Add Biological Asset')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingAsset
-                ? t('biologicalAssets.edit.description', 'Update the asset details.')
-                : t('biologicalAssets.create.description', 'Add a perennial biological asset for IAS 41 tracking.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingAsset
+          ? t('biologicalAssets.edit.title', 'Edit Biological Asset')
+          : t('biologicalAssets.create.title', 'Add Biological Asset')}
+        description={editingAsset
+          ? t('biologicalAssets.edit.description', 'Update the asset details.')
+          : t('biologicalAssets.create.description', 'Add a perennial biological asset for IAS 41 tracking.')}
+        size="lg"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <form onSubmit={assetForm.handleSubmit(onSubmitAsset)} className="space-y-4">
             <Tabs defaultValue="basic" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
@@ -726,19 +724,17 @@ export function BiologicalAssetsManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
-      <Dialog open={isValuationDialogOpen} onOpenChange={setIsValuationDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{t('biologicalAssets.valuation.title', 'Record Fair Value')}</DialogTitle>
-            <DialogDescription>
-              {t('biologicalAssets.valuation.description', 'Record a fair value measurement for {{asset}}.', {
-                asset: selectedAssetForValuation?.asset_name,
-              })}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isValuationDialogOpen}
+        onOpenChange={setIsValuationDialogOpen}
+        title={t('biologicalAssets.valuation.title', 'Record Fair Value')}
+        description={t('biologicalAssets.valuation.description', 'Record a fair value measurement for {{asset}}.', {
+          asset: selectedAssetForValuation?.asset_name,
+        })}
+        size="md"
+      >
           <form onSubmit={valuationForm.handleSubmit(onSubmitValuation)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -819,8 +815,7 @@ export function BiologicalAssetsManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 }

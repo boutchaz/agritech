@@ -5,8 +5,6 @@ import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -49,6 +47,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 type ExtendedStatus = PurchaseOrder['status'] | 'approved' | 'in_transit' | 'completed';
 type StatusActionKey = 'submitted' | 'confirmed' | 'received';
@@ -262,23 +261,19 @@ export const PurchaseOrderDetailDialog = ({
 
   if (isDetailLoading || !resolvedPurchaseOrder) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
-          <SectionLoader className="py-10" />
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
+        <SectionLoader className="py-10" />
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Impossible de charger les lignes du bon de commande.
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -563,24 +558,30 @@ export const PurchaseOrderDetailDialog = ({
   const availableStatusActions = statusActions.filter((action) => !action.disabled);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Purchase Order #{po.order_number ?? ''}
-              </DialogTitle>
-              <DialogDescription>
-                View purchase order details and manage status
-              </DialogDescription>
-            </div>
-            <Badge className={getStatusColor(po.status)}>
-              {po.status}
-            </Badge>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Purchase Order #${po.order_number ?? ''}`}
+      description="View purchase order details and manage status"
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <DialogHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Purchase Order #{po.order_number ?? ''}
+            </DialogTitle>
+            <DialogDescription>
+              View purchase order details and manage status
+            </DialogDescription>
           </div>
-        </DialogHeader>
+          <Badge className={getStatusColor(po.status)}>
+            {po.status}
+          </Badge>
+        </div>
+      </DialogHeader>
 
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
@@ -1124,8 +1125,6 @@ export const PurchaseOrderDetailDialog = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-
       <AlertDialog
         open={pendingStatus !== null}
         onOpenChange={(open) => {
@@ -1166,7 +1165,7 @@ export const PurchaseOrderDetailDialog = ({
           ) : null}
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 

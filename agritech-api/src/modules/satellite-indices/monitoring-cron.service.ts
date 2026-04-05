@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Cron } from "@nestjs/schedule";
 import { DatabaseService } from "../database/database.service";
-import { SatelliteCacheService } from "./satellite-cache.service";
+import { CORE_INDICES, SatelliteCacheService } from "./satellite-cache.service";
 import {
   MANAGEMENT_ROLES,
   NotificationsService,
@@ -90,7 +90,7 @@ export class MonitoringCronService {
             {
               startDate: startDateStr,
               endDate,
-              indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+              indices: CORE_INDICES,
             },
           );
 

@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -482,20 +482,17 @@ export function AccountMappingsManagement() {
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingMapping
-                ? t('accountMappings.edit.title', 'Edit Account Mapping')
-                : t('accountMappings.create.title', 'Create Account Mapping')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingMapping
-                ? t('accountMappings.edit.description', 'Update the account mapping details.')
-                : t('accountMappings.create.description', 'Map a business event to a GL account.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingMapping
+          ? t('accountMappings.edit.title', 'Edit Account Mapping')
+          : t('accountMappings.create.title', 'Create Account Mapping')}
+        description={editingMapping
+          ? t('accountMappings.edit.description', 'Update the account mapping details.')
+          : t('accountMappings.create.description', 'Map a business event to a GL account.')}
+        size="md"
+      >
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Mapping Type */}
@@ -612,8 +609,7 @@ export function AccountMappingsManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingMapping} onOpenChange={() => setDeletingMapping(null)}>

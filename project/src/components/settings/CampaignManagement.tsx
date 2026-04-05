@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -349,20 +349,17 @@ export function CampaignManagement() {
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCampaign
-                ? t('campaigns.edit.title', 'Edit Campaign')
-                : t('campaigns.create.title', 'Create Campaign')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCampaign
-                ? t('campaigns.edit.description', 'Update campaign details.')
-                : t('campaigns.create.description', 'Add a new agricultural campaign for production tracking.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingCampaign
+          ? t('campaigns.edit.title', 'Edit Campaign')
+          : t('campaigns.create.title', 'Create Campaign')}
+        description={editingCampaign
+          ? t('campaigns.edit.description', 'Update campaign details.')
+          : t('campaigns.create.description', 'Add a new agricultural campaign for production tracking.')}
+        size="lg"
+      >
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -475,8 +472,7 @@ export function CampaignManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       <ConfirmDialog
         open={confirmOpen}

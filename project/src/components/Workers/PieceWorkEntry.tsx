@@ -33,9 +33,10 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { workersApi } from '@/lib/api/workers';
 import { workUnitsApi } from '@/lib/api/work-units';
 import { tasksApi } from '@/lib/api/tasks';
@@ -253,8 +254,12 @@ export function PieceWorkEntry({
         {t('workers.pieceWork.buttons.record')}
       </Button>
 
-      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={handleCloseDialog}
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <DialogHeader>
             <DialogTitle>{t('workers.pieceWork.title')}</DialogTitle>
           </DialogHeader>
@@ -554,8 +559,7 @@ export function PieceWorkEntry({
               </div>
             )}
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </>
   );
 }

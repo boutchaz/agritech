@@ -29,14 +29,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Card,
   CardContent,
@@ -1082,23 +1076,21 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
         </Card>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCycle
-                ? t("cropCycles.edit.title", "Edit Crop Cycle")
-                : t("cropCycles.create.title", "Create Crop Cycle")}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCycle
-                ? t("cropCycles.edit.description", "Update crop cycle details.")
-                : t(
-                    "cropCycles.create.description",
-                    "Start tracking a new production cycle.",
-                  )}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingCycle
+          ? t("cropCycles.edit.title", "Edit Crop Cycle")
+          : t("cropCycles.create.title", "Create Crop Cycle")}
+        description={editingCycle
+          ? t("cropCycles.edit.description", "Update crop cycle details.")
+          : t(
+              "cropCycles.create.description",
+              "Start tracking a new production cycle.",
+            )}
+        size="xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           {overlapWarning && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-3 text-sm">
               {overlapWarning}
@@ -1467,8 +1459,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 }

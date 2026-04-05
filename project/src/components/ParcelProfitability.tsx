@@ -26,12 +26,11 @@ import { Input } from './ui/Input';
 import { NativeSelect } from './ui/NativeSelect';
 import { Label } from './ui/label';
 import {
-  Dialog,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { ResponsiveDialog } from './ui/responsive-dialog';
 import {
   Tabs,
   TabsContent,
@@ -1012,8 +1011,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
       )}
 
       {/* Add Cost Modal */}
-      <Dialog open={showAddCost} onOpenChange={setShowAddCost}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddCost} onOpenChange={setShowAddCost} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addCost.title')}</DialogTitle>
           </DialogHeader>
@@ -1096,12 +1094,10 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
               {addCostMutation.isPending ? t('profitability.addCost.adding') : t('profitability.addCost.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Add Revenue Modal */}
-      <Dialog open={showAddRevenue} onOpenChange={setShowAddRevenue}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddRevenue} onOpenChange={setShowAddRevenue} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addRevenue.title')}</DialogTitle>
           </DialogHeader>
@@ -1200,8 +1196,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
               {addRevenueMutation.isPending ? t('profitability.addRevenue.adding') : t('profitability.addRevenue.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 };

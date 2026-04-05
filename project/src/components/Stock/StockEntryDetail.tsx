@@ -3,14 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useStockEntry } from '@/hooks/useStockEntries';
 import { useCurrency } from '@/hooks/useCurrency';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Table,
   TableBody,
@@ -38,26 +37,28 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
 
   if (isLoading) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        size="4xl"
+        className="max-h-[90vh] overflow-y-auto"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             <span className="ml-3">{t('stockEntries.detail.loading')}</span>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
   if (!entry) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-4xl">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl">
           <div className="text-center py-12">
             <p className="text-gray-500">{t('stockEntries.detail.notFound')}</p>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -65,8 +66,13 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
   const totalCost = entry.items?.reduce((sum, item) => sum + (item.quantity * (item.cost_per_unit || 0)), 0) || 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="4xl"
+      className="max-h-[90vh] overflow-y-auto"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5" />
@@ -264,7 +270,6 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

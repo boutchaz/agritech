@@ -24,9 +24,16 @@ DEFAULT_INDEX_MULTIPLIERS = {
     "NDMI": 1.0,
     "NDRE": 1.0,
     "EVI": 1.0,
+    "MSAVI2": 1.0,
     "MSAVI": 1.0,
     "MSI": 1.0,
     "GCI": 1.0,
+    "OSAVI": 1.0,
+    "SAVI": 1.0,
+    "MNDWI": 1.0,
+    "MCARI": 1.0,
+    "TCARI": 1.0,
+    "TCARI_OSAVI": 1.0,
 }
 
 

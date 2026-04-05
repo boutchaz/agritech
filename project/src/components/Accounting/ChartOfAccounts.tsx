@@ -22,11 +22,7 @@ import {
 } from '@/components/ui/table';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -42,6 +38,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import type { Database } from '@/types/database.types';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 type Account = Database['public']['Tables']['accounts']['Row'];
@@ -595,18 +592,17 @@ export const ChartOfAccounts = () => {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
-              {editingAccount ? t('accountingModule.accounts.form.editTitle') : t('accountingModule.accounts.form.createTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              {editingAccount
-                ? t('accountingModule.accounts.form.editDescription')
-                : t('accountingModule.accounts.form.createDescription')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingAccount ? t('accountingModule.accounts.form.editTitle') : t('accountingModule.accounts.form.createTitle')}
+        description={editingAccount
+          ? t('accountingModule.accounts.form.editDescription')
+          : t('accountingModule.accounts.form.createDescription')}
+        size="2xl"
+        className="w-[calc(100vw-2rem)] sm:w-full"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
            <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4 pt-2">
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
@@ -783,8 +779,7 @@ export const ChartOfAccounts = () => {
                </Button>
              </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

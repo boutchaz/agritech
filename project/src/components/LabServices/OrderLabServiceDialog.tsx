@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
 import { NativeSelect } from '@/components/ui/NativeSelect';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Textarea } from '@/components/ui/Textarea';
 import { farmsApi } from '@/lib/api/farms';
 import { useQuery } from '@tanstack/react-query';
@@ -94,11 +94,15 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
   if (!service) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.orderLabService.title')}: {service.name}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`${t('dialogs.orderLabService.title')}: ${service.name}`}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Service Details */}
@@ -194,7 +198,6 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

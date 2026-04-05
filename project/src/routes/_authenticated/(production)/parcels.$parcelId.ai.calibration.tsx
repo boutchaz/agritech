@@ -90,7 +90,7 @@ import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
@@ -1666,11 +1666,14 @@ const AICalibrationPage = () => {
         <CalibrationReviewSection parcelId={parcelId} />
       )}
 
-      <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
-        <DialogContent
-          className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0"
-          data-testid="calibration-partial-recalibration-dialog"
-        >
+      <ResponsiveDialog
+        open={isPartialWizardOpen}
+        onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[92vh] overflow-y-auto p-0"
+      >
+        <div data-testid="calibration-partial-recalibration-dialog">
           <div className="p-4 sm:p-6">
             <RecalibrationWizard
               parcelId={parcelId}
@@ -1680,16 +1683,20 @@ const AICalibrationPage = () => {
               onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
             />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveDialog>
 
-      <Dialog open={isFullWizardOpen} onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0">
+      <ResponsiveDialog
+        open={isFullWizardOpen}
+        onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[92vh] overflow-y-auto p-0"
+      >
           <div className="p-4 sm:p-6">
             <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {phase === 'active' && !isAnnualEligibilityLoading && canShowAnnualBanner && (
         <div

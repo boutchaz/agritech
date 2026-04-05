@@ -10,8 +10,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { storageApi } from '@/lib/api/storage';
 import { filesApi } from '@/lib/api/files';
 import { tasksApi } from '@/lib/api/tasks';
-import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/Input';
@@ -355,16 +355,33 @@ export const ApplicationFormDialog = ({
   const isFormValid = form.formState.isValid && isQuantityValid && isAreaValid && hasProduct && hasValidQuantity && hasValidArea;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FlaskRound className="h-5 w-5 text-green-600" />
-            {t('parcels.index.addApplication')}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={onSubmit} className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('parcels.index.addApplication')}
+      size="lg"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form="application-form-dialog-form"
+            disabled={mutation.isPending || !isFormValid}
+            title={!isFormValid ? 'Please fill all required fields correctly' : ''}
+          >
+            {mutation.isPending ? t('parcels.index.saving') : t('parcels.index.save')}
+          </Button>
+        </>
+      )}
+    >
+      <form id="application-form-dialog-form" onSubmit={onSubmit} className="space-y-4">
           {/* Product Selection */}
           <div className="space-y-2">
             <Label htmlFor="product_id">{t('parcels.index.product')}</Label>
@@ -603,7 +620,7 @@ export const ApplicationFormDialog = ({
                   >
                     <img
                       src={url}
-                      alt={`Application image ${index + 1}`}
+                      alt={`Application attachment ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                     <Button
@@ -627,25 +644,7 @@ export const ApplicationFormDialog = ({
             </p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || !isFormValid}
-              title={!isFormValid ? 'Please fill all required fields correctly' : ''}
-            >
-              {mutation.isPending ? t('parcels.index.saving') : t('parcels.index.save')}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </ResponsiveDialog>
   );
 };

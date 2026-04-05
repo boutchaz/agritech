@@ -29,7 +29,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -779,17 +779,25 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
       </Tabs>
 
       {/* Harvest Dialog */}
-      <Dialog open={isHarvestDialogOpen} onOpenChange={setIsHarvestDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-           <DialogHeader>
-             <DialogTitle>{editingHarvest ? t('cropCycles.harvests.edit', 'Edit Harvest') : t('cropCycles.harvests.new', 'Record Harvest')}</DialogTitle>
-             <DialogDescription>{t('cropCycles.harvests.dialogDesc', 'Enter the details of the harvest operation.')}</DialogDescription>
-           </DialogHeader>
-           
-           <form onSubmit={harvestForm.handleSubmit(handleHarvestSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                   <Label htmlFor="harvest_date">{t('common.date', 'Date')} *</Label>
+      <ResponsiveDialog
+        open={isHarvestDialogOpen}
+        onOpenChange={setIsHarvestDialogOpen}
+        title={editingHarvest ? t('cropCycles.harvests.edit', 'Edit Harvest') : t('cropCycles.harvests.new', 'Record Harvest')}
+        description={t('cropCycles.harvests.dialogDesc', 'Enter the details of the harvest operation.')}
+        size="md"
+        footer={(
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsHarvestDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button type="submit" form="crop-cycle-harvest-form" disabled={createHarvestMutation.isPending || updateHarvestMutation.isPending}>
+              {editingHarvest ? t('common.save', 'Save Changes') : t('common.create', 'Record Harvest')}
+            </Button>
+          </>
+        )}
+      >
+           <form id="crop-cycle-harvest-form" onSubmit={harvestForm.handleSubmit(handleHarvestSubmit)} className="space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="harvest_date">{t('common.date', 'Date')} *</Label>
                    <Input id="harvest_date" type="date" {...harvestForm.register('harvest_date')} />
                    {harvestForm.formState.errors.harvest_date && (
                      <p className="text-xs text-destructive">{harvestForm.formState.errors.harvest_date.message}</p>
@@ -845,18 +853,10 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                     id="quality_notes" 
                     placeholder="Describe quality, defects, or destination..." 
                     {...harvestForm.register('quality_notes')} 
-                 />
-              </div>
-
-              <DialogFooter>
-                 <Button type="button" variant="outline" onClick={() => setIsHarvestDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-                 <Button type="submit" disabled={createHarvestMutation.isPending || updateHarvestMutation.isPending}>
-                   {editingHarvest ? t('common.save', 'Save Changes') : t('common.create', 'Record Harvest')}
-                 </Button>
-              </DialogFooter>
-           </form>
-        </DialogContent>
-      </Dialog>
+                  />
+               </div>
+            </form>
+      </ResponsiveDialog>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

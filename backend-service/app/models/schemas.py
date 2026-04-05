@@ -34,6 +34,7 @@ class TimeSeriesIndex(str, Enum):
     MSI = "MSI"
     MCARI = "MCARI"
     TCARI = "TCARI"
+    TCARI_OSAVI = "TCARI_OSAVI"
     NIRvP = "NIRvP"
 
 class TimeInterval(str, Enum):

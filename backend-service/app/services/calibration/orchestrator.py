@@ -52,24 +52,48 @@ _COMPONENT_MAX_SCORES: dict[str, float] = {
 
 MIN_SATELLITE_IMAGES = 6
 
+# Lowercase / legacy keys from fixtures or old clients → canonical names (GEE / DB)
+_INDEX_KEY_ALIASES: dict[str, str] = {
+    "ndvi": "NDVI",
+    "nirv": "NIRv",
+    "ndmi": "NDMI",
+    "ndre": "NDRE",
+    "evi": "EVI",
+    "msavi": "MSAVI2",
+    "msavi2": "MSAVI2",
+    "msi": "MSI",
+    "gci": "GCI",
+    "osavi": "OSAVI",
+    "savi": "SAVI",
+    "mndwi": "MNDWI",
+    "mcari": "MCARI",
+    "tcari": "TCARI",
+    "tcari_osavi": "TCARI_OSAVI",
+}
+
+
+def _canon_index_key(raw: object) -> str:
+    k = str(raw)
+    tl = k.lower()
+    if tl in _INDEX_KEY_ALIASES:
+        return _INDEX_KEY_ALIASES[tl]
+    return k
+
 
 def _normalize_satellite_images(
     raw_images: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
+    """Merge all index keys into canonical names; do not drop OSAVI, TCARI, etc.
+
+    Legacy rows may use MSAVI; the pipeline uses MSAVI2 to match GEE output names.
+    """
     normalized: list[dict[str, Any]] = []
     for row in raw_images:
         indices = row.get("indices")
         if isinstance(indices, dict):
-            remapped = {
-                "NDVI": indices.get("NDVI", indices.get("ndvi")),
-                "NIRv": indices.get("NIRv", indices.get("nirv")),
-                "NDMI": indices.get("NDMI", indices.get("ndmi")),
-                "NDRE": indices.get("NDRE", indices.get("ndre")),
-                "EVI": indices.get("EVI", indices.get("evi")),
-                "MSAVI": indices.get("MSAVI", indices.get("msavi")),
-                "MSI": indices.get("MSI", indices.get("msi")),
-                "GCI": indices.get("GCI", indices.get("gci")),
-            }
+            remapped = {_canon_index_key(k): v for k, v in indices.items()}
+            if "MSAVI" in remapped and "MSAVI2" not in remapped:
+                remapped["MSAVI2"] = remapped["MSAVI"]
         else:
             remapped = {}
 

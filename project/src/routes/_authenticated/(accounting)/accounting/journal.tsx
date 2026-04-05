@@ -41,21 +41,12 @@ import {
 } from "@/hooks/useJournalEntries";
 import { useAccounts } from "@/hooks/useAccounts";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { FormField } from "@/components/ui/FormField";
@@ -832,27 +823,29 @@ const AppContent = () => {
       </PageLayout>
 
       {/* View Entry Drawer */}
-      <Drawer
+      <ResponsiveDialog
         open={isDrawerOpen}
         onOpenChange={(open) => {
           if (!open) {
             closeDrawer();
           }
         }}
+        size="xl"
+        className="max-h-[90vh] overflow-y-auto"
+        contentClassName="max-h-[90vh] overflow-y-auto"
       >
-        <DrawerContent side="right" className="max-w-xl w-full">
-          <DrawerHeader>
-            <DrawerTitle>
+          <DialogHeader>
+            <DialogTitle>
               {selectedEntry
                 ? `Écriture ${selectedEntry.entry_number}`
                 : "Écriture Comptable"}
-            </DrawerTitle>
-            <DrawerDescription>
+            </DialogTitle>
+            <DialogDescription>
               {selectedEntry
                 ? `Enregistrée le ${formatDate(selectedEntry.entry_date)}`
                 : "Chargement des détails de l'écriture"}
-            </DrawerDescription>
-          </DrawerHeader>
+            </DialogDescription>
+          </DialogHeader>
           <div className="px-6 pb-6 space-y-6">
             {isEntryLoading ? (
               <div className="space-y-4 py-4">
@@ -1000,7 +993,7 @@ const AppContent = () => {
               </div>
             )}
           </div>
-          <DrawerFooter className="px-6 pb-6">
+          <DialogFooter className="px-6 pb-6">
             <div className="flex gap-2 w-full">
               {selectedEntry?.status === "draft" && (
                 <>
@@ -1048,12 +1041,11 @@ const AppContent = () => {
                 Fermer
               </Button>
             </div>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </DialogFooter>
+      </ResponsiveDialog>
 
       {/* Create Entry Dialog */}
-      <Dialog
+      <ResponsiveDialog
         open={showCreateModal}
         onOpenChange={(open) => {
           if (!open) {
@@ -1061,8 +1053,9 @@ const AppContent = () => {
             resetCreateForm();
           }
         }}
+        size="3xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
       >
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nouvelle Écriture Comptable</DialogTitle>
             <DialogDescription>
@@ -1305,8 +1298,7 @@ const AppContent = () => {
               Créer l'écriture
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

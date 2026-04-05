@@ -47,7 +47,7 @@ def _build_step1_with_anomaly() -> object:
                 "NDMI": points,
                 "NDRE": points,
                 "EVI": points,
-                "MSAVI": points,
+                "MSAVI2": points,
                 "MSI": points,
                 "GCI": points,
             },
@@ -61,7 +61,7 @@ def _build_step1_with_anomaly() -> object:
                 "NDMI": [],
                 "NDRE": [],
                 "EVI": [],
-                "MSAVI": [],
+                "MSAVI2": [],
                 "MSI": [],
                 "GCI": [],
             },
@@ -140,7 +140,8 @@ def test_step5_avoids_duplicate_anomaly_records() -> None:
     )
 
     unique_keys = {
-        (item.date.isoformat(), item.anomaly_type) for item in output.anomalies
+        (item.date.isoformat(), item.anomaly_type, item.index_name)
+        for item in output.anomalies
     }
     assert len(unique_keys) == len(output.anomalies)
 

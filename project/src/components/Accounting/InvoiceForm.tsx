@@ -4,11 +4,7 @@ import { getLocalDate, getLocalDateOffset } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +39,7 @@ import { QuickCreateItem } from "../Billing/QuickCreateItem";
 import { useTranslation } from "react-i18next";
 import { SectionLoader } from '@/components/ui/loader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 // Invoice item schema
@@ -419,20 +416,18 @@ export const InvoiceForm = ({
     watchInvoiceType === "sales" ? revenueAccounts : expenseAccounts;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditMode
-              ? t("accountingModule.invoices.form.title.edit")
-              : t("accountingModule.invoices.form.title.create")}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditMode
-              ? t("accountingModule.invoices.form.description.edit")
-              : t("accountingModule.invoices.form.description.create")}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={handleClose}
+      title={isEditMode
+        ? t("accountingModule.invoices.form.title.edit")
+        : t("accountingModule.invoices.form.title.create")}
+      description={isEditMode
+        ? t("accountingModule.invoices.form.description.edit")
+        : t("accountingModule.invoices.form.description.create")}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         {isEditMode && isLoadingInvoice ? (
           <SectionLoader />
@@ -1215,7 +1210,6 @@ export const InvoiceForm = ({
             </DialogFooter>
           </form>
         )}
-      </DialogContent>
 
       {/* Quick Create Item Modal */}
       <QuickCreateItem
@@ -1235,6 +1229,6 @@ export const InvoiceForm = ({
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

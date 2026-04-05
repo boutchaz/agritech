@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Mail, Phone, Search, X, Check } from 'lucide-react';
+import { User, Mail, Phone, Search, Check } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { farmsService } from '../../services/farmsService';
@@ -84,7 +84,6 @@ const EditFarmManagerModal = ({
   onOpenChange,
   farmId,
   farmName,
-  currentManagerName,
   currentManagerEmail,
   currentManagerPhone,
 }: EditFarmManagerModalProps) => {
@@ -189,6 +188,7 @@ const EditFarmManagerModal = ({
           </Button>
         </div>
       }
+      size="md"
       className="sm:max-w-md"
     >
       <form id="edit-manager-form" onSubmit={handleSubmit} className="space-y-4">

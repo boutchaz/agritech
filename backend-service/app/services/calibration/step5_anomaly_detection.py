@@ -15,6 +15,9 @@ def _nearest_weather_event(step2: Step2Output, target_date) -> str | None:
     return None
 
 
+_SEVERITY_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+
+
 def _severity_from_ratio(ratio: float) -> Literal["low", "medium", "high", "critical"]:
     if ratio >= 0.4:
         return "critical"
@@ -184,13 +187,58 @@ def detect_anomalies(
                     )
                 )
 
-    unique: list[AnomalyRecord] = []
-    seen: set[tuple[str, str]] = set()
-    for anomaly in sorted(anomalies, key=lambda item: (item.date, item.anomaly_type)):
-        key = (anomaly.date.isoformat(), anomaly.anomaly_type)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(anomaly)
+    # --- Causal deduplication ---
+    # Two layers of deduplication to reduce alert fatigue:
+    #
+    # 1) Cross-detector: multiple detectors fire on the same event for the
+    #    same index (e.g. sudden_drop + abnormal_value + trend_break).
+    #    Keep the highest-severity anomaly per (index, date ±3 days).
+    #
+    # 2) Cross-index: the same event fires for all indices on the same date
+    #    (e.g. sudden_drop on NDVI, EVI, NDRE all at once = one real event).
+    #    Keep the highest-severity anomaly per (anomaly_type, date ±3 days).
 
-    return Step5Output(anomalies=unique)
+    # Layer 1: collapse across detectors per index
+    sorted_anomalies = sorted(
+        anomalies,
+        key=lambda a: (a.date, -_SEVERITY_RANK.get(a.severity, 0)),
+    )
+    per_index: list[AnomalyRecord] = []
+    for anomaly in sorted_anomalies:
+        merged = False
+        for existing in per_index:
+            if (
+                existing.index_name == anomaly.index_name
+                and abs((existing.date - anomaly.date).days) <= 3
+            ):
+                if _SEVERITY_RANK.get(anomaly.severity, 0) > _SEVERITY_RANK.get(
+                    existing.severity, 0
+                ):
+                    per_index.remove(existing)
+                    per_index.append(anomaly)
+                merged = True
+                break
+        if not merged:
+            per_index.append(anomaly)
+
+    # Layer 2: collapse across indices per anomaly type
+    deduplicated: list[AnomalyRecord] = []
+    for anomaly in sorted(per_index, key=lambda a: (a.date, -_SEVERITY_RANK.get(a.severity, 0))):
+        merged = False
+        for existing in deduplicated:
+            if (
+                existing.anomaly_type == anomaly.anomaly_type
+                and abs((existing.date - anomaly.date).days) <= 3
+            ):
+                if _SEVERITY_RANK.get(anomaly.severity, 0) > _SEVERITY_RANK.get(
+                    existing.severity, 0
+                ):
+                    deduplicated.remove(existing)
+                    deduplicated.append(anomaly)
+                merged = True
+                break
+        if not merged:
+            deduplicated.append(anomaly)
+
+    deduplicated.sort(key=lambda a: (a.date, a.anomaly_type))
+    return Step5Output(anomalies=deduplicated)

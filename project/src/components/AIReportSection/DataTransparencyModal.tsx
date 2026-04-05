@@ -21,7 +21,8 @@ import {
   Hash,
   Shield,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -107,8 +108,13 @@ export const DataTransparencyModal = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="4xl"
+      className="max-h-[90vh] overflow-hidden flex flex-col"
+      contentClassName="max-h-[90vh] overflow-hidden flex flex-col"
+    >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="w-5 h-5 text-primary-600" />
@@ -182,8 +188,7 @@ export const DataTransparencyModal = ({
             </Tabs>
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 
