@@ -14,13 +14,25 @@ from .types import (
 
 
 def _parse_age_bracket(key: str) -> tuple[int, int] | None:
+    # Format: "0-5_ans" or "5-10_ans"
     range_match = re.match(r"^(\d+)-(\d+)_ans$", key)
     if range_match:
         return int(range_match.group(1)), int(range_match.group(2))
 
+    # Format: "ans_3_5" or "ans_11_20" (referentiel format)
+    ans_match = re.match(r"^ans_(\d+)_(\d+)$", key)
+    if ans_match:
+        return int(ans_match.group(1)), int(ans_match.group(2))
+
+    # Format: "plus_50_ans"
     plus_match = re.match(r"^plus_(\d+)_ans$", key)
     if plus_match:
         return int(plus_match.group(1)), 200
+
+    # Format: "ans_40_plus"
+    ans_plus_match = re.match(r"^ans_(\d+)_plus$", key)
+    if ans_plus_match:
+        return int(ans_plus_match.group(1)), 200
 
     return None
 
