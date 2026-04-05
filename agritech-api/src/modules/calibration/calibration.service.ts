@@ -2463,9 +2463,16 @@ export class CalibrationService {
       calibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "awaiting_nutrition_option") {
+    if (parcel.aiPhase === "calibrated") {
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    } else if (parcel.aiPhase !== "awaiting_nutrition_option") {
       throw new BadRequestException(
-        `Nutrition option can only be confirmed in awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Nutrition option can only be confirmed in calibrated or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
