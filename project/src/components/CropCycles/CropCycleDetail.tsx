@@ -143,7 +143,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
 
   // Helper Functions
   const getStatusBadge = (status: CropCycleStatus) => {
-    const config: Record<CropCycleStatus, { icon: any; color: string; label: string }> = {
+    const config: Record<CropCycleStatus, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
       planned: { icon: Pause, color: 'bg-gray-100 text-gray-800 border-gray-200', label: t('cropCycles.status.planned', 'Planned') },
       land_prep: { icon: Sprout, color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: t('cropCycles.status.land_prep', 'Land Prep') },
       growing: { icon: Play, color: 'bg-green-100 text-green-800 border-green-200', label: t('cropCycles.status.growing', 'Growing') },

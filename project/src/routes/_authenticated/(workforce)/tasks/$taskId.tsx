@@ -54,6 +54,7 @@ import {
 } from '@/components/ui/radix-select';
 import { format, formatDistance } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
+import type { TaskComment } from '@/types/tasks';
 
 type HarvestUnit = CompleteHarvestTaskRequest['unit'];
 type HarvestQualityGrade = NonNullable<CompleteHarvestTaskRequest['quality_grade']>;
@@ -225,8 +226,8 @@ function TaskDetailPage() {
       await tasksApi.start(taskOrganizationId, task.id);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.start', 'Failed to start task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.start', 'Failed to start task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -248,8 +249,8 @@ function TaskDetailPage() {
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.pause', 'Failed to pause task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.pause', 'Failed to pause task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -271,8 +272,8 @@ function TaskDetailPage() {
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.resume', 'Failed to resume task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.resume', 'Failed to resume task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -303,8 +304,8 @@ function TaskDetailPage() {
       await tasksApi.complete(taskOrganizationId, task.id, {});
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.complete', 'Failed to complete task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.complete', 'Failed to complete task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -351,8 +352,8 @@ function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       navigate({ to: '/tasks', search: { editTaskId: undefined } });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsActionLoading(false);
     }
@@ -450,8 +451,8 @@ function TaskDetailPage() {
       } else {
         navigate({ to: '/tasks', search: { editTaskId: undefined } });
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsActionLoading(false);
     }
@@ -988,7 +989,7 @@ function TaskDetailPage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment: any) => (
+                {comments.map((comment: TaskComment) => (
                   <div key={comment.id} className="flex gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                       <User className="w-4 h-4 text-blue-600" />

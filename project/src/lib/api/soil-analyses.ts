@@ -7,9 +7,9 @@ export interface SoilAnalysis {
   analysis_date: string;
   parcel_id: string;
   test_type_id?: string;
-  physical?: Record<string, any>;
-  chemical?: Record<string, any>;
-  biological?: Record<string, any>;
+  physical?: Record<string, unknown>;
+  chemical?: Record<string, unknown>;
+  biological?: Record<string, unknown>;
   notes?: string;
   created_at?: string;
   updated_at?: string;
@@ -31,9 +31,9 @@ export interface CreateSoilAnalysisInput {
   analysis_date: string;
   parcel_id: string;
   test_type_id?: string;
-  physical?: Record<string, any>;
-  chemical?: Record<string, any>;
-  biological?: Record<string, any>;
+  physical?: Record<string, unknown>;
+  chemical?: Record<string, unknown>;
+  biological?: Record<string, unknown>;
   notes?: string;
 }
 
@@ -54,7 +54,7 @@ export const soilAnalysesApi = {
     if (filters?.limit) params.append('limit', String(filters.limit));
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    const res = await apiClient.get<{ data: any[] }>(url, {}, organizationId);
+    const res = await apiClient.get<{ data: SoilAnalysis[] }>(url, {}, organizationId);
     return res?.data || [];
   },
 

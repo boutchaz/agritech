@@ -34,7 +34,7 @@ interface ContentSegment {
   type: 'markdown' | 'card';
   text?: string;
   cardType?: string;
-  cardData?: any;
+  cardData?: unknown;
 }
 
 /**

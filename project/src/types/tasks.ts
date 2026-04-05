@@ -130,6 +130,11 @@ export interface ChecklistItem {
   completed_by?: string;
 }
 
+export interface ChecklistUpdateResponse {
+  checklist: ChecklistItem[];
+  completion_percentage: number;
+}
+
 // =====================================================
 // TASK CATEGORY
 // =====================================================
@@ -248,6 +253,40 @@ export interface TaskDependency {
   // Joined data
   depends_on_task_title?: string;
   depends_on_task_status?: TaskStatus;
+}
+
+export interface TaskDependencySummary {
+  id: string;
+  task_id: string;
+  title?: string;
+  status?: TaskStatus;
+  due_date?: string;
+  priority?: TaskPriority;
+  dependency_type?: DependencyType | null;
+  lag_days?: number | null;
+}
+
+export interface TaskDependenciesResponse {
+  depends_on: TaskDependencySummary[];
+  required_by: TaskDependencySummary[];
+}
+
+export interface TaskBlockedStatus {
+  blocked: boolean;
+  blockers: Array<{
+    id?: string;
+    title?: string;
+    status?: TaskStatus;
+  }>;
+}
+
+export interface TaskClockInResponse {
+  timeLog: TaskTimeLog;
+  task: Task;
+}
+
+export interface TaskClockOutResponse extends TaskTimeLog {
+  task?: Pick<Task, 'id' | 'organization_id'> | null;
 }
 
 // =====================================================

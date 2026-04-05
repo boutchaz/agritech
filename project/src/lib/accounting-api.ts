@@ -52,6 +52,32 @@ type JournalEntryWithItems = JournalEntry & {
 type CostCenter = Tables['cost_centers']['Row'];
 type Tax = Tables['taxes']['Row'];
 type BankAccount = Tables['bank_accounts']['Row'];
+type InvoiceApiFilters = Partial<{
+  invoice_type: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+  party_name: string;
+  farm_id: string;
+  parcel_id: string;
+}>;
+type PaymentApiFilters = Partial<{
+  payment_type: 'receive' | 'pay';
+  status: string;
+  date_from: string;
+  date_to: string;
+}>;
+type LedgerApiFilters = Partial<{
+  status: string;
+  date_from: string;
+  date_to: string;
+  account_id: string;
+  cost_center_id: string;
+  farm_id: string;
+  parcel_id: string;
+}>;
+type InvoiceUpdateApiData = Partial<Omit<UpdateInvoiceInput, 'id' | 'items'>> & { items?: UpdateInvoiceInput['items'] };
+type JournalEntryUpdateApiData = Partial<Omit<UpdateJournalEntryInput, 'id' | 'items'>> & { items?: UpdateJournalEntryInput['items'] };
 
 export const accountingApi = {
   // =====================================================
@@ -84,7 +110,7 @@ export const accountingApi = {
   // =====================================================
 
   async getInvoices(organizationId: string, filter?: InvoiceFilter) {
-    const apiFilters: any = {};
+    const apiFilters: InvoiceApiFilters = {};
 
     if (filter?.invoice_type) apiFilters.invoice_type = filter.invoice_type;
     if (filter?.status) apiFilters.status = filter.status;
@@ -118,7 +144,7 @@ export const accountingApi = {
   async updateInvoice(invoiceUpdate: UpdateInvoiceInput) {
     const { id, items, ...updates } = invoiceUpdate;
 
-    const apiData: any = { ...updates };
+    const apiData: InvoiceUpdateApiData = { ...updates };
     if (updates.invoice_date) {
       apiData.invoice_date = updates.invoice_date.toISOString().split('T')[0];
     }
@@ -152,7 +178,7 @@ export const accountingApi = {
   // =====================================================
 
   async getPayments(organizationId: string, filter?: PaymentFilter) {
-    const apiFilters: any = {};
+    const apiFilters: PaymentApiFilters = {};
 
     if (filter?.payment_type) {
       // Map frontend 'received'/'paid' to API 'receive'/'pay'
@@ -238,7 +264,7 @@ export const accountingApi = {
   // =====================================================
 
   async getJournalEntries(organizationId: string, filter?: LedgerFilter) {
-    const apiFilters: any = {};
+    const apiFilters: LedgerApiFilters = {};
 
     if (filter?.status) apiFilters.status = filter.status;
     if (filter?.start_date) apiFilters.date_from = filter.start_date.toISOString().split('T')[0];
@@ -283,7 +309,7 @@ export const accountingApi = {
   async updateJournalEntry(entryUpdate: UpdateJournalEntryInput, organizationId?: string) {
     const { id, items, ...updates } = entryUpdate;
 
-    const apiData: any = { ...updates };
+    const apiData: JournalEntryUpdateApiData = { ...updates };
     if (updates.entry_date) {
       apiData.entry_date = updates.entry_date.toISOString().split('T')[0];
     }

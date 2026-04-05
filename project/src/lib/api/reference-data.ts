@@ -57,7 +57,7 @@ export interface PlantationType {
   description?: string;
   spacing?: string;
   trees_per_ha?: number;
-  configuration?: any;
+  configuration?: Record<string, unknown>;
   organization_id?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -72,7 +72,7 @@ export interface TestType {
     max_value?: number;
     unit?: string;
     method?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   createdAt?: string;
   updatedAt?: string;

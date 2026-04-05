@@ -64,7 +64,13 @@ const formatTooltipValue = (value: number) => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
+const CustomTooltip = ({ active, payload, label, showTemperature, t }: {
+  active?: boolean;
+  payload?: Array<{ dataKey?: string; name?: string; value: number; color?: string }>;
+  label?: string;
+  showTemperature?: boolean;
+  t: (key: string, fallback?: string) => string;
+}) => {
   if (active && payload && payload.length) {
     return (
       <Card className="shadow-xl border-slate-200 min-w-[200px] overflow-hidden">
@@ -76,7 +82,7 @@ const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
         </div>
         <CardContent className="p-3 space-y-2">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {payload.map((entry: any) => {
+          {payload.map((entry) => {
             const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             if (isTemp && !showTemperature) return null;
             

@@ -170,7 +170,7 @@ export default function TaskAttachments({
         type: file.type,
         uploadedAt: new Date().toISOString(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to upload file:', error);
       toast.error(
         t('tasks.attachments.uploadFailed', 'Failed to upload {{name}}', {
@@ -261,7 +261,7 @@ export default function TaskAttachments({
             name: attachment.name,
           })
         );
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to delete file:', error);
         toast.error(
           t(
@@ -290,7 +290,7 @@ export default function TaskAttachments({
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Failed to download file:', error);
         toast.error(
           t(

@@ -1,4 +1,4 @@
-import {  useEffect, useState  } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -87,8 +87,10 @@ export function useAiQuotaError() {
     resetDate?: string;
   }>({ open: false });
 
-  const handleError = (error: any) => {
-    const data = error?.response?.data || error;
+  const handleError = (error: unknown) => {
+    const data = typeof error === 'object' && error !== null && 'response' in error
+      ? (error as { response?: { data?: Record<string, unknown> } }).response?.data || error
+      : error;
     if (data?.error === 'AI_QUOTA_EXCEEDED' || data?.message?.includes?.('AI quota exceeded')) {
       setQuotaError({
         open: true,

@@ -53,7 +53,7 @@ export interface ReportFilters {
 
 export interface ReportData {
   columns: string[];
-  data: Record<string, any>[];
+  data: Record<string, unknown>[];
 }
 
 export const reportsApi = {

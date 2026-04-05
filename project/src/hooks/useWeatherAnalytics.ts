@@ -1,14 +1,63 @@
 import { useState, useEffect } from 'react';
 import {
   weatherClimateService,
-  WeatherAnalyticsData,
-  MonthlyWeatherData,
-  TemperatureTimeSeries,
-  EvapotranspirationTimeSeries,
-  MonthlyEvapotranspirationData,
-  ParcelForecastDay,
+  type WeatherAnalyticsData,
+  type MonthlyWeatherData,
+  type TemperatureTimeSeries,
+  type EvapotranspirationTimeSeries,
+  type MonthlyEvapotranspirationData,
+  type ParcelForecastDay,
 } from '../services/weatherClimateService';
 import { apiRequest } from '../lib/api-client';
+
+interface WeatherApiForecastDay {
+  date?: string;
+  temp?: {
+    day?: number;
+    min?: number;
+    max?: number;
+  };
+  humidity?: number;
+  windSpeed?: number;
+  description?: string;
+  icon?: string;
+  precipitation?: number;
+}
+
+interface WeatherApiDailyPoint {
+  date: string;
+  et0_fao_evapotranspiration?: number | null;
+  et0?: number | null;
+  temperature_min?: number | null;
+  temp_min?: number | null;
+  temperature_mean?: number | null;
+  temperature_max?: number | null;
+  temp_max?: number | null;
+  ltn_min?: number | null;
+  ltn_mean?: number | null;
+  ltn_max?: number | null;
+}
+
+interface WeatherApiMonthlyPoint {
+  month: string;
+  precipitation_total?: number;
+  precipitation_ltn?: number;
+  wet_days_count?: number;
+  dry_days_count?: number;
+}
+
+interface WeatherApiResponse {
+  forecast?: WeatherApiForecastDay[];
+  temperature_series?: TemperatureTimeSeries[];
+  daily?: WeatherApiDailyPoint[];
+  monthly?: WeatherApiMonthlyPoint[];
+  evapotranspiration_series?: EvapotranspirationTimeSeries[];
+  monthly_evapotranspiration?: MonthlyEvapotranspirationData[];
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
+}
 
 export type TimeRange = 'last-3-months' | 'last-6-months' | 'last-12-months' | 'ytd' | 'custom';
 
@@ -52,7 +101,7 @@ export function useWeatherAnalytics({
       // Try NestJS first if parcelId is available
       if (parcelId) {
         try {
-          const result = await apiRequest<any>(
+          const result = await apiRequest<WeatherApiResponse>(
             `/api/v1/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
           );
 
@@ -105,7 +154,7 @@ export function useWeatherAnalytics({
 
 function normalizeApiForecast(raw: unknown): ParcelForecastDay[] {
   if (!Array.isArray(raw) || raw.length === 0) return [];
-  return raw.map((day: any) => ({
+  return raw.map((day: WeatherApiForecastDay) => ({
     date: typeof day.date === 'string' ? day.date : String(day.date ?? ''),
     temp: {
       day: Number(day.temp?.day ?? 0),
@@ -120,19 +169,19 @@ function normalizeApiForecast(raw: unknown): ParcelForecastDay[] {
   }));
 }
 
-function mapDailyToETSeries(daily: any[]): EvapotranspirationTimeSeries[] {
+function mapDailyToETSeries(daily: WeatherApiDailyPoint[]): EvapotranspirationTimeSeries[] {
   if (!daily) return [];
   return daily
-    .filter((d: any) => d.et0_fao_evapotranspiration != null || d.et0 != null)
-    .map((d: any) => ({
+    .filter((d) => d.et0_fao_evapotranspiration != null || d.et0 != null)
+    .map((d) => ({
       date: d.date,
       et0: d.et0_fao_evapotranspiration ?? d.et0 ?? 0,
     }));
 }
 
-function mapDailyToTempSeries(daily: any[]): TemperatureTimeSeries[] {
+function mapDailyToTempSeries(daily: WeatherApiDailyPoint[]): TemperatureTimeSeries[] {
   if (!daily) return [];
-  return daily.map((d: any) => ({
+  return daily.map((d) => ({
     date: d.date,
     current_min: d.temperature_min ?? d.temp_min ?? 0,
     current_mean: d.temperature_mean ?? ((d.temp_max ?? 0) + (d.temp_min ?? 0)) / 2,
@@ -143,7 +192,7 @@ function mapDailyToTempSeries(daily: any[]): TemperatureTimeSeries[] {
   }));
 }
 
-function mapMonthlyToWeatherData(m: any): MonthlyWeatherData {
+function mapMonthlyToWeatherData(m: WeatherApiMonthlyPoint): MonthlyWeatherData {
   return {
     month: m.month,
     precipitation_total: m.precipitation_total ?? 0,

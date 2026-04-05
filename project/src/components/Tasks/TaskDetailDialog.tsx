@@ -178,8 +178,8 @@ const TaskDetailDialog = ({
         },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du démarrage de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du démarrage de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -195,8 +195,8 @@ const TaskDetailDialog = ({
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la pause de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la pause de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -212,8 +212,8 @@ const TaskDetailDialog = ({
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la reprise de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la reprise de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -238,8 +238,8 @@ const TaskDetailDialog = ({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -279,8 +279,8 @@ const TaskDetailDialog = ({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -366,8 +366,8 @@ const TaskDetailDialog = ({
       } else {
         onClose();
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsLoading(false);
     }

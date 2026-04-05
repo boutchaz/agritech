@@ -136,7 +136,7 @@ const AppContent = () => {
 
   const { data: accounts = [] } = useAccounts();
   const activeAccounts = useMemo(
-    () => accounts.filter((a: any) => a.is_active && !a.is_group),
+    () => accounts.filter((a: { is_active?: boolean; is_group?: boolean }) => a.is_active && !a.is_group),
     [accounts],
   );
 
@@ -298,8 +298,8 @@ const AppContent = () => {
       await createMutation.mutateAsync(payload);
       setShowCreateModal(false);
       resetCreateForm();
-    } catch (err: any) {
-      setCreateError(err.message || "Erreur lors de la création");
+    } catch (err: unknown) {
+      setCreateError(err instanceof Error ? err.message : "Erreur lors de la création");
     }
   };
 
@@ -307,7 +307,7 @@ const AppContent = () => {
     try {
       await postMutation.mutateAsync(id);
       closeDrawer();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error posting entry:", err);
     }
   };
@@ -317,7 +317,7 @@ const AppContent = () => {
       try {
         await cancelMutation.mutateAsync(id);
         closeDrawer();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error cancelling entry:", err);
       }
     }, {variant: "destructive"});
@@ -328,7 +328,7 @@ const AppContent = () => {
       try {
         await deleteMutation.mutateAsync(id);
         closeDrawer();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Error deleting entry:", err);
       }
     }, {variant: "destructive"});
@@ -1172,7 +1172,7 @@ const AppContent = () => {
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
                         <option value="">Sélectionner...</option>
-                        {activeAccounts.map((account: any) => (
+                        {activeAccounts.map((account) => (
                           <option key={account.id} value={account.id}>
                             {account.code} - {account.name}
                           </option>

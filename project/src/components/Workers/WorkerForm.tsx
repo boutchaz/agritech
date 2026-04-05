@@ -41,7 +41,7 @@ import { Switch } from '@/components/ui/switch';
 
 
 // Zod schema factory function with conditional validation
-const createWorkerSchema = (t: any) =>
+const createWorkerSchema = (t: (key: string) => string) =>
   z
     .object({
       first_name: z.string().min(2, t("workers.form.validation.firstNameMin")),

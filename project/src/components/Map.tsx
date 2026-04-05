@@ -58,10 +58,10 @@ interface MapProps {
   sensors?: SensorData[];
   farmId?: string;
   enableDrawing?: boolean;
-  onParcelAdded?: (parcel: any) => void;
+  onParcelAdded?: (parcel: unknown) => void;
   selectedParcelId?: string | null;
   onParcelSelect?: (parcelId: string) => void;
-  parcels?: any[]; // Allow passing parcels as prop
+  parcels?: unknown[]; // Allow passing parcels as prop
   editingParcelId?: string | null;
   onBoundaryUpdated?: () => void;
 }

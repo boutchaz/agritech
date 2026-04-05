@@ -26,7 +26,16 @@ type OrderFormData = z.infer<typeof orderSchema>;
 interface OrderLabServiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  service: any | null;
+  service: {
+    id: string;
+    provider_id: string;
+    name: string;
+    price?: number;
+    currency?: string;
+    turnaround_days?: number;
+    parameters_tested?: string[];
+    sample_requirements?: string;
+  } | null;
 }
 
 export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServiceDialogProps) {

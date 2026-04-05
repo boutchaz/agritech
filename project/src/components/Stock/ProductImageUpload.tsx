@@ -78,7 +78,7 @@ export default function ProductImageUpload({
       }
 
       return publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to upload image:', error);
       toast.error(t('items.marketplace.uploadFailed', 'Failed to upload image'));
       return null;

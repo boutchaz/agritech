@@ -13,7 +13,7 @@ import { SectionLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 
 interface OnboardingFlowProps {
-  user: any;
+  user: { id: string; email?: string };
   onComplete: () => void;
 }
 
@@ -331,9 +331,9 @@ const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
       }
 
       onComplete();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Onboarding error:', error);
-      setError(error.message || 'Une erreur est survenue lors de la création');
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la création');
     } finally {
       setLoading(false);
     }

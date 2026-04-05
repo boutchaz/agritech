@@ -162,7 +162,7 @@ export const ApplicationFormDialog = ({
        }
 
        return publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to upload image:', error);
       toast.error('Failed to upload image');
       return null;
@@ -240,7 +240,7 @@ export const ApplicationFormDialog = ({
           } else if (errorData.error) {
             errorMessage = errorData.error;
           } else if (Array.isArray(errorData.details) && errorData.details.length > 0) {
-            errorMessage = errorData.details.map((d: any) => d.message).join(', ');
+            errorMessage = errorData.details.map((d: { message?: string }) => d.message || '').join(', ');
           }
         } catch (_e) {
           // If parsing fails, use status text
@@ -328,7 +328,7 @@ export const ApplicationFormDialog = ({
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
       try {
-        const filters: any = {};
+        const filters: Record<string, string> = {};
         if (farmId) filters.farm_id = farmId;
         const result = await tasksApi.getAll(currentOrganization.id, filters);
         return result?.data || [];
@@ -342,7 +342,7 @@ export const ApplicationFormDialog = ({
   });
 
   // Get selected product for validation
-  const selectedProduct = products.find((p: any) => p.id === selectedProductId);
+  const selectedProduct = products.find((p: { id: string }) => p.id === selectedProductId);
   const availableStock = selectedProduct?.quantity || 0;
   const stockUnit = selectedProduct?.unit || '';
 
@@ -395,7 +395,7 @@ export const ApplicationFormDialog = ({
                     <SelectValue placeholder={t('parcels.index.selectProduct')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {products.map((product: any) => (
+                    {products.map((product: { id: string; name: string; quantity?: number; unit?: string }) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name} ({product.quantity} {product.unit})
                       </SelectItem>
@@ -527,7 +527,7 @@ export const ApplicationFormDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{t('parcels.index.noTask') || 'Aucune tâche (ad-hoc)'}</SelectItem>
-                  {tasks.map((taskItem: any) => (
+                  {tasks.map((taskItem: { id: string; title: string }) => (
                     <SelectItem key={taskItem.id} value={taskItem.id}>
                       {taskItem.title}
                     </SelectItem>

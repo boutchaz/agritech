@@ -205,9 +205,9 @@ export function AccountMappingsManagement() {
         toast.success(t('accountMappings.create.success', 'Account mapping created successfully'));
       }
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
-        error?.message ||
+        (error instanceof Error ? error.message : undefined) ||
         (editingMapping
           ? t('accountMappings.update.failed', 'Failed to update account mapping')
           : t('accountMappings.create.failed', 'Failed to create account mapping'))
@@ -250,8 +250,8 @@ export function AccountMappingsManagement() {
       toast.success(
         t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count })
       );
-    } catch (error: any) {
-      toast.error(error?.message || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
+    } catch (error: unknown) {
+      toast.error((error instanceof Error ? error.message : undefined) || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
     }
   };
 
@@ -560,7 +560,7 @@ export function AccountMappingsManagement() {
                   <SelectValue placeholder={t('accountMappings.form.accountPlaceholder', 'Select account')} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {accounts.map((account: any) => (
+                  {accounts.map((account: { id: string; code: string; name: string }) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.code} - {account.name}
                     </SelectItem>

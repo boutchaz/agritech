@@ -153,7 +153,7 @@ export function WorkerConfiguration({
     mutationFn: async (data: WorkerPaymentFormData) => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      const updateData: any = {
+      const updateData: Partial<WorkerPaymentFormData> = {
         worker_type: data.worker_type,
         payment_frequency: data.payment_frequency,
         daily_rate: data.daily_rate || undefined,

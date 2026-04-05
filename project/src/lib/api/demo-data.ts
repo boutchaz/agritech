@@ -25,7 +25,7 @@ export interface ExportData {
     organizationId: string;
     version: string;
   }>;
-  [key: string]: any[];
+  [key: string]: unknown[];
 }
 
 export interface ImportResult {

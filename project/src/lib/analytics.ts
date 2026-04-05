@@ -24,6 +24,8 @@ interface PageViewOptions {
   path?: string;
 }
 
+type AnalyticsItem = Record<string, unknown>;
+
 export interface AnalyticsUserProperties {
   userId: string;
   email?: string;
@@ -336,7 +338,7 @@ export const trackSearch = (_t: string, _c: number): void => {};
 export const trackExportData = (_d: string, _f: string): void => {};
 export const trackImportData = (_d: string): void => {};
 export const trackViewItem = (_id: string, _n: string, _c?: string, _p?: number): void => {};
-export const trackBeginCheckout = (_v: number, _cur?: string, _items?: any[]): void => {};
-export const trackPurchase = (_tid: string, _v: number, _cur?: string, _items?: any[]): void => {};
+export const trackBeginCheckout = (_v: number, _cur?: string, _items?: AnalyticsItem[]): void => {};
+export const trackPurchase = (_tid: string, _v: number, _cur?: string, _items?: AnalyticsItem[]): void => {};
 export const trackTrialView = (): void => {};
 export const trackTrialConversion = (): void => {};

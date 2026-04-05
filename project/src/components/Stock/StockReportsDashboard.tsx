@@ -163,7 +163,7 @@ export default function StockReportsDashboard() {
           <p className="text-gray-600 dark:text-gray-400">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={dateRange} onValueChange={(val: any) => setDateRange(val)}>
+          <Select value={dateRange} onValueChange={(val: string) => setDateRange(val)}>
             <SelectTrigger className="w-40">
               <Calendar className="w-4 h-4 me-2" />
               <SelectValue />

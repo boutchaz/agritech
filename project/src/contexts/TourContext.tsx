@@ -1052,7 +1052,15 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     }
 
     if (targetRoute) {
-      navigate({ to: targetRoute });
+      const path = location.pathname.replace(/\/$/, '') || '/';
+      const target = targetRoute.replace(/\/$/, '') || '/';
+      // Exact match only: /parcels/xyz must still navigate to /parcels for the list tour.
+      const alreadyOnTourRoute = path === target;
+      // Avoid navigate() when already on the tour route — redundant navigation remounts
+      // the tree and feels like a full reload (especially /parcels + useAutoStartTour).
+      if (!alreadyOnTourRoute) {
+        navigate({ to: targetRoute });
+      }
       // Immediately mark as running to block auto-start hooks during navigation delay.
       // currentTour stays null so Joyride doesn't render yet (no steps = shouldRun false).
       setTourState(prev => ({
@@ -1078,7 +1086,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
         stepIndex: 0,
       }));
     }
-  }, [isOnboardingRoute, navigate]);
+  }, [isOnboardingRoute, navigate, location.pathname]);
 
   const endTour = useCallback(() => {
     // Also cancel any pending delayed start

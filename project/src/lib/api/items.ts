@@ -5,6 +5,7 @@ import type {
   ItemWithDetails,
   ItemGroup,
   ItemSelectionOption,
+  ItemPrice,
   CreateItemInput,
   UpdateItemInput,
   CreateItemGroupInput,
@@ -14,6 +15,8 @@ import type {
   ProductVariant,
   ItemFilters,
   ItemGroupFilters,
+  FarmStockLevelsByItem,
+  ItemUsageSummary,
 } from '../../types/items';
 
 const BASE_URL = '/api/v1/items';
@@ -158,21 +161,21 @@ export const itemsApi = {
       low_stock_only?: boolean;
     },
     organizationId?: string,
-  ): Promise<any[]> {
+  ): Promise<FarmStockLevelsByItem[]> {
     const params = new URLSearchParams();
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.item_id) params.append('item_id', filters.item_id);
     if (filters?.low_stock_only) params.append('low_stock_only', 'true');
 
     const url = `${BASE_URL}/stock-levels/farm${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<any[]>(url, {}, organizationId);
+    return apiClient.get<FarmStockLevelsByItem[]>(url, {}, organizationId);
   },
 
   /**
    * Get item usage by farm/parcel
    */
-  async getItemFarmUsage(itemId: string, organizationId?: string): Promise<any> {
-    return apiClient.get<any>(`${BASE_URL}/${itemId}/farm-usage`, {}, organizationId);
+  async getItemFarmUsage(itemId: string, organizationId?: string): Promise<ItemUsageSummary> {
+    return apiClient.get<ItemUsageSummary>(`${BASE_URL}/${itemId}/farm-usage`, {}, organizationId);
   },
 
   /**
@@ -228,7 +231,7 @@ export const itemsApi = {
   /**
    * Get all prices for a specific item
    */
-  async getItemPrices(itemId: string, organizationId?: string): Promise<any[]> {
-    return apiClient.get<any[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
+  async getItemPrices(itemId: string, organizationId?: string): Promise<ItemPrice[]> {
+    return apiClient.get<ItemPrice[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
   },
 };

@@ -314,7 +314,6 @@ const UtilitiesManagement = () => {
       // Try to find an Operating Expense account
       debitAccountId = await getAccountByType('Expense', 'Operating Expense');
     } catch {
-      // Last resort: any Expense account
       debitAccountId = await getAccountByType('Expense');
     }
 

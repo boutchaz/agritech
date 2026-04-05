@@ -153,8 +153,8 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       setGroupDescription('');
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      toast.error(`Failed to create item group: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to create item group: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1052,8 +1052,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
         is_active: true,
         notes: '',
       });
-    } catch (error: any) {
-      toast.error(`Failed to save variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to save variant: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1065,8 +1065,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     try {
       await deleteVariant.mutateAsync(variant.id);
       toast.success(t('items.variants.deleted', 'Variant deleted'));
-    } catch (error: any) {
-      toast.error(`Failed to delete variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete variant: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1491,8 +1491,8 @@ export default function ItemManagement() {
       toast.success(t('items.itemDeleted'));
       setShowDeleteDialog(false);
       setItemToDelete(null);
-    } catch (error: any) {
-      toast.error(`Failed to delete item: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete item: ${error instanceof Error ? error.message : ''}`);
     }
   };
 

@@ -31,9 +31,9 @@ const Reports = ({ activeModules: _activeModules = [] }: ReportsProps) => {
         const data = await reportsApi.getAvailableReports(currentOrganization.id);
         setBaseReports(data.baseReports);
         setModuleReports(data.moduleReports);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching available reports:', err);
-        setError(err.message || 'Failed to fetch available reports');
+        setError(err instanceof Error ? err.message : 'Failed to fetch available reports');
       } finally {
         setLoading(false);
       }
@@ -63,13 +63,13 @@ const Reports = ({ activeModules: _activeModules = [] }: ReportsProps) => {
       // Convert to CSV and download
       const csv = convertToCSV(reportData.columns, reportData.data);
       downloadCSV(csv, `${reportName}-${endDate.toISOString().split('T')[0]}.csv`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error generating report:', err);
-      toast.error(err.message || 'Failed to generate report');
+      toast.error(err instanceof Error ? err.message : 'Failed to generate report');
     }
   };
 
-  const convertToCSV = (columns: string[], data: Record<string, any>[]): string => {
+  const convertToCSV = (columns: string[], data: Record<string, unknown>[]): string => {
     const header = columns.join(',');
     const rows = data.map(row =>
       columns.map(col => {

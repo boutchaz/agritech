@@ -34,7 +34,10 @@ function TasksListPage() {
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      return (farms || []).map((f: any) => ({ id: f.farm_id || f.id, name: f.farm_name || f.name }));
+      return (farms || []).map((f: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: f.farm_id || f.id || '',
+        name: f.farm_name || f.name || '',
+      }));
     },
     enabled: !!currentOrganization?.id,
   });

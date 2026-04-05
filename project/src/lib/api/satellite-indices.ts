@@ -23,7 +23,7 @@ export interface SatelliteIndex {
   image_source?: string;
   geotiff_url?: string;
   geotiff_expires_at?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
   // Legacy fields for backward compatibility
@@ -63,7 +63,7 @@ export interface CreateSatelliteIndexInput {
   geotiff_url?: string;
   geotiff_expires_at?: string;
   processing_job_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   // Legacy single value field
   index_value?: number;
 }

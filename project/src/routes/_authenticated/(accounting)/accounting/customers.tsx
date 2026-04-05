@@ -187,9 +187,9 @@ function CustomersPage() {
       }
 
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Parse database constraint errors and set field-specific errors
-      if (error?.message?.includes('customer_type_check')) {
+      if (error instanceof Error && error.message.includes('customer_type_check')) {
         form.setError('customer_type', {
           type: 'manual',
           message: 'Invalid customer type. Must be one of: individual, business, government, or other',

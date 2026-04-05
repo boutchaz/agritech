@@ -30,6 +30,24 @@ import {
 } from '@/components/ui/radix-select';
 import type { DependencyType } from '@/types/tasks';
 
+type TaskDependencyLink = {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: DependencyType;
+  lag_days: number;
+  depends_on_task_status?: string;
+  depends_on_task_title?: string;
+  task_status?: string;
+  task_title?: string;
+};
+
+type TaskSearchResult = {
+  id: string;
+  title: string;
+  status: string;
+};
+
 interface TaskDependenciesProps {
   taskId: string;
   organizationId: string;
@@ -60,6 +78,8 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
+const getStatusColor = (status?: string) => STATUS_COLORS[status ?? ''] || 'bg-gray-400';
+const getStatusLabel = (status?: string) => STATUS_LABELS[status ?? ''] || status || 'Unknown';
 export default function TaskDependencies({ taskId, organizationId, disabled }: TaskDependenciesProps) {
   const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
@@ -80,26 +100,30 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
   const dependsOn = useMemo(() => {
     if (!dependenciesData) return [];
     const deps = Array.isArray(dependenciesData) ? dependenciesData : dependenciesData.depends_on || [];
-    return deps.filter((d: any) => d.task_id === taskId);
+    return deps.filter((d: TaskDependencyLink) => d.task_id === taskId);
   }, [dependenciesData, taskId]);
 
   const requiredBy = useMemo(() => {
     if (!dependenciesData) return [];
     const deps = Array.isArray(dependenciesData) ? dependenciesData : dependenciesData.required_by || [];
-    return deps.filter((d: any) => d.depends_on_task_id === taskId);
+    return deps.filter((d: TaskDependencyLink) => d.depends_on_task_id === taskId);
   }, [dependenciesData, taskId]);
 
   // Filter tasks for the add form: exclude current task and already-linked tasks
   const existingDepTaskIds = useMemo(() => {
     const ids = new Set<string>();
     ids.add(taskId);
-    dependsOn.forEach((d: any) => ids.add(d.depends_on_task_id));
-    requiredBy.forEach((d: any) => ids.add(d.task_id));
+    dependsOn.forEach((d: TaskDependencyLink) => {
+      ids.add(d.depends_on_task_id);
+    });
+    requiredBy.forEach((d: TaskDependencyLink) => {
+      ids.add(d.task_id);
+    });
     return ids;
   }, [taskId, dependsOn, requiredBy]);
 
   const filteredTasks = useMemo(() => {
-    return allTasks.filter((task: any) => !existingDepTaskIds.has(task.id));
+    return allTasks.filter((task: TaskSearchResult) => !existingDepTaskIds.has(task.id));
   }, [allTasks, existingDepTaskIds]);
 
   // Blocked status
@@ -110,17 +134,17 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
     }
     // Fallback: count unfinished finish_to_start deps
     return dependsOn.filter(
-      (d: any) => d.dependency_type === 'finish_to_start' && d.depends_on_task_status !== 'completed'
+      (d: TaskDependencyLink) => d.dependency_type === 'finish_to_start' && d.depends_on_task_status !== 'completed'
     ).length;
   }, [blockedData, dependsOn]);
 
   const blockerNames = useMemo(() => {
     if (blockedData && typeof blockedData === 'object' && 'blockers' in blockedData) {
-      return (blockedData.blockers || []).map((b: any) => b.title || b.depends_on_task_title);
+      return (blockedData.blockers || []).map((b: { title?: string; depends_on_task_title?: string }) => b.title || b.depends_on_task_title);
     }
     return dependsOn
-      .filter((d: any) => d.dependency_type === 'finish_to_start' && d.depends_on_task_status !== 'completed')
-      .map((d: any) => d.depends_on_task_title || 'Untitled task');
+      .filter((d: TaskDependencyLink) => d.dependency_type === 'finish_to_start' && d.depends_on_task_status !== 'completed')
+      .map((d: TaskDependencyLink) => d.depends_on_task_title || 'Untitled task');
   }, [blockedData, dependsOn]);
 
   const handleAddDependency = async () => {
@@ -180,8 +204,8 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
               {t('tasks.detail.blockedBy', 'This task is blocked by {{count}} incomplete task(s)', { count: blockerCount })}
             </p>
             <ul className="mt-1 text-sm text-amber-700 dark:text-amber-400 list-disc list-inside">
-              {blockerNames.map((name: string, i: number) => (
-                <li key={name}>{name}</li>
+              {blockerNames.map((name: string | undefined) => (
+                <li key={name ?? 'blocker'}>{name ?? 'Untitled task'}</li>
               ))}
             </ul>
           </div>
@@ -206,13 +230,13 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
               </p>
             ) : (
               <div className="space-y-2">
-                {dependsOn.map((dep: any) => (
+                {dependsOn.map((dep: TaskDependencyLink) => (
                   <div
                     key={dep.id}
                     className="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg group"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[dep.depends_on_task_status] || 'bg-gray-400'}`} />
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getStatusColor(dep.depends_on_task_status)}`} />
                       <div className="min-w-0 flex-1">
                         <Link
                           to="/tasks/$taskId"
@@ -223,7 +247,7 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
                         </Link>
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {STATUS_LABELS[dep.depends_on_task_status] || dep.depends_on_task_status}
+                            {getStatusLabel(dep.depends_on_task_status)}
                           </span>
                           <span className="text-xs text-gray-400 dark:text-gray-500">--</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -267,12 +291,12 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
               </p>
             ) : (
               <div className="space-y-2">
-                {requiredBy.map((dep: any) => (
+                {requiredBy.map((dep: TaskDependencyLink) => (
                   <div
                     key={dep.id}
                     className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
                   >
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[dep.task_status] || 'bg-gray-400'}`} />
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getStatusColor(dep.task_status)}`} />
                     <div className="min-w-0 flex-1">
                       <Link
                         to="/tasks/$taskId"
@@ -283,7 +307,7 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
                       </Link>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {STATUS_LABELS[dep.task_status] || dep.task_status}
+                          {getStatusLabel(dep.task_status)}
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">--</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -330,7 +354,7 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
           {/* Task Dropdown */}
           {searchQuery && filteredTasks.length > 0 && !selectedTaskId && (
             <div className="max-h-40 overflow-y-auto border dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-              {filteredTasks.slice(0, 10).map((task: any) => (
+              {filteredTasks.slice(0, 10).map((task: TaskSearchResult) => (
                 <Button
                   key={task.id}
                   variant="ghost"
@@ -359,9 +383,9 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
           {/* Dependency Type & Lag */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
                 {t('tasks.detail.dependencyType', 'Type')}
-              </label>
+              </span>
               <Select value={dependencyType} onValueChange={(v) => setDependencyType(v as DependencyType)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -374,9 +398,9 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
               </Select>
             </div>
             <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
+              <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">
                 {t('tasks.detail.lagDays', 'Lag (days)')}
-              </label>
+              </span>
               <Input
                 type="number"
                 min="0"

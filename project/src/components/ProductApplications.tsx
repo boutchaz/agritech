@@ -67,7 +67,7 @@ const ProductApplications = () => {
         currentOrganization.id
       );
 
-      const farms = (data || []).map((farm: any) => ({
+      const farms = (data || []).map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
         id: farm.farm_id || farm.id,
         name: farm.farm_name || farm.name,
       }));
@@ -181,7 +181,7 @@ const ProductApplications = () => {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {applications.map((app: any) => (
+            {applications.map((app: { id: string; inventory: { name: string }; application_date: string; quantity_used: number; area_treated: number; notes?: string; cost?: number }) => (
               <div key={app.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">

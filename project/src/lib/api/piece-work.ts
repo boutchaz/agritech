@@ -23,7 +23,7 @@ export interface PieceWorkRecord {
   end_time?: string;
   break_duration?: number;
   notes?: string;
-  attachments?: any;
+  attachments?: unknown;
   created_at: string;
   updated_at: string;
   created_by?: string;

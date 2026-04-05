@@ -99,7 +99,7 @@ const StatisticsCalculator = ({
   const buildStatsFromCache = useCallback((): ParcelStatisticsResponse | null => {
     if (!cachedStats || cachedStats.length === 0) return null;
 
-    const statistics: Record<string, any> = {};
+    const statistics: ParcelStatisticsResponse['statistics'] = {} as ParcelStatisticsResponse['statistics'];
     for (const item of cachedStats) {
       if (!statistics[item.index_name]) {
         statistics[item.index_name] = {

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
@@ -38,7 +38,7 @@ function WorkersPage() {
   // Check if user has access to workers page
   const canReadWorkers = can('read', 'Worker');
 
-  const fetchFarms = async () => {
+  const fetchFarms = useCallback(async () => {
     if (!currentOrganization?.id) {
       setFarmsLoading(false);
       return;
@@ -51,9 +51,9 @@ function WorkersPage() {
         currentOrganization.id
       );
       
-      const farmsList = (data || []).map((farm: any) => ({
-        id: farm.farm_id || farm.id,
-        name: farm.farm_name || farm.name,
+      const farmsList = (data || []).map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: farm.farm_id || farm.id || '',
+        name: farm.farm_name || farm.name || '',
       }));
       setFarms(farmsList);
     } catch (error) {
@@ -63,13 +63,13 @@ function WorkersPage() {
     } finally {
       setFarmsLoading(false);
     }
-  };
+  }, [currentOrganization?.id, t]);
 
   useEffect(() => {
     if (currentOrganization) {
       fetchFarms();
     }
-  }, [currentOrganization]);
+  }, [currentOrganization, fetchFarms]);
 
   if (!currentOrganization) {
     return <PageLoader className="min-h-screen" />;

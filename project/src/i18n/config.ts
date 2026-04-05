@@ -12,9 +12,12 @@ import enAccounting from '../locales/en/accounting.json';
 import enSatellite from '../locales/en/satellite.json';
 
 const NAMESPACES = ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite'] as const;
+type Namespace = (typeof NAMESPACES)[number];
+type TranslationResource = Record<string, unknown>;
+type LanguageBundles = Record<Namespace, TranslationResource>;
 
 // Lazy loaders for non-default languages
-const lazyLanguageLoaders: Record<string, () => Promise<Record<string, any>>> = {
+const lazyLanguageLoaders: Record<string, () => Promise<LanguageBundles>> = {
   fr: async () => {
     const [common, ai, stock, compliance, accounting, satellite] = await Promise.all([
       import('../locales/fr/common.json'),
@@ -51,7 +54,7 @@ const detectLanguage = (): string => {
 const detectedLng = detectLanguage();
 
 // Build initial resources — always include English as fallback
-const initialResources: Record<string, Record<string, any>> = {
+const initialResources: Record<string, LanguageBundles> = {
   en: {
     common: enCommon,
     ai: enAi,

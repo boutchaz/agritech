@@ -23,6 +23,17 @@ import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelC
 import { AdaptiveSection as _AdaptiveSection } from './adaptive/AdaptiveSection';
 import { Badge } from './ui/badge';
 
+interface ParcelProfitabilitySummary {
+  parcel_id?: string;
+  parcel_name: string;
+  total_costs: number;
+  total_revenue: number;
+  net_profit: number;
+  profit_margin?: number;
+  cost_breakdown: Record<string, number>;
+  revenue_breakdown: Record<string, number>;
+}
+
 const ProfitabilityDashboard = () => {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
@@ -127,7 +138,7 @@ const ProfitabilityDashboard = () => {
     }, {} as Record<string, number>);
 
     // Group by parcel
-    const byParcel: Record<string, any> = {};
+    const byParcel: Record<string, ParcelProfitabilitySummary> = {};
 
     costs.forEach(cost => {
       const parcelId = cost.parcel_id || 'unassigned';

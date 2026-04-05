@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { AIRecommendationEvaluation } from '../../types/ai-recommendations';
 
 const BASE_URL = '/api/v1/parcels';
 
@@ -35,7 +36,7 @@ export const aiRecommendationsApi = {
     return apiClient.patch(`/api/v1/ai/recommendations/${id}/execute`, { notes }, {}, organizationId);
   },
 
-  async getAIRecommendationEvaluation(id: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`/api/v1/ai/recommendations/${id}/evaluation`, {}, organizationId);
+  async getAIRecommendationEvaluation(id: string, organizationId?: string): Promise<AIRecommendationEvaluation> {
+    return apiClient.get<AIRecommendationEvaluation>(`/api/v1/ai/recommendations/${id}/evaluation`, {}, organizationId);
   },
 };

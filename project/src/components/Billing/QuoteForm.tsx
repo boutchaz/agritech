@@ -163,7 +163,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
         customer_id: quoteWithItems.customer_id || '',
         quote_date: quoteWithItems.quote_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         valid_until: quoteWithItems.valid_until?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        items: quoteItems.length > 0 ? quoteItems.map((item: any) => ({
+        items: quoteItems.length > 0 ? quoteItems.map((item: Record<string, unknown>) => ({
           item_id: item.item_id || '',
           item_name: item.item_name || '',
           description: item.description || '',

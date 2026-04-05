@@ -562,3 +562,48 @@ export interface ItemSelectionOption {
     name: string;
   };
 }
+
+export interface FarmStockLevel {
+  farm_id: string | null;
+  farm_name: string | null;
+  warehouse_id: string;
+  warehouse_name: string;
+  item_id: string;
+  total_quantity: number;
+  total_value: number;
+  is_low_stock: boolean;
+  minimum_stock_level?: number;
+}
+
+export interface FarmStockLevelsByItem {
+  item_id: string;
+  item_code: string;
+  item_name: string;
+  default_unit: string;
+  minimum_stock_level?: number;
+  total_quantity: number;
+  total_value: number;
+  is_low_stock: boolean;
+  by_farm: FarmStockLevel[];
+}
+
+export interface ItemFarmUsage {
+  farm_id: string;
+  farm_name: string;
+  parcel_id?: string;
+  parcel_name?: string;
+  usage_count: number;
+  last_used_date?: string;
+  total_quantity_used: number;
+  task_ids: string[];
+  tasks?: { id: string; title: string }[];
+  parcels?: ItemFarmUsage[];
+}
+
+export interface ItemUsageSummary {
+  item_id: string;
+  total_usage_count: number;
+  last_used_date?: string;
+  total_quantity_used: number;
+  by_farm: ItemFarmUsage[];
+}

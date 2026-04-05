@@ -18,7 +18,7 @@ export function useSendMessage() {
       try {
         const response = await chatApi.sendMessage(data, currentOrganization.id);
         return response;
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Chat API error:', error);
         throw error;
       }
@@ -33,7 +33,7 @@ export function useSendMessage() {
         queryKey: ['chat-history', currentOrganization?.id],
       });
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Chat mutation error:', error);
     },
   });

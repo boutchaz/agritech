@@ -49,7 +49,7 @@ export default function InventoryStock() {
 
        try {
          // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
-         const filters: any = {};
+          const filters = {} as Record<string, never>;
          // Note: The API returns data grouped by item_id with warehouse details
          // We need to transform it to match the expected format
          const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);

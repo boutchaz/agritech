@@ -80,6 +80,15 @@ export interface ZoneClassification {
   spatial_pattern_type: string;
 }
 
+export interface CalibrationPercentilesResponse {
+  percentiles: Record<string, number>;
+}
+
+export interface CalibrationZonesResponse {
+  zones: string[];
+  distribution: Record<string, number>;
+}
+
 export interface HealthScore {
   total: number;
   components: {

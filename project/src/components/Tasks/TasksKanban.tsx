@@ -89,7 +89,7 @@ interface TasksKanbanProps {
 
 // --- Due date helper ---
 
-function getDueDateIndicator(dueDate: string | undefined | null, t: (key: string, fallback?: string) => string) {
+function getDueDateIndicator(dueDate: string | undefined | null, t: TranslationFn) {
   if (!dueDate) return null;
   const due = new Date(dueDate);
   const today = new Date();
@@ -98,7 +98,7 @@ function getDueDateIndicator(dueDate: string | undefined | null, t: (key: string
 
   if (isPast(due) && !isToday(due)) {
     return {
-      label: t('tasks.kanbanDueOverdue'),
+      label: t('tasks.kanbanDueOverdue', { defaultValue: 'Due overdue' }),
       colorClass: 'text-red-600 dark:text-red-400',
       bgClass: 'bg-red-50 dark:bg-red-900/20',
       Icon: AlertCircle,
@@ -106,7 +106,7 @@ function getDueDateIndicator(dueDate: string | undefined | null, t: (key: string
   }
   if (isToday(due)) {
     return {
-      label: t('tasks.kanbanDueToday'),
+      label: t('tasks.kanbanDueToday', { defaultValue: 'Due today' }),
       colorClass: 'text-orange-600 dark:text-orange-400',
       bgClass: 'bg-orange-50 dark:bg-orange-900/20',
       Icon: Flame,
@@ -114,7 +114,7 @@ function getDueDateIndicator(dueDate: string | undefined | null, t: (key: string
   }
   if (isTomorrow(due)) {
     return {
-      label: t('tasks.kanbanDueTomorrow'),
+      label: t('tasks.kanbanDueTomorrow', { defaultValue: 'Due tomorrow' }),
       colorClass: 'text-amber-600 dark:text-amber-400',
       bgClass: 'bg-amber-50 dark:bg-amber-900/20',
       Icon: CalendarClock,
@@ -181,7 +181,7 @@ function KanbanSkeleton() {
 interface SortableTaskCardProps {
   task: TaskSummary;
   lang: string;
-  t: (key: string, options?: any) => string;
+  t: TranslationFn;
   onSelect?: (taskId: string) => void;
   isDragOverlay?: boolean;
 }
@@ -202,9 +202,10 @@ function SortableTaskCard({ task, lang, t, onSelect, isDragOverlay }: SortableTa
   };
 
   return (
-    <div
+    <button
       ref={setNodeRef}
       style={style}
+      type="button"
       className={cn(
         'group bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 cursor-pointer transition-all',
         'hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600',
@@ -313,9 +314,9 @@ function SortableTaskCard({ task, lang, t, onSelect, isDragOverlay }: SortableTa
           {task.checklist && task.checklist.length > 0 && (
             <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
               <ListChecks className="w-3.5 h-3.5" />
-              <span className="text-xs">
-                {task.checklist.filter((item: any) => item.completed).length}/{task.checklist.length}
-              </span>
+                <span className="text-xs">
+                  {task.checklist.filter((item) => item.completed).length}/{task.checklist.length}
+                </span>
             </div>
           )}
 
@@ -342,7 +343,7 @@ function SortableTaskCard({ task, lang, t, onSelect, isDragOverlay }: SortableTa
           )}
         </div>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -375,7 +376,7 @@ interface KanbanColumnProps {
   status: TaskStatus;
   tasks: TaskSummary[];
   lang: string;
-  t: (key: string, options?: any) => string;
+  t: TranslationFn;
   onSelectTask?: (taskId: string) => void;
   isDropTarget: boolean;
   isInvalidDrop: boolean;
@@ -650,3 +651,4 @@ const TasksKanban = ({ organizationId, onSelectTask }: TasksKanbanProps) => {
 };
 
 export default TasksKanban;
+type TranslationFn = ReturnType<typeof useTranslation>['t'];

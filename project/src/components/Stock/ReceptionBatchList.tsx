@@ -158,8 +158,8 @@ export default function ReceptionBatchList({
       await cancelBatch.mutateAsync(batchId);
       toast.success(t('receptionBatches.list.toasts.cancelSuccess'));
       setConfirmAction(null);
-    } catch (error: any) {
-      toast.error(t('receptionBatches.list.toasts.cancelFailed', { message: error.message }));
+    } catch (error: unknown) {
+      toast.error(t('receptionBatches.list.toasts.cancelFailed', { message: error instanceof Error ? error.message : '' }));
     }
   };
 
@@ -168,8 +168,8 @@ export default function ReceptionBatchList({
       await deleteBatch.mutateAsync(batchId);
       toast.success(t('receptionBatches.list.toasts.deleteSuccess'));
       setConfirmAction(null);
-    } catch (error: any) {
-      toast.error(t('receptionBatches.list.toasts.deleteFailed', { message: error.message }));
+    } catch (error: unknown) {
+      toast.error(t('receptionBatches.list.toasts.deleteFailed', { message: error instanceof Error ? error.message : '' }));
     }
   };
 

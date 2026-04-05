@@ -92,8 +92,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         await addCategory(newCategoryName.trim());
         setNewCategoryName("");
         onDataChange?.();
-      } catch (error: any) {
-        toast.error("Error adding category: " + error.message);
+      } catch (error: unknown) {
+        toast.error("Error adding category: " + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }
   };
@@ -103,8 +103,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       try {
         await deleteCategory(categoryId);
         onDataChange?.();
-      } catch (error: any) {
-        toast.error("Error deleting category: " + error.message);
+      } catch (error: unknown) {
+        toast.error("Error deleting category: " + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }, {variant: "destructive"});
   };
@@ -122,8 +122,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       await updateCategory(categoryId, editedCategoryName);
       setEditingCategory(null);
       onDataChange?.();
-    } catch (error: any) {
-      toast.error("Error updating category: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error updating category: " + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -133,8 +133,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         await addTree(categoryId, newTreeName.trim());
         setNewTreeName("");
         onDataChange?.();
-      } catch (error: any) {
-        toast.error("Error adding tree: " + error.message);
+      } catch (error: unknown) {
+        toast.error("Error adding tree: " + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }
   };
@@ -143,8 +143,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
     try {
       await deleteTree(treeId);
       onDataChange?.();
-    } catch (error: any) {
-      toast.error("Error deleting tree: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error deleting tree: " + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -162,8 +162,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       await updateTree(treeId, editedTreeName);
       setEditingTree(null);
       onDataChange?.();
-    } catch (error: any) {
-      toast.error("Error updating tree: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error updating tree: " + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -178,8 +178,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         );
         setNewPlantationType({ type: "", spacing: "", treesPerHa: 0 });
         onDataChange?.();
-      } catch (error: any) {
-        toast.error("Error adding plantation type: " + error.message);
+      } catch (error: unknown) {
+        toast.error("Error adding plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }
   };
@@ -189,8 +189,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       try {
         await deletePlantationType(id);
         onDataChange?.();
-      } catch (error: any) {
-        toast.error("Error deleting plantation type: " + error.message);
+      } catch (error: unknown) {
+        toast.error("Error deleting plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
       }
     }, {variant: "destructive"});
   };
@@ -217,8 +217,8 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       );
       setEditingPlantation(null);
       onDataChange?.();
-    } catch (error: any) {
-      toast.error("Error updating plantation type: " + error.message);
+    } catch (error: unknown) {
+      toast.error("Error updating plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 

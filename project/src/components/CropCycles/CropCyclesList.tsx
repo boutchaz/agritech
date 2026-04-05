@@ -395,7 +395,7 @@ export function CropCyclesList() {
         let cropId = data.crop_id;
         if (!cropId && data.crop_type && data.farm_id) {
           const matchingCrop = existingCrops.find(
-            (crop: any) =>
+            (crop: { id: string; name?: string; crop_type?: string }) =>
               crop.name?.toLowerCase().includes(data.crop_type.toLowerCase()) ||
               crop.crop_type?.toLowerCase() === data.crop_type.toLowerCase(),
           );

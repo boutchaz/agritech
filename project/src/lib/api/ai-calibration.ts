@@ -1,4 +1,6 @@
 import { apiClient } from '../api-client';
+import type { CalibrationReportResponse } from './calibration-output';
+import type { CalibrationPercentilesResponse, CalibrationZonesResponse } from '../../types/calibration-output';
 
 const BASE_URL = '/api/v1/parcels';
 
@@ -63,20 +65,20 @@ export const aiCalibrationApi = {
     return apiClient.get(`${BASE_URL}/${parcelId}/calibration`, {}, organizationId);
   },
 
-  async getCalibrationReport(parcelId: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/calibration/report`, {}, organizationId);
+  async getCalibrationReport(parcelId: string, organizationId?: string): Promise<CalibrationReportResponse | null> {
+    return apiClient.get<CalibrationReportResponse | null>(`${BASE_URL}/${parcelId}/calibration/report`, {}, organizationId);
   },
 
   async validateCalibration(parcelId: string, organizationId?: string): Promise<AICalibration> {
     return apiClient.post(`${BASE_URL}/${parcelId}/calibration/validate`, {}, {}, organizationId);
   },
 
-  async getCalibrationPercentiles(parcelId: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/calibration/percentiles`, {}, organizationId);
+  async getCalibrationPercentiles(parcelId: string, organizationId?: string): Promise<CalibrationPercentilesResponse> {
+    return apiClient.get<CalibrationPercentilesResponse>(`${BASE_URL}/${parcelId}/calibration/percentiles`, {}, organizationId);
   },
 
-  async getCalibrationZones(parcelId: string, organizationId?: string): Promise<any> {
-    return apiClient.get(`${BASE_URL}/${parcelId}/calibration/zones`, {}, organizationId);
+  async getCalibrationZones(parcelId: string, organizationId?: string): Promise<CalibrationZonesResponse> {
+    return apiClient.get<CalibrationZonesResponse>(`${BASE_URL}/${parcelId}/calibration/zones`, {}, organizationId);
   },
 
   async getAIDiagnostics(
