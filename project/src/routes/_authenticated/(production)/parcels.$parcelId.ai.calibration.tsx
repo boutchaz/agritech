@@ -1224,7 +1224,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId, phase }: {
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
-  const canConfirmNutrition = phase === 'awaiting_nutrition_option';
+  const canConfirmNutrition = phase === 'awaiting_nutrition_option' || phase === 'calibrated';
 
   if (isSuggestionLoading) {
     return (
@@ -1308,10 +1308,9 @@ const NutritionOptionSelector = ({ parcelId, calibrationId, phase }: {
         })}
       </div>
 
-      {!canConfirmNutrition && (
+      {canConfirmNutrition && (
         <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 rounded-lg bg-white/60 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/50 px-3 py-2">
-          Choose an option above (highlight updates when you tap a card). After you validate the baseline in the next section,
-          you can confirm here to finish activation.
+          Choose an option above (highlight updates when you tap a card), then confirm to finish activation.
         </p>
       )}
 

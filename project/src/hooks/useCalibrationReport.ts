@@ -13,6 +13,7 @@ type PartialRecalibrationDto, } from "@/lib/api/calibration-output";
 import { queryKeys } from "@/lib/query-keys";
 import type { NutritionOption } from "@/types/calibration-output";
 import { useCalibrationSocket } from "./useCalibrationSocket";
+import { parcelsKeys } from "./useParcelsQuery";
 
 export function useStartCalibration(parcelId: string) {
   const { currentOrganization } = useAuth();
@@ -183,6 +184,12 @@ export function useValidateCalibration(parcelId: string) {
       queryClient.invalidateQueries({
         queryKey: ['ai-calibration', parcelId],
       });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.byId(parcelId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.all,
+      });
       toast.success(i18n.t("toasts.calibrationValidated", { ns: "ai" }));
     },
     onError: (error) => {
@@ -253,6 +260,12 @@ export function useConfirmNutritionOption(parcelId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
         currentOrganization?.id,),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.byId(parcelId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.all,
       });
       toast.success(i18n.t("toasts.nutritionConfirmed", { ns: "ai" }));
     },
