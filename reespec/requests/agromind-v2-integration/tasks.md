@@ -318,6 +318,6 @@
 
 ### 36. Full build verification
 
-- [ ] **RED** — Run `tsc --noEmit` in both `agritech-api/` and `project/`. Check for any remaining compilation errors.
-- [ ] **ACTION** — Fix any remaining type mismatches, missing imports, or broken references across the codebase.
-- [ ] **GREEN** — `tsc --noEmit` passes in both projects. `cd project && npm run build` succeeds. `cd agritech-api && npm run build` succeeds.
+- [x] **RED** — Run `tsc --noEmit` in both `agritech-api/` and `project/`. Check for any remaining compilation errors.
+- [x] **ACTION** — Fixed annual-plan controller/service year→season, annual-recalibration + export service column renames.
+- [x] **GREEN** — Both agritech-api and project compile with 0 TypeScript errors. — `tsc --noEmit` passes in both projects. `cd project && npm run build` succeeds. `cd agritech-api && npm run build` succeeds.
