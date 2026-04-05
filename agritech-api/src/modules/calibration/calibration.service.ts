@@ -2310,7 +2310,8 @@ export class CalibrationService {
       existingCalibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "calibrated" && parcel.aiPhase !== "active") {
+    const VALIDATABLE_PHASES = new Set(["calibrated", "active", "awaiting_nutrition_option", "awaiting_data", "ready_calibration", "calibrating"]);
+    if (!VALIDATABLE_PHASES.has(parcel.aiPhase)) {
       throw new BadRequestException(
         `Calibration can only be validated when calibration data exists (current: ${parcel.aiPhase})`,
       );
@@ -2377,7 +2378,7 @@ export class CalibrationService {
 
       await this.ensureCalibratedPhase(
         existingCalibration.parcel_id,
-        parcel.aiPhase,
+        parcel.aiPhase as AiPhase,
         organizationId,
       );
       await this.stateMachine.transitionPhase(
@@ -2423,7 +2424,7 @@ export class CalibrationService {
 
     await this.ensureCalibratedPhase(
       existingCalibration.parcel_id,
-      parcel.aiPhase,
+      parcel.aiPhase as AiPhase,
       organizationId,
     );
     await this.stateMachine.transitionPhase(
