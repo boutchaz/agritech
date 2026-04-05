@@ -72,7 +72,7 @@ export class AnnualPlanController {
   })
   async ensurePlan(
     @Param('parcelId') parcelId: string,
-    @Body() body: { year?: number } | undefined,
+    @Body() body: { year?: number; season?: string } | undefined,
     @Req() req: Request,
   ): Promise<AnnualPlanWithInterventions> {
     const organizationId = this.getOrganizationId(req);
@@ -80,7 +80,7 @@ export class AnnualPlanController {
     return this.annualPlanService.ensurePlan(
       parcelId,
       organizationId,
-      this.resolveYear(body?.year),
+      body?.season ?? String(this.resolveYear(body?.year)),
     );
   }
 
@@ -199,7 +199,7 @@ export class AnnualPlanController {
   }
 
   private resolveYear(year?: number): number {
-    if (year === undefined) {
+    if (year === undefined || year === null) {
       return new Date().getUTCFullYear();
     }
 

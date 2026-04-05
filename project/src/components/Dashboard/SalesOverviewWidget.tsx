@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
+import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
 import { ShoppingCart, ChevronRight, TrendingUp, Clock, CheckCircle, Truck } from 'lucide-react';
 import { useSalesOrders } from '../../hooks/useSalesOrders';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
-const SalesOverviewWidget: React.FC = () => {
+const SalesOverviewWidget = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { data: orders = [], isLoading } = useSalesOrders();
@@ -75,24 +77,27 @@ const SalesOverviewWidget: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
-        <div className="flex items-center justify-between mb-5">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 h-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-xl" />
-            <Skeleton className="h-5 w-28" />
+            <Skeleton className="h-10 w-10 rounded-2xl" />
+            <Skeleton className="h-5 w-24 rounded-lg" />
           </div>
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-8 w-8 rounded-xl" />
         </div>
-        <Skeleton className="h-28 rounded-xl mb-5" />
-        <div className="grid grid-cols-4 gap-2 mb-5">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-20 rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 min-[520px]:grid-cols-4 gap-2 sm:gap-3">
+          {[1, 2, 3, 4].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-16 rounded-xl" />
           ))}
         </div>
-        <div className="space-y-2">
-          <Skeleton className="h-3 w-24" />
-          {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-14 rounded-lg" />
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-center justify-between px-1 mb-3">
+            <Skeleton className="h-3 w-20 rounded" />
+            <Skeleton className="h-px flex-1 mx-3 rounded" />
+          </div>
+          {[1, 2].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       </div>
@@ -100,49 +105,45 @@ const SalesOverviewWidget: React.FC = () => {
   }
 
   return (
-    <div className="group bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-700 transition-all duration-300">
+    <div className="group bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-500 flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-900/20 rounded-xl">
+          <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <ShoppingCart className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.sales.title', 'Sales Orders')}
           </h3>
         </div>
         <Button
-          variant="link"
+          variant="ghost"
+          size="sm"
           onClick={handleViewOrders}
-          className="text-green-600 dark:text-green-400 p-0 h-auto hover:bg-green-50 dark:hover:bg-green-900/20 rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5"
+          className="text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 h-8 rounded-xl px-2 transition-colors"
         >
-          {t('dashboard.widgets.viewAll', 'View All')}
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
 
       {/* This Month Stats */}
-      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-900/30 dark:to-indigo-900/10 rounded-xl p-4 mb-5">
-        <div className="flex items-center justify-between">
+      <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 mb-6 overflow-hidden group/card">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full -mr-12 -mt-12 group-hover/card:scale-150 transition-transform duration-700"></div>
+        <div className="relative flex items-center justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
-                {t('dashboard.widgets.sales.thisMonth', 'This Month')}
-              </span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.sales.thisMonth', 'This Month')}</span>
+            <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
               {formatCurrency(stats.thisMonthTotal)}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mt-1 uppercase tracking-tighter">
               {t('dashboard.widgets.sales.ordersCount', '{{count}} orders', { count: stats.thisMonthCount })}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400">
+            <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
               {stats.total}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
               {t('dashboard.widgets.sales.totalOrders', 'Total Orders')}
             </div>
           </div>
@@ -150,75 +151,68 @@ const SalesOverviewWidget: React.FC = () => {
       </div>
 
       {/* Status Grid */}
-      <div className="grid grid-cols-4 gap-2 mb-5">
-        <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-          <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.pending}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.widgets.sales.pending', 'Pending')}</div>
-        </div>
-        <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.inProgress}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.widgets.sales.inProgress', 'In Progress')}</div>
-        </div>
-        <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-          <Truck className="h-4 w-4 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.shipped}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.widgets.sales.shipped', 'Shipped')}</div>
-        </div>
-        <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mx-auto mb-1" />
-          <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.completed}</div>
-          <div className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.widgets.sales.completed', 'Completed')}</div>
-        </div>
+      <div className="grid grid-cols-2 min-[520px]:grid-cols-4 gap-2 sm:gap-3 mb-6 min-w-0">
+        {[
+          { label: 'pending', value: stats.pending, icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+          { label: 'inProgress', value: stats.inProgress, icon: TrendingUp, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+          { label: 'shipped', value: stats.shipped, icon: Truck, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20' },
+          { label: 'completed', value: stats.completed, icon: CheckCircle, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+        ].map((item) => (
+          <div key={item.label} className={cn("text-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 min-w-0 transition-transform hover:scale-105 duration-300", item.bg)}>
+            <item.icon className={cn("h-3.5 w-3.5 flex-shrink-0", item.color)} />
+            <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
+            <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight leading-tight break-words hyphens-auto px-0.5">
+              {t(`dashboard.widgets.sales.${item.label}`)}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Recent Orders */}
-      {stats.recentOrders.length > 0 && (
-        <div>
-          <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-3">
-            {t('dashboard.widgets.sales.recentOrders', 'Recent Orders')}
-          </h4>
+      {stats.recentOrders.length > 0 ? (
+        <div className="mt-auto">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              {t('dashboard.widgets.sales.recentOrders', 'Recent Orders')}
+            </h4>
+            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
+          </div>
           <div className="space-y-2">
             {stats.recentOrders.map((order) => (
               <div
                 key={order.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow group/item cursor-pointer"
                 onClick={handleViewOrders}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    <p className="text-[11px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tighter">
                       {order.order_number}
                     </p>
-                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getStatusColor(order.status)}`}>
+                    <Badge className={cn("border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusColor(order.status))}>
                       {order.status}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase truncate mt-0.5">
                     {order.customer_name}
                   </p>
                 </div>
-                <div className="text-right ml-3">
-                  <div className="text-sm font-bold text-gray-900 dark:text-white">
+                <div className="text-right ml-3 flex-shrink-0">
+                  <div className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
                     {formatCurrency(order.grand_total)}
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {new Date(order.order_date).toLocaleDateString()}
+                  <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-0.5">
+                    {new Date(order.order_date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
-
-      {stats.total === 0 && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/40 dark:to-indigo-900/20 rounded-2xl flex items-center justify-center">
-            <ShoppingCart className="h-8 w-8 text-indigo-500 dark:text-indigo-400" />
-          </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+      ) : (
+        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
+          <ShoppingCart className="h-8 w-8 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             {t('dashboard.widgets.sales.noOrders', 'No sales orders yet')}
           </p>
         </div>

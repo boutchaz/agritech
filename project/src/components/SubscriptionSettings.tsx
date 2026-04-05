@@ -9,6 +9,8 @@ import {
   ExternalLink,
   Loader2,
   LandPlot,
+  RefreshCw,
+  Zap,
 } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -30,8 +32,11 @@ import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { addonsApi } from '@/lib/api/addons';
 import { subscriptionsService } from '@/services/subscriptionsService';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
-const SubscriptionSettings: React.FC = () => {
+const SubscriptionSettings = () => {
   const { data: subscription, isLoading } = useSubscription();
   const { currentOrganization } = useAuth();
   const { t } = useTranslation();
@@ -298,267 +303,297 @@ const SubscriptionSettings: React.FC = () => {
     : null;
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <CreditCard className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('subscription.title', 'Subscription')}
-          </h2>
+    <div className="p-4 sm:p-8 space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+              <CreditCard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              {t('subscription.title', 'Subscription')}
+            </h2>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Manage your plan, billing cycle and usage limits
+          </p>
         </div>
 
-        <Button
+        <Button 
+          variant="default"
           onClick={() => setShowPlans(true)}
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
         >
+          <RefreshCw className="h-4 w-4 mr-2" />
           {t('subscription.changePlan', 'Change plan')}
         </Button>
       </div>
 
       {subscription?.status === 'trialing' && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-          <div className="flex items-start space-x-3">
-            <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-blue-900 dark:text-blue-100">
-                {t('subscription.trial.active', 'Trial active')}
-              </h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                {t('subscription.trial.description', {
-                  endDate: subscription.current_period_end
-                    ? new Date(subscription.current_period_end).toLocaleDateString()
-                    : 'N/A',
-                })}
-              </p>
-            </div>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-800/50 flex items-start gap-5 animate-pulse">
+          <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none">
+            <AlertCircle className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-black text-blue-900 dark:text-blue-100 uppercase tracking-tight">
+              {t('subscription.trial.active', 'Trial Period Active')}
+            </h3>
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mt-1">
+              {t('subscription.trial.description', {
+                endDate: subscription.current_period_end
+                  ? new Date(subscription.current_period_end).toLocaleDateString()
+                  : 'N/A',
+              })}
+            </p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.currentContract')}
-          </h3>
-
-          {plan && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {plan.name}
-                </p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
-                  {plan.description}
-                </p>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Current Plan Details */}
+        <div className="lg:col-span-7 space-y-8">
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('subscription.currentContract')}
+                </CardTitle>
               </div>
-
-              {pricingPreview && (
-                <div className="space-y-1">
-                  <div className="text-3xl font-bold text-green-600">
-                    {pricingPreview.cycleTtc.toLocaleString()} MAD
+            </CardHeader>
+            <CardContent className="p-8 pt-4">
+              {plan && (
+                <div className="space-y-8">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-100 dark:border-slate-700/50">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                          {plan.name}
+                        </h3>
+                        <Badge className="bg-emerald-500 text-white border-none font-black text-[8px] tracking-widest uppercase py-0.5">ACTIVE</Badge>
+                      </div>
+                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        {plan.description}
+                      </p>
+                    </div>
+                    {pricingPreview && (
+                      <div className="text-right">
+                        <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
+                          {pricingPreview.cycleTtc.toLocaleString()} <span className="text-sm font-bold">MAD</span>
+                        </div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
+                          {t('subscription.billedCycle', { cycle: t(`subscription.billingCycles.${effectiveCycle}`) })}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    HT: {pricingPreview.cycleHt.toLocaleString()} + TVA: {pricingPreview.cycleTva.toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                    {t('subscription.billedCycle', { cycle: t(`subscription.billingCycles.${effectiveCycle}`) })}
-                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-6 pt-4 border-t border-slate-50 dark:border-slate-800">
+                    {[
+                      { label: t('subscription.details.status'), value: subscription?.status, color: 'text-emerald-600' },
+                      { label: t('subscription.details.contractedHectares'), value: `${subscription?.contracted_hectares ?? '-'} HA` },
+                      { label: t('subscription.details.includedUsers'), value: subscription?.included_users === null ? t('subscription.details.unlimited') : subscription?.included_users ?? '-' },
+                      { label: t('subscription.details.nextBilling'), value: subscription?.next_billing_at ? new Date(subscription.next_billing_at).toLocaleDateString() : '-' },
+                    ].map((item, idx) => (
+                      <div key={item.label} className="flex items-center justify-between group">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{item.label}</span>
+                        <span className={cn("text-xs font-black uppercase tracking-tight", item.color || "text-slate-700 dark:text-slate-300")}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.status')}</span>
-                  <span className="font-medium capitalize text-gray-900 dark:text-white">
-                    {subscription?.status}
-                  </span>
+          {/* Timeline */}
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                  <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.contractedHectares')}</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {subscription?.contracted_hectares ?? '-'} ha
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.includedUsers')}</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {subscription?.included_users === null
-                      ? t('subscription.details.unlimited')
-                      : subscription?.included_users ?? '-'}
-                  </span>
-                </div>
-                {subscription?.contract_end_at && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.contractEnd')}</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {new Date(subscription.contract_end_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-                {subscription?.next_billing_at && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t('subscription.details.nextBilling')}</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {new Date(subscription.next_billing_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
+                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('subscription.contractTimeline')}
+                </CardTitle>
               </div>
-            </div>
-          )}
+            </CardHeader>
+            <CardContent className="p-8 pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <TimelineItem
+                  icon={<Calendar className="h-4 w-4" />}
+                  label={t('subscription.timeline.start')}
+                  value={
+                    subscription?.contract_start_at
+                      ? new Date(subscription.contract_start_at).toLocaleDateString()
+                      : 'N/A'
+                  }
+                />
+                <TimelineItem
+                  icon={<Calendar className="h-4 w-4" />}
+                  label={t('subscription.timeline.end')}
+                  value={
+                    subscription?.contract_end_at
+                      ? new Date(subscription.contract_end_at).toLocaleDateString()
+                      : 'N/A'
+                  }
+                />
+                <TimelineItem
+                  icon={<AlertCircle className="h-4 w-4" />}
+                  label="Notice Period"
+                  value={t('subscription.timeline.daysBeforeEnd', { days: subscription?.renewal_notice_days || 60 })}
+                />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.usageLimits')}
-          </h3>
+        {/* Right Column: Usage & Actions */}
+        <div className="lg:col-span-5 space-y-8">
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden h-full">
+            <CardHeader className="p-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
+                  <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('subscription.usageLimits')}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 pt-4 space-y-8">
+              <UsageBar
+                icon={<LandPlot className="h-4 w-4 text-slate-400" />}
+                label={t('subscription.plans.hectares')}
+                current={usage?.hectares_count || 0}
+                limit={subscription?.contracted_hectares || 0}
+                color="emerald"
+              />
 
-          <div className="space-y-4">
-            <UsageBar
-              icon={<LandPlot className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.plans.hectares')}
-              current={usage?.hectares_count || 0}
-              limit={subscription?.contracted_hectares || 0}
-            />
+              <UsageBar
+                icon={<Users className="h-4 w-4 text-slate-400" />}
+                label={t('subscription.usage.users', 'Users')}
+                current={usage?.users_count || 0}
+                limit={subscription?.included_users || 0}
+                unlimited={subscription?.included_users === null}
+                color="blue"
+              />
 
-            <UsageBar
-              icon={<Users className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.users', 'Users')}
-              current={usage?.users_count || 0}
-              limit={subscription?.included_users || 0}
-              unlimited={subscription?.included_users === null}
-            />
+              <UsageBar
+                icon={<Building2 className="h-4 w-4 text-slate-400" />}
+                label={t('subscription.usage.farms', 'Farms')}
+                current={usage?.farms_count || 0}
+                limit={subscription?.max_farms || 0}
+                color="purple"
+              />
 
-            <UsageBar
-              icon={<Building2 className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.farms', 'Farms')}
-              current={usage?.farms_count || 0}
-              limit={subscription?.max_farms || 0}
-            />
+              <UsageBar
+                icon={<MapPin className="h-4 w-4 text-slate-400" />}
+                label={t('subscription.usage.parcels', 'Parcels')}
+                current={usage?.parcels_count || 0}
+                limit={subscription?.max_parcels || 0}
+                color="indigo"
+              />
 
-            <UsageBar
-              icon={<MapPin className="h-5 w-5 text-gray-500" />}
-              label={t('subscription.usage.parcels', 'Parcels')}
-              current={usage?.parcels_count || 0}
-              limit={subscription?.max_parcels || 0}
-            />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.contractTimeline')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <TimelineItem
-              icon={<Calendar className="h-4 w-4" />}
-              label={t('subscription.timeline.start')}
-              value={
-                subscription?.contract_start_at
-                  ? new Date(subscription.contract_start_at).toLocaleDateString()
-                  : 'N/A'
-              }
-            />
-            <TimelineItem
-              icon={<Calendar className="h-4 w-4" />}
-              label={t('subscription.timeline.end')}
-              value={
-                subscription?.contract_end_at
-                  ? new Date(subscription.contract_end_at).toLocaleDateString()
-                  : 'N/A'
-              }
-            />
-            <TimelineItem
-              icon={<Calendar className="h-4 w-4" />}
-              label={t('subscription.timeline.renewalNotice')}
-              value={t('subscription.timeline.daysBeforeEnd', { days: subscription?.renewal_notice_days || 60 })}
-            />
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.billingManagementTitle')}
-          </h3>
-
-          <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-            {t('subscription.billingManagementDescription')}
-          </p>
-
-          <Button
-            onClick={() => {
-              const targetPlan = normalizedPlanType || 'standard';
-              purchasePlan.mutate(targetPlan);
-            }}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
-            disabled={purchasePlan.isPending}
-          >
-            <span>
-              {purchasePlan.isPending
-                ? t('subscription.processing')
-                : t('subscription.manageBilling')}
-            </span>
-            <ExternalLink className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('subscription.addons.title')}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {addonModules.map((module) => {
-              const isActive = activeAddons.some(
-                (addon) => addon.module_id === module.id,
-              );
-              return (
-                <div
-                  key={module.id}
-                  className="flex items-center justify-between border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+              <div className="pt-8 border-t border-slate-50 dark:border-slate-800">
+                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Billing Portal</h4>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
+                  {t('subscription.billingManagementDescription')}
+                </p>
+                <Button
+                  onClick={() => {
+                    const targetPlan = normalizedPlanType || 'standard';
+                    purchasePlan.mutate(targetPlan);
+                  }}
+                  className="w-full h-12 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                  disabled={purchasePlan.isPending}
                 >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {module.name}
-                    </p>
-                    <p className="text-xs text-gray-500">{t('subscription.addons.perMonth', { price: module.priceMonthly || 0 })}</p>
-                  </div>
-                  {isActive ? (
-                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                      {t('subscription.addons.active')}
-                    </span>
+                  {purchasePlan.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <Button
-                      onClick={() => purchaseAddon.mutate(module.id)}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    >
-                      {t('subscription.addons.buy')}
-                    </Button>
+                    <ExternalLink className="h-4 w-4 mr-2" />
                   )}
-                </div>
-              );
-            })}
-            {addonModules.length === 0 && (
-              <p className="text-sm text-gray-500">{t('subscription.addons.noAddons')}</p>
-            )}
-          </div>
-
-          {coreModules.length > 0 && (
-            <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                {t('subscription.addons.coreModules')}
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {coreModules.map((module) => (
-                  <span
-                    key={module.slug}
-                    className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700"
-                  >
-                    {module.name}
-                  </span>
-                ))}
+                  {t('subscription.manageBilling')}
+                </Button>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Addons Section */}
+        <div className="lg:col-span-12 space-y-8">
+          <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <CardHeader className="p-8 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-xl">
+                  <Zap className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('subscription.addons.title')}
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 pt-4 space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {addonModules.map((module) => {
+                  const isActive = activeAddons.some(
+                    (addon) => addon.module_id === module.id,
+                  );
+                  return (
+                    <div
+                      key={module.id}
+                      className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-900/50 rounded-[1.5rem] border border-slate-100 dark:border-slate-700/50 group hover:border-orange-200 transition-all"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                          {module.name}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+                          {t('subscription.addons.perMonth', { price: module.priceMonthly || 0 })}
+                        </p>
+                      </div>
+                      <div className="ml-4 flex-shrink-0">
+                        {isActive ? (
+                          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-black text-[9px] tracking-widest px-3 py-1">
+                            {t('subscription.addons.active').toUpperCase()}
+                          </Badge>
+                        ) : (
+                          <Button 
+                            variant="default"
+                            onClick={() => purchaseAddon.mutate(module.id)}
+                            className="h-10 px-6 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-[10px] uppercase tracking-widest shadow-md transition-all"
+                          >
+                            {t('subscription.addons.buy')}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {coreModules.length > 0 && (
+                <div className="pt-8 border-t border-slate-50 dark:border-slate-800">
+                  <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">
+                    {t('subscription.addons.coreModules')}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {coreModules.map((module) => (
+                      <Badge
+                        key={module.slug}
+                        variant="secondary"
+                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-none font-black text-[9px] tracking-widest px-4 py-1.5 uppercase"
+                      >
+                        {module.name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
@@ -571,42 +606,51 @@ interface UsageBarProps {
   current: number;
   limit: number;
   unlimited?: boolean;
+  color?: 'emerald' | 'blue' | 'purple' | 'indigo' | 'rose';
 }
 
-const UsageBar: React.FC<UsageBarProps> = ({
+const UsageBar = ({
   icon,
   label,
   current,
   limit,
   unlimited = false,
-}) => {
+  color = 'emerald'
+}: UsageBarProps) => {
   const hasLimit = !unlimited && limit > 0;
   const percentage = hasLimit ? (current / limit) * 100 : 0;
+  
+  const colorClasses = {
+    emerald: 'bg-emerald-500 shadow-emerald-100',
+    blue: 'bg-blue-500 shadow-blue-100',
+    purple: 'bg-purple-500 shadow-purple-100',
+    indigo: 'bg-indigo-500 shadow-indigo-100',
+    rose: 'bg-rose-500 shadow-rose-100',
+  };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          {icon}
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <div className="space-y-3 group">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg group-hover:scale-110 transition-transform">
+            {icon}
+          </div>
+          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
             {label}
           </span>
         </div>
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          {current} / {unlimited ? '∞' : limit}
+        <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
+          {current} <span className="text-slate-400 mx-1">/</span> {unlimited ? '∞' : limit}
         </span>
       </div>
 
       {hasLimit && (
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+        <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden shadow-inner">
           <div
-            className={`h-2 rounded-full ${
-              percentage >= 90
-                ? 'bg-red-600'
-                : percentage >= 70
-                  ? 'bg-yellow-600'
-                  : 'bg-green-600'
-            }`}
+            className={cn(
+              "h-full rounded-full transition-all duration-1000 ease-out shadow-sm",
+              percentage >= 90 ? 'bg-rose-500' : percentage >= 70 ? 'bg-amber-500' : colorClasses[color]
+            )}
             style={{ width: `${Math.min(percentage, 100)}%` }}
           />
         </div>
@@ -615,14 +659,17 @@ const UsageBar: React.FC<UsageBarProps> = ({
   );
 };
 
-const TimelineItem: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
+const TimelineItem = ({
   icon,
   label,
   value,
-}) => (
-  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-    <div className="flex items-center gap-2 text-gray-500 mb-1">{icon}<span>{label}</span></div>
-    <div className="font-medium text-gray-900 dark:text-white">{value}</div>
+}: { icon: React.ReactNode; label: string; value: string }) => (
+  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 flex flex-col gap-2">
+    <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+      {icon}
+      <span>{label}</span>
+    </div>
+    <div className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums uppercase tracking-tight">{value}</div>
   </div>
 );
 

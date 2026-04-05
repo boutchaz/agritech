@@ -14,6 +14,8 @@ export interface ListItemProps {
   onPress?: () => void;
   disabled?: boolean;
   testID?: string;
+  accessibilityRole?: 'button' | 'text';
+  accessibilityLabel?: string;
 }
 
 export function ListItem({
@@ -26,12 +28,16 @@ export function ListItem({
   onPress,
   disabled = false,
   testID,
+  accessibilityRole = 'button',
+  accessibilityLabel,
 }: ListItemProps) {
   return (
     <Pressable
       testID={testID}
       onPress={onPress}
       disabled={disabled || !onPress}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel ?? subtitle ?? title}
       style={({ pressed }) => [styles.container, pressed && styles.pressed, disabled && styles.disabled]}
     >
       {leftIcon ? (

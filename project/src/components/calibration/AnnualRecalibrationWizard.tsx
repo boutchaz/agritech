@@ -103,23 +103,48 @@ export function AnnualRecalibrationWizard({
 
   return (
     <div
-      className="space-y-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5"
+      className="min-w-0 max-w-full space-y-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:space-y-6 sm:p-5"
       data-testid="calibration-annual-wizard"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage annuel</h3>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             Validation post-campagne et mise a jour du profil agronomique de reference.
           </p>
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onClose}>
+        <Button type="button" variant="ghost" size="icon" onClick={onClose} className="shrink-0 self-end sm:self-start">
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-[760px] items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-900/40 sm:p-4">
+        <div className="space-y-2 md:hidden">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Étape {currentStep} sur {STEPS.length}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">
+            {STEPS[currentStep - 1]?.title}
+          </p>
+          <div className="flex gap-1 pt-1" role="presentation">
+            {STEPS.map((step) => {
+              const isActive = currentStep === step.number;
+              const isCompleted = currentStep > step.number;
+              return (
+                <div
+                  key={step.number}
+                  className={`h-1.5 min-w-0 flex-1 rounded-full ${
+                    isActive
+                      ? 'bg-blue-600'
+                      : isCompleted
+                        ? 'bg-green-600'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="hidden md:flex md:flex-wrap md:items-center md:justify-between md:gap-x-1 md:gap-y-3">
           {STEPS.map((step, index) => {
             const isActive = currentStep === step.number;
             const isCompleted = currentStep > step.number;
@@ -129,27 +154,27 @@ export function AnnualRecalibrationWizard({
                 <div
                   className={`flex h-9 w-9 items-center justify-center rounded-full border-2 text-sm font-medium ${
                     isCompleted
-                      ? 'bg-green-600 border-green-600 text-white'
+                      ? 'border-green-600 bg-green-600 text-white'
                       : isActive
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : 'border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800'
                   }`}
                 >
                   {isCompleted ? <Check className="h-4 w-4" /> : step.number}
                 </div>
-                <div className="ml-2 mr-3">
+                <div className="ml-2 mr-2 max-w-[7rem] lg:max-w-none">
                   <p
                     className={`text-sm font-medium ${
-                      isActive
-                        ? 'text-blue-600 dark:text-blue-300'
-                        : 'text-gray-700 dark:text-gray-300'
+                      isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'
                     }`}
                   >
                     {step.title}
                   </p>
                 </div>
                 {index < STEPS.length - 1 && (
-                  <div className={`h-0.5 w-8 ${isCompleted ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                  <div
+                    className={`h-0.5 w-4 shrink-0 sm:w-6 lg:w-8 ${isCompleted ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'}`}
+                  />
                 )}
               </div>
             );
@@ -157,20 +182,27 @@ export function AnnualRecalibrationWizard({
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-4">
-        {renderStep()}
+      <div className="min-w-0 space-y-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+        <div className="min-w-0">{renderStep()}</div>
 
-        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 pt-4">
-          <Button type="button" variant="outline" onClick={goPrevious} disabled={currentStep === 1}>
+        <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goPrevious}
+            disabled={currentStep === 1}
+            className="w-full sm:w-auto"
+          >
             Precedent
           </Button>
 
           {currentStep !== 1 && (
             <Button
+              variant="blue"
               type="button"
               onClick={goNext}
               disabled={currentStep >= 5 || (currentStep === 4 && step4Ready)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full sm:w-auto"
             >
               {currentStep === 4 && step4Ready ? 'Passage automatique...' : 'Suivant'}
             </Button>

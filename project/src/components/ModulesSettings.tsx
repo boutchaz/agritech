@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import {
   Check, X, Boxes, Lock, ExternalLink, Loader2, AlertCircle,
   TreeDeciduous, Droplets, Waves, Sprout, Flower2, Fish,
   Bird, ChevronDown, ChevronRight, Wheat,
-  Settings2,
+  Settings2, ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import TreeManagement from './TreeManagement';
@@ -16,6 +16,9 @@ import type { OrganizationModule } from '../lib/api/modules';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 // Icon mapping for activity modules
 const MODULE_ICONS: Record<string, LucideIcon> = {
@@ -36,14 +39,8 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 // ============================================================================
 // Main component
 // ============================================================================
-const ModulesSettings: React.FC = () => {
+const ModulesSettings = () => {
   const { t } = useTranslation();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
 
   const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
   const [showFunctional, setShowFunctional] = useState(false);
@@ -112,39 +109,50 @@ const ModulesSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div>
-        <div className="flex items-center space-x-3 mb-2">
-          <Boxes className="h-6 w-6 text-green-600" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('modulesSettings.title')}
-          </h2>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+              <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              {t('modulesSettings.title')}
+            </h2>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            {t('modulesSettings.subtitle')}
+          </p>
         </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('modulesSettings.subtitle')}
-        </p>
       </div>
 
       {/* Subscription banner */}
       {subscription && (subscription.formula || subscription.plan_type) && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg flex items-center justify-between">
-          <div>
-            <p className="font-medium text-blue-900 dark:text-blue-100">
-              {t('modulesSettings.currentPlan', { plan: getPlanDetails((subscription.formula || subscription.plan_type)!).name })}
-            </p>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-              {getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.includes('*')
-                ? t('modulesSettings.allModulesAvailable')
-                : t('modulesSettings.modulesAvailable', { count: getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length })}
-            </p>
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-[2.5rem] border border-blue-100 dark:border-blue-800/50 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-inner">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none">
+              <ShieldCheck className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Subscription Power</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase mt-1">
+                {t('modulesSettings.currentPlan', { plan: getPlanDetails((subscription.formula || subscription.plan_type)!).name })}
+              </h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+                {getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.includes('*')
+                  ? t('modulesSettings.allModulesAvailable')
+                  : t('modulesSettings.modulesAvailable', { count: getPlanDetails((subscription.formula || subscription.plan_type)!).availableModules.length })}
+              </p>
+            </div>
           </div>
-          <Button
+          <Button 
+            variant="default"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none transition-all"
           >
             <span>{t('modulesSettings.viewSubscription')}</span>
-            <ExternalLink className="h-4 w-4" />
+            <ExternalLink className="h-4 w-4 ml-2" />
           </Button>
         </div>
       )}
@@ -181,38 +189,46 @@ const ModulesSettings: React.FC = () => {
       {/* Functional Modules (collapsible) */}
       {/* ================================================================ */}
       {functionalModules.length > 0 && (
-        <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-          <Button
+        <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group">
+          <button
             onClick={() => setShowFunctional(!showFunctional)}
-            className="w-full flex items-center justify-between p-5 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="w-full flex items-center justify-between p-8 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all border-b border-transparent data-[state=open]:border-slate-100"
+            data-state={showFunctional ? 'open' : 'closed'}
           >
-            <div className="flex items-center space-x-3">
-              <Settings2 className="h-5 w-5 text-gray-500" />
-              <div className="text-left">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <div className="flex items-center gap-5">
+              <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 group-hover:scale-110 transition-transform duration-500">
+                <Settings2 className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+              </div>
+              <div className="text-left space-y-1">
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('modulesSettings.sections.functional')}
                 </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                   {t('modulesSettings.sections.functionalDesc')}
                 </p>
               </div>
             </div>
-            {showFunctional ? (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
-            ) : (
-              <ChevronRight className="h-5 w-5 text-gray-400" />
-            )}
-          </Button>
+            <div className="p-2 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700">
+              {showFunctional ? (
+                <ChevronDown className="h-5 w-5 text-slate-400" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-slate-400" />
+              )}
+            </div>
+          </button>
 
           {showFunctional && (
-            <div className="p-5 space-y-6 bg-white dark:bg-gray-800">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CardContent className="p-8 space-y-8 animate-in slide-in-from-top-4 duration-500">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 {Object.entries(functionalByCategory).map(([category, categoryModules]) => (
-                  <div key={category}>
-                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                      {t(`modulesSettings.categories.${category}`, category)}
-                    </h4>
-                    <div className="space-y-2">
+                  <div key={category} className="space-y-4">
+                    <div className="flex items-center gap-3 px-1 mb-6">
+                      <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                        {t(`modulesSettings.categories.${category}`, category)}
+                      </h4>
+                      <div className="h-px flex-1 bg-slate-50 dark:bg-slate-800" />
+                    </div>
+                    <div className="space-y-3">
                       {categoryModules.map((module) => (
                         <ModuleToggleCard
                           key={module.id}
@@ -226,9 +242,9 @@ const ModulesSettings: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </div>
+            </CardContent>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Module Settings Panel */}
@@ -245,63 +261,61 @@ const ModulesSettings: React.FC = () => {
 // ============================================================================
 // Category Section (Agriculture / Élevage)
 // ============================================================================
-const CategorySection: React.FC<{
-  title: string;
+const CategorySection = ({ title, icon: Icon, description, accentColor, modules, subscription, onToggle, onModuleClick }: { title: string;
   icon: LucideIcon;
   description: string;
   accentColor: 'green' | 'amber';
   modules: OrganizationModule[];
   subscription: any;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onModuleClick: (module: OrganizationModule) => void;
-}> = ({ title, icon: Icon, description, accentColor, modules, subscription, onToggle, onModuleClick }) => {
+  onModuleClick: (module: OrganizationModule) => void; }) => {
   const { t } = useTranslation();
   const activeCount = modules.filter(m => m.is_active).length;
 
   const colorClasses = accentColor === 'green'
     ? {
-      headerBg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20',
-      headerBorder: 'border-green-200 dark:border-green-800',
-      iconBg: 'bg-green-100 dark:bg-green-900/40',
-      iconColor: 'text-green-600 dark:text-green-400',
-      badge: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+      headerBg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
+      headerBorder: 'border-emerald-100 dark:border-emerald-800/50',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      iconColor: 'text-emerald-600 dark:text-emerald-400',
+      badge: 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 dark:shadow-none',
     }
     : {
-      headerBg: 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20',
-      headerBorder: 'border-amber-200 dark:border-amber-800',
+      headerBg: 'bg-amber-50/50 dark:bg-amber-900/10',
+      headerBorder: 'border-amber-100 dark:border-amber-800/50',
       iconBg: 'bg-amber-100 dark:bg-amber-900/40',
       iconColor: 'text-amber-600 dark:text-amber-400',
-      badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+      badge: 'bg-amber-500 text-white shadow-lg shadow-amber-100 dark:shadow-none',
     };
 
   return (
-    <div className={`rounded-xl border ${colorClasses.headerBorder} overflow-hidden`}>
+    <Card className={cn("rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group", colorClasses.headerBorder)}>
       {/* Section header */}
-      <div className={`${colorClasses.headerBg} p-5`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className={`w-10 h-10 ${colorClasses.iconBg} rounded-lg flex items-center justify-center`}>
-              <Icon className={`h-5 w-5 ${colorClasses.iconColor}`} />
+      <div className={cn("p-8 border-b transition-colors", colorClasses.headerBg, colorClasses.headerBorder)}>
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className={cn("p-3 rounded-2xl shadow-sm border group-hover:scale-110 transition-transform duration-500", colorClasses.iconBg, colorClasses.headerBorder)}>
+              <Icon className={cn("h-6 w-6", colorClasses.iconColor)} />
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">{title}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{description}</p>
             </div>
           </div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${colorClasses.badge}`}>
-            {t('modulesSettings.activeCount', { active: activeCount, total: modules.length })}
-          </span>
+          <Badge className={cn("border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-xl uppercase", colorClasses.badge)}>
+            {activeCount} / {modules.length} {t('liveDashboard.operations.active').toUpperCase()}
+          </Badge>
         </div>
       </div>
 
       {/* Modules grid */}
-      <div className="p-5 bg-white dark:bg-gray-800">
+      <CardContent className="p-8 bg-white dark:bg-slate-800">
         {modules.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+          <p className="text-slate-400 dark:text-slate-500 text-center py-12 font-black text-[10px] uppercase tracking-[0.2em]">
             {t('modulesSettings.noModulesInCategory')}
           </p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {modules.map((module) => (
               <ActivityModuleCard
                 key={module.id}
@@ -314,21 +328,19 @@ const CategorySection: React.FC<{
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
 // ============================================================================
 // Activity Module Card (Agriculture / Élevage modules)
 // ============================================================================
-const ActivityModuleCard: React.FC<{
-  module: OrganizationModule;
+const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onClick }: { module: OrganizationModule;
   subscription: any;
   accentColor: 'green' | 'amber';
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onClick: () => void;
-}> = ({ module, subscription, accentColor, onToggle, onClick }) => {
+  onClick: () => void; }) => {
   const { t } = useTranslation();
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
@@ -337,75 +349,80 @@ const ActivityModuleCard: React.FC<{
   const displayDesc = t(`modulesSettings.activityDescriptions.${module.name}`, module.description);
 
   const activeClasses = accentColor === 'green'
-    ? 'border-green-300 bg-green-50/50 dark:border-green-700 dark:bg-green-900/10'
-    : 'border-amber-300 bg-amber-50/50 dark:border-amber-700 dark:bg-amber-900/10';
+    ? 'border-emerald-500 bg-white dark:bg-slate-900 shadow-xl shadow-emerald-500/10'
+    : 'border-amber-500 bg-white dark:bg-slate-900 shadow-xl shadow-amber-500/10';
 
-  const inactiveClasses = 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600';
+  const inactiveClasses = 'border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-900';
 
   return (
     <div
-      className={`relative rounded-lg border p-4 transition-all ${
-        isLocked
-          ? 'opacity-60 border-gray-200 dark:border-gray-700'
-          : module.is_active
-            ? activeClasses
-            : `${inactiveClasses} cursor-pointer`
-      }`}
+      className={cn(
+        "relative rounded-3xl border-2 p-6 transition-all duration-500 group/card cursor-pointer flex flex-col h-full",
+        isLocked ? "opacity-60 border-slate-100 dark:border-slate-800 bg-slate-50/30 grayscale" : module.is_active ? activeClasses : inactiveClasses
+      )}
       onClick={() => !isLocked && onClick()}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center space-x-2">
-          <Icon className={`h-5 w-5 ${
-            module.is_active
-              ? accentColor === 'green'
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-amber-600 dark:text-amber-400'
-              : 'text-gray-400'
-          }`} />
-          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={cn(
+            "p-2.5 rounded-xl transition-all duration-500 group-hover/card:scale-110",
+            module.is_active 
+              ? accentColor === 'green' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
+              : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 shadow-sm'
+          )}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-tight truncate">
             {displayName}
           </h4>
         </div>
 
         {isLocked ? (
-          <Lock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+            <Lock className="h-3.5 w-3.5 text-slate-400" />
+          </div>
         ) : (
-          <Button
+          <button
             onClick={(e) => {
               e.stopPropagation();
               onToggle(module.id, module.is_active);
             }}
-            className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              module.is_active
-                ? accentColor === 'green'
-                  ? 'bg-green-500'
-                  : 'bg-amber-500'
-                : 'bg-gray-300 dark:bg-gray-600'
-            }`}
+            className="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-all duration-300 focus:outline-none ring-offset-white dark:ring-offset-slate-900"
           >
+            <div className={cn(
+              "absolute inset-0 rounded-full transition-all duration-300",
+              module.is_active ? accentColor === 'green' ? 'bg-emerald-500' : 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-700'
+            )} />
             <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                module.is_active ? 'translate-x-4' : 'translate-x-0'
-              }`}
+              className={cn(
+                "relative inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                module.is_active ? 'translate-x-6' : 'translate-x-1'
+              )}
             />
-          </Button>
+          </button>
         )}
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+      <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed mb-6">
         {displayDesc}
       </p>
 
-      {isLocked && (
+      {isLocked ? (
         <Button
           onClick={(e) => {
             e.stopPropagation();
             window.location.href = '/settings/subscription';
           }}
-          className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 mt-2"
+          variant="ghost"
+          className="mt-auto w-full h-9 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 transition-all"
         >
           {t('modulesSettings.upgrade')}
         </Button>
+      ) : module.is_active && (
+        <div className="mt-auto flex items-center gap-2 text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+          Module Operational
+        </div>
       )}
     </div>
   );
@@ -414,46 +431,54 @@ const ActivityModuleCard: React.FC<{
 // ============================================================================
 // Functional Module Toggle Card (simpler, for the collapsible section)
 // ============================================================================
-const ModuleToggleCard: React.FC<{
-  module: OrganizationModule;
+const ModuleToggleCard = ({ module, subscription, onToggle, onClick }: { module: OrganizationModule;
   subscription: any;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onClick: () => void;
-}> = ({ module, subscription, onToggle, onClick }) => {
+  onClick: () => void; }) => {
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
 
   return (
     <div
-      className={`flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg ${
-        isLocked ? 'opacity-60' : 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600'
-      }`}
+      className={cn(
+        "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 group/row",
+        isLocked ? 'opacity-60 bg-slate-50 dark:bg-slate-900/30 border-transparent grayscale' : 'cursor-pointer bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/5'
+      )}
       onClick={() => !isLocked && onClick()}
     >
-      <div className="flex items-center space-x-3 flex-1">
-        <input
-          type="checkbox"
-          checked={module.is_active}
-          disabled={isLocked}
-          onChange={() => onToggle(module.id, module.is_active)}
-          className="rounded border-gray-300 disabled:opacity-50"
-          onClick={(e) => e.stopPropagation()}
-        />
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <span className="text-gray-700 dark:text-gray-300 font-medium text-sm">{module.name}</span>
-            {isLocked && <Lock className="h-4 w-4 text-gray-400" />}
+      <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="relative flex items-center justify-center h-5 w-5 flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={module.is_active}
+            disabled={isLocked}
+            onChange={() => onToggle(module.id, module.is_active)}
+            className="h-5 w-5 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-emerald-600 focus:ring-emerald-500/20 checked:bg-emerald-500 checked:border-emerald-500 transition-all cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {module.is_active && <Check className="absolute h-3 w-3 text-white pointer-events-none" />}
+        </div>
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate group-hover/row:text-emerald-600 transition-colors">
+              {module.name.replace('_', ' ')}
+            </span>
+            {isLocked && <Lock className="h-3 w-3 text-slate-400" />}
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{module.description}</p>
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-0.5">{module.description}</p>
         </div>
       </div>
-      {module.is_active ? (
-        <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-      ) : isLocked ? (
-        <Lock className="h-5 w-5 text-gray-400 flex-shrink-0" />
-      ) : (
-        <X className="h-5 w-5 text-gray-400 flex-shrink-0" />
-      )}
+      
+      <div className="ml-4">
+        {module.is_active ? (
+          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-black text-[8px] tracking-widest px-2 py-0.5">ACTIVE</Badge>
+        ) : isLocked ? (
+          <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-400 border-none font-black text-[8px] tracking-widest px-2 py-0.5">LOCKED</Badge>
+        ) : (
+          <Badge variant="outline" className="text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 font-black text-[8px] tracking-widest px-2 py-0.5">INACTIVE</Badge>
+        )}
+      </div>
     </div>
   );
 };
@@ -461,55 +486,78 @@ const ModuleToggleCard: React.FC<{
 // ============================================================================
 // Module Settings Panel
 // ============================================================================
-const ModuleSettingsPanel: React.FC<{
-  module: OrganizationModule;
-  onClose: () => void;
-}> = ({ module, onClose }) => {
+const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
+  onClose: () => void; }) => {
   const { t } = useTranslation();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const renderModuleSettings = () => {
     switch (module.name) {
       case 'arbres_fruitiers':
         return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                {t('modulesSettings.treeManagement')}
-              </h3>
-              <TreeManagement />
+          <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 px-1">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <TreeDeciduous className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('modulesSettings.treeManagement')}
+                </h3>
+              </div>
+              <div className="p-1 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 shadow-inner overflow-hidden">
+                <TreeManagement />
+              </div>
             </div>
           </div>
         );
       case 'farm_management':
         return (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('modulesSettings.farmManagementSettings')}</h3>
-              <TreeManagement />
+          <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 px-1">
+                <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                  <Wheat className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.farmManagementSettings')}</h3>
+              </div>
+              <div className="p-1 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 shadow-inner overflow-hidden">
+                <TreeManagement />
+              </div>
             </div>
-            <div className="border-t pt-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('modulesSettings.generalSettings')}</h3>
-              <div className="space-y-3">
-                <label className="flex items-center space-x-2">
-                  <Checkbox defaultChecked />
-                  <span>{t('modulesSettings.pruningNotifications')}</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <Checkbox defaultChecked />
-                  <span>{t('modulesSettings.diseaseAlerts')}</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <Checkbox defaultChecked />
-                  <span>{t('modulesSettings.harvestForecasts')}</span>
-                </label>
+            
+            <div className="pt-8 border-t border-slate-50 dark:border-slate-800 space-y-6">
+              <div className="flex items-center gap-3 px-1">
+                <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
+                  <Settings2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.generalSettings')}</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { key: 'pruning', label: t('modulesSettings.pruningNotifications') },
+                  { key: 'disease', label: t('modulesSettings.diseaseAlerts') },
+                  { key: 'harvest', label: t('modulesSettings.harvestForecasts') },
+                ].map(item => (
+                  <div key={item.key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 group hover:border-purple-200 transition-all">
+                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">{item.label}</span>
+                    <Checkbox defaultChecked className="h-5 w-5 rounded-lg data-[state=checked]:bg-purple-600 border-slate-300" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         );
       default:
         return (
-          <div className="text-gray-500 dark:text-gray-400">
-            {t('modulesSettings.noSettings')}
+          <div className="py-20 text-center space-y-4">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full w-fit mx-auto border border-slate-100 dark:border-slate-800">
+              <Settings2 className="h-10 w-10 text-slate-200 dark:text-slate-700" />
+            </div>
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+              {t('modulesSettings.noSettings')}
+            </p>
           </div>
         );
     }
@@ -518,19 +566,35 @@ const ModuleSettingsPanel: React.FC<{
   const displayName = t(`modulesSettings.activityModules.${module.name}`, module.name);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {t('modulesSettings.configurationOf', { name: displayName })}
-        </h3>
-        <Button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-      </div>
-      {renderModuleSettings()}
+    <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-2xl overflow-hidden mt-12 animate-in slide-in-from-bottom-8 duration-700">
+      <CardHeader className="p-8 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+              <Settings2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                {t('modulesSettings.configurationOf', { name: displayName })}
+              </h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Adjust module-specific operational parameters</p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="h-10 w-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-400 hover:text-rose-600 transition-all"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="p-8">
+        {renderModuleSettings()}
+      </CardContent>
+
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
@@ -539,7 +603,7 @@ const ModuleSettingsPanel: React.FC<{
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </div>
+    </Card>
   );
 };
 

@@ -26,7 +26,7 @@ function HarvestsPage() {
   const { currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -177,11 +177,7 @@ function HarvestsPage() {
                 {t('production.harvests.export')}
               </Button>
 
-              <Button
-                data-tour="harvest-add"
-                onClick={handleAddHarvest}
-                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg w-full sm:w-auto"
-              >
+              <Button variant="green" data-tour="harvest-add" onClick={handleAddHarvest} className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg w-full sm:w-auto" >
                 <Plus className="h-4 w-4" />
                 {t('production.harvests.newHarvest')}
               </Button>
@@ -194,10 +190,7 @@ function HarvestsPage() {
         <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
           {/* Mobile Add Button - Only visible on mobile */}
           <div className="md:hidden">
-            <Button
-              onClick={handleAddHarvest}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md font-medium"
-            >
+            <Button variant="green" onClick={handleAddHarvest} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg shadow-md font-medium" >
               <Plus className="h-5 w-5" />
               {t('production.harvests.newHarvest')}
             </Button>
@@ -244,8 +237,8 @@ function HarvestsPage() {
           {/* Harvests List */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-64"></div>
+              {[1, 2, 3].map(skIdx => (
+                <div key={"sk-" + skIdx} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-64"></div>
               ))}
             </div>
           ) : harvests.length === 0 ? (
@@ -258,10 +251,7 @@ function HarvestsPage() {
                 {tableState.search ? t('production.harvests.emptyState.modifySearch') : t('production.harvests.emptyState.startFirst')}
               </p>
               {!tableState.search && (
-                <Button
-                  onClick={handleAddHarvest}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                >
+                <Button variant="green" onClick={handleAddHarvest} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg" >
                   <Plus className="h-4 w-4" />
                   {t('production.harvests.newHarvest')}
                 </Button>

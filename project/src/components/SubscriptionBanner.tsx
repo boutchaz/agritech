@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 
-const SubscriptionBanner: React.FC = () => {
+const SubscriptionBanner = () => {
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -93,7 +93,7 @@ const SubscriptionBanner: React.FC = () => {
 
           <Button
             onClick={() => setDismissed(true)}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             aria-label={t('app.close')}
           >
             <X className="h-5 w-5" />

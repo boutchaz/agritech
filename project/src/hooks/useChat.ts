@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { chatApi, type SendMessageDto, type ChatResponse } from '@/lib/api/chat';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -40,17 +40,25 @@ export function useSendMessage() {
 }
 
 /**
- * Hook to fetch chat history
+ * Hook to fetch chat history with infinite scroll (load older messages on scroll up)
  */
 export function useChatHistory(limit = 20) {
   const { currentOrganization } = useAuth();
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['chat-history', currentOrganization?.id, limit],
-    queryFn: () => chatApi.getHistory(currentOrganization?.id, limit),
+    queryFn: ({ pageParam }) =>
+      chatApi.getHistory(currentOrganization?.id, limit, pageParam as string | undefined),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: () => undefined, // We don't load newer pages via infinite query
+    getPreviousPageParam: (firstPage) => {
+      if (!firstPage.hasMore || !firstPage.messages.length) return undefined;
+      // Return the oldest message's timestamp as cursor
+      return firstPage.messages[0].timestamp;
+    },
     enabled: !!currentOrganization?.id,
-    staleTime: 0, // Always refetch when invalidated
-    refetchOnWindowFocus: true,
+    staleTime: 0,
+    refetchOnWindowFocus: false, // Avoid refetch resetting scroll position
   });
 }
 
@@ -94,12 +102,13 @@ export function useStreamMessage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamedContent, setStreamedContent] = useState('');
   const [streamSuggestions, setStreamSuggestions] = useState<string[]>([]);
-  const abortRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
+  /* eslint-disable react-hooks/preserve-manual-memoization -- currentOrganization?.id is the only reactive dep needed */
   const stream = useCallback(
     async (
       data: SendMessageDto,
-      onComplete?: (metadata: any) => void,
+      onComplete?: (metadata: unknown) => void,
       onError?: (error: Error) => void,
     ) => {
       if (!currentOrganization?.id) {
@@ -107,17 +116,21 @@ export function useStreamMessage() {
         return;
       }
 
+      // Abort any in-flight stream before starting a new one
+      abortControllerRef.current?.abort();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       setIsStreaming(true);
       setStreamedContent('');
       setStreamSuggestions([]);
-      abortRef.current = false;
 
       try {
         await chatApi.sendMessageStream(
           data,
           currentOrganization.id,
           (token) => {
-            if (!abortRef.current) {
+            if (!controller.signal.aborted) {
               setStreamedContent((prev) => prev + token);
             }
           },
@@ -135,6 +148,7 @@ export function useStreamMessage() {
             setIsStreaming(false);
             onError?.(error);
           },
+          controller.signal,
         );
       } catch (error) {
         setIsStreaming(false);
@@ -143,17 +157,20 @@ export function useStreamMessage() {
     },
     [currentOrganization?.id, queryClient],
   );
+  /* eslint-enable react-hooks/preserve-manual-memoization */
 
   const stopStream = useCallback(() => {
-    abortRef.current = true;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setIsStreaming(false);
   }, []);
 
   const resetStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     setStreamedContent('');
     setStreamSuggestions([]);
     setIsStreaming(false);
-    abortRef.current = false;
   }, []);
 
   return { stream, isStreaming, streamedContent, streamSuggestions, stopStream, resetStream };

@@ -18,6 +18,7 @@ describe('AgromindiaContextService', () => {
     };
     mockAnnualPlanService = {
       getPlanOrNull: jest.fn(),
+      getValidatedPlanOrNull: jest.fn(),
       getInterventions: jest.fn(),
       getSummary: jest.fn(),
     };
@@ -73,7 +74,7 @@ describe('AgromindiaContextService', () => {
       mockRecommendationsService.getRecommendations.mockResolvedValue([
         {
           id: 'rec-1',
-          status: 'pending',
+          status: 'validated',
           priority: 'high',
           constat: 'NDVI drop observed',
           diagnostic: 'Water stress',
@@ -83,7 +84,7 @@ describe('AgromindiaContextService', () => {
         },
       ]);
 
-      mockAnnualPlanService.getPlanOrNull.mockResolvedValue({
+      mockAnnualPlanService.getValidatedPlanOrNull.mockResolvedValue({
         id: 'plan-1',
         status: 'active',
         interventions: [
@@ -126,7 +127,7 @@ describe('AgromindiaContextService', () => {
     it('should return null diagnostics when service throws', async () => {
       mockDiagnosticsService.getDiagnostics.mockRejectedValue(new Error('No data'));
       mockRecommendationsService.getRecommendations.mockResolvedValue([]);
-      mockAnnualPlanService.getPlanOrNull.mockResolvedValue(null);
+      mockAnnualPlanService.getValidatedPlanOrNull.mockResolvedValue(null);
       mockCalibrationService.getLatestCalibration.mockResolvedValue(null);
 
       const result = await service.getParcelIntelligence('parcel-1', 'org-1', 'olivier');
@@ -140,12 +141,34 @@ describe('AgromindiaContextService', () => {
     it('should return null calibration when no calibration exists', async () => {
       mockDiagnosticsService.getDiagnostics.mockRejectedValue(new Error('Not found'));
       mockRecommendationsService.getRecommendations.mockResolvedValue([]);
-      mockAnnualPlanService.getPlanOrNull.mockResolvedValue(null);
+      mockAnnualPlanService.getValidatedPlanOrNull.mockResolvedValue(null);
       mockCalibrationService.getLatestCalibration.mockResolvedValue(null);
 
       const result = await service.getParcelIntelligence('parcel-1', 'org-1', 'olivier');
 
       expect(result.calibration).toBeNull();
+    });
+
+    it('should exclude pending AI recommendations from chat context', async () => {
+      mockDiagnosticsService.getDiagnostics.mockRejectedValue(new Error('No data'));
+      mockRecommendationsService.getRecommendations.mockResolvedValue([
+        {
+          id: 'rec-pending',
+          status: 'pending',
+          priority: 'high',
+          constat: 'Test',
+          diagnostic: 'Test',
+          action: 'Do something',
+          valid_from: null,
+          valid_until: null,
+        },
+      ]);
+      mockAnnualPlanService.getValidatedPlanOrNull.mockResolvedValue(null);
+      mockCalibrationService.getLatestCalibration.mockResolvedValue(null);
+
+      const result = await service.getParcelIntelligence('parcel-1', 'org-1', 'olivier');
+
+      expect(result.recommendations).toEqual([]);
     });
   });
 
@@ -169,7 +192,7 @@ describe('AgromindiaContextService', () => {
       // Mock all services to return empty/null
       mockDiagnosticsService.getDiagnostics.mockRejectedValue(new Error('No data'));
       mockRecommendationsService.getRecommendations.mockResolvedValue([]);
-      mockAnnualPlanService.getPlanOrNull.mockResolvedValue(null);
+      mockAnnualPlanService.getValidatedPlanOrNull.mockResolvedValue(null);
       mockCalibrationService.getLatestCalibration.mockResolvedValue(null);
 
       const result = await service.getOrgIntelligence('org-1');

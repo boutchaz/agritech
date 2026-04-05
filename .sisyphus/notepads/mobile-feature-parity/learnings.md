@@ -104,3 +104,36 @@
 - useRefreshOnFocus: AppState-based refetch trigger
 - useNetworkStatus: NetInfo wrapper
 - api.ts: added 30s timeout + 1 retry on network error
+
+## 2026-04-02 — Notification Redirect Normalization
+- Added shared route mapper at `project/src/lib/notification-routes.ts` to centralize redirect logic for both notification surfaces.
+- Mapper must normalize mixed backend keys (`parcelId`/`parcel_id`, `report_id`) and prefers semantic destination by type for AI, soil analysis, and admin notifications.
+- Marketplace quote notifications should route to `/marketplace/quote-requests/received` (not `/marketplace/quotes`), and order redirects should not pass unsupported search params.
+- `NotificationCenter.tsx` and `NotificationBell.tsx` now both resolve destinations via `getNotificationRedirect`, ensuring toast "View" action availability for all valid redirectable types.
+
+## 2026-04-02 — Expo Router Error Boundary rollout
+- Added reusable class-based boundary at `mobile/src/components/ErrorBoundary.tsx` using existing `ErrorState` fallback and retry reset (`handleReset`).
+- Wrapped every discovered Expo Router layout file under `mobile/app/**/_layout.tsx` (15 total), including nested parcel layouts in both `(production)` and `(tabs)/production` groups.
+- Root layout boundary placement is inside `GestureHandlerRootView`, wrapping `StatusBar` + `Stack` together to prevent route-level white screens while preserving providers and bootstrapping flow.
+- LSP diagnostics are clean across all modified files; this pattern is safe to reuse for future layout groups.
+
+## 2026-04-02 — Mobile log cleanup
+- Removed incidental `console.log` calls from `mobile/app/` and `mobile/src/` while preserving `console.warn`, `console.error`, and the intentional `[API]` logs in `mobile/src/lib/api.ts`.
+- `useMutationWithToast` is now a no-op toast shim instead of logging directly, and mobile analytics queueing was switched to the existing NetInfo dependency to keep typecheck happy.
+
+## 2026-04-02 — Mobile unit-test baseline (auth store + API client)
+- Added first Jest unit tests under `mobile/src/stores/__tests__/authStore.test.ts` and `mobile/src/lib/__tests__/api.test.ts`.
+- Expo mobile tests are stable with `mobile/jest.config.js` using `preset: 'jest-expo'`, alias mapping for `@/`, and `__DEV__` globals.
+- Auth store tests should mock `expo-secure-store`, `expo-local-authentication`, analytics (`@/lib/gtm`), and API module exports (`api`, `authApi`, `farmsApi`) to isolate Zustand state transitions.
+- API client tests should mock `expo-secure-store` + `fetch` and assert header injection (`Authorization`, `x-organization-id`) plus 401 refresh retry behavior.
+
+## 2026-04-02 — Shared UI accessibility baseline (mobile)
+- `Button` now exposes `accessibilityLabel?: string`, sets `accessibilityRole="button"`, and falls back to string/number `children` for label inference.
+- `IconButton` now requires `accessibilityLabel` (icon-only controls), and forwards it with `accessibilityRole="button"`.
+- Reusable state/display primitives were hardened: `AppText` defaults to `accessibilityRole="text"`, `LoadingState` announces `progressbar` + `Loading`, `ErrorState` marks message as `alert`, and `Toast` uses `accessibilityLiveRegion="polite"`.
+- Overlay/navigation primitives were updated: `BottomSheet` accepts `accessibilityViewIsModal?: boolean` (default `true`) and `ConfirmDialog` forwards modal semantics plus explicit action labels.
+
+## 2026-04-02 — Login form RHF+Zod migration (mobile)
+- `mobile/app/(auth)/login.tsx` now uses `useForm` + `zodResolver(loginSchema)` with `Controller` for `email` and `password` while preserving the existing custom input JSX/styling (icon-in-input gray containers).
+- Validation schema is screen-local and enforces: non-empty valid email + non-empty password; error text is rendered directly under each field via `styles.fieldError` without introducing design-system `TextInput` styles.
+- Existing submit UX and biometric behavior were preserved by keeping screen-level `isSubmitting` state for button disabling/spinner and biometric flow, while form validation is delegated to `handleSubmit`.

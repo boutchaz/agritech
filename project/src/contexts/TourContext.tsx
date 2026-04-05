@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Joyride, STATUS, EVENTS, ACTIONS } from 'react-joyride';
-import type { Step, CallBackProps, TooltipRenderProps } from 'react-joyride';
+import type { Step, EventData, TooltipRenderProps } from 'react-joyride';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { useHotkey } from '@tanstack/react-hotkeys';
@@ -66,11 +66,11 @@ const TOUR_ROUTES: Record<TourId, string> = {
   'inventory': '/stock',
   'harvests': '/harvests',
   'infrastructure': '/infrastructure',
-  'billing': '/billing',
+  'billing': '/accounting/quotes',
   'accounting': '/accounting',
   'satellite': '/satellite-analysis',
   'reports': '/reports',
-  'settings': '/settings',
+  'settings': '/settings/account',
 };
 
 const tourStyles = {
@@ -104,7 +104,7 @@ interface CustomTooltipProps extends TooltipRenderProps {
   t: TFunction;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({
+const CustomTooltip = ({
   continuous,
   index,
   step,
@@ -116,7 +116,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   tooltipProps,
   isLastStep,
   t,
-}) => {
+}: CustomTooltipProps) => {
   // Detect mobile for responsive styling
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
@@ -278,28 +278,28 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       placement: 'center',
       title: t('tour.welcome.step1.title'),
       content: t('tour.welcome.step1.content'),
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="sidebar"]',
       title: t('tour.welcome.step2.title'),
       content: t('tour.welcome.step2.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="org-switcher"]',
       title: t('tour.welcome.step3.title'),
       content: t('tour.welcome.step3.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="user-menu"]',
       title: t('tour.welcome.step4.title'),
       content: t('tour.welcome.step4.content'),
       placement: 'bottom-end',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   'full-app': [
@@ -308,105 +308,117 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       placement: 'center',
       title: t('tour.fullApp.step1.title'),
       content: t('tour.fullApp.step1.content'),
-      disableBeacon: true,
-    },
-    {
-      target: '[data-tour="sidebar"]',
-      title: t('tour.fullApp.step2.title'),
-      content: t('tour.fullApp.step2.content'),
-      placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="org-switcher"]',
-      title: t('tour.fullApp.step3.title'),
-      content: t('tour.fullApp.step3.content'),
+      title: t('tour.fullApp.step2.title'),
+      content: t('tour.fullApp.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="nav-dashboard"]',
+      title: t('tour.fullApp.step3.title'),
+      content: t('tour.fullApp.step3.content'),
+      placement: 'right',
+      skipBeacon: true,
+    },
+    // --- LAYER 1: Define Your Land ---
+    {
+      target: '[data-tour="nav-farms"]',
       title: t('tour.fullApp.step4.title'),
       content: t('tour.fullApp.step4.content'),
       placement: 'right',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-tour="nav-farms"]',
-      title: t('tour.fullApp.step5.title'),
-      content: t('tour.fullApp.step5.content'),
-      placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="nav-parcels"]',
-      title: t('tour.fullApp.step6.title'),
-      content: t('tour.fullApp.step6.content'),
+      title: t('tour.fullApp.step5.title'),
+      content: t('tour.fullApp.step5.content'),
       placement: 'right',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-tour="nav-stock"]',
-      title: t('tour.fullApp.step7.title'),
-      content: t('tour.fullApp.step7.content'),
-      placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="nav-infrastructure"]',
+      title: t('tour.fullApp.step6.title'),
+      content: t('tour.fullApp.step6.content'),
+      placement: 'right',
+      skipBeacon: true,
+    },
+    // --- LAYER 2: Work the Land ---
+    {
+      target: '[data-tour="nav-personnel"]',
+      title: t('tour.fullApp.step7.title'),
+      content: t('tour.fullApp.step7.content'),
+      placement: 'right',
+      skipBeacon: true,
+    },
+    {
+      target: '[data-tour="nav-stock"]',
       title: t('tour.fullApp.step8.title'),
       content: t('tour.fullApp.step8.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
+    // --- LAYER 3: Grow & Monitor ---
     {
-      target: '[data-tour="nav-personnel"]',
+      target: '[data-tour="nav-production"]',
       title: t('tour.fullApp.step9.title'),
       content: t('tour.fullApp.step9.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
-      target: '[data-tour="nav-production"]',
+      target: '[data-tour="nav-compliance"]',
       title: t('tour.fullApp.step10.title'),
       content: t('tour.fullApp.step10.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
+    // --- LAYER 4: Sell & Account ---
     {
       target: '[data-tour="nav-billing"]',
       title: t('tour.fullApp.step11.title'),
       content: t('tour.fullApp.step11.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="nav-accounting"]',
       title: t('tour.fullApp.step12.title'),
       content: t('tour.fullApp.step12.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
+    // --- LAYER 5: Intelligence ---
     {
-      target: '[data-tour="nav-reports"]',
+      target: '[data-tour="nav-chat"]',
       title: t('tour.fullApp.step13.title'),
       content: t('tour.fullApp.step13.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
+    },
+    {
+      target: '[data-tour="nav-reports"]',
+      title: t('tour.fullApp.step14.title'),
+      content: t('tour.fullApp.step14.content'),
+      placement: 'right',
+      skipBeacon: true,
     },
     {
       target: '[data-tour="user-menu"]',
-      title: t('tour.fullApp.step14.title'),
-      content: t('tour.fullApp.step14.content'),
+      title: t('tour.fullApp.step15.title'),
+      content: t('tour.fullApp.step15.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: 'body',
       placement: 'center',
-      title: t('tour.fullApp.step15.title'),
-      content: t('tour.fullApp.step15.content'),
-      disableBeacon: true,
+      title: t('tour.fullApp.step16.title'),
+      content: t('tour.fullApp.step16.content'),
+      skipBeacon: true,
     },
   ],
   dashboard: [
@@ -415,44 +427,44 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.dashboard.step1.title'),
       content: t('tour.dashboard.step1.content'),
       placement: 'bottom',
-      disableBeacon: true,
-    },
-    {
-      target: '[data-tour="dashboard-tasks"]',
-      title: t('tour.dashboard.step2.title'),
-      content: t('tour.dashboard.step2.content'),
-      placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="dashboard-parcels"]',
-      title: t('tour.dashboard.step4.title'),
-      content: t('tour.dashboard.step4.content'),
+      title: t('tour.dashboard.step2.title'),
+      content: t('tour.dashboard.step2.content'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
+    },
+    {
+      target: '[data-tour="dashboard-tasks"]',
+      title: t('tour.dashboard.step3.title'),
+      content: t('tour.dashboard.step3.content'),
+      placement: 'left',
+      skipBeacon: true,
     },
   ],
   'farm-management': [
     {
-      target: '[data-tour="farm-list"]',
+      target: '[data-tour="farm-stats"]',
       title: t('tour.farmManagement.step1.title'),
       content: t('tour.farmManagement.step1.content'),
-      placement: 'right',
-      disableBeacon: true,
+      placement: 'bottom',
+      skipBeacon: true,
     },
     {
       target: '[data-tour="add-farm"]',
       title: t('tour.farmManagement.step2.title'),
       content: t('tour.farmManagement.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
-      target: '[data-tour="farm-map"]',
+      target: '[data-tour="farm-list"]',
       title: t('tour.farmManagement.step3.title'),
       content: t('tour.farmManagement.step3.content'),
-      placement: 'left',
-      disableBeacon: true,
+      placement: 'top',
+      skipBeacon: true,
     },
   ],
   parcels: [
@@ -461,21 +473,21 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.parcels.step1.title'),
       content: t('tour.parcels.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="parcel-filters"]',
       title: t('tour.parcels.step2.title'),
       content: t('tour.parcels.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="parcel-actions"]',
       title: t('tour.parcels.step3.title'),
       content: t('tour.parcels.step3.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   tasks: [
@@ -484,21 +496,21 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.tasks.step1.title'),
       content: t('tour.tasks.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="task-calendar"]',
       title: t('tour.tasks.step2.title'),
       content: t('tour.tasks.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="task-create"]',
       title: t('tour.tasks.step3.title'),
       content: t('tour.tasks.step3.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   workers: [
@@ -507,21 +519,21 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.workers.step1.title'),
       content: t('tour.workers.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="worker-payments"]',
       title: t('tour.workers.step2.title'),
       content: t('tour.workers.step2.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="worker-add"]',
       title: t('tour.workers.step3.title'),
       content: t('tour.workers.step3.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   inventory: [
@@ -530,28 +542,28 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.inventory.step1.title'),
       content: t('tour.inventory.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="stock-items"]',
       title: t('tour.inventory.step2.title'),
       content: t('tour.inventory.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="stock-warehouses"]',
       title: t('tour.inventory.step3.title'),
       content: t('tour.inventory.step3.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="stock-movements"]',
       title: t('tour.inventory.step4.title'),
       content: t('tour.inventory.step4.content'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   accounting: [
@@ -560,28 +572,28 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.accounting.step1.title'),
       content: t('tour.accounting.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="accounting-invoices"]',
       title: t('tour.accounting.step2.title'),
       content: t('tour.accounting.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="accounting-journal"]',
       title: t('tour.accounting.step3.title'),
       content: t('tour.accounting.step3.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="accounting-reports"]',
       title: t('tour.accounting.step4.title'),
       content: t('tour.accounting.step4.content'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   satellite: [
@@ -590,21 +602,21 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.satellite.step1.title'),
       content: t('tour.satellite.step1.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="satellite-indices"]',
       title: t('tour.satellite.step2.title'),
       content: t('tour.satellite.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="satellite-timeline"]',
       title: t('tour.satellite.step3.title'),
       content: t('tour.satellite.step3.content'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   reports: [
@@ -613,21 +625,21 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.reports.step1.title'),
       content: t('tour.reports.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="reports-export"]',
       title: t('tour.reports.step2.title'),
       content: t('tour.reports.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="reports-filters"]',
       title: t('tour.reports.step3.title'),
       content: t('tour.reports.step3.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   harvests: [
@@ -636,28 +648,28 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.harvests.step1.title'),
       content: t('tour.harvests.step1.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="harvest-list"]',
       title: t('tour.harvests.step2.title'),
       content: t('tour.harvests.step2.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="harvest-add"]',
       title: t('tour.harvests.step3.title'),
       content: t('tour.harvests.step3.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="harvest-filters"]',
       title: t('tour.harvests.step4.title'),
       content: t('tour.harvests.step4.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   infrastructure: [
@@ -666,14 +678,14 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.infrastructure.step1.title'),
       content: t('tour.infrastructure.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="infrastructure-add"]',
       title: t('tour.infrastructure.step2.title'),
       content: t('tour.infrastructure.step2.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   billing: [
@@ -682,35 +694,35 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.billing.step1.title'),
       content: t('tour.billing.step1.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="billing-quotes"]',
       title: t('tour.billing.step2.title'),
       content: t('tour.billing.step2.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="billing-orders"]',
       title: t('tour.billing.step3.title'),
       content: t('tour.billing.step3.content'),
       placement: 'bottom',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="billing-invoices"]',
       title: t('tour.billing.step4.title'),
       content: t('tour.billing.step4.content'),
       placement: 'left',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="billing-customers"]',
       title: t('tour.billing.step5.title'),
       content: t('tour.billing.step5.content'),
       placement: 'top',
-      disableBeacon: true,
+      skipBeacon: true,
     },
   ],
   settings: [
@@ -719,42 +731,42 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       title: t('tour.settings.step1.title'),
       content: t('tour.settings.step1.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="settings-organization"]',
       title: t('tour.settings.step2.title'),
       content: t('tour.settings.step2.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="settings-users"]',
       title: t('tour.settings.step3.title'),
       content: t('tour.settings.step3.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="settings-subscription"]',
       title: t('tour.settings.step4.title'),
       content: t('tour.settings.step4.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
       target: '[data-tour="settings-modules"]',
       title: t('tour.settings.step5.title'),
       content: t('tour.settings.step5.content'),
       placement: 'right',
-      disableBeacon: true,
+      skipBeacon: true,
     },
     {
-      target: '[data-tour="settings-preferences"]',
+      target: '[data-tour="settings-account"]',
       title: t('tour.settings.step6.title'),
       content: t('tour.settings.step6.content'),
-      placement: 'left',
-      disableBeacon: true,
+      placement: 'right',
+      skipBeacon: true,
     },
   ],
 });
@@ -811,7 +823,7 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
+export const TourProvider = ({ children }: TourProviderProps) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -821,6 +833,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   const isMobile = useIsMobile();
   const loadRequestIdRef = useRef(0);
   const mutationVersionRef = useRef(0);
+  const startTourTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tourState, setTourState] = useState<TourState>({
     completedTours: [],
     dismissedTours: [],
@@ -961,6 +974,11 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     }
   };
 
+  const saveCompletedToursRef = useRef(saveCompletedTours);
+  useEffect(() => {
+    saveCompletedToursRef.current = saveCompletedTours;
+  });
+
   /**
    * Save dismissed tours to backend with localStorage fallback
    */
@@ -1020,7 +1038,6 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     // Tours that target sidebar nav items - expand sidebar if collapsed
     const sidebarTours: TourId[] = ['welcome', 'full-app'];
     if (sidebarTours.includes(tourId)) {
-      // Expand sidebar by setting localStorage and dispatching event
       const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
       if (isCollapsed) {
         localStorage.setItem('sidebarCollapsed', 'false');
@@ -1028,15 +1045,30 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       }
     }
 
+    // Cancel any pending startTour timeout to prevent race conditions
+    if (startTourTimeoutRef.current) {
+      clearTimeout(startTourTimeoutRef.current);
+      startTourTimeoutRef.current = null;
+    }
+
     if (targetRoute) {
       navigate({ to: targetRoute });
-      setTimeout(() => {
-        setTourState(prev => ({
-          ...prev,
-          currentTour: tourId,
-          isRunning: true,
-          stepIndex: 0,
-        }));
+      // Immediately mark as running to block auto-start hooks during navigation delay.
+      // currentTour stays null so Joyride doesn't render yet (no steps = shouldRun false).
+      setTourState(prev => ({
+        ...prev,
+        isRunning: true,
+        currentTour: null,
+        stepIndex: 0,
+      }));
+      startTourTimeoutRef.current = setTimeout(() => {
+        startTourTimeoutRef.current = null;
+        setTourState(prev => {
+          // Only activate if still in the pending state we set above.
+          // If endTour() was called or another startTour replaced us, bail out.
+          if (!prev.isRunning || prev.currentTour !== null) return prev;
+          return { ...prev, currentTour: tourId, stepIndex: 0 };
+        });
       }, 500);
     } else {
       setTourState(prev => ({
@@ -1049,12 +1081,44 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   }, [isOnboardingRoute, navigate]);
 
   const endTour = useCallback(() => {
+    // Also cancel any pending delayed start
+    if (startTourTimeoutRef.current) {
+      clearTimeout(startTourTimeoutRef.current);
+      startTourTimeoutRef.current = null;
+    }
     setTourState(prev => ({
       ...prev,
       currentTour: null,
       isRunning: false,
       stepIndex: 0,
     }));
+  }, []);
+
+  /**
+   * Normal completion: mark current tour completed, persist, stop Joyride.
+   * In controlled mode, react-joyride ignores internal index bumps, so after the
+   * last step `controls.next()` never drives `index >= size` → no STATUS.FINISHED /
+   * TOUR_END. We must complete explicitly on STEP_AFTER + NEXT for the final step.
+   */
+  const completeRunningTour = useCallback(() => {
+    setTourState(prev => {
+      const { currentTour, completedTours } = prev;
+      if (!currentTour) {
+        return { ...prev, isRunning: false, stepIndex: 0 };
+      }
+      if (!completedTours.includes(currentTour)) {
+        const newCompletedTours = [...completedTours, currentTour];
+        void saveCompletedToursRef.current(newCompletedTours);
+        return {
+          ...prev,
+          completedTours: newCompletedTours,
+          currentTour: null,
+          isRunning: false,
+          stepIndex: 0,
+        };
+      }
+      return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
+    });
   }, []);
 
   const isTourCompleted = useCallback((tourId: TourId) => {
@@ -1132,71 +1196,64 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     }
   }, [tourState.dismissedTours, tourState.completedTours, endTour, user]);
 
-  const handleJoyrideCallback = useCallback((data: CallBackProps) => {
-    const { status, type, action, index } = data;
+  /**
+   * react-joyride v3 uses `onEvent` only — the legacy `callback` prop is ignored.
+   * Without this handler, controlled `stepIndex` never advances after step 1.
+   */
+  const handleJoyrideEvent = useCallback((data: EventData) => {
+    const { status, type, action, index, size } = data;
 
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.NEXT) {
-      setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
-    }
-
-    if (type === EVENTS.STEP_AFTER && action === ACTIONS.PREV) {
-      setTourState(prev => ({ ...prev, stepIndex: index - 1 }));
-    }
-
-    // Handle overlay click dismiss
+    // --- 1. Close button → end immediately ---
     if (action === ACTIONS.CLOSE) {
       endTour();
       return;
     }
 
-    if (status === STATUS.SKIPPED) {
-      const currentTour = tourState.currentTour;
-
-      if (!currentTour) {
-        endTour();
-        return;
-      }
-
-      if (!tourState.dismissedTours.includes(currentTour)) {
-        dismissTour(currentTour);
-        return;
-      }
-
-      endTour();
+    // --- 2. Tour finished (uncontrolled / overlay paths) ---
+    if (status === STATUS.FINISHED || type === EVENTS.TOUR_END) {
+      completeRunningTour();
       return;
     }
 
-    if (status === STATUS.FINISHED) {
-      setTourState(prev => {
-        const { currentTour, completedTours } = prev;
-
-        if (!currentTour) {
-          endTour();
-          return prev;
-        }
-
-        if (!completedTours.includes(currentTour)) {
-          const newCompletedTours = [...completedTours, currentTour];
-          saveCompletedTours(newCompletedTours);
-          return {
-            ...prev,
-            completedTours: newCompletedTours,
-            currentTour: null,
-            isRunning: false,
-            stepIndex: 0,
-          };
-        }
-
+    // --- 3. Tour skipped ---
+    if (status === STATUS.SKIPPED) {
+      const cur = tourState.currentTour;
+      if (cur && !tourState.dismissedTours.includes(cur)) {
+        void dismissTour(cur);
+      } else {
         endTour();
-        return {
-          ...prev,
-          currentTour: null,
-          isRunning: false,
-          stepIndex: 0,
-        };
-      });
+      }
+      return;
     }
-  }, [dismissTour, endTour, saveCompletedTours, tourState.currentTour, tourState.dismissedTours]);
+
+    // --- 4. Target not found (controlled mode does not auto-advance) ---
+    if (type === EVENTS.TARGET_NOT_FOUND) {
+      setTourState(prev => {
+        const nextIndex = prev.stepIndex + 1;
+        if (nextIndex >= size) {
+          return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
+        }
+        return { ...prev, stepIndex: nextIndex };
+      });
+      return;
+    }
+
+    // --- 5. After a step completes — advance controlled index or finish ---
+    // Joyride emits `action: lastAction ?? ACTIONS.UPDATE` for STEP_AFTER; if `lastAction`
+    // is not set yet, Finir/Next on the last step sends UPDATE — we must still complete or
+    // `isRunning` stays true and the overlay remains (seen on /infrastructure).
+    if (type === EVENTS.STEP_AFTER) {
+      if (action === ACTIONS.PREV) {
+        setTourState(prev => ({ ...prev, stepIndex: Math.max(0, index - 1) }));
+      } else if (action === ACTIONS.NEXT || action === ACTIONS.UPDATE) {
+        if (index + 1 < size) {
+          setTourState(prev => ({ ...prev, stepIndex: index + 1 }));
+        } else {
+          completeRunningTour();
+        }
+      }
+    }
+  }, [completeRunningTour, dismissTour, endTour, tourState.currentTour, tourState.dismissedTours]);
 
   /**
    * Reset a specific tour - allows tour to show again
@@ -1324,8 +1381,9 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
   }, [loadTourPreferences]);
 
   const rawSteps = tourState.currentTour ? tourDefinitions[tourState.currentTour] : [];
-  const currentSteps = filterStepsByDomPresence(rawSteps);
-  const shouldRun = tourState.isRunning && currentSteps.length > 0;
+  // Do not filter steps here: a filtered array changes length/order vs. `stepIndex` and breaks
+  // controlled mode. Missing targets are handled via EVENTS.TARGET_NOT_FOUND above.
+  const shouldRun = tourState.isRunning && rawSteps.length > 0;
 
   // ESC key listener to dismiss running tour
   useHotkey('Escape', endTour, {
@@ -1333,9 +1391,13 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
     meta: { name: t('close', 'Close'), description: 'End guided tour' },
   });
 
-  if (isOnboardingRoute && tourState.isRunning) {
-    endTour();
-  }
+  useEffect(() => {
+    if (!(isOnboardingRoute && tourState.isRunning)) return;
+    const id = window.setTimeout(() => {
+      endTour();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [isOnboardingRoute, tourState.isRunning, endTour]);
 
   return (
     <TourContext.Provider
@@ -1361,7 +1423,8 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
       {children}
       {!isOnboardingRoute && !isMobile && (
         <Joyride
-          steps={currentSteps}
+          key={tourState.currentTour ?? 'joyride-idle'}
+          steps={rawSteps}
           run={shouldRun}
           stepIndex={tourState.stepIndex}
           continuous
@@ -1370,7 +1433,7 @@ export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
           disableScrolling={true}
           spotlightClicks
           disableOverlayClose={JOYRIDE_PROPS.disableOverlayClose}
-          callback={handleJoyrideCallback}
+          onEvent={handleJoyrideEvent}
           styles={tourStyles}
           tooltipComponent={(props) => (
             <CustomTooltip

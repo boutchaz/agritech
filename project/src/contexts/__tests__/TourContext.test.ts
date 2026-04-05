@@ -5,7 +5,7 @@ import type { Step } from 'react-joyride';
 const mockT = (key: string) => key;
 
 describe('Tour definitions', () => {
-  it('every step across all tours has disableBeacon: true', () => {
+  it('every step across all tours has skipBeacon: true (react-joyride v3)', () => {
     const definitions = getTourDefinitions(mockT as any);
     const tourIds = Object.keys(definitions);
 
@@ -15,8 +15,8 @@ describe('Tour definitions', () => {
       const steps = definitions[tourId];
       for (let i = 0; i < steps.length; i++) {
         expect(
-          steps[i].disableBeacon,
-          `Tour "${tourId}" step ${i + 1} (target: ${steps[i].target}) missing disableBeacon: true`
+          steps[i].skipBeacon,
+          `Tour "${tourId}" step ${i + 1} (target: ${steps[i].target}) missing skipBeacon: true`
         ).toBe(true);
       }
     }
@@ -26,7 +26,7 @@ describe('Tour definitions', () => {
 describe('filterStepsByDomPresence', () => {
   it('includes body-targeted steps always', () => {
     const steps: Step[] = [
-      { target: 'body', content: 'Welcome', disableBeacon: true },
+      { target: 'body', content: 'Welcome', skipBeacon: true },
     ];
     const result = filterStepsByDomPresence(steps);
     expect(result).toHaveLength(1);
@@ -35,8 +35,8 @@ describe('filterStepsByDomPresence', () => {
 
   it('excludes steps whose selector target is not in the DOM', () => {
     const steps: Step[] = [
-      { target: '[data-tour="infrastructure-list"]', content: 'List', disableBeacon: true },
-      { target: '[data-tour="infrastructure-add"]', content: 'Add', disableBeacon: true },
+      { target: '[data-tour="infrastructure-list"]', content: 'List', skipBeacon: true },
+      { target: '[data-tour="infrastructure-add"]', content: 'Add', skipBeacon: true },
     ];
     // No matching elements exist in test DOM
     const result = filterStepsByDomPresence(steps);
@@ -50,8 +50,8 @@ describe('filterStepsByDomPresence', () => {
     document.body.appendChild(el);
 
     const steps: Step[] = [
-      { target: '[data-tour="test-element"]', content: 'Test', disableBeacon: true },
-      { target: '[data-tour="missing"]', content: 'Missing', disableBeacon: true },
+      { target: '[data-tour="test-element"]', content: 'Test', skipBeacon: true },
+      { target: '[data-tour="missing"]', content: 'Missing', skipBeacon: true },
     ];
     const result = filterStepsByDomPresence(steps);
     expect(result).toHaveLength(1);
@@ -63,8 +63,8 @@ describe('filterStepsByDomPresence', () => {
 
   it('returns empty array when all non-body targets are missing', () => {
     const steps: Step[] = [
-      { target: '[data-tour="a"]', content: 'A', disableBeacon: true },
-      { target: '[data-tour="b"]', content: 'B', disableBeacon: true },
+      { target: '[data-tour="a"]', content: 'A', skipBeacon: true },
+      { target: '[data-tour="b"]', content: 'B', skipBeacon: true },
     ];
     const result = filterStepsByDomPresence(steps);
     expect(result).toHaveLength(0);

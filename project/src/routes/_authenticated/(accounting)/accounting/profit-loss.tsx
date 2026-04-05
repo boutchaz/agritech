@@ -23,14 +23,14 @@ const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ProfitLossSection: React.FC<{
+const ProfitLossSection = ({ title, accounts, total, currencySymbol, color, icon }: {
   title: string;
   accounts: ProfitLossRow[];
   total: number;
   currencySymbol: string;
   color: string;
   icon: React.ReactNode;
-}> = ({ title, accounts, total, currencySymbol, color, icon }) => (
+}) => (
   <Card>
     <CardHeader className={`${color} text-white rounded-t-lg`}>
       <CardTitle className="flex items-center justify-between">
@@ -78,7 +78,7 @@ const ProfitLossSection: React.FC<{
   </Card>
 );
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 

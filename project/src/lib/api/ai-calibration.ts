@@ -27,7 +27,7 @@ export type AiScenarioCode = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
 
 export interface AiDiagnosticsIndicators {
   reading_date: string;
-  baseline_ndvi: number;
+  p50_ndvi: number;
   current_ndvi: number;
   ndvi_delta: number;
   ndvi_band: 'above_optimal' | 'optimal' | 'vigilance' | 'alert';

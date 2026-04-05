@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
@@ -173,9 +174,12 @@ export class SalesOrdersService {
         .eq('organization_id', organizationId);
 
       if (search) {
-        const searchFilter = `order_number.ilike.%${search}%,customer_name.ilike.%${search}%`;
-        countQuery = countQuery.or(searchFilter);
-        dataQuery = dataQuery.or(searchFilter);
+        const safeSearch = sanitizeSearch(search);
+        if (safeSearch) {
+          const searchFilter = `order_number.ilike.%${safeSearch}%,customer_name.ilike.%${safeSearch}%`;
+          countQuery = countQuery.or(searchFilter);
+          dataQuery = dataQuery.or(searchFilter);
+        }
       }
 
       if (status) {

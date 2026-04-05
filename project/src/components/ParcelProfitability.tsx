@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   TrendingUp,
@@ -45,7 +45,7 @@ interface ParcelProfitabilityProps {
   parcelName: string;
 }
 
-const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
+const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { format: formatCurrency, currencyCode, symbol: currencySymbol } = useCurrency();
@@ -252,9 +252,8 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             <Plus className="h-4 w-4 mr-2" />
             {t('profitability.buttons.addCost')}
           </Button>
-          <Button
+          <Button variant="green"
             onClick={() => setShowAddRevenue(true)}
-            className="bg-green-600 hover:bg-green-700"
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -270,7 +269,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -1195,9 +1194,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             >
               {t('profitability.addRevenue.cancel')}
             </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => addRevenueMutation.mutate(newRevenue)}
+            <Button variant="green" onClick={() => addRevenueMutation.mutate(newRevenue)}
               disabled={addRevenueMutation.isPending || !newRevenue.amount}
             >
               {addRevenueMutation.isPending ? t('profitability.addRevenue.adding') : t('profitability.addRevenue.add')}

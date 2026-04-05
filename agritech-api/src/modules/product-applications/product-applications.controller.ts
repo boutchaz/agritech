@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { ProductApplicationsService } from './product-applications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -16,7 +17,7 @@ import { ListProductApplicationsResponseDto } from './dto/list-product-applicati
 
 @ApiTags('product-applications')
 @Controller('product-applications')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class ProductApplicationsController {
   constructor(private productApplicationsService: ProductApplicationsService) {}
 

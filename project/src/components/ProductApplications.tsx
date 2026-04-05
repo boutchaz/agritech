@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { DEFAULT_CURRENCY } from '../utils/currencies';
@@ -12,7 +12,7 @@ import { SectionLoader } from '@/components/ui/loader';
 
 type Application = ProductApplication;
 
-const ProductApplications: React.FC = () => {
+const ProductApplications = () => {
   const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
@@ -158,9 +158,9 @@ const ProductApplications: React.FC = () => {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Applications de Produits
         </h2>
-        <Button
+        <Button variant="green"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="flex items-center space-x-2 px-4 py-2 rounded-md"
         >
           <Plus className="h-5 w-5" />
           <span>Nouvelle Application</span>
@@ -359,11 +359,7 @@ const ProductApplications: React.FC = () => {
               >
                 Annuler
               </Button>
-              <Button
-                onClick={handleAddApplication}
-                disabled={!newApplication.product_id || !newApplication.quantity_used}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <Button variant="green" onClick={handleAddApplication} disabled={!newApplication.product_id || !newApplication.quantity_used} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
                 Enregistrer
               </Button>
             </div>

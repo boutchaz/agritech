@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
-  LineChart,
   Line,
   BarChart,
   Bar,
@@ -17,15 +16,61 @@ import {
 } from 'recharts';
 import { EvapotranspirationTimeSeries, MonthlyEvapotranspirationData } from '../../services/weatherClimateService';
 
+interface TooltipPayload {
+  name: string;
+  value: number;
+  color: string;
+  dataKey: string;
+  label?: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
+const DailyTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
+        <p className="font-medium mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={entry.label} style={{ color: entry.color }} className="text-sm">
+            {entry.name}: {entry.value} mm/j
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+const MonthlyTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
+        <p className="font-medium mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={entry.label} style={{ color: entry.color }} className="text-sm">
+            {entry.name}: {entry.value} {entry.dataKey === 'et0_total' ? 'mm' : 'mm/j'}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
 interface EvapotranspirationChartProps {
   dailyData: EvapotranspirationTimeSeries[];
   monthlyData: MonthlyEvapotranspirationData[];
 }
 
-const EvapotranspirationChart: React.FC<EvapotranspirationChartProps> = ({
+const EvapotranspirationChart = ({
   dailyData,
   monthlyData,
-}) => {
+}: EvapotranspirationChartProps) => {
   const { t } = useTranslation();
 
   // Format daily data for the line chart
@@ -83,51 +128,6 @@ const EvapotranspirationChart: React.FC<EvapotranspirationChartProps> = ({
     );
   }
 
-  interface TooltipPayload {
-    name: string;
-    value: number;
-    color: string;
-    dataKey: string;
-  }
-
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: TooltipPayload[];
-    label?: string;
-  }
-
-  const DailyTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: {entry.value} mm/j
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const MonthlyTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: {entry.value} {entry.dataKey === 'et0_total' ? 'mm' : 'mm/j'}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="space-y-8">
       {/* ET Info Card */}
@@ -145,7 +145,7 @@ const EvapotranspirationChart: React.FC<EvapotranspirationChartProps> = ({
 
       {/* Summary Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
               {t('weather.et.totalET', 'Total ET₀')}

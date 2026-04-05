@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -115,7 +115,7 @@ interface WorkerFormProps {
   onSuccess?: () => void;
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({
+const WorkerForm = ({
   open,
   worker,
   organizationId,
@@ -123,7 +123,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   existingWorkers = [],
   onClose,
   onSuccess,
-}) => {
+}: WorkerFormProps) => {
   const { t } = useTranslation();
   const { handleFormError } = useFormErrors<WorkerFormData>();
   const isEditing = !!worker;
@@ -566,11 +566,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 >
                   {t("workers.form.buttons.cancel")}
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                  onClick={() => {
+                <Button variant="amber" type="button" size="sm" onClick={() => {
                     const data = duplicateWarning.pendingData;
                     setDuplicateWarning(null);
                     onSubmit(data, true);
@@ -1188,18 +1184,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.specialties")}
             />
-            <Button
-              type="button"
-              onClick={addSpecialty}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addSpecialty} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {specialties.map((specialty, index) => (
               <span
-                key={index}
+                key={specialty}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
               >
                 {specialty}
@@ -1231,18 +1223,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.certifications")}
             />
-            <Button
-              type="button"
-              onClick={addCertification}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addCertification} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {certifications.map((cert, index) => (
               <span
-                key={index}
+                key={cert}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm"
               >
                 {cert}

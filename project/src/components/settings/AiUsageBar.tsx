@@ -1,9 +1,9 @@
-import React from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
-import { Zap, Infinity } from 'lucide-react';
+import { Zap, Infinity as InfinityIcon } from 'lucide-react';
 
 interface AiUsageBarProps {
   currentCount: number;
@@ -29,7 +29,7 @@ export function AiUsageBar({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">{t('ai.quota.usage', 'Usage')}</span>
           <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-            <Infinity className="w-3 h-3 mr-1" />
+            <InfinityIcon className="w-3 h-3 mr-1" />
             {t('ai.quota.unlimited', 'Unlimited')}
           </Badge>
         </div>

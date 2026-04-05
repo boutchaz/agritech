@@ -29,9 +29,10 @@ export function useYieldHistory(filters?: {
   toDate?: string;
 }) {
   const { currentOrganization } = useAuth();
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
 
   return useQuery({
-    queryKey: ['yield_history', currentOrganization?.id, filters],
+    queryKey: ['yield_history', currentOrganization?.id, filterKey],
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
@@ -79,9 +80,10 @@ export function useHarvestForecasts(filters?: {
   toDate?: string;
 }) {
   const { currentOrganization } = useAuth();
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
 
   return useQuery({
-    queryKey: ['harvest_forecasts', currentOrganization?.id, filters],
+    queryKey: ['harvest_forecasts', currentOrganization?.id, filterKey],
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
@@ -147,9 +149,10 @@ export function useYieldBenchmarks(filters?: {
   isActive?: boolean;
 }) {
   const { currentOrganization } = useAuth();
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
 
   return useQuery({
-    queryKey: ['yield_benchmarks', currentOrganization?.id, filters],
+    queryKey: ['yield_benchmarks', currentOrganization?.id, filterKey],
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
@@ -195,9 +198,10 @@ export function usePerformanceAlerts(filters?: {
   alertType?: string;
 }) {
   const { currentOrganization } = useAuth();
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
 
   return useQuery({
-    queryKey: ['performance_alerts', currentOrganization?.id, filters],
+    queryKey: ['performance_alerts', currentOrganization?.id, filterKey],
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
@@ -256,9 +260,10 @@ export function useParcelPerformanceSummary(filters?: {
   toDate?: string;
 }) {
   const { currentOrganization } = useAuth();
+  const filterKey = filters ? JSON.stringify(filters) : undefined;
 
   return useQuery({
-    queryKey: ['parcel_performance', currentOrganization?.id, filters],
+    queryKey: ['parcel_performance', currentOrganization?.id, filterKey],
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 

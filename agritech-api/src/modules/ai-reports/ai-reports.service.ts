@@ -27,14 +27,10 @@ import {
 import { GenerateAIReportDto, AIProviderInfoDto, CalibrationStatusDto, CalibrateRequestDto, FetchDataRequestDto } from './dto';
 import {
   AGRICULTURAL_EXPERT_SYSTEM_PROMPT,
-  CALIBRATION_EXPERT_SYSTEM_PROMPT,
-  RECOMMENDATIONS_EXPERT_SYSTEM_PROMPT,
-  ANNUAL_PLAN_EXPERT_SYSTEM_PROMPT,
+
   FOLLOWUP_EXPERT_SYSTEM_PROMPT,
   buildUserPrompt,
-  buildCalibrationPrompt,
-  buildRecommendationsPrompt,
-  buildAnnualPlanPrompt,
+
   buildFollowUpPrompt,
 } from './prompts';
 import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
@@ -989,10 +985,56 @@ export class AIReportsService {
           dto.data_end_date,
         );
 
+        // V2: load moteur config + culture referentiel for config-driven prompt
+        const { getMoteurConfig, getLocalCropReference } = await import(
+          '../../modules/calibration/crop-reference-loader'
+        );
+        const { buildCalibrageSystemPrompt: buildV3System, buildCalibrageUserPrompt: buildV3User } = await import(
+          '../../libs/agromind-ia/prompts/calibrage.prompt.v3'
+        );
+        const moteurConfig = getMoteurConfig() ?? {};
+        const cropType = calibrationData.parcel?.cropType ?? calibrationData.parcel?.treeType ?? 'olivier';
+        const referentiel = getLocalCropReference(cropType) ?? {};
+
+        // Build V2 user input from aggregated data
+        const v3Input = {
+          profil: {
+            parcelle_id: dto.parcel_id,
+            culture: cropType as any,
+            variete: calibrationData.parcel?.variety ?? 'inconnue',
+            systeme: (calibrationData.parcel?.plantingSystem ?? 'intensif') as any,
+            age_ans: calibrationData.parcel?.plantingYear
+              ? new Date().getFullYear() - Number(calibrationData.parcel.plantingYear)
+              : 0,
+            densite_arbres_ha: calibrationData.parcel?.treeCount && calibrationData.parcel?.area
+              ? Math.round(Number(calibrationData.parcel.treeCount) / Number(calibrationData.parcel.area))
+              : 0,
+            surface_ha: Number(calibrationData.parcel?.area ?? 0),
+            irrigation: {
+              type: calibrationData.parcel?.irrigationType ?? 'inconnu',
+              efficience: 0.9,
+            },
+            localisation: { lat: 0, lng: 0, region: '' },
+            langue: (language ?? 'fr') as any,
+          },
+          satellite_history: (calibrationData.satelliteHistory?.timeSeries?.NDVI ?? []).map((pt: any) => ({
+            date: pt.date,
+            indices: { NDVI: pt.value, NIRv: 0, NDMI: 0, NDRE: 0 },
+            nb_pixels_purs: 50,
+            couverture_nuageuse_pct: 10,
+          })),
+          meteo_history: [],
+          analyses: {},
+          historique_rendements: (calibrationData.yieldHistory ?? []).map((y: any) => ({
+            annee: y.year,
+            rendement_t_ha: y.yieldPerHa ?? 0,
+          })),
+        };
+
         return {
           reportType,
-          systemPrompt: CALIBRATION_EXPERT_SYSTEM_PROMPT,
-          userPrompt: buildCalibrationPrompt(calibrationData, language),
+          systemPrompt: buildV3System(moteurConfig, referentiel),
+          userPrompt: buildV3User(v3Input as any),
           parcelName: calibrationData.parcel.name,
           dataSnapshot: calibrationData,
         };
@@ -1005,10 +1047,21 @@ export class AIReportsService {
           dto.data_end_date,
         );
 
+        // V2: config-driven operational prompt
+        const { getMoteurConfig: getOpConfig, getLocalCropReference: getOpRef } = await import(
+          '../../modules/calibration/crop-reference-loader'
+        );
+        const { buildOperationnelSystemPrompt } = await import(
+          '../../libs/agromind-ia/prompts/operationnel.prompt.v3'
+        );
+        const opMoteurConfig = getOpConfig() ?? {};
+        const opCropType = operationalData.parcel?.cropType ?? operationalData.parcel?.treeType ?? 'olivier';
+        const opReferentiel = getOpRef(opCropType) ?? {};
+
         return {
           reportType,
-          systemPrompt: RECOMMENDATIONS_EXPERT_SYSTEM_PROMPT,
-          userPrompt: buildRecommendationsPrompt(operationalData, language),
+          systemPrompt: buildOperationnelSystemPrompt(opMoteurConfig, opReferentiel),
+          userPrompt: JSON.stringify(operationalData, null, 2),
           parcelName: operationalData.parcel.name,
           dataSnapshot: operationalData,
         };
@@ -1021,10 +1074,21 @@ export class AIReportsService {
           dto.data_end_date,
         );
 
+        // V2: config-driven annual plan prompt
+        const { getMoteurConfig: getApConfig, getLocalCropReference: getApRef } = await import(
+          '../../modules/calibration/crop-reference-loader'
+        );
+        const { buildPlanAnnuelSystemPrompt } = await import(
+          '../../libs/agromind-ia/prompts/plan_annuel.prompt.v3'
+        );
+        const apMoteurConfig = getApConfig() ?? {};
+        const apCropType = annualPlanData.parcel?.cropType ?? annualPlanData.parcel?.treeType ?? 'olivier';
+        const apReferentiel = getApRef(apCropType) ?? {};
+
         return {
           reportType,
-          systemPrompt: ANNUAL_PLAN_EXPERT_SYSTEM_PROMPT,
-          userPrompt: buildAnnualPlanPrompt(annualPlanData, language),
+          systemPrompt: buildPlanAnnuelSystemPrompt(apMoteurConfig, apReferentiel),
+          userPrompt: JSON.stringify(annualPlanData, null, 2),
           parcelName: annualPlanData.parcel.name,
           dataSnapshot: annualPlanData,
         };

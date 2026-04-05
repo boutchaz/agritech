@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Bot, Sparkles, Loader, AlertCircle, Calendar } from 'lucide-react';
 import { useAIProviders, useGenerateAIReport, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
 import type { AIProvider, AIReportResponse } from '../../lib/api/ai-reports';
@@ -17,10 +17,10 @@ interface AIReportSectionProps {
   parcelName: string;
 }
 
-export const AIReportSection: React.FC<AIReportSectionProps> = ({
+export const AIReportSection = ({
   parcelId,
   parcelName,
-}) => {
+}: AIReportSectionProps) => {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],

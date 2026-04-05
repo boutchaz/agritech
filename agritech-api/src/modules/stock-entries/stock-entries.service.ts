@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -42,9 +43,9 @@ export class StockEntriesService {
         if (filters?.status) q = q.eq('status', filters.status);
         if (filters?.from_date) q = q.gte('entry_date', filters.from_date);
         if (filters?.to_date) q = q.lte('entry_date', filters.to_date);
-        if (filters?.warehouse_id) q = q.or(`from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`);
+        if (filters?.warehouse_id) q = q.or(`from_warehouse_id.eq.${filters.warehouse_id.replace(/[,.()'"]/g, '')},to_warehouse_id.eq.${filters.warehouse_id.replace(/[,.()'"]/g, '')}`);
         if (filters?.reference_type) q = q.eq('reference_type', filters.reference_type);
-        if (filters?.search) q = q.or(`entry_number.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+        if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`entry_number.ilike.%${s}%,notes.ilike.%${s}%`); }
         return q;
       },
       page: filters?.page || 1,

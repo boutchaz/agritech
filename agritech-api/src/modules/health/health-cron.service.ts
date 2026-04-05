@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HealthService, ServiceCheckResult } from './health.service';
 import { AlertService } from './alert.service';
@@ -9,9 +9,10 @@ interface ServiceState {
 }
 
 @Injectable()
-export class HealthCronService implements OnModuleInit {
+export class HealthCronService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(HealthCronService.name);
   private readonly serviceStates = new Map<string, ServiceState>();
+  private probeInterval: ReturnType<typeof setInterval> | null = null;
 
   private readonly serviceUrls: Record<string, string>;
   private readonly intervalMs: number;
@@ -38,8 +39,15 @@ export class HealthCronService implements OnModuleInit {
     this.logger.log(
       `[HealthCron] Starting health probe every ${this.intervalMs / 1000}s`,
     );
-    setInterval(() => this.runProbe(), this.intervalMs);
+    this.probeInterval = setInterval(() => this.runProbe(), this.intervalMs);
     setTimeout(() => this.runProbe(), 5000);
+  }
+
+  onModuleDestroy() {
+    if (this.probeInterval) {
+      clearInterval(this.probeInterval);
+      this.probeInterval = null;
+    }
   }
 
   async runProbe(): Promise<void> {

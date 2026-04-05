@@ -19,14 +19,26 @@ import {
   HardDrive,
   Calendar,
   Brain,
+  PanelLeftClose,
+  PanelLeft,
+  ChevronDown,
+  Home,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Separator } from "./ui/separator";
+import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 import { ALL_ROLES, ADMIN_ROLES, ADMIN_AND_MANAGER_ROLES } from "../types/auth";
 import type { RoleName } from "../types/auth";
-
+import { cn } from "../lib/utils";
+import { useSidebarCollapsed } from "../hooks/useSidebarLayout";
 
 interface SettingsMenuItem {
   id: string;
@@ -47,19 +59,72 @@ interface SettingsLayoutProps {
   children: React.ReactNode;
 }
 
-const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
+const SETTINGS_COLLAPSED_KEY = "settingsSidebarCollapsed";
+const SETTINGS_SECTIONS_COLLAPSED_KEY = "settingsSectionsCollapsed";
+
+function loadCollapsedSectionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(SETTINGS_SECTIONS_COLLAPSED_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
+
+const SettingsLayout = ({ children }: SettingsLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mainSidebarCollapsed = useSidebarCollapsed();
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SETTINGS_COLLAPSED_KEY);
+    return saved === "true";
+  });
+  const bothRailsCollapsed = mainSidebarCollapsed && isCollapsed;
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
+    loadCollapsedSectionIds,
+  );
+
+  const toggleCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    localStorage.setItem(SETTINGS_COLLAPSED_KEY, String(newValue));
+    window.dispatchEvent(
+      new CustomEvent("settingsSidebarCollapse", {
+        detail: { collapsed: newValue },
+      }),
+    );
+  };
+
+  const toggleSectionOpen = (sectionId: string) => {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      try {
+        localStorage.setItem(
+          SETTINGS_SECTIONS_COLLAPSED_KEY,
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const isSectionExpanded = (sectionId: string) =>
+    !collapsedSectionIds.has(sectionId);
 
   useEffect(() => {
-    const mainEl = document.querySelector('[data-main-scroll]');
-    if (mainEl) {
-      mainEl.scrollTo({ top: 0 });
-    }
-   
+    const el =
+      document.querySelector("[data-settings-content-scroll]") ??
+      document.querySelector("[data-main-scroll]");
+    el?.scrollTo({ top: 0 });
   }, [location.pathname]);
 
   // Define menu sections with grouped items
@@ -255,41 +320,57 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     const Icon = item.icon;
     const active = isActive(item.path);
 
+    if (isCollapsed) {
+      return (
+        <Tooltip key={item.id}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => handleNavigate(item.path)}
+              data-tour={`settings-${item.id}`}
+              className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300",
+                active
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20"
+                  : "text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+              )}
+            >
+              <Icon className="h-5 w-5 flex-shrink-0" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12} className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl bg-white dark:bg-slate-800 p-3">
+            <p className="font-black text-[10px] uppercase tracking-widest text-slate-900 dark:text-white">{item.name}</p>
+            <p className="text-[10px] font-medium text-slate-400 mt-1 max-w-[180px]">{item.description}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
     return (
       <button
         key={item.id}
         type="button"
         onClick={() => handleNavigate(item.path)}
         data-tour={`settings-${item.id}`}
-        className={`w-full text-start p-3 sm:p-4 rounded-lg transition-colors group ${
+        className={cn(
+          "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 group",
           active
-            ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-            : "hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-        }`}
+            ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 shadow-sm"
+            : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-900 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent"
+        )}
       >
-        <div className="flex items-start gap-3">
-          <Icon
-            className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
-              active
-                ? "text-green-600 dark:text-green-400"
-                : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
-            }`}
-          />
-          <div className="flex-1 min-w-0">
-            <div
-              className={`font-medium text-start text-sm sm:text-base ${active ? "text-green-700 dark:text-green-300" : "text-gray-900 dark:text-white"}`}
-            >
-              {item.name}
-            </div>
-            <div
-              className={`text-xs sm:text-sm mt-1 text-start ${
-                active
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-gray-500 dark:text-gray-400"
-              }`}
-            >
-              {item.description}
-            </div>
+        <div className={cn(
+          "p-2 rounded-xl transition-colors duration-300",
+          active ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="font-black text-[11px] uppercase tracking-widest truncate">
+            {item.name}
+          </div>
+          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-0.5">
+            {item.description}
           </div>
         </div>
       </button>
@@ -298,103 +379,221 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
 
   const renderSections = () =>
     visibleSections.map((section, sectionIndex) => (
-      <div key={section.id} data-tour={`settings-section-${section.id}`}>
-        {sectionIndex > 0 && <Separator className="my-3" />}
-        <div className="px-1 pt-2 pb-1">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            {section.label}
-          </span>
-        </div>
-        <div className="space-y-1">
-          {section.items.map(renderItem)}
-        </div>
+      <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
+        {!isCollapsed && (
+          <div className="px-3 mb-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSectionOpen(section.id)}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1.5 ps-0 pe-2 text-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
+              aria-expanded={isSectionExpanded(section.id)}
+            >
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-slate-900 transition-transform duration-200 dark:text-slate-100",
+                  !isSectionExpanded(section.id) && "-rotate-90",
+                )}
+              />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100 truncate">
+                {section.label}
+              </span>
+            </button>
+            {sectionIndex === 0 && (
+              <div className="h-px min-w-[2rem] flex-1 bg-slate-100 dark:bg-slate-800 opacity-50" />
+            )}
+          </div>
+        )}
+        {(isCollapsed || isSectionExpanded(section.id)) && (
+          <div
+            className={cn(
+              "space-y-1",
+              isCollapsed && "flex flex-col items-center gap-2",
+            )}
+          >
+            {section.items.map(renderItem)}
+          </div>
+        )}
       </div>
     ));
 
   return (
-    <div className="flex h-full relative">
-      {/* Desktop Settings Sidebar */}
-      <div className="hidden md:block w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t("settings.title")}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t("settings.subtitle")}
-          </p>
-        </div>
-        <nav className="p-4" data-tour="settings-menu">
-          {renderSections()}
-        </nav>
-      </div>
+    <div className="relative flex min-h-0 h-full min-w-0 w-full flex-1 flex-col bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
+      {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
+      <TooltipProvider delayDuration={200}>
+        <div
+          className={cn(
+            "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
+            /* Match parent row height (inside main), not 100dvh — dvh was taller than the scroll
+               port and clipped the collapse footer on tablet / devtools iPad frames. */
+            "md:flex md:min-h-0 md:h-full md:max-h-full md:self-stretch",
+            isCollapsed ? (bothRailsCollapsed ? "w-16" : "w-20") : "w-80",
+          )}
+        >
+          {/* Header */}
+          <div className={cn("flex-shrink-0 p-4 pt-5 sm:p-6", isCollapsed && "px-3")}>
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate({ to: "/dashboard" })}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
+                  aria-label={t("settings.backToDashboard", "Return to Dashboard")}
+                >
+                  <Home className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
+                  aria-label={t("sidebar.expand", "Expand sidebar")}
+                >
+                  <PanelLeft className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 dark:border-emerald-800 dark:bg-emerald-900/30 sm:p-3">
+                    <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400 sm:h-6 sm:w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg font-black uppercase leading-none tracking-tight text-slate-900 dark:text-white sm:text-xl">
+                      {t("settings.title")}
+                    </h1>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Workspace Management
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-10 w-10 shrink-0 rounded-xl text-slate-900 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  aria-label={t("sidebar.collapse", "Collapse sidebar")}
+                >
+                  <PanelLeftClose className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+          </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
-        {/* Mobile section bar — tap to open Drawer */}
-        <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+          <Separator
+            className={cn("w-auto opacity-50", isCollapsed ? "mx-3" : "mx-6")}
+          />
+
+          {/* Navigation */}
+          <nav
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto py-4 no-scrollbar sm:py-6",
+              isCollapsed ? "px-3" : "px-4",
+            )}
+            data-tour="settings-menu"
+          >
+            {renderSections()}
+          </nav>
+
+          {/* Collapse Toggle (duplicate control for mouse users) */}
+          <div className="flex-shrink-0 border-t border-slate-100 p-3 dark:border-slate-800 sm:p-4">
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn(
+                "h-11 w-full rounded-2xl text-slate-900 transition-all hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:h-12",
+                isCollapsed ? "justify-center px-0" : "justify-start px-3 sm:px-4",
+              )}
+              onClick={toggleCollapse}
+            >
+              {isCollapsed ? (
+                <PanelLeft className="h-5 w-5" />
+              ) : (
+                <>
+                  <PanelLeftClose className="mr-2 h-5 w-5 shrink-0 sm:mr-3" />
+                  <span className="truncate text-[10px] font-black uppercase tracking-widest sm:text-[11px]">
+                    {t("sidebar.collapse", "Collapse Sidebar")}
+                  </span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </TooltipProvider>
+
+      {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
+      <div
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
+        data-settings-content-scroll
+      >
+        {/* Mobile section title bar */}
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-between w-full min-h-[44px]"
+            className="flex items-center justify-between w-full h-11 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner"
           >
             <div className="flex items-center gap-3">
               {(() => {
-                const currentItem = allVisibleItems.find((item) =>
-                  isActive(item.path),
-                );
+                const currentItem = allVisibleItems.find((item) => isActive(item.path));
                 if (currentItem) {
                   const Icon = currentItem.icon;
                   return (
                     <>
-                      <Icon className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                        <Icon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
                         {currentItem.name}
                       </span>
                     </>
                   );
                 }
                 return (
-                  <>
-                    <Menu className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {t("settings.title")}
-                    </span>
-                  </>
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                    {t("settings.title")}
+                  </span>
                 );
               })()}
             </div>
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <span className="text-sm">
-                {t("settings.menu.changeSection", "Menu")}
-              </span>
-              <Menu className="h-5 w-5" />
-            </div>
+            <ChevronDown className="h-4 w-4 text-slate-400" />
           </button>
         </div>
-        {children}
+        
+        <div className="flex-1 px-3 pt-3 pb-24 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-8 md:px-6 md:pt-6 lg:p-10 lg:pb-10 min-w-0">
+          {children}
+        </div>
       </div>
 
       {/* Mobile Settings Drawer */}
       <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-        <DrawerContent side="bottom" hideClose className="max-h-[80vh] rounded-t-2xl p-0">
-          <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+        <DrawerContent side="bottom" hideClose className="max-h-[85vh] rounded-t-[2.5rem] p-0 bg-white dark:bg-slate-900 border-none shadow-2xl">
+          <DrawerHeader className="px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
             <div className="flex items-center justify-between">
-              <DrawerTitle className="text-base font-semibold">
-                {t("settings.title")}
-              </DrawerTitle>
-              <button
-                type="button"
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <DrawerTitle className="text-lg font-black uppercase tracking-tight">
+                  {t("settings.title")}
+                </DrawerTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="p-2 -me-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label={t("common.close", "Close")}
+                className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800"
               >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+                <X className="h-5 w-5 text-slate-400" />
+              </Button>
             </div>
           </DrawerHeader>
           <div
-            className="overflow-y-auto px-3 py-2"
-            style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+            className="overflow-y-auto px-4 py-6 no-scrollbar"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 24px)" }}
           >
             <button
               type="button"
@@ -402,14 +601,14 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
                 navigate({ to: "/" });
                 setIsMobileMenuOpen(false);
               }}
-              className="w-full text-start p-3 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 mb-2"
+              className="w-full flex items-center gap-4 p-4 rounded-[1.5rem] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-inner mb-8 group"
             >
-              <div className="flex items-center gap-3">
-                <ArrowLeft className="h-5 w-5 flex-shrink-0 text-gray-600 dark:text-gray-300" />
-                <span className="font-medium text-sm text-gray-900 dark:text-white">
-                  {t("settings.backToDashboard", "Back to Dashboard")}
-                </span>
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm group-active:scale-95 transition-all">
+                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
+              <span className="font-black text-xs uppercase tracking-[0.15em] text-slate-900 dark:text-white">
+                {t("settings.backToDashboard", "Return to Dashboard")}
+              </span>
             </button>
             {renderSections()}
           </div>

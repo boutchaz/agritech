@@ -627,7 +627,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <div>
                     <Calendar className="inline h-3 w-3 mr-1" />
                     {format(new Date(record.work_date), 'MMM dd, yyyy')}

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { UsersService, CreateUserProfileDto } from './users.service';
 import { DatabaseService } from '../database/database.service';
+import { FilesService } from '../files/files.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -91,6 +92,13 @@ describe('UsersService', () => {
       providers: [
         UsersService,
         { provide: DatabaseService, useValue: mockDatabaseService },
+        {
+          provide: FilesService,
+          useValue: {
+            upsertFileRegistryEntry: jest.fn().mockResolvedValue({}),
+            deleteRegistryEntryByBucketPath: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 

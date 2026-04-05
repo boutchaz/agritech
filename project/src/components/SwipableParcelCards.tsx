@@ -21,13 +21,13 @@ interface SwipableParcelCardsProps {
   onParcelSelect?: (parcel: Parcel) => void;
 }
 
-const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
+const SwipableParcelCards = ({
   parcels,
   className = '',
   variant = 'default',
   selectedParcel = null,
   onParcelSelect
-}) => {
+}: SwipableParcelCardsProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
@@ -311,8 +311,8 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
                         Attention requise:
                       </h4>
                       <div className="space-y-1">
-                        {data.issues.map((issue, idx) => (
-                          <div key={idx} className="flex items-center space-x-2 text-xs text-yellow-700 dark:text-yellow-400">
+                        {data.issues.map((issue) => (
+                          <div key={issue} className="flex items-center space-x-2 text-xs text-yellow-700 dark:text-yellow-400">
                             <AlertTriangle className="h-3 w-3" />
                             <span>{issue}</span>
                           </div>
@@ -359,15 +359,11 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
       {/* Pagination dots */}
       {parcels.length > 1 && (
         <div className="flex justify-center space-x-2 mt-4">
-          {parcels.map((_, index) => (
-            <Button
-              key={index}
+          {parcels.map((parcel, index) => (
+            <Button variant="green"
+              key={"dot-" + parcel.id}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex
-                  ? 'bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-              }`}
+              className={`w-2 h-2 rounded-full transition-colors ${ index === currentIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
             />
           ))}
         </div>

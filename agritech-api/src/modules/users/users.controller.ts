@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param, Delete, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Body, UseGuards, Request, Param, Delete, UseInterceptors, UploadedFile, BadRequestException, Headers } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -127,19 +127,26 @@ export class UsersController {
     @ApiResponse({ status: 200, description: 'Avatar uploaded successfully' })
     @ApiResponse({ status: 400, description: 'Invalid file' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    async uploadAvatar(@Request() req, @UploadedFile() file: Express.Multer.File) {
+    async uploadAvatar(
+        @Request() req,
+        @UploadedFile() file: Express.Multer.File,
+        @Headers('x-organization-id') organizationId?: string,
+    ) {
         if (!file) {
             throw new BadRequestException('No file provided');
         }
-        return this.usersService.uploadAvatar(req.user.id, file);
+        return this.usersService.uploadAvatar(req.user.id, file, organizationId);
     }
 
     @Delete('me/avatar')
     @ApiOperation({ summary: 'Remove user avatar' })
     @ApiResponse({ status: 200, description: 'Avatar removed successfully' })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    async removeAvatar(@Request() req) {
-        return this.usersService.removeAvatar(req.user.id);
+    async removeAvatar(
+        @Request() req,
+        @Headers('x-organization-id') organizationId?: string,
+    ) {
+        return this.usersService.removeAvatar(req.user.id, organizationId);
     }
 
     @Get('organizations/:organizationId/users')

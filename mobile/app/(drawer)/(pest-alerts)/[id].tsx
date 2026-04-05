@@ -8,8 +8,8 @@ import {
   Pressable,
   Alert,
   RefreshControl,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -197,8 +197,8 @@ export default function PestReportDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('pestAlerts.photos', { defaultValue: 'Photos' })}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photoScroll}>
-              {report.photo_urls.map((url, idx) => (
-                <Image key={idx} source={{ uri: url }} style={styles.photo} resizeMode="cover" />
+              {report.photo_urls.map((url) => (
+                <Image key={url} source={{ uri: url }} style={styles.photo} contentFit="cover" />
               ))}
             </ScrollView>
           </View>

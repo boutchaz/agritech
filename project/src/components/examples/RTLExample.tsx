@@ -5,11 +5,11 @@
  * Use this as a reference when building RTL-aware components.
  */
 
-import React from 'react';
+
 import { ChevronRight, User, Mail, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-const RTLExample: React.FC = () => {
+const RTLExample = () => {
   return (
     <div className="space-y-8 p-6">
       {/* Example 1: Card with Icon */}
@@ -106,13 +106,13 @@ const RTLExample: React.FC = () => {
         <h3 className="text-lg font-semibold mb-4 text-start">Example 4: Grid with Cards</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="border rounded-lg p-4">
+          {[1, 2, 3].map((_, cardIdx) => (
+            <div key={"card-" + cardIdx} className="border rounded-lg p-4">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center">
-                  <span className="text-primary-600 dark:text-primary-400 font-bold">{i}</span>
+                  <span className="text-primary-600 dark:text-primary-400 font-bold">{cardIdx}</span>
                 </div>
-                <h4 className="font-semibold text-start">Card {i}</h4>
+                <h4 className="font-semibold text-start">Card {cardIdx}</h4>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 text-start">
                 This is a sample card demonstrating RTL-aware grid layout with proper spacing.

@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateBiologicalAssetDto, BiologicalAssetStatus } from './dto';
 import { BiologicalAssetFiltersDto } from './dto/biological-asset-filters.dto';
 
@@ -24,10 +25,10 @@ export class BiologicalAssetsService {
       query = query.eq('status', filters.status);
     }
     if (filters.variety) {
-      query = query.ilike('variety', `%${filters.variety}%`);
+      { const sv = sanitizeSearch(filters.variety); if (sv) query = query.ilike('variety', `%${sv}%`); }
     }
     if (filters.rootstock) {
-      query = query.ilike('rootstock', `%${filters.rootstock}%`);
+      { const sr = sanitizeSearch(filters.rootstock); if (sr) query = query.ilike('rootstock', `%${sr}%`); }
     }
     if (filters.farm_id) {
       query = query.eq('farm_id', filters.farm_id);
@@ -48,7 +49,8 @@ export class BiologicalAssetsService {
       query = query.lte('planting_date', filters.planting_date_to);
     }
     if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,notes.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`name.ilike.%${s}%,notes.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting

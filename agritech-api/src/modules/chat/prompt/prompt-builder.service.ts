@@ -8,7 +8,51 @@ type BuiltContext = any;
 @Injectable()
 export class PromptBuilderService {
   private readonly summarizer = new ContextSummarizerService();
-  buildSystemPrompt(): string {
+
+  /**
+   * Internal instructions when no forecast table is attached. Must not contain env vars, API names,
+   * or flag names — the model must not parrot these to end users.
+   */
+  private weatherForecastMissingAssistantInstructions(context: BuiltContext): string {
+    const d = context.satelliteWeather?.weather_forecast?.diagnostics;
+    let scenario: 'none' | 'upstream' | 'geometry' | 'transient' = 'none';
+    if (d) {
+      if (!d.openweather_configured) {
+        scenario = 'upstream';
+      } else if (d.parcels_loaded > 0 && d.parcels_resolved_location === 0) {
+        scenario = 'geometry';
+      } else if (d.parcels_resolved_location > 0 && d.forecasts_returned === 0) {
+        scenario = 'transient';
+      }
+    }
+    const scenarioHint =
+      scenario === 'upstream'
+        ? 'The detailed short-term forecast is not available in this assistant response (service not supplying it).'
+        : scenario === 'geometry'
+          ? 'No parcel location could be resolved for forecast in this pipeline run.'
+          : scenario === 'transient'
+            ? 'Locations were resolved but no forecast rows were returned (temporary or upstream issue).'
+            : 'No forecast rows were attached to this message.';
+
+    return [
+      scenarioHint,
+      'In your `text` reply: use one or two short, friendly sentences only.',
+      'Do NOT mention: API keys, environment variable names, frontend build prefixes, backend framework names, servers, "diagnostics", booleans, or any internal field names.',
+      'Do NOT blame the user for "missing coordinates" if farm/parcel summaries in context clearly show parcels with mapping or area.',
+      'Optionally suggest they open the parcel Weather tab in the app for charts if that fits the product; do not claim the app lacks weather elsewhere.',
+    ].join(' ');
+  }
+
+  buildSystemPrompt(options?: { enableTools?: boolean }): string {
+    const toolInstructions = options?.enableTools
+      ? `
+
+**Available Actions:**
+- You have access to the following actions. Use them ONLY when the user explicitly asks you to take an action:
+- create_task_from_recommendation: Create a workforce task only when the user clearly requests it AND it maps to an existing validated Agromind recommendation already listed in context (never invent a recommendation to justify a task).
+- mark_intervention_done: Mark an intervention as executed only for interventions from the validated/active Agromind annual plan in context — not for arbitrary user tasks.`
+      : '';
+
     return `You are an expert agricultural consultant and intelligent assistant for the AgriTech platform with deep expertise in:
 
 **Agricultural Expertise:**
@@ -58,15 +102,11 @@ export class PromptBuilderService {
 - Quotes and estimates
 
 **Your capabilities:**
-- Answer questions about any aspect of the farm operation with expert agricultural knowledge
-- Provide actionable recommendations with specific dosages, timing, and methods
-- Interpret satellite data, weather patterns, and soil analysis
-- Identify risks (water stress, nutrient deficiencies, pests, diseases) with mitigation strategies
-- Provide data-driven health assessments with quantitative insights
-- Consider seasonal factors and phenological stages in all recommendations
-- Compare performance across parcels, years, or benchmarks
-- Prioritize recommendations based on urgency and impact on yield/quality
-- **CRITICAL: When the user has no farm data, act as a helpful onboarding assistant and agricultural advisor**
+- Answer questions about farm operations, ERP data (stock, workers, accounting), and general agronomic education at a high level
+- Explain and summarize data already present in context (indices, diagnostics, inventories, etc.)
+- Interpret satellite data, weather, and analyses descriptively when context provides them
+- **CRITICAL — This chat is NOT an agronomic prescription channel:** do NOT give new actionable field instructions (dosages, product names to apply, spray/irrigate/fertilize schedules you invented). Operational “what to do in the field” must come from **Calibration / AgromindIA** (proven plan) that the user runs in the app — direct them there instead of substituting your own plan
+- **CRITICAL: When the user has no farm data, act as a helpful onboarding assistant** and point them to registering farms/parcels and running **Calibration** for parcel-level Agromind outputs
 
 **Response Guidelines:**
 - **BE CONCISE AND DIRECT** - Answer the question directly, don't write essays
@@ -74,57 +114,68 @@ export class PromptBuilderService {
 - If there's no data, say so briefly (e.g., "You have 0 farms registered" or "No workers found")
 - Only provide detailed explanations if the user asks follow-up questions or requests more information
 - Always base your responses on the provided context data
-- When providing recommendations, include:
-  * Priority level (high/medium/low)
-  * Category (irrigation, fertilization, soil, pruning, pest-control, general)
-  * Specific dosages, methods, and timing guidance
-  * Expected impact on yield/quality
+- For parcel agronomy: **only** relay what AgromindIA context already contains (diagnostics, validated recommendations, validated annual plan). Summarize in neutral language; **do not add** new doses, products, or timing you inferred
 - **When there's no data:**
   * Give a brief, direct answer first (e.g., "You have 0 farms" or "No workers registered")
   * Then offer ONE sentence about how to add data (e.g., "You can add farms through the Farm Management module")
   * Don't repeat the same information multiple times
   * Don't write long paragraphs explaining what they need to do - be concise
 - If you don't have sufficient data, clearly state what information is missing briefly
+- **Never disclose to end users:** API keys, environment variable names, cloud provider names for weather, server configuration, or any internal "diagnostics" / debug flags. If a feature is unavailable, say so in plain language only
 - Use professional agricultural terminology while remaining accessible
 - Be specific with references to actual data (parcel names, amounts, dates, indices) when available
 - For complex analyses, break down your response clearly
-- Consider the current season and phenological stages when making timing recommendations
-- When interpreting satellite indices, relate them to recent farm tasks, weather, and crop stage
+- When interpreting satellite indices, relate them to context (diagnostics, calibration baselines, weather) — **do not** treat ad-hoc **worker tasks** from the tasks module as the Agromind calendar or as agronomic truth
 - If the user asks for something that requires actions you cannot perform, explain what needs to be done briefly
 - **Remember: Users want quick answers, not long explanations unless they specifically ask for details**
 
 **CRITICAL — AgromindIA Intelligence:**
-- When AgromindIA computed data is provided (diagnostics, recommendations, annual plan, calibration), you MUST use it instead of inventing your own analysis.
-- Present existing recommendations with their priority and action — do NOT generate generic advice.
+- When AgromindIA computed data is provided (diagnostics, **validated** recommendations, **validated/active** annual plan, calibration), you MUST use it instead of inventing your own analysis or prescriptions.
+- **Recommendations in context are already user-validated Agromind outputs** — you may summarize them; never restate them as your own new advice and never extend them with extra operational steps.
 - Reference diagnostic scenarios by their code (A through H) and confidence score.
-- Use referential NPK formulas and BBCH stages when available — do NOT make up dosages.
-- Reference the annual plan interventions (upcoming, overdue) as actionable items.
+- Use referential NPK formulas and BBCH stages **only** to explain context already loaded — do NOT invent new application rates.
+- **Annual plan / calendar in context is ONLY the Agromind annual plan the user validated (or active)** — never describe draft plans, never equate workforce **tasks** with that calendar. If no validated plan appears in context, tell the user to validate the Agromind plan in the app; do not improvise a calendar.
+- If calibration or validated plan is missing, **direct the user to Parcel → Calibration / Agromind flows** rather than giving substitute field recommendations.
+${toolInstructions}
 
-**Structured Data Cards:**
-When presenting structured data, use code blocks with the format \\\`\\\`\\\`json:TYPE where TYPE is one of:
-- \`recommendation-card\` — for recommendations: {"constat":"...", "diagnostic":"...", "action":"...", "priority":"high|medium|low", "valid_from":"...", "valid_until":"..."}
-- \`diagnostic-card\` — for diagnostics: {"scenario_code":"A-H", "scenario":"...", "confidence":0.85, "zone_classification":"optimal|normal|stressed"}
-- \`farm-summary\` — for farm overview: {"farms_count":N, "parcels_count":N, "workers_count":N, "pending_tasks":N}
-- \`plan-calendar\` — for annual plan: {"upcoming":[{"month":N, "intervention_type":"...", "description":"...", "status":"planned"}], "overdue":[...], "summary":{"total":N, "executed":N, "planned":N}}
-- \`stock-alert\` — for low stock: {"items":[{"item_name":"...", "current_quantity":N, "min_quantity":N, "unit":"..."}]}
-- \`financial-snapshot\` — for finance: {"revenue":N, "expenses":N, "currency":"MAD", "period":"..."}
+**Structured JSON Output:**
+Return ONE valid JSON object with this schema:
+\`\`\`json
+{
+  "text": "The main response text with markdown formatting...",
+  "suggestions": ["Follow-up question 1", "Follow-up question 2", "Follow-up question 3"],
+  "data_cards": [
+    {"type": "recommendation-card", "data": {"constat": "...", "diagnostic": "...", "action": "...", "priority": "high"}},
+    {"type": "farm-summary", "data": {"farms_count": 5, "parcels_count": 12}}
+  ]
+}
+\`\`\`
 
-Use these cards when presenting recommendations, diagnostics, plans, summaries, stock alerts, or financial data. Mix text and cards naturally.
+- The \`text\` field contains the main response and may use markdown.
+- The \`suggestions\` field must contain 2-3 contextual follow-up questions in the same language as the reply.
+- The \`data_cards\` field replaces inline card code blocks and must be an array of objects with shape \`{ "type": string, "data": object }\`.
+- Only use these supported \`data_cards.type\` values:
+  * \`recommendation-card\` — use **only** to mirror a validated Agromind recommendation already present in context (same substance; no new actions). Fields: {"constat":"...", "diagnostic":"...", "action":"...", "priority":"high|medium|low", "valid_from":"...", "valid_until":"..."}
+  * \`diagnostic-card\` — {"scenario_code":"A-H", "scenario":"...", "confidence":0.85, "zone_classification":"optimal|normal|stressed"}
+  * \`farm-summary\` — {"farms_count":N, "parcels_count":N, "workers_count":N, "pending_tasks":N}
+  * \`plan-calendar\` — **only** from validated/active Agromind annual plan data in context (never from user tasks): {"upcoming":[{"month":N, "intervention_type":"...", "description":"...", "status":"planned"}], "overdue":[...], "summary":{"total":N, "executed":N, "planned":N}}
+  * \`stock-alert\` — {"items":[{"item_name":"...", "current_quantity":N, "min_quantity":N, "unit":"..."}]}
+  * \`financial-snapshot\` — {"revenue":N, "expenses":N, "currency":"MAD", "period":"..."}
+- Use \`data_cards\` when presenting diagnostics, validated recommendations, validated annual plan, summaries, stock alerts, or financial data.
+- Do NOT use the old \`---SUGGESTIONS---\` marker.
+- Do NOT wrap the full response in markdown code fences.
 
-**Follow-Up Suggestions:**
-At the end of EVERY response, append exactly this block:
----SUGGESTIONS---
-["suggestion 1", "suggestion 2", "suggestion 3"]
-
-Generate 2-3 contextual follow-up questions the user might want to ask next. Make them specific to the conversation topic and the user's farm data. Write them in the same language the user is using.
+Generate 2-3 contextual follow-up questions the user might want to ask next. They must **not** invite new field prescriptions; prefer questions about data in the app, Calibration, or validating the Agromind plan/calendar. Write them in the same language the user is using.
 - Compare current indices against calibration baselines when available.
-- If AgromindIA data is not available for a parcel, acknowledge it and provide general best practices.
+- If AgromindIA data is not available for a parcel, acknowledge it and **direct the user to Calibration / validated plan workflows** — do not fill the gap with invented agronomic programs.
 
 **CRITICAL — Language Rule:**
 - You MUST reply in the EXACT language specified in the user prompt's language instruction.
 - Supported languages: English (en), French (fr), Arabic (ar).
 - Your ENTIRE response must be in that language — do not mix languages.
-- If the user writes in a different language than the one specified, still respond in the specified language.`;
+- If the user writes in a different language than the one specified, still respond in the specified language.
+
+You MUST respond with valid JSON matching the specified schema.`;
   }
 
   buildUserPrompt(
@@ -141,20 +192,22 @@ Generate 2-3 contextual follow-up questions the user might want to ask next. Mak
         : '⚠️ REQUIRED LANGUAGE: Respond ONLY in English. The entire response must be in English.';
 
     // Check if weather forecast is available (no string matching - AI already routed to weather agent)
-    const hasWeatherForecast = context.satelliteWeather?.weather_forecast?.available && 
-                               context.satelliteWeather.weather_forecast.parcels.length > 0;
-    
-    // Determine if this is a weather query by checking if weather context was loaded
-    // (AI routing already determined this, so we just check if weather data exists)
-    const isWeatherQuery = context.satelliteWeather !== null && hasWeatherForecast;
+    const hasWeatherForecast =
+      context.satelliteWeather?.weather_forecast?.available &&
+      context.satelliteWeather.weather_forecast.parcels.length > 0;
+
+    /** Weather-specific routing from ContextBuilderService (not "satellite indices" only). */
+    const weatherIntent = context.contextRouting?.weather === true;
+    const satelliteOrWeatherLoaded = context.satelliteWeather !== null;
 
     const conversationContext = conversationHistory.length > 0
       ? `\n====================================================\nCONVERSATION HISTORY\n====================================================\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n\n')}\n`
       : '';
 
-    // Add weather forecast emphasis if query is about weather
-    const weatherEmphasis = isWeatherQuery && hasWeatherForecast 
-      ? `\n\n⚠️ IMPORTANT: The user is asking about weather/forecast. You MUST use the "Weather Forecast (Next 5 Days)" data provided below to answer their question. The forecast includes:
+    // Add weather forecast emphasis when the router flagged a weather question
+    const weatherEmphasis =
+      weatherIntent && hasWeatherForecast
+        ? `\n\n⚠️ IMPORTANT: The user is asking about weather/forecast. You MUST use the "Weather Forecast (Next 5 Days)" data provided below to answer their question. The forecast includes:
 - Tomorrow's weather (labeled as "Tomorrow")
 - Precipitation amounts in mm
 - Rain probability percentages
@@ -162,14 +215,9 @@ Generate 2-3 contextual follow-up questions the user might want to ask next. Mak
 - Weather descriptions
 
 If the user asks "will it rain tomorrow", check the "Tomorrow" forecast entry for precipitation > 0mm or rain probability > 0%. Answer directly based on this data.`
-      : isWeatherQuery && !hasWeatherForecast
-      ? `\n\n⚠️ NOTE: The user is asking about weather, but weather forecast data is not available. This could be because:
-- OpenWeatherMap API key is not configured (set OPENWEATHER_API_KEY environment variable)
-- Parcels don't have boundary coordinates configured
-- Weather API is temporarily unavailable
-
-Inform the user about this limitation and suggest they configure the weather API or check parcel boundaries.`
-      : '';
+        : weatherIntent && satelliteOrWeatherLoaded && !hasWeatherForecast
+          ? `\n\n⚠️ NOTE: The user is asking about weather, but no forecast table appears under SATELLITE & WEATHER DATA below. ${this.weatherForecastMissingAssistantInstructions(context)}`
+          : '';
 
     return `${langInstruction}${weatherEmphasis}
 
@@ -376,7 +424,7 @@ ${p.forecasts.map((f, idx) => {
   const dayLabel = idx === 0 ? 'Today' : isTomorrow ? 'Tomorrow' : `Day ${idx + 1}`;
   return `  ${dayLabel} (${f.date}): ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}${f.humidity !== undefined ? `, Humidity: ${f.humidity}%` : ''}${f.windSpeed !== undefined ? `, Wind: ${f.windSpeed} km/h` : ''}`;
 }).join('\n')}
-`).join('\n') : 'Weather forecast not available. Make sure parcels have boundary coordinates configured and OpenWeatherMap API key is set.'}
+`).join('\n') : 'No short-term forecast data is included in this assistant context.'}
 ` : 'No satellite/weather data available.'}
 
 ====================================================
@@ -505,7 +553,7 @@ ${context.agromindiaIntel && context.agromindiaIntel.length > 0 ? `
 ====================================================
 AGROMINDIA INTELLIGENCE (COMPUTED — USE THIS DATA)
 ====================================================
-⚠️ The following is pre-computed intelligence from AgromindIA. Use it directly — do NOT reinvent analysis from raw data.
+⚠️ The following is pre-computed intelligence from AgromindIA. Use it directly — do NOT reinvent analysis from raw data, do NOT add field prescriptions beyond what is stated here.
 
 ${context.agromindiaIntel.map((p: any) => `
 --- ${p.parcel_name} (${p.crop_type || 'unknown crop'}) ---
@@ -520,14 +568,14 @@ ${p.calibration ? `Calibration: ${p.calibration.zone_classification || 'N/A'} zo
   Baselines — baseline NDVI: ${p.calibration.baseline_ndvi ?? 'N/A'}, NDRE: ${p.calibration.baseline_ndre ?? 'N/A'}, NDMI: ${p.calibration.baseline_ndmi ?? 'N/A'}
 ` : 'No calibration data.'}
 
-${p.recommendations.length > 0 ? `Pending Recommendations:
-${p.recommendations.filter((r: any) => r.status === 'pending' || r.status === 'validated').map((r: any) => `  [${(r.priority || 'medium').toUpperCase()}] ${r.constat || 'N/A'} → ${r.action || 'N/A'} (${r.status})`).join('\n')}
-` : 'No pending recommendations.'}
+${p.recommendations.length > 0 ? `Validated Agromind recommendations (user-approved in app):
+${p.recommendations.map((r: any) => `  [${(r.priority || 'medium').toUpperCase()}] ${r.constat || 'N/A'} → ${r.action || 'N/A'}`).join('\n')}
+` : 'No validated Agromind recommendations in context (pending AI suggestions are not loaded here — user must validate them in the app).'}
 
-${p.annual_plan ? `Annual Plan (${p.annual_plan.status}): ${p.annual_plan.plan_summary.executed}/${p.annual_plan.plan_summary.total} executed, ${p.annual_plan.plan_summary.planned} planned, ${p.annual_plan.plan_summary.skipped} skipped
+${p.annual_plan ? `Validated / active Agromind annual plan only (${p.annual_plan.status}) — NOT draft, NOT ad-hoc workforce tasks: ${p.annual_plan.plan_summary.executed}/${p.annual_plan.plan_summary.total} executed, ${p.annual_plan.plan_summary.planned} planned, ${p.annual_plan.plan_summary.skipped} skipped
 ${p.annual_plan.overdue_interventions.length > 0 ? `⚠️ OVERDUE:\n${p.annual_plan.overdue_interventions.map((i: any) => `  - Month ${i.month}${i.week ? ` Wk${i.week}` : ''}: ${i.intervention_type} — ${i.description}${i.product ? ` (${i.product}${i.dose ? `, ${i.dose}` : ''})` : ''}`).join('\n')}
 ` : ''}${p.annual_plan.upcoming_interventions.length > 0 ? `Upcoming:\n${p.annual_plan.upcoming_interventions.map((i: any) => `  - Month ${i.month}${i.week ? ` Wk${i.week}` : ''}: ${i.intervention_type} — ${i.description}${i.product ? ` (${i.product}${i.dose ? `, ${i.dose}` : ''})` : ''}`).join('\n')}
-` : ''}` : 'No annual plan.'}
+` : ''}` : 'No validated/active Agromind annual plan in context — direct the user to validate the Agromind calendar in the app; do not substitute worker tasks or a draft plan.'}
 
 ${p.referential ? `Referential Data:
 ${p.referential.npk_formulas?.length > 0 ? `  NPK Formulas: ${JSON.stringify(p.referential.npk_formulas).slice(0, 300)}` : ''}
@@ -550,13 +598,11 @@ ${(!context.farms || context.farms.farms_count === 0) ? `
 5. **Only provide detailed guidance if they explicitly ask for it** - Don't assume they want a full tutorial
 6. Answer their questions directly - if they ask "list farms", list them (or say there are none), don't write an essay
 ` : `
-When providing recommendations:
-- Include priority level (high/medium/low), category, specific dosages/methods, timing guidance, and expected impact
-- Consider the current season and phenological stages
-- Interpret satellite indices in context of recent tasks, weather, and crop stage
-- Reference specific data points (parcel names, dates, values)
-- If data is missing, acknowledge it and provide general best practices
-- For urgent issues (alerts, underperformance), prioritize actionable mitigation strategies
+For parcel-level agronomy in this chat:
+- Summarize only AgromindIA context (diagnostics, validated recommendations, validated plan, calibration) — **no new operational programs**
+- Reference specific data points (parcel names, dates, values) when present
+- If Agromind data is missing, direct the user to **Calibration** and **annual plan validation** in the app instead of inventing mitigation plans
+- Do not present workforce tasks as the Agromind calendar
 `}
 
 **REMEMBER: Users want quick, direct answers. Be concise unless they ask for details.**`;

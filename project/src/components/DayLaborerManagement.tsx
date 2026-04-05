@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workersApi, type Worker } from '../lib/api/workers';
@@ -34,7 +34,7 @@ interface DayLaborer {
   farm_id: string;
 }
 
-const DayLaborerManagement: React.FC = () => {
+const DayLaborerManagement = () => {
   const { currentFarm, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const farmId = currentFarm?.id;
@@ -321,7 +321,8 @@ const DayLaborerManagement: React.FC = () => {
           type="button"
           onClick={() => setShowAddModal(true)}
           disabled={!currentFarm?.id}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+          variant={currentFarm?.id ? 'green' : undefined}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
           title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter un ouvrier' : undefined}
         >
           <Plus className="h-5 w-5" />
@@ -345,10 +346,10 @@ const DayLaborerManagement: React.FC = () => {
         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
           <User className="h-12 w-12 text-gray-400" />
           <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun ouvrier pour l’instant.</p>
-          <Button
+          <Button variant="green"
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            className="mt-6 px-4 py-2 rounded-md"
           >
             Ajouter votre premier ouvrier
           </Button>
@@ -571,11 +572,7 @@ const DayLaborerManagement: React.FC = () => {
               >
                 Annuler
               </Button>
-              <Button
-                type="button"
-                onClick={handleAddLaborer}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
+              <Button variant="green" type="button" onClick={handleAddLaborer} className="px-4 py-2 text-sm font-medium rounded-md" >
                 Ajouter
               </Button>
             </div>
@@ -761,10 +758,10 @@ const DayLaborerManagement: React.FC = () => {
               >
                 Annuler
               </Button>
-              <Button
+              <Button variant="green"
                 type="button"
                 onClick={() => handleUpdateLaborer(editingLaborer)}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
+                className="px-4 py-2 text-sm font-medium rounded-md"
               >
                 Enregistrer
               </Button>

@@ -108,9 +108,9 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
               <div>
                 <span className="font-medium">{t('dialogs.orderLabService.parameters')}:</span>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {service.parameters_tested.map((param: string, idx: number) => (
+                  {service.parameters_tested.map((param: string) => (
                     <span
-                      key={idx}
+                      key={param}
                       className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-200 dark:border-gray-600"
                     >
                       {param}

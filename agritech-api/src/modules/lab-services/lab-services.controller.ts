@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { LabServicesService } from './lab-services.service';
 import {
   LabServiceOrderFiltersDto,
@@ -30,7 +31,7 @@ import {
 @ApiTags('Lab Services')
 @ApiBearerAuth()
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class LabServicesController {
   constructor(private readonly labServicesService: LabServicesService) {}
 

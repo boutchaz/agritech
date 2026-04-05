@@ -36,6 +36,7 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { cn } from "../lib/utils";
 import { isRTLLocale } from "../lib/is-rtl-locale";
+import { useSidebarMargin } from "../hooks/useSidebarLayout";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface SidebarProps {
@@ -48,17 +49,86 @@ interface SidebarProps {
 
 const SIDEBAR_COLLAPSED_KEY = "sidebarCollapsed";
 
-const Sidebar: React.FC<SidebarProps> = ({
+type PopoverNavItemProps = {
+  path: string;
+  label: string;
+  isActive: boolean;
+  onNavigate: (path: string, e?: React.MouseEvent) => void;
+};
+
+function PopoverNavItem({
+  path,
+  label,
+  isActive,
+  onNavigate,
+}: PopoverNavItemProps) {
+  return (
+    <Button
+      variant="ghost"
+      className={cn(
+        "w-full h-8 justify-start text-sm text-slate-900 dark:text-slate-100",
+        isActive &&
+          "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400",
+      )}
+      onClick={(e) => onNavigate(path, e)}
+    >
+      {label}
+    </Button>
+  );
+}
+
+type CollapsedSectionPopoverProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
+  isRTL: boolean;
+};
+
+function CollapsedSectionPopover({
+  icon: Icon,
+  title,
+  children,
+  isRTL,
+}: CollapsedSectionPopoverProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          className={cn(
+            "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-0 text-slate-900 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+          )}
+        >
+          <Icon className="h-5 w-5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        side={isRTL ? "left" : "right"}
+        align="start"
+        sideOffset={8}
+        className="w-48 p-1 bg-white dark:bg-slate-900"
+      >
+        <div className="px-2 py-1.5 text-sm font-medium text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 mb-1">
+          {title}
+        </div>
+        <div className="space-y-0.5">{children}</div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const Sidebar = ({
   modules: _modules,
   onModuleChange,
   isDarkMode,
   onThemeToggle,
-}) => {
+}: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation("common");
   const { currentOrganization } = useAuth();
   const isRTL = isRTLLocale(i18n.language);
+  const { bothRailsCollapsed } = useSidebarMargin(isRTL);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
@@ -149,70 +219,72 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Auto-expand parent section when navigating to a child route
   useEffect(() => {
-    // Personnel section
-    if (
-      ["/workers", "/tasks"].some(
-        (p) => currentPath === p || currentPath.startsWith(p + "/"),
-      )
-    ) {
-      setShowPersonnel(true);
-    }
-    // Production section
-    if (
-      [
-        "/campaigns",
-        "/crop-cycles",
-        "/harvests",
-        "/reception-batches",
-        "/quality-control",
-        "/biological-assets",
-      ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
-    ) {
-      setShowProduction(true);
-    }
-    // Compliance section
-    if (currentPath.startsWith("/compliance")) {
-      setShowCompliance(true);
-    }
-    // Sales & Purchasing section
-    if (
-      [
-        "/accounting/quotes",
-        "/accounting/sales-orders",
-        "/accounting/purchase-orders",
-      ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
-    ) {
-      setShowSalesPurchasing(true);
-    }
-    // Accounting section
-    if (
-      [
-        "/accounting",
-        "/accounting/accounts",
-        "/accounting/invoices",
-        "/accounting/payments",
-        "/accounting/journal",
-        "/utilities",
-      ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
-    ) {
-      setShowAccounting(true);
-    }
-    // Stock Management section
-    if (
-      [
-        "/stock",
-        "/stock/items",
-        "/stock/suppliers",
-        "/stock/warehouses",
-        "/accounting/customers",
-      ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
-    ) {
-      setShowStockManagement(true);
-    }
-    // Marketplace section
-    if (currentPath.startsWith("/marketplace/")) {
-      setShowMarketplace(true);
-    }
+    queueMicrotask(() => {
+      // Personnel section
+      if (
+        ["/workers", "/tasks"].some(
+          (p) => currentPath === p || currentPath.startsWith(p + "/"),
+        )
+      ) {
+        setShowPersonnel(true);
+      }
+      // Production section
+      if (
+        [
+          "/campaigns",
+          "/crop-cycles",
+          "/harvests",
+          "/reception-batches",
+          "/quality-control",
+          "/biological-assets",
+        ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
+      ) {
+        setShowProduction(true);
+      }
+      // Compliance section
+      if (currentPath.startsWith("/compliance")) {
+        setShowCompliance(true);
+      }
+      // Sales & Purchasing section
+      if (
+        [
+          "/accounting/quotes",
+          "/accounting/sales-orders",
+          "/accounting/purchase-orders",
+        ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
+      ) {
+        setShowSalesPurchasing(true);
+      }
+      // Accounting section
+      if (
+        [
+          "/accounting",
+          "/accounting/accounts",
+          "/accounting/invoices",
+          "/accounting/payments",
+          "/accounting/journal",
+          "/utilities",
+        ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
+      ) {
+        setShowAccounting(true);
+      }
+      // Stock Management section
+      if (
+        [
+          "/stock",
+          "/stock/items",
+          "/stock/suppliers",
+          "/stock/warehouses",
+          "/accounting/customers",
+        ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
+      ) {
+        setShowStockManagement(true);
+      }
+      // Marketplace section
+      if (currentPath.startsWith("/marketplace/")) {
+        setShowMarketplace(true);
+      }
+    });
   }, [currentPath]);
 
   const scrollViewportRef = React.useRef<HTMLDivElement>(null);
@@ -262,35 +334,41 @@ const Sidebar: React.FC<SidebarProps> = ({
     additionalClasses?: string,
   ) => {
     return cn(
-      "w-full text-gray-600 dark:text-gray-400 h-11 min-h-[44px]",
+      "w-full text-slate-900 dark:text-slate-100 h-11 min-h-[44px]",
       isCollapsed
-        ? "lg:justify-center lg:px-2"
+        ? [
+            "md:h-10 md:min-h-0 md:w-10 md:max-w-[2.5rem] md:shrink-0 md:rounded-xl md:px-0 md:justify-center",
+            "md:text-slate-900 dark:md:text-slate-100 md:hover:bg-slate-50 dark:md:hover:bg-slate-800 md:hover:text-slate-900 dark:md:hover:text-slate-100",
+          ]
         : isRTL
           ? "flex-row-reverse justify-end text-right"
           : "justify-start",
       isActive &&
-        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
+        "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30",
+      isActive &&
+        isCollapsed &&
+        "md:bg-emerald-600 md:text-white md:shadow-lg md:shadow-emerald-200/80 dark:md:shadow-emerald-900/25 md:hover:bg-emerald-600 md:hover:text-white dark:md:bg-emerald-600 dark:md:hover:bg-emerald-600",
       additionalClasses,
     );
   };
 
   const getSubItemClassName = (isActive: boolean) => {
     return cn(
-      "w-full text-gray-600 dark:text-gray-400 h-10 min-h-[40px] text-sm",
+      "w-full text-slate-900 dark:text-slate-100 h-10 min-h-[40px] text-sm",
       isCollapsed
-        ? "lg:justify-center lg:px-2 lg:pl-2"
+        ? "md:justify-center md:px-0"
         : isRTL
           ? "flex-row-reverse justify-end text-right pr-8"
           : "justify-start pl-8",
       isActive &&
-        "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30",
+        "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30",
     );
   };
 
   const getSectionHeaderClassName = () => {
     return cn(
-      "w-full justify-between px-3 h-11 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
-      isCollapsed && "lg:justify-center lg:px-2",
+      "w-full justify-between px-3 h-11 min-h-[44px] text-sm font-medium text-slate-900 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/50",
+      isCollapsed && "md:justify-center md:px-2",
       isRTL && "flex-row-reverse text-right",
     );
   };
@@ -303,7 +381,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <IconComponent
         className={cn(
           "h-4 w-4 flex-shrink-0",
-          isCollapsed ? "lg:mx-auto" : isRTL ? "ml-3" : "mr-3",
+          isCollapsed ? "md:h-5 md:w-5" : isRTL ? "ml-3" : "mr-3",
           className,
         )}
       />
@@ -316,7 +394,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={cn(
           "flex-1 truncate",
           isRTL ? "text-right" : "text-left",
-          isCollapsed && "lg:hidden",
+          isCollapsed && "md:hidden",
         )}
       >
         {text}
@@ -328,82 +406,30 @@ const Sidebar: React.FC<SidebarProps> = ({
     return isOpen ? (
       <ChevronDown
         className={cn(
-          "h-4 w-4 flex-shrink-0 text-gray-400",
-          isCollapsed && "lg:hidden",
+          "h-4 w-4 flex-shrink-0 text-slate-900 dark:text-slate-100",
+          isCollapsed && "md:hidden",
         )}
       />
     ) : (
       <ChevronRight
         className={cn(
-          "h-4 w-4 flex-shrink-0 text-gray-400",
-          isCollapsed && "lg:hidden",
+          "h-4 w-4 flex-shrink-0 text-slate-900 dark:text-slate-100",
+          isCollapsed && "md:hidden",
         )}
       />
     );
   };
 
   const renderSectionTitle = (text: string) => {
-    return <span className={cn(isCollapsed && "lg:hidden")}>{text}</span>;
+    return <span className={cn(isCollapsed && "md:hidden")}>{text}</span>;
   };
-
-  // Component for collapsed section with hover popover
-  const CollapsedSectionPopover: React.FC<{
-    icon: React.ComponentType<{ className?: string }>;
-    title: string;
-    children: React.ReactNode;
-  }> = ({ icon: Icon, title, children }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full h-9 justify-center px-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/50",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          side={isRTL ? "left" : "right"}
-          align="start"
-          sideOffset={8}
-          className="w-48 p-1 bg-white dark:bg-gray-800"
-        >
-          <div className="px-2 py-1.5 text-sm font-medium text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-700 mb-1">
-            {title}
-          </div>
-          <div className="space-y-0.5">{children}</div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  // Submenu item for collapsed popover
-  const PopoverNavItem: React.FC<{
-    path: string;
-    label: string;
-    isActive: boolean;
-  }> = ({ path, label, isActive }) => (
-    <Button
-      variant="ghost"
-      className={cn(
-        "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400",
-        isActive &&
-          "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400",
-      )}
-      onClick={(e) => handleNavigation(path, e)}
-    >
-      {label}
-    </Button>
-  );
 
   return (
     <>
       {/* Overlay for mobile — only used if sidebar is somehow opened programmatically */}
       {isMobileMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -414,18 +440,22 @@ const Sidebar: React.FC<SidebarProps> = ({
         className={cn(
           "fixed inset-y-0 z-50",
           isRTL ? "right-0 border-l" : "left-0 border-r",
-          "h-screen bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 flex flex-col",
+          "h-screen bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
-          "hidden lg:flex",
-          isCollapsed ? "lg:w-16" : "w-64",
+          "hidden md:flex",
+          isCollapsed
+            ? bothRailsCollapsed
+              ? "md:w-16"
+              : "md:w-20"
+            : "w-64",
         )}
         dir={isRTL ? "rtl" : "ltr"}
       >
         {/* Header */}
         <div
           className={cn(
-            "flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-            isCollapsed ? "lg:p-2 p-4" : "p-4",
+            "flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900",
+            isCollapsed ? "md:p-2 p-4" : "p-4",
             isRTL && "text-right",
           )}
         >
@@ -435,38 +465,51 @@ const Sidebar: React.FC<SidebarProps> = ({
               isRTL ? "flex-row-reverse" : "",
             )}
           >
-            <div
+            <button
+              type="button"
+              onClick={() => navigate({ to: '/dashboard' })}
               className={cn(
-                "flex items-center min-w-0 flex-1 gap-3",
+                "flex items-center min-w-0 flex-1 gap-3 cursor-pointer bg-transparent border-0 p-0",
                 isRTL && "flex-row-reverse",
-                isCollapsed && "lg:justify-center",
+                isCollapsed && "md:justify-center md:flex-none",
               )}
             >
-              <img
-                src="/assets/logo.png"
-                alt="AGROGINA"
-                className="flex-shrink-0 w-10 h-10 object-contain rounded-lg"
-              />
-              <div className={cn("min-w-0 flex-1", isCollapsed && "lg:hidden")}>
-                <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate text-start">
+              <span
+                className={cn(
+                  "flex flex-shrink-0 items-center justify-center",
+                  isCollapsed &&
+                    "md:h-11 md:w-11 md:rounded-2xl md:bg-slate-50 dark:md:bg-slate-800",
+                )}
+              >
+                <img
+                  src="/assets/logo.png"
+                  alt="AGROGINA"
+                  className={cn(
+                    "flex-shrink-0 object-contain rounded-lg",
+                    isCollapsed ? "h-8 w-8 md:h-7 md:w-7" : "h-10 w-10",
+                  )}
+                />
+              </span>
+              <div className={cn("min-w-0 flex-1", isCollapsed && "md:hidden")}>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white truncate text-start">
                   {currentOrganization?.name || t("app.name")}
                 </h2>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-start">
+                <p className="text-xs text-slate-500 dark:text-slate-400 text-start">
                   {appConfig.name} Platform
                 </p>
               </div>
-            </div>
+            </button>
             <div
               className={cn(
                 "flex items-center gap-1",
                 isRTL && "flex-row-reverse",
-                isCollapsed && "lg:hidden",
+                isCollapsed && "md:hidden",
               )}
             >
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden h-11 w-11"
+                className="md:hidden h-11 w-11"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <X className="h-5 w-5" />
@@ -478,7 +521,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Navigation */}
         <ScrollArea className="flex-1 min-h-0 px-3">
           <nav
-            className={cn("space-y-1 py-4", isRTL && "text-right")}
+            className={cn(
+              "space-y-1 py-4",
+              isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+              isRTL && "text-right",
+            )}
             ref={(node) => {
               if (node) {
                 const viewport = node.closest(
@@ -495,7 +542,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             }}
           >
             {/* ========== MAIN NAVIGATION ========== */}
-            <div className="space-y-1">
+            <div
+              className={cn(
+                "space-y-1",
+                isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+              )}
+            >
               {/* Dashboard */}
               <ProtectedNavItem action="read" subject="Dashboard">
                 <Button
@@ -541,22 +593,29 @@ const Sidebar: React.FC<SidebarProps> = ({
               </ProtectedNavItem>
 
               {/* Stock Management */}
-              <div className="space-y-1" data-tour="nav-stock">
+              <div
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+                data-tour="nav-stock"
+              >
                 {isCollapsed ? (
-                  <div className="hidden lg:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
+                      isRTL={isRTL}
                       icon={Package}
                       title={t("nav.stock")}
                     >
                       <ProtectedNavItem action="read" subject="Stock">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/stock"
                           label={t("nav.overview")}
                           isActive={currentPath === "/stock"}
                         />
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Item">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/stock/items"
                           label={t("nav.items")}
                           isActive={
@@ -566,7 +625,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         />
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Warehouse">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/stock/warehouses"
                           label={t("nav.warehouses")}
                           isActive={
@@ -576,7 +635,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         />
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Supplier">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/stock/suppliers"
                           label={t("nav.suppliers")}
                           isActive={
@@ -586,7 +645,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         />
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Customer">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/accounting/customers"
                           label={t("nav.customers")}
                           isActive={currentPath === "/accounting/customers"}
@@ -706,6 +765,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <ProtectedNavItem action="read" subject="Chat">
                 <Button
                   variant="ghost"
+                  data-tour="nav-chat"
                   className={getButtonClassName(currentPath === "/chat")}
                   onClick={(e) => handleNavigation("/chat", e)}
                   title={isCollapsed ? t("nav.chat") : undefined}
@@ -717,23 +777,35 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* ========== PERSONNEL SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-personnel">
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
+            <div
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+              data-tour="nav-personnel"
+            >
               {isCollapsed ? (
-                <div className="hidden lg:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
+                    isRTL={isRTL}
                     icon={Users}
                     title={t("nav.personnel")}
                   >
                     <ProtectedNavItem action="read" subject="Worker">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/workers"
                         label={t("nav.workers")}
                         isActive={currentPath === "/workers"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Task">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/tasks"
                         label={t("nav.tasks")}
                         isActive={currentPath === "/tasks"}
@@ -790,51 +862,63 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* ========== PRODUCTION SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-production">
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
+            <div
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+              data-tour="nav-production"
+            >
               {isCollapsed ? (
-                <div className="hidden lg:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
+                    isRTL={isRTL}
                     icon={Wheat}
                     title={t("nav.production")}
                   >
                     <ProtectedNavItem action="read" subject="Campaign">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/campaigns"
                         label={t("nav.campaigns", "Campaigns")}
                         isActive={currentPath === "/campaigns"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="CropCycle">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/crop-cycles"
                         label={t("nav.cropCycles", "Crop Cycles")}
                         isActive={currentPath === "/crop-cycles"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Harvest">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/harvests"
                         label={t("nav.harvests")}
                         isActive={currentPath === "/harvests"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="ReceptionBatch">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/reception-batches"
                         label={t("nav.receptionBatches")}
                         isActive={currentPath === "/reception-batches"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="ReceptionBatch">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/quality-control"
                         label={t("nav.qualityControl")}
                         isActive={currentPath === "/quality-control"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="BiologicalAsset">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/biological-assets"
                         label={t("nav.biologicalAssets", "Biological Assets")}
                         isActive={currentPath === "/biological-assets"}
@@ -941,30 +1025,42 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* ========== COMPLIANCE SECTION ========== */}
-            <Separator className="my-3" />
-            <div className="space-y-1" data-tour="nav-compliance">
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
+            <div
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+              data-tour="nav-compliance"
+            >
               {isCollapsed ? (
-                <div className="hidden lg:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
+                    isRTL={isRTL}
                     icon={ShieldCheck}
                     title={t("nav.compliance")}
                   >
                     <ProtectedNavItem action="read" subject="Certification">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/compliance"
                         label={t("nav.overview")}
                         isActive={currentPath === "/compliance"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Certification">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/compliance/certifications"
                         label={t("nav.certifications")}
                         isActive={currentPath === "/compliance/certifications"}
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Certification">
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/compliance/corrective-actions"
                         label={t(
                           "nav.correctiveActions",
@@ -1047,25 +1143,37 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== SALES & PURCHASING SECTION ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
-              <Separator className="my-3" />
-              <div className="space-y-1" data-tour="nav-billing">
+              <Separator
+                className={cn(
+                  "my-3 opacity-50",
+                  isCollapsed && "md:self-stretch",
+                )}
+              />
+              <div
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+                data-tour="nav-billing"
+              >
                 {isCollapsed ? (
-                  <div className="hidden lg:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
+                      isRTL={isRTL}
                       icon={ShoppingCart}
                       title={t("nav.salesPurchasing")}
                     >
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/quotes"
                         label={t("nav.quotes")}
                         isActive={currentPath === "/accounting/quotes"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/sales-orders"
                         label={t("nav.salesOrders")}
                         isActive={currentPath === "/accounting/sales-orders"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/purchase-orders"
                         label={t("nav.purchaseOrders")}
                         isActive={currentPath === "/accounting/purchase-orders"}
@@ -1135,42 +1243,54 @@ const Sidebar: React.FC<SidebarProps> = ({
             </ProtectedNavItem>
 
             {/* ========== ACCOUNTING SECTION ========== */}
-            <Separator className="my-3" />
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
             <ProtectedNavItem action="read" subject="Invoice">
-              <div className="space-y-1" data-tour="nav-accounting">
+              <div
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+                data-tour="nav-accounting"
+              >
                 {isCollapsed ? (
-                  <div className="hidden lg:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
+                      isRTL={isRTL}
                       icon={BookOpen}
                       title={t("nav.accounting")}
                     >
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting"
                         label={t("nav.overview")}
                         isActive={currentPath === "/accounting"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/accounts"
                         label={t("nav.chartOfAccounts")}
                         isActive={currentPath === "/accounting/accounts"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/invoices"
                         label={t("nav.invoices")}
                         isActive={currentPath === "/accounting/invoices"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/payments"
                         label={t("nav.payments")}
                         isActive={currentPath === "/accounting/payments"}
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/journal"
                         label={t("nav.journal")}
                         isActive={currentPath === "/accounting/journal"}
                       />
                       <ProtectedNavItem action="read" subject="Utility">
-                        <PopoverNavItem
+                        <PopoverNavItem onNavigate={handleNavigation}
                           path="/utilities"
                           label={t("nav.expenses")}
                           isActive={currentPath === "/utilities"}
@@ -1271,22 +1391,33 @@ const Sidebar: React.FC<SidebarProps> = ({
 
             {/* ========== MARKETPLACE ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
-              <Separator className="my-3" />
-              <div className="space-y-1">
+              <Separator
+                className={cn(
+                  "my-3 opacity-50",
+                  isCollapsed && "md:self-stretch",
+                )}
+              />
+              <div
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+              >
                 {isCollapsed ? (
-                  <div className="hidden lg:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
+                      isRTL={isRTL}
                       icon={ShoppingBag}
                       title={t("nav.marketplace")}
                     >
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/marketplace/quote-requests/received"
                         label={t("nav.receivedRequests")}
                         isActive={
                           currentPath === "/marketplace/quote-requests/received"
                         }
                       />
-                      <PopoverNavItem
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/marketplace/quote-requests/sent"
                         label={t("nav.sentRequests")}
                         isActive={
@@ -1303,7 +1434,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <Button
                           variant="ghost"
                           className={cn(
-                            "w-full h-8 justify-start text-sm text-gray-600 dark:text-gray-400 group",
+                            "w-full h-8 justify-start text-sm text-slate-900 dark:text-slate-100 group",
                           )}
                         >
                           <div className="flex items-center w-full">
@@ -1399,8 +1530,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* ========== FOOTER ========== */}
         <div
           className={cn(
-            "flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 space-y-1",
-            isCollapsed ? "lg:p-2 p-3" : "p-3",
+            "flex-shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1",
+            isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+            isCollapsed ? "md:p-2 p-3" : "p-3",
           )}
         >
           <ProtectedNavItem action="read" subject="Report">
@@ -1419,13 +1551,18 @@ const Sidebar: React.FC<SidebarProps> = ({
             </Button>
           </ProtectedNavItem>
 
-          <Separator className="my-2" />
+          <Separator
+            className={cn(
+              "my-2 opacity-50",
+              isCollapsed && "md:self-stretch",
+            )}
+          />
 
           <Button
             variant="ghost"
             className={getButtonClassName(
               false,
-              "hover:text-gray-900 dark:hover:text-gray-100",
+              "hover:text-slate-900 dark:hover:text-slate-100",
             )}
             onClick={onThemeToggle}
             title={
@@ -1444,8 +1581,10 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Button
             variant="ghost"
             className={cn(
-              "w-full h-9 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hidden lg:flex",
-              isCollapsed ? "justify-center" : "justify-start",
+              "hidden md:flex text-slate-900 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100",
+              isCollapsed
+                ? "h-10 w-10 shrink-0 rounded-xl justify-center hover:bg-slate-50 dark:hover:bg-slate-800 md:mx-auto"
+                : "h-9 w-full justify-start",
             )}
             onClick={toggleCollapse}
             title={
@@ -1455,7 +1594,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             }
           >
             {isCollapsed ? (
-              <PanelLeft className="h-4 w-4" />
+              <PanelLeft className="h-5 w-5" />
             ) : (
               <>
                 <PanelLeftClose

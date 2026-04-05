@@ -90,6 +90,7 @@ export function Toast({
 
   return (
     <Animated.View
+      accessibilityLiveRegion="polite"
       style={[
         styles.container,
         {

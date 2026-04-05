@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
@@ -35,7 +35,7 @@ interface FarmHierarchyHeaderProps {
   onFiltersChange?: (filters: { type: 'all' | 'main' | 'sub'; status: 'all' | 'active' | 'inactive' }) => void;
 }
 
-const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
+const FarmHierarchyHeader = ({
   organizationName,
   totalFarms,
   totalArea,
@@ -52,7 +52,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   onToggleFilters,
   filters,
   onFiltersChange,
-}) => {
+}: FarmHierarchyHeaderProps) => {
   const { t } = useTranslation();
 
   return (
@@ -114,7 +114,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-tour="farm-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">

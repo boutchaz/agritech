@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -55,11 +55,11 @@ interface HarvestForecastFormProps {
   onSuccess?: () => void;
 }
 
-export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
+export const HarvestForecastForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: HarvestForecastFormProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const createForecast = useCreateHarvestForecast();
   const { data: farms = [] } = useFarms(currentOrganization?.id);

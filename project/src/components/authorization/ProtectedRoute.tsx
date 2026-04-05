@@ -20,12 +20,12 @@ interface ProtectedRouteProps {
  * IMPORTANT: This component waits for auth to fully load before checking permissions
  * to avoid race conditions where guest abilities are evaluated before user data loads.
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+export const ProtectedRoute = ({
   action,
   subject,
   children,
   redirectTo = '/tasks',
-}) => {
+}: ProtectedRouteProps) => {
   const ability = useAbility();
   const { loading: authLoading, user, currentOrganization, userRole } = useAuth();
   const navigate = useNavigate();

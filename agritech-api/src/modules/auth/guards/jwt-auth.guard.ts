@@ -1,4 +1,4 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtStrategy } from '../strategies/jwt.strategy';
 
@@ -9,6 +9,8 @@ import { JwtStrategy } from '../strategies/jwt.strategy';
  */
 @Injectable()
 export class JwtAuthGuard {
+  private readonly logger = new Logger(JwtAuthGuard.name);
+
   constructor(
     private reflector: Reflector,
     private jwtStrategy: JwtStrategy,
@@ -16,8 +18,6 @@ export class JwtAuthGuard {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const requestId = (request as any).requestId || 'unknown';
-    console.log(`[JwtAuthGuard #${requestId}] canActivate called for:`, request.url);
 
     // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
@@ -26,18 +26,13 @@ export class JwtAuthGuard {
     ]);
 
     if (isPublic) {
-      console.log('[JwtAuthGuard] Route is public, allowing access');
       return true;
     }
 
-    console.log(`[JwtAuthGuard #${requestId}] Calling Supabase JWT strategy`);
-
     try {
-      const result = await this.jwtStrategy.canActivate(context);
-      console.log(`[JwtAuthGuard #${requestId}] canActivate result:`, result);
-      return result;
+      return await this.jwtStrategy.canActivate(context);
     } catch (err) {
-      console.error(`[JwtAuthGuard #${requestId}] Authentication failed:`, err.message);
+      this.logger.debug(`Authentication failed for ${request.url}: ${err.message}`);
       throw err;
     }
   }

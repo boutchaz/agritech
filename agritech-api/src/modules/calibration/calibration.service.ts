@@ -1,5 +1,4 @@
 import {
-  BadGatewayException,
   BadRequestException,
   Inject,
   Injectable,
@@ -15,6 +14,7 @@ import {
 } from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import { SatelliteProxyService } from "../satellite-indices/satellite-proxy.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
 import { NotificationType } from "../notifications/dto/notification.dto";
@@ -26,23 +26,82 @@ import {
   NutritionOptionSuggestion,
 } from "./nutrition-option.service";
 import { getLocalCropReference } from "./crop-reference-loader";
+import {
+  CalibrationReviewAdapter,
+  type CalibrationReviewView,
+  type CalibrationSnapshotInput,
+} from "./calibration-review.adapter";
 
-const CALIBRATION_LOOKBACK_DAYS = 730;
+/**
+ * Calibration satellite lookback depth depends on tree age, per spec.
+ *
+ * | Parcel Age        | Lookback                  |
+ * |-------------------|---------------------------|
+ * | ≥ 3 years         | 36 months                 |
+ * | 2–3 years         | 24 months                 |
+ * | < 2 years         | Jan 1 of planting year    |
+ * | No planting year  | 24 months (default)       |
+ *
+ * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
+ * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
+ */
+/**
+ * Max lookback days — must stay within FastAPI weather endpoint limit (365*3 = 1095 days).
+ * We use 1090 to leave a small buffer.
+ */
+const MAX_LOOKBACK_DAYS = 1090;
+
+function getCalibrationLookbackDate(plantingYear: number | null): string {
+  const now = new Date();
+
+  let start: Date;
+
+  if (plantingYear != null) {
+    const parcelAge = now.getFullYear() - plantingYear;
+
+    if (parcelAge >= 3) {
+      // 36 months, clamped to MAX_LOOKBACK_DAYS
+      start = new Date();
+      start.setMonth(start.getMonth() - 36);
+    } else if (parcelAge < 2) {
+      start = new Date(`${plantingYear}-01-01`);
+    } else {
+      // 2–3 years: 24 months
+      start = new Date();
+      start.setMonth(start.getMonth() - 24);
+    }
+  } else {
+    // No planting year: default 24 months
+    start = new Date();
+    start.setMonth(start.getMonth() - 24);
+  }
+
+  // Clamp: never exceed MAX_LOOKBACK_DAYS from today
+  const maxStart = new Date();
+  maxStart.setDate(maxStart.getDate() - MAX_LOOKBACK_DAYS);
+  if (start < maxStart) {
+    start = maxStart;
+  }
+
+  return start.toISOString().split("T")[0];
+}
+
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
-const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
+/** Minimum confidence score (0-100 scale) for active recommendations */
+const MINIMUM_CONFIDENCE_FOR_ACTIVE = 25;
 
 type ZoneClassification = "optimal" | "normal" | "stressed";
 type ParcelAiPhase =
-  | "disabled"
+  | "awaiting_data"
   | "calibrating"
-  | "awaiting_validation"
+  | "calibrated"
   | "awaiting_nutrition_option"
   | "active"
-  | "paused"
-  | "calibration"
+  
+  | "ready_calibration"
   | string;
 type JsonObject = Record<string, unknown>;
-type CalibrationMode = "full" | "partial" | "annual";
+type CalibrationType = "initial" | "F2_partial" | "F3_complete";
 type RecalibrationMotif =
   | "water_source_change"
   | "irrigation_change"
@@ -130,7 +189,7 @@ interface HarvestRow {
 
 interface CalibrationResponse {
   parcel_id: string;
-  maturity_phase: string;
+  phase_age: string;
   step3?: {
     global_percentiles?: Record<string, { p50?: number }>;
   };
@@ -165,16 +224,37 @@ export interface CalibrationRecord {
   id: string;
   parcel_id: string;
   organization_id: string;
+  type: string;
   status: string;
   started_at: string | null;
   completed_at: string | null;
-  baseline_ndvi: number | string | null;
-  baseline_ndre: number | string | null;
-  baseline_ndmi: number | string | null;
+  mode_calibrage: string | null;
+  phase_age: string | null;
+  p50_ndvi: number | string | null;
+  p50_nirv: number | string | null;
+  p50_ndmi: number | string | null;
+  p50_ndre: number | string | null;
+  p10_ndvi: number | string | null;
+  p10_ndmi: number | string | null;
   confidence_score: number | string | null;
-  zone_classification: ZoneClassification | null;
-  phenology_stage: string | null;
-  calibration_data: unknown;
+  health_score: number | string | null;
+  yield_potential_min: number | string | null;
+  yield_potential_max: number | string | null;
+  coefficient_etat_parcelle: number | string | null;
+  anomaly_count: number;
+  baseline_data: unknown;
+  diagnostic_data: unknown;
+  anomalies_data: unknown;
+  scores_detail: unknown;
+  profile_snapshot: unknown;
+  recalibration_motif: string | null;
+  previous_baseline: unknown;
+  campaign_bilan: unknown;
+  rapport_fr: string | null;
+  rapport_ar: string | null;
+  validated_by_user: boolean;
+  validated_at: string | null;
+  calibration_version: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -194,15 +274,18 @@ export class CalibrationService {
   @Inject(forwardRef(() => AIReportsService))
   private readonly aiReportsService: AIReportsService;
 
+  @Inject(forwardRef(() => NotificationsGateway))
+  private readonly notificationsGateway: NotificationsGateway;
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly stateMachine: CalibrationStateMachine,
     private readonly nutritionOptionService: NutritionOptionService,
     private readonly annualPlanService: AnnualPlanService,
     private readonly satelliteCacheService: SatelliteCacheService,
+    private readonly satelliteProxy: SatelliteProxyService,
     private readonly notificationsService: NotificationsService,
-    @Inject(forwardRef(() => NotificationsGateway))
-    private readonly notificationsGateway: NotificationsGateway,
+    private readonly calibrationReviewAdapter: CalibrationReviewAdapter,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════
@@ -313,14 +396,14 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
-    options?: { skipReadinessCheck?: boolean },
+    options?: { skipReadinessCheck?: boolean; authToken?: string },
   ): Promise<CalibrationRecord> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const previousPhase = parcel.aiPhase as
-      | "disabled"
-      | "pret_calibrage"
+      | "awaiting_data"
+      | "ready_calibration"
       | "active"
-      | "awaiting_validation"
+      | "calibrated"
       | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
@@ -330,15 +413,15 @@ export class CalibrationService {
     }
 
     const allowedStartPhases = [
-      "disabled",
-      "pret_calibrage",
+      "awaiting_data",
+      "ready_calibration",
       "active",
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
     ];
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Calibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Calibration can only start from awaiting_data, ready_calibration, active, calibrated, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -361,25 +444,20 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      previousPhase,
-      "calibrating",
-      organizationId,
-    );
+    // Lifecycle: transition through intermediate states if needed
+    await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
       .from("calibrations")
       .insert({
         parcel_id: parcelId,
         organization_id: organizationId,
+        type: "initial",
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: dto.mode_calibrage ?? "full",
-        calibration_version: "v2",
-        calibration_data: {
-          version: "v2",
-          request: { ...dto, lookback_days: CALIBRATION_LOOKBACK_DAYS },
+        calibration_version: "v3",
+        profile_snapshot: {
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           parcel: {
             id: parcel.id,
             crop_type: parcel.cropType,
@@ -414,6 +492,7 @@ export class CalibrationService {
       organizationId,
       parcel,
       dto,
+      options?.authToken,
     ).catch((error) => {
       this.logger.error(
         `Background calibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
@@ -427,6 +506,7 @@ export class CalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
+    options?: { authToken?: string },
   ): Promise<CalibrationRecord> {
     const mode = dto.mode_calibrage ?? "partial";
     if (mode !== "partial") {
@@ -472,16 +552,16 @@ export class CalibrationService {
         parcelId,
         organizationId,
         fullCalibrationDto,
-        { skipReadinessCheck: true },
+        { skipReadinessCheck: true, authToken: options?.authToken },
       );
     }
 
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const previousPhase = parcel.aiPhase as
-      | "disabled"
-      | "pret_calibrage"
+      | "awaiting_data"
+      | "ready_calibration"
       | "active"
-      | "awaiting_validation"
+      | "calibrated"
       | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
@@ -491,16 +571,16 @@ export class CalibrationService {
     }
 
     const allowedStartPhases = [
-      "disabled",
-      "pret_calibrage",
+      "awaiting_data",
+      "ready_calibration",
       "active",
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
     ];
 
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Partial recalibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Partial recalibration can only start from awaiting_data, ready_calibration, active, calibrated, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -527,27 +607,22 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    await this.stateMachine.transitionPhase(
-      parcelId,
-      previousPhase,
-      "calibrating",
-      organizationId,
-    );
+    // Lifecycle: transition through intermediate states if needed
+    await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
       .from("calibrations")
       .insert({
         parcel_id: parcelId,
         organization_id: organizationId,
+        type: "F2_partial",
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: "partial",
         recalibration_motif: motif,
         previous_baseline: previousBaseline,
-        calibration_version: "v2",
-        calibration_data: {
-          version: "v2",
-          request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+        calibration_version: "v3",
+        profile_snapshot: {
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           recalibration: {
             motif,
             motif_detail: dto.recalibration_motif_detail ?? null,
@@ -596,6 +671,7 @@ export class CalibrationService {
       affectedBlocks,
       updatedBlocks,
       previousBaseline,
+      options?.authToken,
     ).catch((error) => {
       this.logger.error(
         `Background partial recalibration failed for calibration ${calibration.id}: ${error instanceof Error ? error.message : "unknown error"}`,
@@ -607,10 +683,10 @@ export class CalibrationService {
 
   private isRecoverableCalibrationPhase(value: string): value is AiPhase {
     return (
-      value === "disabled" ||
-      value === "pret_calibrage" ||
+      value === "awaiting_data" ||
+      value === "ready_calibration" ||
       value === "active" ||
-      value === "awaiting_validation" ||
+      value === "calibrated" ||
       value === "awaiting_nutrition_option"
     );
   }
@@ -650,7 +726,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: row, error } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -661,7 +737,7 @@ export class CalibrationService {
       );
     }
 
-    const persistedCalibrationData = this.toJsonObject(row?.calibration_data);
+    const persistedCalibrationData = this.toJsonObject(row?.profile_snapshot);
     const recovery = this.toJsonObject(persistedCalibrationData.recovery);
     const rawPrevious =
       typeof recovery.previous_ai_phase === "string"
@@ -670,7 +746,7 @@ export class CalibrationService {
     const targetPhase: AiPhase =
       rawPrevious && this.isRecoverableCalibrationPhase(rawPrevious)
         ? rawPrevious
-        : "disabled";
+        : "awaiting_data";
 
     try {
       await this.stateMachine.transitionPhase(
@@ -711,6 +787,7 @@ export class CalibrationService {
     organizationId: string,
     parcel: ParcelContext,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<void> {
     try {
       await Promise.race([
@@ -720,6 +797,7 @@ export class CalibrationService {
           organizationId,
           parcel,
           dto,
+          authToken,
         ),
         new Promise<never>((_, reject) => {
           setTimeout(
@@ -790,6 +868,7 @@ export class CalibrationService {
     affectedBlocks: string[],
     updatedBlocks: Record<string, unknown>,
     previousBaseline: JsonObject,
+    authToken?: string,
   ): Promise<void> {
     try {
       await Promise.race([
@@ -803,6 +882,7 @@ export class CalibrationService {
           affectedBlocks,
           updatedBlocks,
           previousBaseline,
+          authToken,
         ),
         new Promise<never>((_, reject) => {
           setTimeout(
@@ -877,17 +957,19 @@ export class CalibrationService {
     affectedBlocks: string[],
     updatedBlocks: Record<string, unknown>,
     previousBaseline: JsonObject,
+    authToken?: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 5;
     const completedAt = new Date().toISOString();
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
     emitProgress(1, "data_collection", "Collecte des données satellite, météo et analyses...");
 
     const [satelliteImages, initialWeatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
-      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
       this.fetchWeatherRows(parcel),
       this.fetchAnalyses(parcelId),
       this.fetchHarvestRecords(parcelId),
@@ -898,7 +980,7 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(1, "weather_sync", "Synchronisation des données météo...");
-      await this.syncWeatherData(parcel, organizationId);
+      await this.syncWeatherData(parcel, organizationId, authToken);
       weatherRows = await this.fetchWeatherRows(parcel);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
@@ -940,7 +1022,7 @@ export class CalibrationService {
       analyses,
       harvest_records: harvestRecords,
       reference_data: referenceData,
-      mode_calibrage: "partial" as CalibrationMode,
+      mode_calibrage: "F2_partial" as CalibrationType,
       recalibration_motif: motif,
       baseline_calibration: previousBaseline,
       updated_blocks: updatedBlocks,
@@ -948,15 +1030,15 @@ export class CalibrationService {
 
     emitProgress(2, "calibration_engine", "Exécution du moteur de calibration V2...");
 
-    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
-      "/api/calibration/v2/run",
-      {
+    const v2Output = await this.satelliteProxy.proxy("POST", "/calibration/v2/run", {
+      body: {
         calibration_input: calibrationInput,
         satellite_images: satelliteImages,
         weather_rows: weatherRows,
       },
       organizationId,
-    );
+      authToken,
+    }) as CalibrationResponse;
 
     emitProgress(3, "saving_results", "Sauvegarde des résultats de calibration...");
 
@@ -973,21 +1055,24 @@ export class CalibrationService {
 
     const { data: existingPartialSnapshot } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
     const existingPartialData = this.toJsonObject(
-      existingPartialSnapshot?.calibration_data,
+      existingPartialSnapshot?.profile_snapshot,
     );
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
-    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const rawConfidence = this.toNumber(v2Output.confidence?.normalized_score);
+    const confidenceScore = rawConfidence !== null
+      ? (rawConfidence <= 1 ? Math.round(rawConfidence * 100) : Math.round(rawConfidence))
+      : null;
     const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
       ...existingPartialData,
       version: "v2",
-      request: { ...dto, mode_calibrage: "partial", lookback_days: CALIBRATION_LOOKBACK_DAYS },
+      request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
       recalibration: {
         motif,
         motif_detail: dto.recalibration_motif_detail ?? null,
@@ -1019,33 +1104,36 @@ export class CalibrationService {
       await supabase
         .from("calibrations")
         .update({
-          status: "completed",
+          status: "validated",
           completed_at: completedAt,
-          mode_calibrage: "partial",
+          mode_calibrage: this.extractModeCalibrage(v2Output),
+          phase_age: this.extractPhaseAge(v2Output, parcel),
           recalibration_motif: motif,
           previous_baseline: previousBaseline,
-          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          p50_nirv: this.extractIndexP50(v2Output, "NIRv"),
+          p50_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
+          p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          zone_classification: zoneClassification,
-          phenology_stage: this.extractPhenologyStage(v2Output),
-          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          health_score: this.toInteger(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
           ),
           yield_potential_max: this.toNumber(
             v2Output.step6?.yield_potential?.maximum,
           ),
-          data_completeness_score: this.toNumber(
-            v2Output.confidence?.total_score,
-          ),
-          maturity_phase: v2Output.maturity_phase,
+          coefficient_etat_parcelle: this.extractCoefficientEtat(v2Output),
           anomaly_count: Array.isArray(v2Output.step5?.anomalies)
             ? v2Output.step5?.anomalies.length
             : 0,
-          calibration_version: "v2",
-          calibration_data: calibrationData,
+          baseline_data: this.extractBaselineData(v2Output),
+          diagnostic_data: this.extractDiagnosticData(v2Output),
+          anomalies_data: v2Output.step5?.anomalies ?? null,
+          scores_detail: this.extractScoresDetail(v2Output),
+          profile_snapshot: calibrationData,
+          calibration_version: "v3",
         })
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
@@ -1077,6 +1165,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         primaryLanguage,
+        calibrationDataStart,
       ),
       this.runCalibrationAI(
         calibrationId,
@@ -1084,12 +1173,13 @@ export class CalibrationService {
         organizationId,
         v2Output,
         secondaryLanguage,
+        calibrationDataStart,
       ),
     ]);
 
     const bilingualUpdate: Record<string, unknown> = {};
     if (primaryReport || secondaryReport) {
-      bilingualUpdate.calibration_data = {
+      bilingualUpdate.profile_snapshot = {
         ...calibrationData,
         ai_analysis: primaryReport ?? secondaryReport,
       };
@@ -1144,12 +1234,12 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "awaiting_validation",
+        "calibrated",
         organizationId,
       );
       await this.stateMachine.transitionPhase(
         parcelId,
-        "awaiting_validation",
+        "calibrated",
         "active",
         organizationId,
       );
@@ -1187,10 +1277,12 @@ export class CalibrationService {
     organizationId: string,
     parcel: ParcelContext,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 7;
     const completedAt = new Date().toISOString();
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -1203,7 +1295,7 @@ export class CalibrationService {
       harvestRecords,
       referenceData,
     ] = await Promise.all([
-      this.fetchSatelliteImages(parcelId, organizationId),
+      this.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
       this.fetchWeatherRows(parcel),
       this.fetchAnalyses(parcelId),
       this.fetchHarvestRecords(parcelId),
@@ -1224,9 +1316,10 @@ export class CalibrationService {
           organizationId,
           undefined,
           {
-            startDate: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+            startDate: getCalibrationLookbackDate(parcel.plantingYear),
             endDate: new Date().toISOString().split("T")[0],
             indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+            authToken,
           },
         );
 
@@ -1237,6 +1330,7 @@ export class CalibrationService {
       satelliteImages = await this.fetchSatelliteImages(
         parcelId,
         organizationId,
+        calibrationDataStart,
       );
     }
 
@@ -1244,7 +1338,7 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(2, "weather_sync", "Synchronisation des données météo...");
-      await this.syncWeatherData(parcel, organizationId);
+      await this.syncWeatherData(parcel, organizationId, authToken);
       weatherRows = await this.fetchWeatherRows(parcel);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
@@ -1271,23 +1365,20 @@ export class CalibrationService {
         return coord;
       });
 
-      const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+      const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
       const today = new Date().toISOString().split("T")[0];
 
-      const rasterResult = await this.postCalibrationApi<{
-        pixels: Array<{ lon: number; lat: number; value: number }>;
-        count: number;
-      }>(
-        "/api/calibration/v2/extract-raster",
-        {
+      const rasterResult = await this.satelliteProxy.proxy("POST", "/calibration/v2/extract-raster", {
+        body: {
           geometry: wgs84Boundary,
           start_date: sinceDate,
           end_date: today,
           scale: 10,
         },
         organizationId,
-        1,
-      );
+        timeout: 120000,
+        authToken,
+      }) as { pixels: Array<{ lon: number; lat: number; value: number }>; count: number };
 
       if (rasterResult.count > 1) {
         ndviRasterPixels = rasterResult.pixels;
@@ -1307,23 +1398,70 @@ export class CalibrationService {
       weatherRows.length &&
       this.hasMissingGdd(weatherRows, parcel.cropType)
     ) {
-      const firstRow = weatherRows[0];
-      const latitude = this.toNumber(firstRow?.latitude) ?? 0;
-      const longitude = this.toNumber(firstRow?.longitude) ?? 0;
+      const wgs84ForGdd = WeatherProvider.ensureWGS84(parcel.boundary);
+      const gddCentroid = WeatherProvider.calculateCentroid(wgs84ForGdd);
+      const gddLatitude = this.roundCoordinate(gddCentroid.latitude, 2);
+      const gddLongitude = this.roundCoordinate(gddCentroid.longitude, 2);
 
-      await this.postCalibrationApi<{
-        crop_type: string;
-        updated_rows: number;
-      }>(
-        "/api/calibration/v2/precompute-gdd",
+      // Build NIRv time-series from satellite images for the two-phase model.
+      const nirvSeries: Array<{ date: string; value: number }> = [];
+      for (const img of satelliteImages) {
+        const indices = img.indices as Record<string, number> | undefined;
+        const nirvVal = indices?.NIRv ?? indices?.nirv;
+        if (img.date && nirvVal != null) {
+          nirvSeries.push({ date: String(img.date), value: Number(nirvVal) });
+        }
+      }
+
+      // Fetch variety-specific chill threshold for olive two-phase model.
+      let chillThreshold: number | null = null;
+      if (parcel.cropType === "olivier" && parcel.variety) {
+        try {
+          const supabase = this.databaseService.getAdminClient();
+          const { data: varietyData } = await supabase
+            .from("crop_varieties")
+            .select("chill_hours_requirement")
+            .ilike("name", parcel.variety)
+            .maybeSingle();
+          if (varietyData?.chill_hours_requirement) {
+            chillThreshold = Number(varietyData.chill_hours_requirement);
+          }
+        } catch {
+          this.logger.warn(
+            `Could not fetch chill threshold for variety "${parcel.variety}", using default`,
+          );
+        }
+      }
+
+      const precomputeGdd = (await this.satelliteProxy.proxy(
+        "POST",
+        "/calibration/v2/precompute-gdd",
         {
-          latitude,
-          longitude,
-          crop_type: parcel.cropType,
-          rows: weatherRows,
+          body: {
+            latitude: gddLatitude,
+            longitude: gddLongitude,
+            crop_type: parcel.cropType,
+            variety: parcel.variety,
+            chill_threshold: chillThreshold,
+            nirv_series: nirvSeries,
+            rows: weatherRows.map((row) => ({ ...row })),
+          },
+          organizationId,
+          timeout: 120000,
+          authToken,
         },
-        organizationId,
-      );
+      )) as {
+        crop_type?: string;
+        updated_rows?: number;
+        rows?: WeatherDailyRow[];
+      };
+
+      if (
+        Array.isArray(precomputeGdd.rows) &&
+        precomputeGdd.rows.length === weatherRows.length
+      ) {
+        weatherRows = precomputeGdd.rows;
+      }
     }
 
     emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
@@ -1365,16 +1503,16 @@ export class CalibrationService {
       reference_data: referenceData,
     };
 
-    const v2Output = await this.postCalibrationApi<CalibrationResponse>(
-      "/api/calibration/v2/run",
-      {
+    const v2Output = await this.satelliteProxy.proxy("POST", "/calibration/v2/run", {
+      body: {
         calibration_input: calibrationInput,
         satellite_images: satelliteImages,
         weather_rows: weatherRows,
         ndvi_raster_pixels: ndviRasterPixels,
       },
       organizationId,
-    );
+      authToken,
+    }) as CalibrationResponse;
 
     emitProgress(6, "saving_results", "Sauvegarde des résultats de calibration...");
 
@@ -1389,22 +1527,25 @@ export class CalibrationService {
       return;
     }
 
-    const mode = this.normalizeCalibrationMode(dto.mode_calibrage);
+    const mode = this.normalizeCalibrationType(dto.mode_calibrage);
     const autoActivate = this.shouldAutoActivateAfterCompletion(
       parcel.aiPhase,
       mode,
     );
     const { data: existingCalibrationSnapshot } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
     const existingCalibrationData = this.toJsonObject(
-      existingCalibrationSnapshot?.calibration_data,
+      existingCalibrationSnapshot?.profile_snapshot,
     );
     const zoneClassification = this.deriveZoneClassification(v2Output);
-    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const rawConfidenceFull = this.toNumber(v2Output.confidence?.normalized_score);
+    const confidenceScore = rawConfidenceFull !== null
+      ? (rawConfidenceFull <= 1 ? Math.round(rawConfidenceFull * 100) : Math.round(rawConfidenceFull))
+      : null;
     const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
       ...existingCalibrationData,
@@ -1412,7 +1553,7 @@ export class CalibrationService {
       request: {
         ...this.toJsonObject(existingCalibrationData.request),
         ...dto,
-        lookback_days: CALIBRATION_LOOKBACK_DAYS,
+        lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear),
       },
       parcel: {
         id: parcel.id,
@@ -1445,30 +1586,34 @@ export class CalibrationService {
       await supabase
         .from("calibrations")
         .update({
-          status: "completed",
+          status: "awaiting_validation",
           completed_at: completedAt,
-          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          mode_calibrage: this.extractModeCalibrage(v2Output),
+          phase_age: this.extractPhaseAge(v2Output, parcel),
+          p50_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          p50_nirv: this.extractIndexP50(v2Output, "NIRv"),
+          p50_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
+          p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          zone_classification: zoneClassification,
-          phenology_stage: this.extractPhenologyStage(v2Output),
-          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          health_score: this.toInteger(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
           ),
           yield_potential_max: this.toNumber(
             v2Output.step6?.yield_potential?.maximum,
           ),
-          data_completeness_score: this.toNumber(
-            v2Output.confidence?.total_score,
-          ),
-          maturity_phase: v2Output.maturity_phase,
+          coefficient_etat_parcelle: this.extractCoefficientEtat(v2Output),
           anomaly_count: Array.isArray(v2Output.step5?.anomalies)
             ? v2Output.step5?.anomalies.length
             : 0,
-          calibration_version: "v2",
-          calibration_data: calibrationData,
+          baseline_data: this.extractBaselineData(v2Output),
+          diagnostic_data: this.extractDiagnosticData(v2Output),
+          anomalies_data: v2Output.step5?.anomalies ?? null,
+          scores_detail: this.extractScoresDetail(v2Output),
+          profile_snapshot: calibrationData,
+          calibration_version: "v3",
         })
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
@@ -1500,6 +1645,7 @@ export class CalibrationService {
         organizationId,
         v2Output,
         primaryLanguage,
+        calibrationDataStart,
       ),
       this.runCalibrationAI(
         calibrationId,
@@ -1507,12 +1653,13 @@ export class CalibrationService {
         organizationId,
         v2Output,
         secondaryLanguage,
+        calibrationDataStart,
       ),
     ]);
 
     const bilingualUpdate: Record<string, unknown> = {};
     if (primaryReport || secondaryReport) {
-      bilingualUpdate.calibration_data = {
+      bilingualUpdate.profile_snapshot = {
         ...calibrationData,
         ai_analysis: primaryReport ?? secondaryReport,
       };
@@ -1569,14 +1716,14 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "awaiting_validation",
+        "calibrated",
         organizationId,
       );
 
       if (autoActivate) {
         await this.stateMachine.transitionPhase(
           parcelId,
-          "awaiting_validation",
+          "calibrated",
           "active",
           organizationId,
         );
@@ -1648,8 +1795,9 @@ export class CalibrationService {
     calibrationId: string,
     parcelId: string,
     organizationId: string,
-    v2Output: CalibrationResponse,
+    calibrationOutput: CalibrationResponse,
     language: string = "fr",
+    dataStartDate?: string,
   ): Promise<Record<string, unknown> | null> {
     try {
       this.logger.log(
@@ -1666,7 +1814,7 @@ export class CalibrationService {
           model: resolved.model,
           reportType: AgromindReportType.CALIBRATION,
           language,
-          data_start_date: this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS),
+          data_start_date: dataStartDate ?? new Date().toISOString().split("T")[0],
           data_end_date: new Date().toISOString().split("T")[0],
         },
       );
@@ -1723,9 +1871,10 @@ export class CalibrationService {
       status: string;
       health_score: number | null;
       confidence_score: number | null;
-      maturity_phase: string | null;
+      phase_age: string | null;
       error_message: string | null;
-      mode_calibrage: CalibrationMode;
+      type: string;
+      mode_calibrage: string | null;
       recalibration_motif: string | null;
       created_at: string;
       completed_at: string | null;
@@ -1735,7 +1884,7 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
+        "id, type, status, health_score, confidence_score, phase_age, mode_calibrage, error_message, recalibration_motif, profile_snapshot, created_at, completed_at",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
@@ -1764,9 +1913,10 @@ export class CalibrationService {
       status: string;
       health_score: number | null;
       confidence_score: number | null;
-      maturity_phase: string | null;
+      phase_age: string | null;
       error_message: string | null;
-      mode_calibrage: CalibrationMode;
+      type: string;
+      mode_calibrage: string | null;
       recalibration_motif: string | null;
       created_at: string;
       completed_at: string | null;
@@ -1776,11 +1926,11 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
+        "id, type, status, health_score, confidence_score, phase_age, mode_calibrage, error_message, recalibration_motif, profile_snapshot, created_at, completed_at",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .in("mode_calibrage", ["F2", "partial"])
+      .in("type", ["F2_partial"])
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -1806,10 +1956,129 @@ export class CalibrationService {
       return null;
     }
 
+    // Reconstruct output from split JSONB columns for frontend compatibility
+    const baselineData = this.toJsonObject(calibration.baseline_data);
+    const diagnosticData = this.toJsonObject(calibration.diagnostic_data);
+    const scoresDetail = this.toJsonObject(calibration.scores_detail);
+    const profileSnapshot = this.toJsonObject(calibration.profile_snapshot);
+    const snapshotOutput = this.toJsonObject(profileSnapshot?.output);
+
+    const output = {
+      parcel_id: calibration.parcel_id,
+      phase_age: calibration.phase_age,
+      mode_calibrage: calibration.mode_calibrage,
+      step1: snapshotOutput.step1 ?? null,
+      step2: snapshotOutput.step2 ?? null,
+      step3: {
+        global_percentiles: baselineData.percentiles ?? null,
+      },
+      step4: baselineData.phenology ?? null,
+      step5: {
+        anomalies: calibration.anomalies_data ?? [],
+      },
+      step6: snapshotOutput.step6 ?? {
+        yield_potential: {
+          minimum: this.toNumber(calibration.yield_potential_min),
+          maximum: this.toNumber(calibration.yield_potential_max),
+        },
+      },
+      step7: baselineData.zones ?? null,
+      step8: {
+        health_score: {
+          total: this.toNumber(calibration.health_score),
+          ...(this.toJsonObject(scoresDetail.health)),
+        },
+      },
+      confidence: {
+        total_score: this.toNumber(calibration.confidence_score),
+        normalized_score: this.toNumber(calibration.confidence_score),
+        ...(this.toJsonObject(scoresDetail.confidence)),
+      },
+      diagnostic_explicatif: diagnosticData,
+      coefficient_etat_parcelle: this.toNumber(calibration.coefficient_etat_parcelle),
+      metadata: {
+        version: calibration.calibration_version ?? "v3",
+        generated_at: calibration.completed_at ?? calibration.created_at,
+        data_quality_flags: this.buildDataQualityFlags(calibration),
+      },
+    };
+
     return {
       calibration,
-      report: this.toJsonObject(calibration.calibration_data),
+      report: {
+        ...profileSnapshot,
+        output,
+      },
     };
+  }
+
+  async getCalibrationReview(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<CalibrationReviewView> {
+    const ALLOWED_STATUSES = [
+      "completed",
+      "calibrated",
+      "awaiting_nutrition_option",
+      "active",
+    ];
+
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("calibrations")
+      .select("*")
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .in("status", ALLOWED_STATUSES)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(
+        `Failed to fetch calibration for review: ${error.message}`,
+      );
+      throw new BadRequestException(
+        `Failed to fetch calibration: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      throw new NotFoundException(
+        `No completed calibration found for parcel ${parcelId}`,
+      );
+    }
+
+    const record = data as CalibrationRecord;
+    const output = {
+      ...this.toJsonObject(record.baseline_data),
+      ...this.toJsonObject(record.diagnostic_data),
+      anomalies: record.anomalies_data,
+      scores: this.toJsonObject(record.scores_detail),
+    };
+    const history = await this.getCalibrationHistory(parcelId, organizationId, 5);
+
+    const snapshotInput: CalibrationSnapshotInput = {
+      calibration_id: record.id,
+      parcel_id: record.parcel_id,
+      generated_at: record.completed_at ?? record.updated_at ?? record.created_at,
+      output,
+      inputs: this.toJsonObject(record.profile_snapshot),
+      confidence_score: this.toNumber(record.confidence_score),
+      status: record.status,
+      parcel_phase: record.phase_age ?? "unknown",
+      organization_id: record.organization_id,
+      calibration_history: history.map((item) => ({
+        id: item.id,
+        date: item.completed_at ?? item.created_at,
+        health_score: item.health_score,
+        confidence_score: item.confidence_score,
+        phase_age: item.phase_age ?? "unknown",
+        status: item.status,
+      })),
+    };
+
+    return this.calibrationReviewAdapter.transform(snapshotInput);
   }
 
   async checkCalibrationReadiness(
@@ -1911,6 +2180,7 @@ export class CalibrationService {
     const satelliteImages = await this.fetchSatelliteImages(
       parcelId,
       organizationId,
+      getCalibrationLookbackDate(parcel.plantingYear),
     );
     const hasMinSatellite = satelliteImages.length >= 10;
     checks.push(
@@ -2039,15 +2309,15 @@ export class CalibrationService {
       existingCalibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "awaiting_validation") {
+    if (parcel.aiPhase !== "calibrated") {
       throw new BadRequestException(
         `Calibration can only be validated in awaiting_validation phase (current: ${parcel.aiPhase})`,
       );
     }
 
-    if (existingCalibration.status !== "completed") {
+    if (existingCalibration.status !== "awaiting_validation" && existingCalibration.status !== "completed") {
       throw new BadRequestException(
-        "Only completed calibrations can be validated",
+        "Only awaiting_validation calibrations can be validated",
       );
     }
 
@@ -2056,7 +2326,7 @@ export class CalibrationService {
     );
     const validatedAt = new Date().toISOString();
     const calibrationData = {
-      ...this.toJsonObject(existingCalibration.calibration_data),
+      ...this.toJsonObject(existingCalibration.profile_snapshot),
       validation: {
         validated: true,
         validated_at: validatedAt,
@@ -2069,8 +2339,10 @@ export class CalibrationService {
     };
 
     const updatePayload: Record<string, unknown> = {
-      status: "completed",
-      calibration_data: calibrationData,
+      status: "validated",
+      validated_by_user: true,
+      validated_at: validatedAt,
+      profile_snapshot: calibrationData,
     };
 
     if (!existingCalibration.completed_at) {
@@ -2104,7 +2376,7 @@ export class CalibrationService {
 
       await this.stateMachine.transitionPhase(
         existingCalibration.parcel_id,
-        "awaiting_validation",
+        "calibrated",
         "active",
         organizationId,
       );
@@ -2115,14 +2387,14 @@ export class CalibrationService {
         .eq("id", existingCalibration.parcel_id)
         .eq("organization_id", organizationId);
 
-      const observationReason = `Confidence score (${Math.round(confidenceScoreAtValidation * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
-      const currentData = this.toJsonObject(updatedCalibration.calibration_data);
+      const observationReason = `Confidence score (${confidenceScoreAtValidation}%) below minimum threshold (${MINIMUM_CONFIDENCE_FOR_ACTIVE}%) for active recommendations`;
+      const currentData = this.toJsonObject(updatedCalibration.profile_snapshot);
       const prevValidation = this.toJsonObject(currentData.validation);
 
       await supabase
         .from("calibrations")
         .update({
-          calibration_data: {
+          profile_snapshot: {
             ...currentData,
             observation_only: true,
             observation_reason: observationReason,
@@ -2145,7 +2417,7 @@ export class CalibrationService {
 
     await this.stateMachine.transitionPhase(
       existingCalibration.parcel_id,
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
       organizationId,
     );
@@ -2191,9 +2463,34 @@ export class CalibrationService {
       calibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "awaiting_nutrition_option") {
+    if (parcel.aiPhase === "calibrated") {
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    } else if (parcel.aiPhase === "awaiting_data" || parcel.aiPhase === "ready_calibration") {
+      await this.transitionToCalibrating(
+        calibration.parcel_id,
+        parcel.aiPhase,
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrating",
+        "calibrated",
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    } else if (parcel.aiPhase !== "awaiting_nutrition_option") {
       throw new BadRequestException(
-        `Nutrition option can only be confirmed in awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Nutrition option can only be confirmed when calibration data exists (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -2244,7 +2541,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcelAiRow } = await supabase
       .from("parcels")
-      .select("ai_phase, ai_enabled, ai_observation_only")
+      .select("ai_phase, ai_enabled, ai_observation_only, planting_year")
       .eq("id", parcelId)
       .maybeSingle();
 
@@ -2263,7 +2560,7 @@ export class CalibrationService {
     );
 
     const dataEnd = new Date().toISOString().split("T")[0];
-    const dataStart = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const dataStart = getCalibrationLookbackDate(parcelAiRow?.planting_year ?? null);
 
     // Resolve provider: org-configured first, then system fallback
     const { provider, model } = await this.aiReportsService.resolveProvider(organizationId);
@@ -2377,23 +2674,45 @@ export class CalibrationService {
     }
   }
 
-  private normalizeCalibrationMode(mode?: string): CalibrationMode {
-    if (mode === "partial" || mode === "annual") {
-      return mode;
-    }
-
-    return "full";
+  private normalizeCalibrationType(mode?: string): CalibrationType {
+    const TYPE_MAP: Record<string, CalibrationType> = {
+      F2_partial: "F2_partial",
+      F3_complete: "F3_complete",
+      initial: "initial",
+      // Legacy values
+      full: "initial",
+      partial: "F2_partial",
+      annual: "F3_complete",
+    };
+    return TYPE_MAP[mode ?? ""] ?? "initial";
   }
 
   private shouldAutoActivateAfterCompletion(
     previousPhase: ParcelAiPhase,
-    mode: CalibrationMode,
+    type: CalibrationType,
   ): boolean {
-    if (mode === "annual" || mode === "partial") {
+    if (type === "F3_complete" || type === "F2_partial") {
       return true;
     }
 
     return previousPhase === "active";
+  }
+
+  /**
+    * Lifecycle: transitions a parcel to 'calibrating', going through
+   * intermediate states if needed (awaiting_data → ready_calibration → calibrating).
+   */
+  private async transitionToCalibrating(
+    parcelId: string,
+    currentPhase: AiPhase,
+    organizationId: string,
+  ): Promise<void> {
+    let phase = currentPhase;
+    if (phase === "awaiting_data") {
+      await this.stateMachine.transitionPhase(parcelId, "awaiting_data", "ready_calibration", organizationId);
+      phase = "ready_calibration" as AiPhase;
+    }
+    await this.stateMachine.transitionPhase(parcelId, phase, "calibrating", organizationId);
   }
 
   private buildObservationModeContext(confidenceScore: number | null): {
@@ -2402,7 +2721,7 @@ export class CalibrationService {
   } {
     if (
       confidenceScore === null ||
-      confidenceScore >= MINIMUM_CONFIDENCE_FOR_ACTIVE
+      confidenceScore !== null && confidenceScore >= MINIMUM_CONFIDENCE_FOR_ACTIVE
     ) {
       return {
         observationOnly: false,
@@ -2412,7 +2731,7 @@ export class CalibrationService {
 
     return {
       observationOnly: true,
-      observationReason: `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`,
+      observationReason: `Confidence score (${confidenceScore}%) below minimum threshold (${MINIMUM_CONFIDENCE_FOR_ACTIVE}%) for active recommendations`,
     };
   }
 
@@ -2433,6 +2752,7 @@ export class CalibrationService {
   async getPercentiles(
     parcelId: string,
     organizationId: string,
+    authToken?: string,
   ): Promise<PercentilesResponse> {
     const ndviValues = await this.fetchNdviValues(parcelId, organizationId);
 
@@ -2440,19 +2760,20 @@ export class CalibrationService {
       throw new NotFoundException("No NDVI readings found for parcel");
     }
 
-    return this.postCalibrationApi<PercentilesResponse>(
-      "/api/calibration/percentiles",
-      {
+    return (await this.satelliteProxy.proxy("POST", "/calibration/percentiles", {
+      body: {
         values: ndviValues,
         percentiles: NDVI_PERCENTILES,
       },
       organizationId,
-    );
+      authToken,
+    })) as PercentilesResponse;
   }
 
   async getZones(
     parcelId: string,
     organizationId: string,
+    authToken?: string,
   ): Promise<ZonesResponse> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const [ndviValues, thresholds] = await Promise.all([
@@ -2464,14 +2785,14 @@ export class CalibrationService {
       throw new NotFoundException("No NDVI readings found for parcel");
     }
 
-    return this.postCalibrationApi<ZonesResponse>(
-      "/api/calibration/classify-zones",
-      {
+    return (await this.satelliteProxy.proxy("POST", "/calibration/classify-zones", {
+      body: {
         ndvi_values: ndviValues,
         thresholds,
       },
       organizationId,
-    );
+      authToken,
+    })) as ZonesResponse;
   }
 
   private async getParcelContext(
@@ -2534,7 +2855,7 @@ export class CalibrationService {
       waterQuantityPerSession: this.toNumber(parcel.water_quantity_per_session),
       langue: typeof parcel.langue === "string" ? parcel.langue : "fr",
       aiPhase:
-        typeof parcel.ai_phase === "string" ? parcel.ai_phase : "disabled",
+        typeof parcel.ai_phase === "string" ? parcel.ai_phase : "awaiting_data",
     };
   }
 
@@ -2632,16 +2953,17 @@ export class CalibrationService {
   private async fetchNdviValues(
     parcelId: string,
     organizationId: string,
+    sinceDate?: string,
   ): Promise<number[]> {
     const supabase = this.databaseService.getAdminClient();
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(null);
     const { data, error } = await supabase
       .from("satellite_indices_data")
       .select("mean_value")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
       .eq("index_name", "NDVI")
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true });
 
     if (error) {
@@ -2667,15 +2989,16 @@ export class CalibrationService {
   private async fetchSatelliteImages(
     parcelId: string,
     organizationId: string,
+    sinceDate?: string,
   ): Promise<Array<Record<string, unknown>>> {
     const supabase = this.databaseService.getAdminClient();
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(null);
     const { data, error } = await supabase
       .from("satellite_indices_data")
       .select("date, index_name, mean_value, cloud_coverage_percentage")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true })
       .order("index_name", { ascending: true });
 
@@ -2732,7 +3055,7 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
 
     const { data, error } = await supabase
       .from("weather_daily_data")
@@ -2756,6 +3079,7 @@ export class CalibrationService {
   private async syncWeatherData(
     parcel: ParcelContext,
     organizationId: string,
+    authToken?: string,
   ): Promise<void> {
     if (!parcel.boundary.length) {
       return;
@@ -2766,31 +3090,19 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const startDate = this.getLookbackDate(CALIBRATION_LOOKBACK_DAYS);
+    const startDate = getCalibrationLookbackDate(parcel.plantingYear);
     const endDate = new Date().toISOString().split("T")[0];
 
-    const url = new URL(
-      `${this.getSatelliteServiceUrl()}/api/weather/historical`,
-    );
-    url.searchParams.set("latitude", String(roundedLatitude));
-    url.searchParams.set("longitude", String(roundedLongitude));
-    url.searchParams.set("start_date", startDate);
-    url.searchParams.set("end_date", endDate);
-
-    const response = await fetch(url.toString(), {
-      method: "GET",
-      headers: { "x-organization-id": organizationId },
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!response.ok) {
-      this.logger.warn(
-        `Weather auto-sync failed for parcel ${parcel.id}: HTTP ${response.status}`,
-      );
-      return;
-    }
-
-    const body = (await response.json()) as {
+    const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
+      query: {
+        latitude: String(roundedLatitude),
+        longitude: String(roundedLongitude),
+        start_date: startDate,
+        end_date: endDate,
+      },
+      organizationId,
+      authToken,
+    }) as {
       latitude: number;
       longitude: number;
       source?: string;
@@ -3056,7 +3368,7 @@ export class CalibrationService {
   }
 
   private extractPreviousBaseline(calibration: CalibrationRecord): JsonObject {
-    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const calibrationData = this.toJsonObject(calibration.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
 
     if (Object.keys(output).length > 0) {
@@ -3073,59 +3385,29 @@ export class CalibrationService {
     status: string;
     health_score: number | null;
     confidence_score: number | null;
-    maturity_phase: string | null;
+    phase_age: string | null;
     error_message: string | null;
-    mode_calibrage: CalibrationMode;
+    type: string;
+    mode_calibrage: string | null;
     recalibration_motif: string | null;
     created_at: string;
     completed_at: string | null;
   }> {
     return rows.map((row) => {
-      const calibrationData = this.toJsonObject(row.calibration_data);
-      const recalibrationData = this.toJsonObject(calibrationData.recalibration);
-      const requestData = this.toJsonObject(calibrationData.request);
-
-      const modeFromColumn =
-        typeof row.mode_calibrage === "string" ? row.mode_calibrage : null;
-      const modeFromRequest =
-        typeof requestData.mode_calibrage === "string"
-          ? requestData.mode_calibrage
-          : null;
-      const CALIBRATION_MODE_MAP: Record<string, CalibrationMode> = {
-        F1: "full",
-        F2: "partial",
-        F3: "annual",
-        full: "full",
-        partial: "partial",
-        annual: "annual",
-      };
-      const mode: CalibrationMode =
-        CALIBRATION_MODE_MAP[modeFromColumn ?? ""] ??
-        CALIBRATION_MODE_MAP[modeFromRequest ?? ""] ??
-        "full";
-
-      const motifFromColumn =
-        typeof row.recalibration_motif === "string"
-          ? row.recalibration_motif
-          : null;
-      const motifFromData =
-        typeof calibrationData.recalibration_motif === "string"
-          ? calibrationData.recalibration_motif
-          : typeof recalibrationData.motif === "string"
-            ? recalibrationData.motif
-            : null;
-
       return {
         id: row.id as string,
         status: row.status as string,
         health_score: this.toNumber(row.health_score),
         confidence_score: this.toNumber(row.confidence_score),
-        maturity_phase:
-          typeof row.maturity_phase === "string" ? row.maturity_phase : null,
+        phase_age:
+          typeof row.phase_age === "string" ? row.phase_age : null,
         error_message:
           typeof row.error_message === "string" ? row.error_message : null,
-        mode_calibrage: mode,
-        recalibration_motif: motifFromColumn ?? motifFromData,
+        type: typeof row.type === "string" ? row.type : "initial",
+        mode_calibrage:
+          typeof row.mode_calibrage === "string" ? row.mode_calibrage : null,
+        recalibration_motif:
+          typeof row.recalibration_motif === "string" ? row.recalibration_motif : null,
         created_at: row.created_at as string,
         completed_at:
           typeof row.completed_at === "string" ? row.completed_at : null,
@@ -3190,103 +3472,74 @@ export class CalibrationService {
     return keys.length > 0 ? keys[0] : null;
   }
 
-  private async postCalibrationApi<T>(
-    path: string,
-    payload: unknown,
-    organizationId: string,
-    maxRetries: number = 3,
-  ): Promise<T> {
-    const url = `${this.getSatelliteServiceUrl()}${path}`;
-    let lastError: Error | null = null;
+  // ═══════════════════════════════════════════════════════════════
+  // EXTRACTION HELPERS
+  // ═══════════════════════════════════════════════════════════════
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  private extractIndexPercentile(
+    output: CalibrationResponse,
+    indexName: string,
+    percentile: string,
+  ): number | null {
+    const value = output.step3?.global_percentiles?.[indexName]?.[percentile];
+    return this.toNumber(value);
+  }
+
+  private extractModeCalibrage(output: CalibrationResponse): string | null {
+    const raw = (output as unknown as Record<string, unknown>).mode_calibrage;
+    return typeof raw === "string" ? raw : null;
+  }
+
+  private extractPhaseAge(
+    output: CalibrationResponse,
+    parcel: ParcelContext,
+  ): string | null {
+    // Try from engine output first
+    const fromOutput = (output as unknown as Record<string, unknown>).phase_age;
+    if (typeof fromOutput === "string") return fromOutput;
+    const nested = (fromOutput as Record<string, unknown>)?.phase;
+    if (typeof nested === "string") return nested;
+
+    // Fallback: compute from referentiel
+    if (parcel.plantingYear != null) {
+      const age = new Date().getFullYear() - parcel.plantingYear;
       try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-organization-id": organizationId,
-          },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(5 * 60 * 1000),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          const message =
-            errorText ||
-            `Calibration service request failed with status ${response.status}`;
-
-          if (response.status >= 500 && attempt < maxRetries) {
-            lastError = new BadGatewayException(message);
-            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-            this.logger.warn(
-              `Calibration API ${path} returned ${response.status}, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, delay));
-            continue;
-          }
-
-          throw response.status >= 500
-            ? new BadGatewayException(message)
-            : new BadRequestException(message);
+        const { detectPhaseAgeFromReferentiel } = require('./phase-age-detector');
+        const ref = getLocalCropReference(parcel.cropType);
+        if (ref) {
+          return detectPhaseAgeFromReferentiel(age, parcel.system, ref);
         }
-
-        const responseBody: T = await response.json();
-        return responseBody;
-      } catch (error) {
-        if (error instanceof BadRequestException) {
-          throw error;
-        }
-
-        const isRetryable =
-          error instanceof BadGatewayException ||
-          (error instanceof Error &&
-            (error.name === "AbortError" ||
-              error.name === "TimeoutError" ||
-              error.message.includes("fetch failed")));
-
-        if (isRetryable && attempt < maxRetries) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-          this.logger.warn(
-            `Calibration API ${path} failed (${lastError.message}), retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`,
-          );
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          continue;
-        }
-
-        if (error instanceof BadGatewayException) {
-          throw error;
-        }
-
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Unknown calibration service error";
-        this.logger.error(`Calibration API call failed for ${url}: ${message}`);
-        throw new BadGatewayException(
-          `Calibration service unavailable: ${message}`,
-        );
+      } catch {
+        // phase-age-detector not available, return null
       }
     }
-
-    throw (
-      lastError ??
-      new BadGatewayException("Calibration service unavailable after retries")
-    );
+    return null;
   }
 
-  private getSatelliteServiceUrl(): string {
-    const baseUrl =
-      process.env.SATELLITE_SERVICE_URL || "http://localhost:8001";
-    return baseUrl.replace(/\/+$/, "");
+  private extractCoefficientEtat(output: CalibrationResponse): number | null {
+    const raw = (output as unknown as Record<string, unknown>).coefficient_etat_parcelle;
+    return this.toNumber(raw);
   }
 
-  private getLookbackDate(days: number): string {
-    const lookbackDate = new Date();
-    lookbackDate.setDate(lookbackDate.getDate() - days);
-    return lookbackDate.toISOString().split("T")[0];
+  private extractBaselineData(output: CalibrationResponse): Record<string, unknown> {
+    return {
+      percentiles: output.step3?.global_percentiles ?? null,
+      phenology: output.step4 ?? null,
+      zones: output.step7 ?? null,
+    };
+  }
+
+  private extractDiagnosticData(output: CalibrationResponse): Record<string, unknown> | null {
+    const diagnostic = (output as unknown as Record<string, unknown>).diagnostic_explicatif;
+    if (this.isJsonObject(diagnostic)) return diagnostic;
+    return null;
+  }
+
+  private extractScoresDetail(output: CalibrationResponse): Record<string, unknown> {
+    return {
+      health: output.step8 ?? null,
+      confidence: output.confidence ?? null,
+    };
   }
 
   private extractFarmOrganizationId(farms: unknown): string | null {
@@ -3348,6 +3601,24 @@ export class CalibrationService {
 
   private toJsonObject(value: unknown): JsonObject {
     return this.isJsonObject(value) ? value : {};
+  }
+
+  private buildDataQualityFlags(calibration: CalibrationRecord): string[] {
+    const flags: string[] = [];
+    const confidence = this.toNumber(calibration.confidence_score);
+    if (confidence !== null && confidence < 50) flags.push('low_confidence');
+    if (confidence !== null && confidence < 25) flags.push('insufficient_satellite_data');
+    if (calibration.phase_age === 'juvenile') flags.push('juvenile_plantation');
+    if (calibration.phase_age === 'senescence') flags.push('senescence_detected');
+    if (calibration.mode_calibrage === 'lecture_pure') flags.push('observation_mode_only');
+    if ((this.toNumber(calibration.anomaly_count) ?? 0) > 3) flags.push('high_anomaly_count');
+    return flags;
+  }
+
+  /** Convert to integer (for INTEGER columns like confidence_score, health_score) */
+  private toInteger(value: unknown): number | null {
+    const num = this.toNumber(value);
+    return num !== null ? Math.round(num) : null;
   }
 
   private toNumber(value: unknown): number | null {

@@ -6,7 +6,10 @@ export interface FileRegistry {
   id: string;
   organization_id: string;
   bucket_name: string;
+  /** Storage object path within the bucket */
   file_path: string;
+  /** Browser-openable URL when bucket is public (set by API from SUPABASE_URL) */
+  public_url?: string | null;
   file_name: string;
   file_size: number;
   mime_type: string;
@@ -161,5 +164,12 @@ export const filesApi = {
    */
   async trackAccess(fileId: string, organizationId?: string): Promise<{ success: boolean }> {
     return apiClient.post(`${BASE_URL}/${fileId}/access`, {}, {}, organizationId);
+  },
+
+  /**
+   * Sync existing files from storage to registry
+   */
+  async syncExisting(organizationId?: string): Promise<{ synced: number; skipped: number }> {
+    return apiClient.post(`${BASE_URL}/sync`, {}, {}, organizationId);
   },
 };

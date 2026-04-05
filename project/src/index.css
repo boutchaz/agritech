@@ -115,6 +115,35 @@
     overflow: hidden;
   }
 
+  /* ===== Tablet Demo Optimizations ===== */
+
+  /* Standalone PWA: hide status bar gap, use full screen */
+  @media all and (display-mode: standalone) {
+    body {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  /* Prevent pull-to-refresh and overscroll bounce on tablet */
+  html, body, #root {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text selection during demo swipes */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Tablet-specific: smoother scroll in content areas */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    [data-main-scroll] {
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
   /* Defend main scroll container against Radix UI / react-remove-scroll
      injecting inline style="overflow: initial" when dialogs close */
   main[data-main-scroll] {
@@ -199,6 +228,18 @@
     @apply w-full max-w-lg rounded-t-2xl sm:rounded-xl bg-white dark:bg-gray-900 shadow-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden max-h-[90vh] sm:max-h-[85vh] overflow-y-auto;
   }
 
+  /**
+   * Module page body — same rhythm as dashboard.tsx and settings content.
+   * Use on route pages below ModernPageHeader for consistent padding and max width.
+   */
+  .app-page-content {
+    @apply w-full max-w-[1600px] mx-auto min-h-0 min-w-0 flex-1 p-4 sm:p-5 md:p-6 lg:p-8 space-y-6 md:space-y-8;
+  }
+
+  /** Horizontal scroll for wide toolbars/filters on narrow viewports (demo-safe on tablet). */
+  .app-toolbar-scroll {
+    @apply flex min-w-0 flex-wrap gap-2 sm:flex-nowrap sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:thin];
+  }
 }
 
 /* Landing page animations */
@@ -512,6 +553,34 @@
 }
 .chat-markdown > *:last-child {
   margin-bottom: 0;
+}
+
+/* Custom branded scrollbar — thin, rounded, uses design tokens */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.35);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.55);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Hide scrollbar for horizontal scroll strips */

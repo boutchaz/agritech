@@ -83,7 +83,7 @@ interface OnboardingProviderProps {
   children: ReactNode;
 }
 
-export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, email, children }) => {
+export const OnboardingProvider = ({ userId, email, children }: OnboardingProviderProps) => {
   const [state, setState] = useState<OnboardingState>(() => getDefaultState(userId, email));
   const [isRestored, setIsRestored] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

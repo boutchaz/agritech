@@ -280,6 +280,8 @@ CREATE TABLE IF NOT EXISTS organization_users (
 
 CREATE INDEX IF NOT EXISTS idx_organization_users_org ON organization_users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_organization_users_user ON organization_users(user_id);
+-- Composite index for OrganizationGuard: called on every authenticated request
+CREATE INDEX IF NOT EXISTS idx_organization_users_membership ON organization_users(user_id, organization_id) WHERE is_active = true;
 
 -- User Profiles
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -558,7 +560,7 @@ CREATE TABLE IF NOT EXISTS parcels (
   boundary_geom GEOMETRY(Polygon, 4326),
   -- AI calibration columns
   ai_enabled BOOLEAN DEFAULT false,
-  ai_phase TEXT DEFAULT 'disabled' CHECK (ai_phase IN ('disabled', 'calibration', 'calibrating', 'awaiting_validation', 'awaiting_nutrition_option', 'active', 'paused')),
+  ai_phase TEXT DEFAULT 'awaiting_data' CHECK (ai_phase IN ('awaiting_data', 'ready_calibration', 'calibrating', 'calibrated', 'awaiting_nutrition_option', 'active', 'archived')),
   ai_calibration_id UUID,
   ai_nutrition_option TEXT DEFAULT 'A',
   ai_production_target TEXT,
@@ -3791,7 +3793,7 @@ CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_date ON cloud_coverage_chec
 CREATE TABLE IF NOT EXISTS analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   analysis_type analysis_type NOT NULL,
   analysis_date DATE NOT NULL,
   laboratory TEXT,
@@ -3828,7 +3830,7 @@ CREATE INDEX IF NOT EXISTS idx_analysis_recommendations_analysis ON analysis_rec
 CREATE TABLE IF NOT EXISTS soil_analyses (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   test_type_id UUID,
   analysis_date TIMESTAMPTZ DEFAULT NOW(),
   physical JSONB,
@@ -3857,7 +3859,7 @@ CREATE TABLE IF NOT EXISTS test_types (
 CREATE TABLE IF NOT EXISTS parcel_reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   template_id TEXT NOT NULL,
   title TEXT NOT NULL,
   generated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -4355,7 +4357,7 @@ CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WH
 CREATE TABLE IF NOT EXISTS utilities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
   type TEXT NOT NULL,
   provider TEXT,
@@ -4575,7 +4577,7 @@ CREATE POLICY "org_delete_subscriptions" ON subscriptions
 CREATE TABLE IF NOT EXISTS financial_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   category TEXT NOT NULL,
   subcategory TEXT,
@@ -4598,7 +4600,7 @@ CREATE INDEX IF NOT EXISTS idx_financial_transactions_date ON financial_transact
 CREATE TABLE IF NOT EXISTS livestock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   type TEXT NOT NULL,
   breed TEXT,
   count INTEGER DEFAULT 1,
@@ -5469,7 +5471,7 @@ CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   parcel_id UUID NOT NULL REFERENCES parcels(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   gdd_daily NUMERIC(6, 2),
@@ -5740,7 +5742,7 @@ DO $$
 BEGIN
   INSERT INTO crop_types (name, name_fr, name_ar, scientific_name, family, tbase, frost_threshold, heat_threshold, chill_hours_min, chill_hours_max, is_system)
   SELECT * FROM (VALUES
-    ('olive', 'Olivier', 'الزيتون', 'Olea europaea', 'Oleaceae', 10.0::numeric, -5.0::numeric, 40.0::numeric, 200, 1000, true),
+    ('olive', 'Olivier', 'الزيتون', 'Olea europaea', 'Oleaceae', 7.5::numeric, -5.0::numeric, 40.0::numeric, 200, 1000, true),
     ('avocado', 'Avocatier', 'الأفوكادو', 'Persea americana', 'Lauraceae', 10.0, -1.0, 35.0, 100, 400, true),
     ('citrus', 'Agrumes', 'الحوامض', 'Citrus spp.', 'Rutaceae', 13.0, -3.0, 38.0, 100, 500, true),
     ('almond', 'Amandier', 'اللوز', 'Prunus dulcis', 'Rosaceae', 4.5, -2.0, 38.0, 400, 800, true),
@@ -5756,7 +5758,7 @@ BEGIN
     SELECT 1 FROM crop_types WHERE crop_types.name = v.name AND crop_types.organization_id IS NULL
   );
 
-  UPDATE crop_types SET scientific_name = 'Olea europaea', family = 'Oleaceae', tbase = 10.0, frost_threshold = -5.0, heat_threshold = 40.0, chill_hours_min = 200, chill_hours_max = 1000, is_system = true, name_fr = 'Olivier', name_ar = 'الزيتون' WHERE name = 'olive' AND organization_id IS NULL;
+  UPDATE crop_types SET scientific_name = 'Olea europaea', family = 'Oleaceae', tbase = 7.5, frost_threshold = -5.0, heat_threshold = 40.0, chill_hours_min = 200, chill_hours_max = 1000, is_system = true, name_fr = 'Olivier', name_ar = 'الزيتون' WHERE name = 'olive' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Persea americana', family = 'Lauraceae', tbase = 10.0, frost_threshold = -1.0, heat_threshold = 35.0, chill_hours_min = 100, chill_hours_max = 400, is_system = true, name_fr = 'Avocatier', name_ar = 'الأفوكادو' WHERE name = 'avocado' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Citrus spp.', family = 'Rutaceae', tbase = 13.0, frost_threshold = -3.0, heat_threshold = 38.0, chill_hours_min = 100, chill_hours_max = 500, is_system = true, name_fr = 'Agrumes', name_ar = 'الحوامض' WHERE name = 'citrus' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Prunus dulcis', family = 'Rosaceae', tbase = 4.5, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 800, is_system = true, name_fr = 'Amandier', name_ar = 'اللوز' WHERE name = 'almond' AND organization_id IS NULL;
@@ -5931,34 +5933,65 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-  -- Status validated in application code (no CHECK constraint)
-  status TEXT NOT NULL DEFAULT 'pending',
+
+  -- Trigger type: what initiated the calibration
+  type TEXT NOT NULL DEFAULT 'initial' CHECK (type IN ('initial', 'F2_partial', 'F3_complete')),
+
+  -- Engine run status
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'awaiting_validation', 'validated', 'insufficient', 'failed', 'archived')),
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
-  baseline_ndvi NUMERIC,
-  baseline_ndre NUMERIC,
-  baseline_ndmi NUMERIC,
-  confidence_score NUMERIC CHECK (confidence_score >= 0 AND confidence_score <= 1),
-  zone_classification JSONB,
-  phenology_stage TEXT,
-  calibration_data JSONB,
   error_message TEXT,
-  -- Calibration v2 columns
-  health_score NUMERIC CHECK (health_score >= 0 AND health_score <= 100),
-  yield_potential_min NUMERIC,
-  yield_potential_max NUMERIC,
-  data_completeness_score NUMERIC CHECK (data_completeness_score >= 0 AND data_completeness_score <= 100),
-  maturity_phase TEXT CHECK (maturity_phase IN ('juvenile', 'entree_production', 'pleine_production', 'maturite_avancee', 'senescence', 'unknown')),
+
+  -- V2 engine mode: how the engine behaved based on parcel maturity
+  mode_calibrage TEXT CHECK (mode_calibrage IN ('lecture_pure', 'calibrage_progressif', 'calibrage_complet', 'calibrage_avec_signalement', 'collecte_donnees', 'age_manquant')),
+
+  -- Phase age: parcel maturity at calibration time
+  phase_age TEXT CHECK (phase_age IN ('juvenile', 'entree_production', 'pleine_production', 'senescence')),
+
+  -- Extracted percentiles for fast DB access (avoid JSONB parsing)
+  p50_ndvi DECIMAL(6,4),
+  p50_nirv DECIMAL(6,4),
+  p50_ndmi DECIMAL(6,4),
+  p50_ndre DECIMAL(6,4),
+  p10_ndvi DECIMAL(6,4),
+  p10_ndmi DECIMAL(6,4),
+
+  -- Scores
+  confidence_score INTEGER CHECK (confidence_score BETWEEN 0 AND 100),
+  health_score INTEGER CHECK (health_score BETWEEN 0 AND 100),
+
+  -- Yield potential
+  yield_potential_min DECIMAL(6,2),
+  yield_potential_max DECIMAL(6,2),
+  coefficient_etat_parcelle DECIMAL(4,2),
+
+  -- Anomaly count
   anomaly_count INTEGER DEFAULT 0,
-  calibration_version TEXT DEFAULT 'v2',
-  -- Calibration mode and recalibration support
-  mode_calibrage TEXT DEFAULT 'full',
+
+  -- Structured JSONB data (split from monolithic calibration_data)
+  baseline_data JSONB,          -- percentiles, phenology, intra-parcel zones
+  diagnostic_data JSONB,        -- ecarts, causes, resume_pourquoi
+  anomalies_data JSONB,         -- detected anomalies with triple confirmation
+  scores_detail JSONB,          -- health + confidence score component breakdown
+  profile_snapshot JSONB,       -- parcel profile at calibration time
+
+  -- Recalibration support
   recalibration_motif TEXT,
   previous_baseline JSONB,
   campaign_bilan JSONB,
+
   -- Localized reports
   rapport_fr TEXT,
   rapport_ar TEXT,
+
+  -- User validation
+  validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
+  validated_at TIMESTAMPTZ,
+
+  -- Versioning
+  calibration_version TEXT DEFAULT 'v3',
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (id, organization_id),
@@ -5967,14 +6000,50 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
-COMMENT ON COLUMN calibrations.mode_calibrage IS 'Calibration mode: full (initial), partial (block-update recalibration), annual (post-campaign recalibration)';
-COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for partial recalibrations';
+COMMENT ON COLUMN calibrations.type IS 'Trigger type: initial (first calibration), F2_partial (event-driven recalibration), F3_complete (post-campaign annual recalibration)';
+COMMENT ON COLUMN calibrations.mode_calibrage IS 'V2 engine mode: how the calibration engine behaved based on parcel maturity and data availability';
+COMMENT ON COLUMN calibrations.phase_age IS 'Parcel maturity phase at calibration time, derived from referentiel age thresholds';
+COMMENT ON COLUMN calibrations.baseline_data IS 'Calibrated baseline: percentiles, phenology historique, zones intra-parcellaires';
+COMMENT ON COLUMN calibrations.diagnostic_data IS 'Diagnostic explicatif: ecarts, causes probables, resume_pourquoi';
+COMMENT ON COLUMN calibrations.anomalies_data IS 'Detected anomalies with triple confirmation (meteo + satellite + user)';
+COMMENT ON COLUMN calibrations.scores_detail IS 'Score breakdown: sante components (vigueur, homogeneite, stabilite, hydrique, nutritionnel) + confiance Bloc A/B';
+COMMENT ON COLUMN calibrations.profile_snapshot IS 'Snapshot of parcel agronomic profile at calibration time';
+COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for F2_partial recalibrations';
 COMMENT ON COLUMN calibrations.previous_baseline IS 'Snapshot of validated baseline prior to recalibration';
-COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by annual recalibration flow';
+COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by F3_complete recalibration flow';
 
 CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_status ON public.calibrations(status);
+
+-- AI Diagnostic Sessions (one row per operational AI analysis run)
+CREATE TABLE IF NOT EXISTS public.ai_diagnostic_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
+  chemin TEXT NOT NULL CHECK (chemin IN ('A_plan_standard', 'B_recommendations', 'C_observation')),
+  phase_age TEXT,
+  engine_output JSONB,
+  date_analyse DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_diagnostic_sessions_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE ai_diagnostic_sessions IS 'One row per operational AI analysis run — stores full engine output and routing chemin';
+COMMENT ON COLUMN ai_diagnostic_sessions.chemin IS 'Routing path: A_plan_standard (juvenile), B_recommendations (operational), C_observation (low confidence)';
+COMMENT ON COLUMN ai_diagnostic_sessions.engine_output IS 'Full JSON response from the operational AI engine';
+
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_parcel ON public.ai_diagnostic_sessions(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_org ON public.ai_diagnostic_sessions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_date ON public.ai_diagnostic_sessions(parcel_id, date_analyse DESC);
+
+ALTER TABLE ai_diagnostic_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_diagnostic_sessions" ON ai_diagnostic_sessions
+  FOR ALL USING (is_organization_member(organization_id));
 
 -- AI Recommendations
 CREATE TABLE IF NOT EXISTS public.ai_recommendations (
@@ -5982,25 +6051,46 @@ CREATE TABLE IF NOT EXISTS public.ai_recommendations (
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validated', 'rejected', 'executed', 'expired')),
-  constat TEXT NOT NULL,
-  diagnostic TEXT NOT NULL,
-  action TEXT NOT NULL,
-  conditions JSONB,
-  suivi TEXT,
+  session_id UUID REFERENCES public.ai_diagnostic_sessions(id) ON DELETE SET NULL,
+
+  -- Alert and classification
+  alert_code TEXT,                   -- e.g. OLI-01, OLI-16, AGR-03
   crop_type TEXT NOT NULL,
-  alert_code TEXT,
-  priority INTEGER DEFAULT 3,
-  valid_from DATE,
-  valid_until DATE,
+  type TEXT NOT NULL DEFAULT 'other' CHECK (type IN ('irrigation', 'fertilisation', 'phytosanitary', 'pruning', 'harvest', 'information', 'other')),
+  recommendation_type TEXT NOT NULL DEFAULT 'reactive' CHECK (recommendation_type IN ('reactive', 'planned')),
+  theme TEXT,                        -- for frequency limit tracking: irrigation, fertigation_n, phytosanitary, soil_amendment, biostimulants, pruning
+
+  -- Priority and status (V2 governance)
+  priority TEXT NOT NULL DEFAULT 'info' CHECK (priority IN ('urgent', 'priority', 'vigilance', 'info')),
+  status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'validated', 'waiting', 'executed', 'evaluated', 'closed', 'rejected', 'expired')),
+
+  -- 6-bloc structure (V2 governance — mandatory for every recommendation)
+  bloc_1_constat JSONB,              -- spectral values, baseline position, trend, inter-index coherence
+  bloc_2_diagnostic JSONB,           -- hypotheses, alternatives, confidence level, missing data
+  bloc_3_action JSONB,               -- description, product, dose, method, blocking condition
+  bloc_4_fenetre JSONB,              -- urgency level, optimal period, deadline, expiration rules
+  bloc_5_conditions JSONB,           -- meteo requirements, J+7 compatibility
+  bloc_6_suivi JSONB,                -- evaluation delay, indicator, expected response
+
+  -- Co-occurrence
+  co_occurrence_code TEXT,           -- linked alert code if co-occurrence detected
+
+  -- Lifecycle dates
+  expires_at TIMESTAMPTZ,
   executed_at TIMESTAMPTZ,
+  evaluated_at TIMESTAMPTZ,
   execution_notes TEXT,
-  -- Monitoring operational columns
-  evaluation_window_days INTEGER,
-  evaluation_indicator TEXT,
-  expected_response TEXT,
-  actual_response_pct REAL,
-  efficacy TEXT,
+
+  -- Evaluation result
+  evaluation_result TEXT CHECK (evaluation_result IN ('effective', 'partially_effective', 'not_effective')),
+  evaluation_notes TEXT,
+
+  -- Rejection
+  rejection_motif TEXT,
+
+  -- Responsibility disclaimer
+  mention_responsabilite TEXT DEFAULT 'Cette recommandation est basée sur l''analyse des données disponibles. La décision et la responsabilité de l''application reviennent à l''exploitant.',
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (id, organization_id),
@@ -6009,11 +6099,39 @@ CREATE TABLE IF NOT EXISTS public.ai_recommendations (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE ai_recommendations IS 'Individual actionable recommendations with V2 6-bloc governance structure';
+COMMENT ON COLUMN ai_recommendations.session_id IS 'FK to ai_diagnostic_sessions — links recommendation to the AI analysis run that generated it';
+COMMENT ON COLUMN ai_recommendations.theme IS 'Theme for frequency limit tracking per gouvernance rules';
+COMMENT ON COLUMN ai_recommendations.recommendation_type IS 'reactive (triggered by alert) or planned (from annual plan)';
+
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_parcel_id ON public.ai_recommendations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_organization_id ON public.ai_recommendations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_status ON public.ai_recommendations(status);
-CREATE INDEX IF NOT EXISTS idx_ai_recommendations_executed_efficacy
-  ON public.ai_recommendations(status, executed_at, efficacy);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_session ON public.ai_recommendations(session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_expiry ON public.ai_recommendations(status, expires_at) WHERE status IN ('proposed', 'validated', 'waiting');
+
+-- Recommendation Events (lifecycle journal — every state transition logged)
+CREATE TABLE IF NOT EXISTS public.recommendation_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recommendation_id UUID NOT NULL REFERENCES public.ai_recommendations(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  decider TEXT NOT NULL CHECK (decider IN ('ia', 'user')),
+  motif TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE recommendation_events IS 'Lifecycle journal: every recommendation status transition with timestamp, decider, and motif';
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_reco ON public.recommendation_events(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_parcel ON public.recommendation_events(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_org ON public.recommendation_events(organization_id);
+
+ALTER TABLE recommendation_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_recommendation_events" ON recommendation_events
+  FOR ALL USING (is_organization_member(organization_id));
 
 -- Annual Plans
 CREATE TABLE IF NOT EXISTS public.annual_plans (
@@ -6021,25 +6139,53 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
-  year INTEGER NOT NULL,
+  season TEXT NOT NULL,              -- e.g. "2026", "2025-2026"
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'validated', 'active', 'archived')),
   crop_type TEXT NOT NULL,
   variety TEXT,
-  plan_data JSONB,
+
+  -- V2 extracted parameters
+  nutrition_option TEXT CHECK (nutrition_option IN ('A', 'B', 'C')),
+  nutrition_option_reason TEXT,
+  yield_target_t_ha DECIMAL(6,2),
+  alternance_status TEXT,            -- ON / OFF / indefini / NA
+  production_target TEXT,            -- huile_qualite / olive_table / mixte
+
+  -- V2 extracted annual doses (kg/ha)
+  dose_n_kg_ha DECIMAL(7,2),
+  dose_p_kg_ha DECIMAL(7,2),
+  dose_k_kg_ha DECIMAL(7,2),
+  dose_mg_kg_ha DECIMAL(7,2),
+
+  -- Full plan data
+  monthly_calendar JSONB,            -- structured monthly interventions
+  irrigation_plan JSONB,             -- monthly Kc, ETo, volume reference
+  harvest_forecast JSONB,            -- window, IM target, yield forecast
+  budget_estimate_dh DECIMAL(10,2),
+  verifications JSONB,               -- fractionnement_ok, doses_plausibles, etc.
+  plan_summary TEXT,
+
+  -- Validation
+  validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
   validated_at TIMESTAMPTZ,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (parcel_id, year),
+  UNIQUE (parcel_id, season),
   UNIQUE (id, organization_id),
   CONSTRAINT fk_annual_plans_parcel_org
     FOREIGN KEY (parcel_id, organization_id)
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE annual_plans IS 'V2 annual plan: deterministic 10-step assembly from calibration + referentiel';
+COMMENT ON COLUMN annual_plans.monthly_calendar IS 'Structured monthly breakdown: NPK, formes_engrais, microelements, biostimulants, phyto, irrigation, travaux';
+COMMENT ON COLUMN annual_plans.nutrition_option IS 'Auto-determined nutrition option: A (full data), B (incomplete data), C (salinity)';
+
 CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
 
--- Plan Interventions
+-- Plan Interventions (calendar tasks derived from annual plan)
 CREATE TABLE IF NOT EXISTS public.plan_interventions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   annual_plan_id UUID NOT NULL,
@@ -6047,13 +6193,17 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),
   week INTEGER CHECK (week >= 1 AND week <= 5),
-  intervention_type TEXT NOT NULL,
+  intervention_type TEXT NOT NULL CHECK (intervention_type IN ('fertilisation', 'irrigation', 'phytosanitary', 'biostimulant', 'pruning', 'harvest', 'other')),
   description TEXT NOT NULL,
   product TEXT,
-  dose TEXT,
-  unit TEXT,
-  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'executed', 'skipped', 'delayed')),
+  dose_data JSONB,                   -- structured: {valeur, unite}
+  stage_bbch TEXT,                   -- target BBCH stage
+  application_method TEXT,           -- fertigation, foliaire, epandage_sol, injection
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('normal', 'high', 'critical')),
+  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'reminded', 'executed', 'skipped', 'delayed', 'cancelled')),
+  scheduled_date DATE,
   executed_at TIMESTAMPTZ,
+  assigned_to UUID,                  -- FK to users/workers handled at app level
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -6065,9 +6215,14 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE plan_interventions IS 'Calendar tasks derived from annual plan — each becomes a planned recommendation with 5-state lifecycle';
+COMMENT ON COLUMN plan_interventions.dose_data IS 'Structured dose: {valeur: number|[min,max], unite: string}';
+COMMENT ON COLUMN plan_interventions.status IS 'Lifecycle: planned → reminded → executed | skipped | delayed | cancelled';
+
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_annual_plan_id ON public.plan_interventions(annual_plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_parcel_id ON public.plan_interventions(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_organization_id ON public.plan_interventions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_status_date ON public.plan_interventions(parcel_id, status, scheduled_date);
 
 -- Crop AI References
 CREATE TABLE IF NOT EXISTS public.crop_ai_references (
@@ -6458,6 +6613,7453 @@ CREATE POLICY "update_crop_ai_references" ON public.crop_ai_references
 DROP POLICY IF EXISTS "delete_crop_ai_references" ON public.crop_ai_references;
 CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
   FOR DELETE USING (auth.role() = 'service_role');
+
+
+-- Seed crop_ai_references from repo referentials (DATA_*.json). Idempotent: upserts on crop_type.
+-- Regenerate: node project/scripts/generate-crop-ai-references-sql.mjs
+
+INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
+VALUES (
+  'agrumes',
+  '1.0',
+  $crop_ai_ref_agrumes${
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "agrumes",
+    "famille": "Rutaceae",
+    "genre": "Citrus",
+    "pays": "Maroc"
+  },
+  "especes": {
+    "orange": {
+      "nom_scientifique": "Citrus sinensis",
+      "part_production_maroc": "60%",
+      "types": [
+        "Navel",
+        "Blonde",
+        "Sanguine"
+      ]
+    },
+    "petits_agrumes": {
+      "nom_scientifique": "Citrus reticulata",
+      "part_production_maroc": "25%",
+      "types": [
+        "Clémentine",
+        "Mandarine",
+        "Tangor"
+      ]
+    },
+    "citron": {
+      "nom_scientifique": "Citrus limon",
+      "part_production_maroc": "8%",
+      "types": [
+        "Eureka",
+        "Lisbon",
+        "Verna"
+      ]
+    },
+    "pomelo": {
+      "nom_scientifique": "Citrus paradisi",
+      "part_production_maroc": "3%",
+      "types": [
+        "Star Ruby",
+        "Marsh"
+      ]
+    }
+  },
+  "varietes": {
+    "oranges": [
+      {
+        "code": "NAVELINE",
+        "nom": "Naveline",
+        "type": "Navel",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan"
+        ],
+        "calibre": "gros",
+        "qualite": "excellente",
+        "export": true
+      },
+      {
+        "code": "WASH_NAVEL",
+        "nom": "Washington Navel",
+        "type": "Navel",
+        "maturite": [
+          "Dec",
+          "Jan",
+          "Fev"
+        ],
+        "calibre": "tres_gros",
+        "qualite": "excellente"
+      },
+      {
+        "code": "NAVELATE",
+        "nom": "Navelate",
+        "type": "Navel",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "calibre": "gros",
+        "qualite": "tres_bonne",
+        "tardive": true
+      },
+      {
+        "code": "SALUSTIANA",
+        "nom": "Salustiana",
+        "type": "Blonde",
+        "maturite": [
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "usage": "jus",
+        "qualite": "tres_bonne"
+      },
+      {
+        "code": "VALENCIA",
+        "nom": "Valencia Late",
+        "type": "Blonde",
+        "maturite": [
+          "Avr",
+          "Mai",
+          "Juin"
+        ],
+        "qualite": "excellente",
+        "tres_tardive": true
+      },
+      {
+        "code": "MAROC_LATE",
+        "nom": "Maroc Late",
+        "type": "Blonde",
+        "maturite": [
+          "Mar",
+          "Avr",
+          "Mai",
+          "Juin"
+        ],
+        "qualite": "excellente",
+        "specialite_maroc": true
+      },
+      {
+        "code": "SANGUINELLI",
+        "nom": "Sanguinelli",
+        "type": "Sanguine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "niche": true
+      }
+    ],
+    "petits_agrumes": [
+      {
+        "code": "CLEM_COMMUNE",
+        "nom": "Clémentine Commune",
+        "type": "Clementine",
+        "maturite": [
+          "Oct",
+          "Nov",
+          "Dec"
+        ],
+        "pepins": [
+          0,
+          2
+        ],
+        "conservation": "moyenne"
+      },
+      {
+        "code": "NULES",
+        "nom": "Nules",
+        "type": "Clementine",
+        "maturite": [
+          "Nov",
+          "Dec"
+        ],
+        "pepins": [
+          0,
+          1
+        ],
+        "conservation": "bonne",
+        "export": true
+      },
+      {
+        "code": "MARISOL",
+        "nom": "Marisol",
+        "type": "Clementine",
+        "maturite": [
+          "Sept",
+          "Oct"
+        ],
+        "tres_precoce": true,
+        "conservation": "faible"
+      },
+      {
+        "code": "NOUR",
+        "nom": "Nour",
+        "type": "Clementine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "tardive": true,
+        "origine": "Maroc"
+      },
+      {
+        "code": "NADORCOTT",
+        "nom": "Nadorcott/Afourer",
+        "type": "Mandarine",
+        "maturite": [
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "premium": true,
+        "conservation": "excellente"
+      },
+      {
+        "code": "ORTANIQUE",
+        "nom": "Ortanique",
+        "type": "Tangor",
+        "maturite": [
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "pepins": [
+          5,
+          15
+        ],
+        "hybride": "Orange x Tangerine"
+      },
+      {
+        "code": "NOVA",
+        "nom": "Nova",
+        "type": "Mandarine",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan"
+        ],
+        "arome": "intense"
+      }
+    ],
+    "citrons": [
+      {
+        "code": "EUREKA",
+        "nom": "Eureka",
+        "maturite": "toute_annee",
+        "acidite": "elevee",
+        "standard": true
+      },
+      {
+        "code": "LISBON",
+        "nom": "Lisbon",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr",
+          "Mai"
+        ],
+        "acidite": "elevee",
+        "rustique": true
+      },
+      {
+        "code": "VERNA",
+        "nom": "Verna",
+        "maturite": [
+          "Fev",
+          "Mar",
+          "Avr",
+          "Mai",
+          "Juin",
+          "Juil"
+        ],
+        "acidite": "moyenne",
+        "peu_pepins": true
+      },
+      {
+        "code": "MEYER",
+        "nom": "Meyer",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "acidite": "faible",
+        "hybride": true
+      }
+    ],
+    "pomelos": [
+      {
+        "code": "STAR_RUBY",
+        "nom": "Star Ruby",
+        "chair": "rouge",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar"
+        ],
+        "gout": "peu_amer",
+        "principal": true
+      },
+      {
+        "code": "RIO_RED",
+        "nom": "Rio Red",
+        "chair": "rouge",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "gout": "peu_amer"
+      },
+      {
+        "code": "MARSH",
+        "nom": "Marsh",
+        "chair": "blonde",
+        "maturite": [
+          "Nov",
+          "Dec",
+          "Jan",
+          "Fev",
+          "Mar",
+          "Avr"
+        ],
+        "gout": "legerement_amer"
+      }
+    ]
+  },
+  "porte_greffes": [
+    {
+      "code": "BIGARADIER",
+      "nom": "Bigaradier",
+      "vigueur": "forte",
+      "calcaire": "excellente",
+      "salinite": "bonne",
+      "phytophthora": "sensible",
+      "tristeza": "TRES_SENSIBLE",
+      "qualite_fruit": "excellente",
+      "exclusion_Cl": "bonne",
+      "note": "RISQUE Tristeza - éviter nouvelles plantations"
+    },
+    {
+      "code": "CARRIZO",
+      "nom": "Citrange Carrizo",
+      "vigueur": "moyenne_forte",
+      "calcaire": "moyenne",
+      "salinite": "faible",
+      "phytophthora": "tolerante",
+      "tristeza": "tolerante",
+      "qualite_fruit": "bonne",
+      "exclusion_Cl": "faible",
+      "recommande_si_tristeza": true
+    },
+    {
+      "code": "VOLKAMERIANA",
+      "nom": "Volkameriana",
+      "vigueur": "tres_forte",
+      "calcaire": "bonne",
+      "salinite": "bonne",
+      "phytophthora": "moyenne",
+      "tristeza": "tolerante",
+      "qualite_fruit": "moyenne",
+      "exclusion_Cl": "bonne",
+      "recommande_si_salin": true
+    },
+    {
+      "code": "MACROPHYLLA",
+      "nom": "Macrophylla",
+      "vigueur": "tres_forte",
+      "calcaire": "bonne",
+      "salinite": "bonne",
+      "phytophthora": "moyenne",
+      "tristeza": "tolerante",
+      "qualite_fruit": "faible",
+      "exclusion_Cl": "bonne"
+    },
+    {
+      "code": "CLEOPATRE",
+      "nom": "Mandarinier Cléopâtre",
+      "vigueur": "moyenne",
+      "calcaire": "excellente",
+      "salinite": "bonne",
+      "phytophthora": "sensible",
+      "tristeza": "tolerante",
+      "qualite_fruit": "excellente",
+      "exclusion_Cl": "bonne"
+    },
+    {
+      "code": "PONCIRUS",
+      "nom": "Poncirus trifoliata",
+      "vigueur": "nanisante",
+      "calcaire": "tres_faible",
+      "salinite": "faible",
+      "phytophthora": "tres_tolerante",
+      "tristeza": "tolerante",
+      "qualite_fruit": "excellente",
+      "note": "Éviter sol calcaire"
+    }
+  ],
+  "guide_choix_pg": {
+    "sol_calcaire_pH>7.5": {
+      "recommande": [
+        "Bigaradier",
+        "Mandarinier Cléopâtre"
+      ],
+      "eviter": [
+        "Poncirus",
+        "Citrange"
+      ]
+    },
+    "sol_salin_CE>2": {
+      "recommande": [
+        "Volkameriana",
+        "Macrophylla",
+        "Bigaradier"
+      ],
+      "eviter": [
+        "Citrange Carrizo"
+      ]
+    },
+    "sol_lourd_mal_draine": {
+      "recommande": [
+        "Citrange Carrizo",
+        "Poncirus"
+      ],
+      "eviter": [
+        "Bigaradier",
+        "Volkameriana"
+      ]
+    },
+    "presence_tristeza": {
+      "recommande": [
+        "Citrange",
+        "Volkameriana",
+        "Citrumelo"
+      ],
+      "interdit": [
+        "Bigaradier"
+      ]
+    }
+  },
+  "exigences_climatiques": {
+    "orange": {
+      "T_optimale": [
+        22,
+        28
+      ],
+      "T_min_croissance": 13,
+      "gel_feuilles": [
+        -3,
+        -5
+      ],
+      "gel_fruits": [
+        -2,
+        -3
+      ],
+      "gel_mortel": [
+        -8,
+        -10
+      ],
+      "heures_froid": [
+        200,
+        400
+      ]
+    },
+    "clementine": {
+      "T_optimale": [
+        20,
+        26
+      ],
+      "T_min_croissance": 13,
+      "gel_feuilles": [
+        -3,
+        -5
+      ],
+      "gel_fruits": -2,
+      "gel_mortel": -8,
+      "heures_froid": [
+        100,
+        200
+      ]
+    },
+    "citron": {
+      "T_optimale": [
+        20,
+        30
+      ],
+      "T_min_croissance": 15,
+      "gel_feuilles": [
+        -2,
+        -3
+      ],
+      "gel_fruits": [
+        -1,
+        -2
+      ],
+      "gel_mortel": [
+        -5,
+        -6
+      ],
+      "heures_froid": 0
+    },
+    "pomelo": {
+      "T_optimale": [
+        23,
+        30
+      ],
+      "T_min_croissance": 15,
+      "gel_feuilles": -2,
+      "gel_fruits": -1,
+      "gel_mortel": -4,
+      "heures_froid": 0
+    }
+  },
+  "exigences_sol": {
+    "pH_optimal": [
+      6.0,
+      7.0
+    ],
+    "pH_tolerance": [
+      5.5,
+      8.0
+    ],
+    "calcaire_actif_max_pct": 8,
+    "CE_sol_optimal_dS_m": 1.5,
+    "CE_sol_max_dS_m": 3.0,
+    "texture": "sablo_limoneux",
+    "drainage": "bon_a_excellent",
+    "profondeur_utile_min_cm": 60,
+    "nappe_phreatique_min_cm": 100
+  },
+  "systemes": {
+    "traditionnel": {
+      "densite_arbres_ha": [
+        200,
+        300
+      ],
+      "ecartement_m": "7×5 à 8×6",
+      "irrigation": "gravitaire",
+      "entree_production_annee": [
+        5,
+        6
+      ],
+      "pleine_production_annee": [
+        10,
+        12
+      ],
+      "duree_vie_ans": [
+        40,
+        50
+      ],
+      "rendement_pleine_prod_t_ha": [
+        20,
+        35
+      ]
+    },
+    "intensif": {
+      "densite_arbres_ha": [
+        400,
+        600
+      ],
+      "ecartement_m": "5×3 à 6×4",
+      "irrigation": "goutte_a_goutte",
+      "entree_production_annee": [
+        3,
+        4
+      ],
+      "pleine_production_annee": [
+        6,
+        8
+      ],
+      "duree_vie_ans": [
+        25,
+        35
+      ],
+      "rendement_pleine_prod_t_ha": [
+        40,
+        60
+      ]
+    },
+    "super_intensif": {
+      "densite_arbres_ha": [
+        800,
+        1200
+      ],
+      "ecartement_m": "4×2 à 5×2.5",
+      "irrigation": "gag_haute_frequence",
+      "entree_production_annee": [
+        2,
+        3
+      ],
+      "pleine_production_annee": [
+        5,
+        6
+      ],
+      "duree_vie_ans": [
+        15,
+        20
+      ],
+      "rendement_pleine_prod_t_ha": [
+        50,
+        80
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI": {
+        "optimal": [
+          0.5,
+          0.7
+        ],
+        "vigilance": 0.45,
+        "alerte": 0.4
+      },
+      "NIRv": {
+        "optimal": [
+          0.12,
+          0.28
+        ],
+        "vigilance": 0.1,
+        "alerte": 0.08
+      },
+      "NDMI": {
+        "optimal": [
+          0.18,
+          0.38
+        ],
+        "vigilance": 0.14,
+        "alerte": 0.1
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.6,
+          0.78
+        ],
+        "vigilance": 0.55,
+        "alerte": 0.5
+      },
+      "NIRv": {
+        "optimal": [
+          0.18,
+          0.35
+        ],
+        "vigilance": 0.15,
+        "alerte": 0.12
+      },
+      "NDMI": {
+        "optimal": [
+          0.22,
+          0.42
+        ],
+        "vigilance": 0.18,
+        "alerte": 0.14
+      }
+    },
+    "super_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.68,
+          0.85
+        ],
+        "vigilance": 0.63,
+        "alerte": 0.58
+      },
+      "NIRv": {
+        "optimal": [
+          0.22,
+          0.42
+        ],
+        "vigilance": 0.2,
+        "alerte": 0.17
+      },
+      "NDMI": {
+        "optimal": [
+          0.28,
+          0.48
+        ],
+        "vigilance": 0.24,
+        "alerte": 0.2
+      }
+    }
+  },
+  "rendement_t_ha": {
+    "orange_navel": {
+      "3-4_ans": [
+        5,
+        15
+      ],
+      "5-7_ans": [
+        20,
+        35
+      ],
+      "8-12_ans": [
+        35,
+        50
+      ],
+      "13-20_ans": [
+        45,
+        60
+      ],
+      "plus_20_ans": [
+        40,
+        55
+      ]
+    },
+    "orange_valencia": {
+      "3-4_ans": [
+        5,
+        15
+      ],
+      "5-7_ans": [
+        25,
+        40
+      ],
+      "8-12_ans": [
+        40,
+        60
+      ],
+      "13-20_ans": [
+        55,
+        80
+      ],
+      "plus_20_ans": [
+        50,
+        70
+      ]
+    },
+    "clementine": {
+      "3-4_ans": [
+        5,
+        12
+      ],
+      "5-7_ans": [
+        18,
+        30
+      ],
+      "8-12_ans": [
+        30,
+        45
+      ],
+      "13-20_ans": [
+        40,
+        55
+      ],
+      "plus_20_ans": [
+        35,
+        50
+      ]
+    },
+    "citron": {
+      "3-4_ans": [
+        5,
+        10
+      ],
+      "5-7_ans": [
+        15,
+        30
+      ],
+      "8-12_ans": [
+        30,
+        50
+      ],
+      "13-20_ans": [
+        45,
+        70
+      ],
+      "plus_20_ans": [
+        40,
+        60
+      ]
+    },
+    "pomelo": {
+      "3-4_ans": [
+        5,
+        12
+      ],
+      "5-7_ans": [
+        20,
+        35
+      ],
+      "8-12_ans": [
+        40,
+        60
+      ],
+      "13-20_ans": [
+        55,
+        80
+      ],
+      "plus_20_ans": [
+        50,
+        70
+      ]
+    }
+  },
+  "stades_phenologiques": [
+    {
+      "nom": "Repos hivernal",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "coef_nirvp": 0.7
+    },
+    {
+      "nom": "Flush printemps",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Floraison",
+      "mois": [
+        "Mar",
+        "Avr"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Nouaison",
+      "mois": [
+        "Avr",
+        "Mai"
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Chute juin",
+      "mois": [
+        "Mai",
+        "Juin"
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Grossissement I",
+      "mois": [
+        "Juin",
+        "Juil"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Flush été",
+      "mois": [
+        "Juil",
+        "Aout"
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Grossissement II",
+      "mois": [
+        "Aout",
+        "Sept"
+      ],
+      "coef_nirvp": 0.95
+    },
+    {
+      "nom": "Véraison",
+      "mois": [
+        "Sept",
+        "Oct"
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Maturation",
+      "mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Flush automne",
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "coef_nirvp": 0.9
+    }
+  ],
+  "options_nutrition": {
+    "A": {
+      "nom": "Nutrition équilibrée",
+      "condition": "analyse_sol < 2 ans ET analyse_eau"
+    },
+    "B": {
+      "nom": "Nutrition foliaire prioritaire",
+      "condition": "PAS analyse_sol OU > 3 ans"
+    },
+    "C": {
+      "nom": "Gestion salinité",
+      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m"
+    }
+  },
+  "export_kg_tonne": {
+    "orange": {
+      "N": [
+        1.8,
+        2.2
+      ],
+      "P2O5": [
+        0.4,
+        0.6
+      ],
+      "K2O": [
+        2.5,
+        3.5
+      ],
+      "CaO": [
+        0.8,
+        1.2
+      ],
+      "MgO": [
+        0.3,
+        0.5
+      ]
+    },
+    "clementine": {
+      "N": [
+        1.5,
+        2.0
+      ],
+      "P2O5": [
+        0.3,
+        0.5
+      ],
+      "K2O": [
+        2.0,
+        3.0
+      ],
+      "CaO": [
+        0.6,
+        1.0
+      ],
+      "MgO": [
+        0.2,
+        0.4
+      ]
+    },
+    "citron": {
+      "N": [
+        2.0,
+        2.5
+      ],
+      "P2O5": [
+        0.4,
+        0.6
+      ],
+      "K2O": [
+        3.0,
+        4.0
+      ],
+      "CaO": [
+        0.8,
+        1.2
+      ],
+      "MgO": [
+        0.3,
+        0.5
+      ]
+    },
+    "pomelo": {
+      "N": [
+        1.5,
+        2.0
+      ],
+      "P2O5": [
+        0.3,
+        0.5
+      ],
+      "K2O": [
+        2.5,
+        3.5
+      ],
+      "CaO": [
+        0.6,
+        1.0
+      ],
+      "MgO": [
+        0.2,
+        0.4
+      ]
+    }
+  },
+  "entretien_kg_ha": {
+    "jeune_1-3_ans": {
+      "N": [
+        40,
+        80
+      ],
+      "P2O5": [
+        20,
+        40
+      ],
+      "K2O": [
+        30,
+        60
+      ]
+    },
+    "entree_prod_4-6_ans": {
+      "N": [
+        100,
+        150
+      ],
+      "P2O5": [
+        40,
+        60
+      ],
+      "K2O": [
+        80,
+        120
+      ]
+    },
+    "intensif_pleine_prod": {
+      "N": [
+        180,
+        280
+      ],
+      "P2O5": [
+        60,
+        100
+      ],
+      "K2O": [
+        150,
+        250
+      ]
+    },
+    "super_intensif": {
+      "N": [
+        250,
+        400
+      ],
+      "P2O5": [
+        80,
+        120
+      ],
+      "K2O": [
+        200,
+        350
+      ]
+    }
+  },
+  "fractionnement_pct": {
+    "fev": {
+      "N": 15,
+      "P2O5": 40,
+      "K2O": 10,
+      "objectif": "Pré-floraison"
+    },
+    "mar_avr": {
+      "N": 25,
+      "P2O5": 30,
+      "K2O": 15,
+      "objectif": "Floraison-nouaison"
+    },
+    "mai_juin": {
+      "N": 20,
+      "P2O5": 15,
+      "K2O": 20,
+      "objectif": "Grossissement I"
+    },
+    "juil_aout": {
+      "N": 20,
+      "P2O5": 10,
+      "K2O": 25,
+      "objectif": "Grossissement II"
+    },
+    "sept_oct": {
+      "N": 10,
+      "P2O5": 5,
+      "K2O": 20,
+      "objectif": "Maturation"
+    },
+    "nov": {
+      "N": 10,
+      "P2O5": 0,
+      "K2O": 10,
+      "objectif": "Post-récolte"
+    }
+  },
+  "ajustement_espece": {
+    "orange_navel": {
+      "N": 1.0,
+      "K": 1.0,
+      "note": "Éviter excès N (éclatement)"
+    },
+    "orange_valencia": {
+      "N": 1.1,
+      "K": 1.0,
+      "note": "Production élevée"
+    },
+    "clementine": {
+      "N": 0.9,
+      "K": 1.0,
+      "note": "Éviter calibre excessif"
+    },
+    "citron": {
+      "N": 1.15,
+      "K": 1.1,
+      "note": "Remontant, besoins continus"
+    },
+    "pomelo": {
+      "N": 1.0,
+      "K": 1.1,
+      "note": "Gros fruits"
+    }
+  },
+  "formes_engrais": {
+    "N_recommande": [
+      "nitrate_calcium",
+      "nitrate_ammonium",
+      "uree_si_pH<7"
+    ],
+    "P_recommande": [
+      "MAP",
+      "acide_phosphorique"
+    ],
+    "K_recommande": [
+      "sulfate_potasse",
+      "nitrate_potasse"
+    ],
+    "K_conditionnel": "KCl acceptable si CE_eau < 1.0 ET Cl_eau < 100 mg/L",
+    "note": "Agrumes sensibles Cl mais moins que avocatier"
+  },
+  "seuils_foliaires": {
+    "periode_prelevement": "Août-Septembre, feuilles 4-6 mois",
+    "N": {
+      "unite": "%",
+      "carence": 2.2,
+      "suffisant": [
+        2.2,
+        2.4
+      ],
+      "optimal": [
+        2.4,
+        2.7
+      ],
+      "exces": 3.0
+    },
+    "P": {
+      "unite": "%",
+      "carence": 0.09,
+      "suffisant": [
+        0.09,
+        0.11
+      ],
+      "optimal": [
+        0.12,
+        0.17
+      ],
+      "exces": 0.2
+    },
+    "K": {
+      "unite": "%",
+      "carence": 0.7,
+      "suffisant": [
+        0.7,
+        1.0
+      ],
+      "optimal": [
+        1.0,
+        1.5
+      ],
+      "exces": 2.0
+    },
+    "Ca": {
+      "unite": "%",
+      "carence": 2.0,
+      "suffisant": [
+        2.0,
+        3.0
+      ],
+      "optimal": [
+        3.0,
+        5.0
+      ],
+      "exces": 6.0
+    },
+    "Mg": {
+      "unite": "%",
+      "carence": 0.2,
+      "suffisant": [
+        0.2,
+        0.3
+      ],
+      "optimal": [
+        0.3,
+        0.5
+      ],
+      "exces": 0.7
+    },
+    "Fe": {
+      "unite": "ppm",
+      "carence": 35,
+      "suffisant": [
+        35,
+        60
+      ],
+      "optimal": [
+        60,
+        120
+      ],
+      "exces": 200
+    },
+    "Zn": {
+      "unite": "ppm",
+      "carence": 18,
+      "suffisant": [
+        18,
+        25
+      ],
+      "optimal": [
+        25,
+        100
+      ],
+      "exces": 200
+    },
+    "Mn": {
+      "unite": "ppm",
+      "carence": 18,
+      "suffisant": [
+        18,
+        25
+      ],
+      "optimal": [
+        25,
+        100
+      ],
+      "exces": 500
+    },
+    "B": {
+      "unite": "ppm",
+      "carence": 20,
+      "suffisant": [
+        20,
+        35
+      ],
+      "optimal": [
+        35,
+        100
+      ],
+      "exces": 150
+    },
+    "Cu": {
+      "unite": "ppm",
+      "carence": 3,
+      "suffisant": [
+        3,
+        5
+      ],
+      "optimal": [
+        5,
+        15
+      ],
+      "exces": 20
+    },
+    "Cl": {
+      "unite": "%",
+      "toxique": 0.7
+    },
+    "Na": {
+      "unite": "%",
+      "toxique": 0.25
+    }
+  },
+  "salinite": {
+    "orange_mandarine": {
+      "CE_eau_optimal": 1.0,
+      "CE_eau_limite": 2.0,
+      "CE_sol_limite": 2.5,
+      "Cl_eau_limite_mg_L": 150,
+      "Cl_foliaire_toxique_pct": 0.7
+    },
+    "citron": {
+      "CE_eau_optimal": 0.8,
+      "CE_eau_limite": 1.5,
+      "CE_sol_limite": 2.0,
+      "Cl_eau_limite_mg_L": 100,
+      "Cl_foliaire_toxique_pct": 0.5
+    },
+    "pomelo": {
+      "CE_eau_optimal": 1.2,
+      "CE_eau_limite": 2.5,
+      "CE_sol_limite": 3.0,
+      "Cl_eau_limite_mg_L": 200,
+      "Cl_foliaire_toxique_pct": 0.8
+    }
+  },
+  "kc": {
+    "jeune": {
+      "jan_fev": 0.45,
+      "mar_avr": 0.55,
+      "mai_juin": 0.65,
+      "juil_aout": 0.7,
+      "sept_oct": 0.6,
+      "nov_dec": 0.5
+    },
+    "adulte": {
+      "jan_fev": 0.65,
+      "mar_avr": 0.75,
+      "mai_juin": 0.85,
+      "juil_aout": 0.9,
+      "sept_oct": 0.8,
+      "nov_dec": 0.7
+    }
+  },
+  "rdi": {
+    "floraison": {
+      "sensibilite": "tres_haute",
+      "rdi_possible": false,
+      "reduction": 0
+    },
+    "nouaison": {
+      "sensibilite": "haute",
+      "rdi_possible": false,
+      "reduction": 0
+    },
+    "grossissement_I": {
+      "sensibilite": "haute",
+      "rdi_possible": "prudence",
+      "reduction": [
+        0,
+        10
+      ]
+    },
+    "grossissement_II": {
+      "sensibilite": "moderee",
+      "rdi_possible": true,
+      "reduction": [
+        15,
+        25
+      ]
+    },
+    "maturation": {
+      "sensibilite": "faible",
+      "rdi_possible": true,
+      "reduction": [
+        25,
+        35
+      ]
+    },
+    "note": "RDI pré-récolte augmente °Brix +0.5-1.0 mais réduit calibre"
+  },
+  "phytosanitaire": {
+    "maladies": [
+      {
+        "nom": "Gommose",
+        "agent": "Phytophthora citrophthora, P. nicotianae",
+        "conditions": "sol_mal_draine_exces_eau",
+        "prevention": [
+          "drainage",
+          "PG_tolerant",
+          "point_greffe_haut"
+        ],
+        "traitement": [
+          "Phosphonate",
+          "Métalaxyl"
+        ]
+      },
+      {
+        "nom": "Tristeza",
+        "agent": "Citrus Tristeza Virus (CTV)",
+        "vecteur": "pucerons",
+        "prevention": "PG_tolerant_obligatoire",
+        "traitement": null,
+        "note": "AUCUN curatif - arrachage si sévère"
+      },
+      {
+        "nom": "Alternariose",
+        "agent": "Alternaria alternata",
+        "conditions": "HR > 80%, pluie",
+        "varietes_sensibles": [
+          "Minneola",
+          "Nova",
+          "Fortune"
+        ],
+        "traitement": [
+          "Cuivre",
+          "Mancozèbe",
+          "Difénoconazole"
+        ]
+      }
+    ],
+    "ravageurs": [
+      {
+        "nom": "Cératite",
+        "degats": "piqures_fruits",
+        "periode": "veraison_recolte",
+        "seuil": "2% fruits piqués",
+        "traitement": "Spinosad + piégeage"
+      },
+      {
+        "nom": "Cochenilles",
+        "degats": "fumagine",
+        "periode": "toute_annee",
+        "traitement": "Huile blanche, Spirotetramat"
+      },
+      {
+        "nom": "Pucerons",
+        "degats": "deformation_pousses_virus",
+        "periode": "printemps",
+        "traitement": "Imidaclopride, Spirotetramat"
+      },
+      {
+        "nom": "Mineuse",
+        "degats": "galeries_feuilles",
+        "periode": "flush",
+        "traitement": "Abamectine, Imidaclopride"
+      },
+      {
+        "nom": "Acariens",
+        "degats": "feuilles_bronze",
+        "periode": "ete_sec",
+        "traitement": "Abamectine, soufre"
+      },
+      {
+        "nom": "Thrips",
+        "degats": "cicatrices_fruits",
+        "periode": "floraison",
+        "traitement": "Spinosad"
+      }
+    ]
+  },
+  "calendrier_phyto_preventif": {
+    "jan": {
+      "cible": "Cochenilles",
+      "produit": "Huile blanche",
+      "dose": "15-20 L/ha"
+    },
+    "fev_mar": {
+      "cible": "Gommose",
+      "produit": "Phosphonate",
+      "dose": "5 mL/L foliaire",
+      "condition": "sol_humide"
+    },
+    "avr": {
+      "cible": "Pucerons",
+      "produit": "Imidaclopride",
+      "condition": "si_colonies"
+    },
+    "mai": {
+      "cible": "Mineuse",
+      "produit": "Abamectine",
+      "dose": "0.5 L/ha",
+      "condition": "si_presence"
+    },
+    "aout_oct": {
+      "cible": "Cératite",
+      "produit": "Spinosad + attractif",
+      "dose": "0.2 L/ha",
+      "condition": "piegeage + seuil"
+    },
+    "nov": {
+      "cible": "Cuivre hivernal",
+      "produit": "Cuivre",
+      "dose": "3 kg/ha"
+    }
+  },
+  "maturite_recolte": {
+    "orange_navel": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 8,
+      "optimal": [
+        10,
+        14
+      ],
+      "autre": "couleur_80%"
+    },
+    "orange_valencia": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 8,
+      "optimal": [
+        10,
+        16
+      ],
+      "autre": "Brix >= 10"
+    },
+    "clementine": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 7,
+      "optimal": [
+        10,
+        14
+      ],
+      "autre": "couleur_100%"
+    },
+    "citron": {
+      "indice": "acidite_titrable",
+      "min_pct": 5,
+      "optimal_pct": [
+        5,
+        7
+      ],
+      "autre": "jus >= 25%"
+    },
+    "pomelo": {
+      "indice": "ratio_Brix_Acidite",
+      "min": 5.5,
+      "optimal": [
+        6,
+        8
+      ],
+      "autre": "Brix >= 9"
+    }
+  },
+  "defauts_qualite": {
+    "granulation": {
+      "cause": "recolte_tardive_K_faible",
+      "prevention": "recolter_a_temps_K_suffisant"
+    },
+    "eclatement": {
+      "cause": "exces_N_stress_hydrique",
+      "prevention": "equilibre_N_K_irrigation_reguliere"
+    },
+    "petit_calibre": {
+      "cause": "charge_excessive_stress_eau",
+      "prevention": "eclaircissage_irrigation"
+    },
+    "peau_epaisse": {
+      "cause": "exces_N",
+      "prevention": "reduire_N"
+    },
+    "reverdissement": {
+      "cause": "recolte_tardive_Valencia",
+      "prevention": "ethylene_si_necessaire"
+    },
+    "oleocellose": {
+      "cause": "recolte_humide_blessures",
+      "prevention": "recolter_sec_manipulation_douce"
+    }
+  },
+  "alertes": [
+    {
+      "code": "AGR-01",
+      "nom": "Stress hydrique",
+      "seuil": "NDMI < P15 (2 passages) + T > 30",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-02",
+      "nom": "Excès eau / Gommose",
+      "seuil": "NDMI > P95 + pluie > 40mm/sem",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-03",
+      "nom": "Risque gel",
+      "seuil": "Tmin prévue < 0°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-04",
+      "nom": "Gel avéré",
+      "seuil": "Tmin < -2°C (orange) ou < 0°C (citron)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-05",
+      "nom": "Canicule",
+      "seuil": "Tmax > 40°C (3j) + HR < 30%",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-06",
+      "nom": "Vent chaud",
+      "seuil": "T > 38 + HR < 25% + vent > 30 km/h",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-07",
+      "nom": "Conditions Gommose",
+      "seuil": "Sol saturé > 48h + T 18-28",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-08",
+      "nom": "Risque Cératite",
+      "seuil": "Véraison + T 20-30 + piège positif",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-09",
+      "nom": "Pression pucerons",
+      "seuil": "Flush + T 18-28 + colonies",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-10",
+      "nom": "Risque Alternaria",
+      "seuil": "HR > 85% + pluie + variété sensible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-11",
+      "nom": "Chlorose ferrique",
+      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AGR-12",
+      "nom": "Carence Zn",
+      "seuil": "Feuilles petites mouchetées + flush",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AGR-13",
+      "nom": "Toxicité Cl",
+      "seuil": "Brûlures foliaires + CE eau > 2.5",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-14",
+      "nom": "Floraison faible",
+      "seuil": "Floraison < 50% attendue",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-15",
+      "nom": "Chute excessive",
+      "seuil": "Charge < 40% post-nouaison",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-16",
+      "nom": "Maturité récolte",
+      "seuil": "Ratio Brix/Acidité atteint + couleur",
+      "priorite": "info"
+    },
+    {
+      "code": "AGR-17",
+      "nom": "Année OFF probable",
+      "seuil": "N-1 très productif + flush faible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-18",
+      "nom": "Risque granulation",
+      "seuil": "Récolte tardive + K foliaire bas",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AGR-19",
+      "nom": "Dépérissement",
+      "seuil": "NIRv ↘ > 20% (4 passages)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AGR-20",
+      "nom": "Tristeza suspectée",
+      "seuil": "NDVI ↘ + PG bigaradier + déclin rapide",
+      "priorite": "urgente"
+    }
+  ],
+  "modele_predictif": {
+    "variables": [
+      {
+        "nom": "floraison",
+        "source": "satellite_terrain",
+        "poids": [
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "nom": "alternance_N-1_N-2",
+        "source": "historique",
+        "poids": [
+          0.2,
+          0.3
+        ]
+      },
+      {
+        "nom": "conditions_floraison",
+        "source": "meteo",
+        "poids": [
+          0.15,
+          0.25
+        ]
+      },
+      {
+        "nom": "NIRv_cumule",
+        "source": "satellite",
+        "poids": [
+          0.15,
+          0.25
+        ]
+      },
+      {
+        "nom": "stress_hydrique",
+        "source": "bilan_hydrique",
+        "poids": [
+          0.1,
+          0.2
+        ]
+      },
+      {
+        "nom": "gel",
+        "source": "meteo",
+        "poids": "fort_si_1"
+      },
+      {
+        "nom": "age_verger",
+        "source": "profil",
+        "type": "ajustement"
+      }
+    ],
+    "precision_attendue": {
+      "traditionnel": {
+        "R2": [
+          0.4,
+          0.55
+        ],
+        "MAE_pct": [
+          30,
+          45
+        ]
+      },
+      "intensif": {
+        "R2": [
+          0.5,
+          0.65
+        ],
+        "MAE_pct": [
+          20,
+          35
+        ]
+      },
+      "super_intensif": {
+        "R2": [
+          0.55,
+          0.7
+        ],
+        "MAE_pct": [
+          15,
+          30
+        ]
+      }
+    },
+    "previsibilite_espece": {
+      "orange_navel": "moyenne",
+      "orange_valencia": "bonne",
+      "clementine": "moyenne",
+      "citron": "difficile_remontant",
+      "pomelo": "bonne"
+    }
+  },
+  "plan_annuel_type_orange_intensif_50T": {
+    "jan": {
+      "NPK": "N15+P20+K10",
+      "micro": "Fe-EDDHA",
+      "biostim": null,
+      "phyto": "Huile blanche",
+      "irrigation_L_sem": 50
+    },
+    "fev": {
+      "NPK": "N25+P15+K15",
+      "micro": null,
+      "biostim": "Humiques+Algues",
+      "phyto": "Phosphonate",
+      "irrigation_L_sem": 60
+    },
+    "mar": {
+      "NPK": "N30+K20",
+      "micro": "Zn+Mn foliaire",
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 80
+    },
+    "avr": {
+      "NPK": "N25+P10+K15",
+      "micro": "B floraison",
+      "biostim": "Aminés",
+      "phyto": "Pucerons si présence",
+      "irrigation_L_sem": 100
+    },
+    "mai": {
+      "NPK": "N20+K25",
+      "micro": "Zn foliaire",
+      "biostim": "Humiques+Aminés",
+      "phyto": "Mineuse si présence",
+      "irrigation_L_sem": 130
+    },
+    "juin": {
+      "NPK": "N20+K30",
+      "micro": "Fe-EDDHA",
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 160
+    },
+    "juil": {
+      "NPK": "N15+K30",
+      "micro": "Zn+Mn foliaire",
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 180
+    },
+    "aout": {
+      "NPK": "N15+K25",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Cératite début",
+      "irrigation_L_sem": 180
+    },
+    "sept": {
+      "NPK": "N10+K20",
+      "micro": null,
+      "biostim": "Humiques",
+      "phyto": "Cératite",
+      "irrigation_L_sem": 140
+    },
+    "oct": {
+      "NPK": "N10+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Cératite",
+      "irrigation_L_sem": 100
+    },
+    "nov": {
+      "NPK": "N15",
+      "micro": null,
+      "biostim": "Humiques granulé",
+      "phyto": "Cuivre",
+      "irrigation_L_sem": 70
+    },
+    "dec": {
+      "NPK": null,
+      "micro": null,
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 50
+    }
+  }
+}$crop_ai_ref_agrumes$::jsonb
+)
+ON CONFLICT (crop_type) DO UPDATE SET
+  version = EXCLUDED.version,
+  reference_data = EXCLUDED.reference_data,
+  updated_at = NOW();
+
+INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
+VALUES (
+  'avocatier',
+  '1.0',
+  $crop_ai_ref_avocatier${
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "avocatier",
+    "nom_scientifique": "Persea americana Mill.",
+    "pays": "Maroc"
+  },
+  "varietes": [
+    {
+      "code": "HASS",
+      "nom": "Hass",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_noire",
+      "poids_g": [
+        170,
+        300
+      ],
+      "huile_pct": [
+        18,
+        25
+      ],
+      "maturite_mois": [
+        "Fev",
+        "Mar",
+        "Avr",
+        "Mai",
+        "Juin",
+        "Juil",
+        "Aout",
+        "Sept"
+      ],
+      "alternance": "moderee",
+      "vigueur": "moyenne",
+      "port": "etale",
+      "froid_min_C": -3,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          5,
+          15
+        ],
+        "5-7_ans": [
+          30,
+          60
+        ],
+        "8-12_ans": [
+          80,
+          150
+        ],
+        "13-20_ans": [
+          120,
+          200
+        ],
+        "plus_20_ans": [
+          100,
+          180
+        ]
+      }
+    },
+    {
+      "code": "FUERTE",
+      "nom": "Fuerte",
+      "race": "hybride_GM",
+      "type_floral": "B",
+      "peau": "lisse_verte",
+      "poids_g": [
+        200,
+        400
+      ],
+      "huile_pct": [
+        15,
+        20
+      ],
+      "maturite_mois": [
+        "Nov",
+        "Dec",
+        "Jan",
+        "Fev",
+        "Mar"
+      ],
+      "alternance": "forte",
+      "vigueur": "forte",
+      "port": "etale_large",
+      "froid_min_C": -4,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          5,
+          10
+        ],
+        "5-7_ans": [
+          25,
+          50
+        ],
+        "8-12_ans": [
+          60,
+          120
+        ],
+        "13-20_ans": [
+          100,
+          180
+        ],
+        "plus_20_ans": [
+          80,
+          150
+        ]
+      }
+    },
+    {
+      "code": "BACON",
+      "nom": "Bacon",
+      "race": "mexicaine",
+      "type_floral": "B",
+      "peau": "lisse_verte",
+      "poids_g": [
+        200,
+        350
+      ],
+      "huile_pct": [
+        12,
+        15
+      ],
+      "maturite_mois": [
+        "Nov",
+        "Dec",
+        "Jan"
+      ],
+      "alternance": "moderee",
+      "vigueur": "forte",
+      "port": "dresse",
+      "froid_min_C": -5,
+      "salinite": "moyenne",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          3,
+          8
+        ],
+        "5-7_ans": [
+          20,
+          40
+        ],
+        "8-12_ans": [
+          50,
+          100
+        ],
+        "13-20_ans": [
+          80,
+          140
+        ],
+        "plus_20_ans": [
+          70,
+          120
+        ]
+      }
+    },
+    {
+      "code": "ZUTANO",
+      "nom": "Zutano",
+      "race": "mexicaine",
+      "type_floral": "B",
+      "peau": "lisse_vert_clair",
+      "poids_g": [
+        200,
+        400
+      ],
+      "huile_pct": [
+        10,
+        15
+      ],
+      "maturite_mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "alternance": "faible",
+      "vigueur": "tres_forte",
+      "port": "dresse",
+      "froid_min_C": -6,
+      "salinite": "moyenne",
+      "pollinisateur": true
+    },
+    {
+      "code": "PINKERTON",
+      "nom": "Pinkerton",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_verte",
+      "poids_g": [
+        250,
+        450
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Avr"
+      ],
+      "alternance": "faible",
+      "vigueur": "faible",
+      "port": "compact",
+      "froid_min_C": -2,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          8,
+          20
+        ],
+        "5-7_ans": [
+          40,
+          80
+        ],
+        "8-12_ans": [
+          100,
+          180
+        ],
+        "13-20_ans": [
+          150,
+          250
+        ],
+        "plus_20_ans": [
+          130,
+          220
+        ]
+      }
+    },
+    {
+      "code": "REED",
+      "nom": "Reed",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "epaisse_verte",
+      "poids_g": [
+        300,
+        500
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Juil",
+        "Aout",
+        "Sept",
+        "Oct"
+      ],
+      "alternance": "moderee",
+      "vigueur": "moyenne",
+      "port": "dresse",
+      "froid_min_C": -2,
+      "salinite": "sensible"
+    },
+    {
+      "code": "ETTINGER",
+      "nom": "Ettinger",
+      "race": "hybride_GM",
+      "type_floral": "B",
+      "peau": "lisse_vert_brillant",
+      "poids_g": [
+        250,
+        400
+      ],
+      "huile_pct": [
+        15,
+        18
+      ],
+      "maturite_mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "alternance": "moderee",
+      "vigueur": "forte",
+      "port": "etale",
+      "froid_min_C": -4,
+      "salinite": "moyenne",
+      "pollinisateur": true
+    },
+    {
+      "code": "LAMB_HASS",
+      "nom": "Lamb Hass",
+      "race": "guatemalteque",
+      "type_floral": "A",
+      "peau": "rugueuse_noire",
+      "poids_g": [
+        250,
+        400
+      ],
+      "huile_pct": [
+        18,
+        22
+      ],
+      "maturite_mois": [
+        "Avr",
+        "Mai",
+        "Juin",
+        "Juil",
+        "Aout"
+      ],
+      "alternance": "faible",
+      "vigueur": "moyenne",
+      "port": "compact",
+      "froid_min_C": -3,
+      "salinite": "sensible",
+      "rendement_kg_arbre": {
+        "3-4_ans": [
+          8,
+          18
+        ],
+        "5-7_ans": [
+          40,
+          75
+        ],
+        "8-12_ans": [
+          90,
+          170
+        ],
+        "13-20_ans": [
+          140,
+          230
+        ],
+        "plus_20_ans": [
+          120,
+          200
+        ]
+      }
+    }
+  ],
+  "types_floraux": {
+    "description": "Dichogamie protogyne synchrone",
+    "type_A": {
+      "jour_1_matin": "femelle_receptif",
+      "jour_1_apres_midi": "ferme",
+      "jour_2_matin": "ferme",
+      "jour_2_apres_midi": "male_pollen",
+      "varietes": [
+        "Hass",
+        "Pinkerton",
+        "Reed",
+        "Gwen",
+        "Lamb Hass"
+      ]
+    },
+    "type_B": {
+      "jour_1_matin": "ferme",
+      "jour_1_apres_midi": "femelle_receptif",
+      "jour_2_matin": "male_pollen",
+      "jour_2_apres_midi": "ferme",
+      "varietes": [
+        "Fuerte",
+        "Bacon",
+        "Zutano",
+        "Ettinger",
+        "Edranol"
+      ]
+    },
+    "ratio_pollinisateur": "1 type B pour 8-10 type A",
+    "ruches_ha": [
+      4,
+      6
+    ]
+  },
+  "systemes": {
+    "traditionnel": {
+      "densite_arbres_ha": [
+        100,
+        150
+      ],
+      "ecartement_m": "10×8 à 12×10",
+      "irrigation": "gravitaire_ou_gag",
+      "entree_production_annee": [
+        5,
+        6
+      ],
+      "pleine_production_annee": [
+        10,
+        12
+      ],
+      "duree_vie_ans": [
+        40,
+        50
+      ],
+      "rendement_pleine_prod_t_ha": [
+        8,
+        12
+      ]
+    },
+    "intensif": {
+      "densite_arbres_ha": [
+        200,
+        400
+      ],
+      "ecartement_m": "6×4 à 8×5",
+      "irrigation": "goutte_a_goutte",
+      "entree_production_annee": [
+        3,
+        4
+      ],
+      "pleine_production_annee": [
+        6,
+        8
+      ],
+      "duree_vie_ans": [
+        25,
+        35
+      ],
+      "rendement_pleine_prod_t_ha": [
+        12,
+        20
+      ]
+    },
+    "super_intensif": {
+      "densite_arbres_ha": [
+        800,
+        1200
+      ],
+      "ecartement_m": "4×2 à 5×2.5",
+      "irrigation": "gag_haute_frequence",
+      "entree_production_annee": [
+        2,
+        3
+      ],
+      "pleine_production_annee": [
+        4,
+        5
+      ],
+      "duree_vie_ans": [
+        15,
+        20
+      ],
+      "rendement_pleine_prod_t_ha": [
+        18,
+        30
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI": {
+        "optimal": [
+          0.55,
+          0.75
+        ],
+        "vigilance": 0.5,
+        "alerte": 0.45
+      },
+      "NIRv": {
+        "optimal": [
+          0.15,
+          0.3
+        ],
+        "vigilance": 0.12,
+        "alerte": 0.1
+      },
+      "NDMI": {
+        "optimal": [
+          0.2,
+          0.4
+        ],
+        "vigilance": 0.15,
+        "alerte": 0.12
+      },
+      "NDRE": {
+        "optimal": [
+          0.2,
+          0.35
+        ],
+        "vigilance": 0.17,
+        "alerte": 0.15
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.65,
+          0.82
+        ],
+        "vigilance": 0.6,
+        "alerte": 0.55
+      },
+      "NIRv": {
+        "optimal": [
+          0.2,
+          0.38
+        ],
+        "vigilance": 0.17,
+        "alerte": 0.15
+      },
+      "NDMI": {
+        "optimal": [
+          0.25,
+          0.45
+        ],
+        "vigilance": 0.2,
+        "alerte": 0.17
+      },
+      "NDRE": {
+        "optimal": [
+          0.25,
+          0.4
+        ],
+        "vigilance": 0.22,
+        "alerte": 0.2
+      }
+    },
+    "super_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.7,
+          0.88
+        ],
+        "vigilance": 0.65,
+        "alerte": 0.6
+      },
+      "NIRv": {
+        "optimal": [
+          0.25,
+          0.45
+        ],
+        "vigilance": 0.22,
+        "alerte": 0.2
+      },
+      "NDMI": {
+        "optimal": [
+          0.3,
+          0.5
+        ],
+        "vigilance": 0.25,
+        "alerte": 0.22
+      },
+      "NDRE": {
+        "optimal": [
+          0.28,
+          0.45
+        ],
+        "vigilance": 0.25,
+        "alerte": 0.23
+      }
+    }
+  },
+  "stades_phenologiques": [
+    {
+      "nom": "Repos relatif",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "duree_sem": [
+        6,
+        8
+      ],
+      "coef_nirvp": 0.7
+    },
+    {
+      "nom": "Flush végétatif 1",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Induction florale",
+      "mois": [
+        "Jan",
+        "Fev"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 0.8
+    },
+    {
+      "nom": "Boutons floraux",
+      "mois": [
+        "Fev",
+        "Mar"
+      ],
+      "duree_sem": [
+        2,
+        4
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Floraison",
+      "mois": [
+        "Mar",
+        "Avr",
+        "Mai"
+      ],
+      "duree_sem": [
+        4,
+        8
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Nouaison",
+      "mois": [
+        "Avr",
+        "Mai"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 0.9
+    },
+    {
+      "nom": "Chute physiologique",
+      "mois": [
+        "Mai",
+        "Juin",
+        "Juil"
+      ],
+      "duree_sem": [
+        8,
+        12
+      ],
+      "coef_nirvp": 0.85
+    },
+    {
+      "nom": "Grossissement",
+      "mois": [
+        "Juin",
+        "Dec"
+      ],
+      "duree_mois": [
+        5,
+        8
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Flush végétatif 2",
+      "mois": [
+        "Juil",
+        "Aout"
+      ],
+      "duree_sem": [
+        4,
+        6
+      ],
+      "coef_nirvp": 1.0
+    },
+    {
+      "nom": "Maturation",
+      "mois": "variable_variete",
+      "coef_nirvp": 0.85
+    }
+  ],
+  "exigences_climatiques": {
+    "temperature_optimale_C": [
+      20,
+      25
+    ],
+    "temperature_croissance_C": [
+      15,
+      30
+    ],
+    "temperature_stress_chaleur_C": 35,
+    "temperature_stress_froid_C": 10,
+    "gel_feuilles_hass_C": [
+      -2,
+      -3
+    ],
+    "gel_mortel_hass_C": [
+      -4,
+      -6
+    ],
+    "gel_race_mexicaine_C": [
+      -6,
+      -8
+    ],
+    "gel_race_antillaise_C": [
+      0,
+      -2
+    ],
+    "humidite_relative_optimale_pct": [
+      60,
+      80
+    ],
+    "humidite_relative_min_pct": 40,
+    "pluviometrie_optimale_mm": [
+      1200,
+      1800
+    ]
+  },
+  "exigences_sol": {
+    "pH_optimal": [
+      5.5,
+      6.5
+    ],
+    "pH_tolerance": [
+      5.0,
+      7.5
+    ],
+    "calcaire_actif_max_pct": 5,
+    "CE_sol_optimal_dS_m": 1.5,
+    "CE_sol_max_dS_m": 2.5,
+    "texture": "sablo_limoneux",
+    "drainage": "excellent_obligatoire",
+    "profondeur_utile_min_cm": 60,
+    "matiere_organique_min_pct": 2,
+    "nappe_phreatique_min_cm": 100,
+    "note": "TRÈS sensible asphyxie - Phytophthora si mal drainé"
+  },
+  "options_nutrition": {
+    "A": {
+      "nom": "Nutrition équilibrée",
+      "condition": "analyse_sol < 2 ans ET analyse_eau",
+      "description": "Programme complet sol + plante"
+    },
+    "B": {
+      "nom": "Nutrition foliaire prioritaire",
+      "condition": "PAS analyse_sol OU > 3 ans",
+      "description": "Foliaire renforcé"
+    },
+    "C": {
+      "nom": "Gestion salinité",
+      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m",
+      "seuil_plus_bas_que_olivier": true,
+      "description": "Lessivage + engrais faible index salin"
+    }
+  },
+  "export_kg_tonne": {
+    "N": [
+      2.5,
+      3.5
+    ],
+    "P2O5": [
+      0.5,
+      0.8
+    ],
+    "K2O": [
+      4.0,
+      5.5
+    ],
+    "CaO": [
+      0.3,
+      0.5
+    ],
+    "MgO": [
+      0.4,
+      0.6
+    ],
+    "S": [
+      0.2,
+      0.3
+    ]
+  },
+  "entretien_kg_ha": {
+    "jeune_1-3_ans": {
+      "N": [
+        30,
+        60
+      ],
+      "P2O5": [
+        15,
+        30
+      ],
+      "K2O": [
+        20,
+        40
+      ]
+    },
+    "entree_prod_4-6_ans": {
+      "N": [
+        80,
+        120
+      ],
+      "P2O5": [
+        30,
+        50
+      ],
+      "K2O": [
+        60,
+        100
+      ]
+    },
+    "intensif_pleine_prod": {
+      "N": [
+        150,
+        250
+      ],
+      "P2O5": [
+        50,
+        80
+      ],
+      "K2O": [
+        150,
+        250
+      ]
+    },
+    "super_intensif": {
+      "N": [
+        200,
+        350
+      ],
+      "P2O5": [
+        60,
+        100
+      ],
+      "K2O": [
+        200,
+        350
+      ]
+    }
+  },
+  "fractionnement_pct": {
+    "jan_fev": {
+      "N": 15,
+      "P2O5": 30,
+      "K2O": 10,
+      "objectif": "Préparer floraison"
+    },
+    "mar_avr": {
+      "N": 20,
+      "P2O5": 30,
+      "K2O": 15,
+      "objectif": "Floraison-nouaison"
+    },
+    "mai_juin": {
+      "N": 20,
+      "P2O5": 20,
+      "K2O": 20,
+      "objectif": "Post-chute"
+    },
+    "juil_aout": {
+      "N": 20,
+      "P2O5": 10,
+      "K2O": 25,
+      "objectif": "Grossissement, flush 2"
+    },
+    "sept_oct": {
+      "N": 15,
+      "P2O5": 10,
+      "K2O": 20,
+      "objectif": "Maturation"
+    },
+    "nov_dec": {
+      "N": 10,
+      "P2O5": 0,
+      "K2O": 10,
+      "objectif": "Reconstitution"
+    }
+  },
+  "formes_engrais": {
+    "N_recommande": [
+      "nitrate_calcium",
+      "nitrate_ammonium",
+      "uree_si_pH<7"
+    ],
+    "N_eviter": [
+      "uree_si_pH>7"
+    ],
+    "P_recommande": [
+      "MAP",
+      "acide_phosphorique"
+    ],
+    "P_eviter": [
+      "DAP_haute_dose"
+    ],
+    "K_recommande": [
+      "sulfate_potasse"
+    ],
+    "K_interdit": [
+      "chlorure_potasse"
+    ],
+    "note_KCl": "STRICTEMENT INTERDIT - très sensible au chlore"
+  },
+  "seuils_foliaires": {
+    "periode_prelevement": "Août-Septembre, feuilles 5-7 mois",
+    "N": {
+      "unite": "%",
+      "carence": 1.6,
+      "suffisant": [
+        1.6,
+        1.8
+      ],
+      "optimal": [
+        1.8,
+        2.2
+      ],
+      "exces": 2.5
+    },
+    "P": {
+      "unite": "%",
+      "carence": 0.08,
+      "suffisant": [
+        0.08,
+        0.1
+      ],
+      "optimal": [
+        0.1,
+        0.25
+      ],
+      "exces": 0.3
+    },
+    "K": {
+      "unite": "%",
+      "carence": 0.75,
+      "suffisant": [
+        0.75,
+        1.0
+      ],
+      "optimal": [
+        1.0,
+        2.0
+      ],
+      "exces": 3.0
+    },
+    "Ca": {
+      "unite": "%",
+      "carence": 1.0,
+      "suffisant": [
+        1.0,
+        1.5
+      ],
+      "optimal": [
+        1.5,
+        3.0
+      ],
+      "exces": 4.0
+    },
+    "Mg": {
+      "unite": "%",
+      "carence": 0.25,
+      "suffisant": [
+        0.25,
+        0.4
+      ],
+      "optimal": [
+        0.4,
+        0.8
+      ],
+      "exces": 1.0
+    },
+    "Fe": {
+      "unite": "ppm",
+      "carence": 50,
+      "suffisant": [
+        50,
+        80
+      ],
+      "optimal": [
+        80,
+        200
+      ],
+      "exces": 300
+    },
+    "Zn": {
+      "unite": "ppm",
+      "carence": 30,
+      "suffisant": [
+        30,
+        50
+      ],
+      "optimal": [
+        50,
+        100
+      ],
+      "exces": 200
+    },
+    "Mn": {
+      "unite": "ppm",
+      "carence": 25,
+      "suffisant": [
+        25,
+        50
+      ],
+      "optimal": [
+        50,
+        200
+      ],
+      "exces": 500
+    },
+    "B": {
+      "unite": "ppm",
+      "carence": 30,
+      "suffisant": [
+        30,
+        50
+      ],
+      "optimal": [
+        50,
+        100
+      ],
+      "exces": 150
+    },
+    "Cu": {
+      "unite": "ppm",
+      "carence": 5,
+      "suffisant": [
+        5,
+        10
+      ],
+      "optimal": [
+        10,
+        25
+      ],
+      "exces": 40
+    },
+    "Cl": {
+      "unite": "%",
+      "toxique": 0.25
+    },
+    "Na": {
+      "unite": "%",
+      "toxique": 0.25
+    }
+  },
+  "seuils_eau_salinite": {
+    "CE_tolerance_dS_m": 1.0,
+    "CE_problematique_dS_m": 1.5,
+    "CE_deconseille_dS_m": 2.0,
+    "Cl_tolerance_mg_L": 50,
+    "Cl_toxique_mg_L": 100,
+    "Na_tolerance_mg_L": 50,
+    "Na_toxique_mg_L": 100,
+    "B_tolerance_mg_L": 0.5,
+    "B_toxique_mg_L": 1.0,
+    "SAR_max": 5,
+    "note": "2-3× plus sensible que olivier"
+  },
+  "kc": {
+    "jeune_1-3_ans": {
+      "jan_fev": 0.5,
+      "mar_avr": 0.55,
+      "mai_juin": 0.6,
+      "juil_aout": 0.65,
+      "sept_oct": 0.6,
+      "nov_dec": 0.55
+    },
+    "adulte_plus_6_ans": {
+      "jan_fev": 0.7,
+      "mar_avr": 0.75,
+      "mai_juin": 0.8,
+      "juil_aout": 0.85,
+      "sept_oct": 0.8,
+      "nov_dec": 0.75
+    }
+  },
+  "irrigation": {
+    "sensibilite": "elevee_stress_et_exces",
+    "note": "Ne tolère ni stress hydrique ni excès eau (Phytophthora)",
+    "frequence": "frequente_petites_doses",
+    "tensiometre_seuil_sol_leger_cbar": [
+      25,
+      30
+    ],
+    "tensiometre_seuil_sol_limoneux_cbar": [
+      35,
+      40
+    ]
+  },
+  "phytosanitaire": {
+    "maladies": [
+      {
+        "nom": "Phytophthora",
+        "agent": "Phytophthora cinnamomi",
+        "gravite": "maladie_n1_devastatrice",
+        "conditions": "sol_mal_draine_exces_eau_T_20-30",
+        "prevention": [
+          "drainage_excellent",
+          "porte_greffe_tolerant",
+          "jamais_saturer_sol"
+        ],
+        "traitement": {
+          "phosphonate_injection": {
+            "dose": "20-30 mL/L",
+            "frequence": "2-3x/an"
+          },
+          "phosphonate_foliaire": {
+            "dose": "5 mL/L",
+            "frequence": "4-6x/an"
+          },
+          "metalaxyl_sol": {
+            "dose": "2-3 g/m²",
+            "condition": "infection_active"
+          }
+        }
+      },
+      {
+        "nom": "Anthracnose",
+        "agent": "Colletotrichum gloeosporioides",
+        "conditions": "HR_elevee_pluie_T_20-25",
+        "traitement": {
+          "cuivre": {
+            "dose_kg_ha": 2,
+            "DAR_jours": 14
+          }
+        }
+      },
+      {
+        "nom": "Cercospora",
+        "agent": "Cercospora purpurea",
+        "traitement": {
+          "cuivre": {
+            "dose_kg_ha": [
+              2,
+              3
+            ],
+            "applications": [
+              2,
+              3
+            ]
+          }
+        }
+      }
+    ],
+    "ravageurs": [
+      {
+        "nom": "Thrips",
+        "periode": "floraison",
+        "traitement": "Spinosad 0.2 L/ha"
+      },
+      {
+        "nom": "Acariens",
+        "periode": "ete_sec",
+        "traitement": "Abamectine 0.5 L/ha"
+      },
+      {
+        "nom": "Cochenilles",
+        "periode": "toute_annee",
+        "traitement": "Huile blanche 15 L/ha"
+      },
+      {
+        "nom": "Scolytes",
+        "condition": "arbres_stresses",
+        "traitement": "eliminer_branches"
+      }
+    ]
+  },
+  "calendrier_phyto_preventif": {
+    "jan_fev": {
+      "cible": "Phosphonate préventif",
+      "produit": "Phosphonate K",
+      "dose": "5 mL/L foliaire"
+    },
+    "mars": {
+      "cible": "Anthracnose floraison",
+      "produit": "Cuivre",
+      "dose": "2 kg/ha",
+      "condition": "si_HR_elevee"
+    },
+    "avr_mai": {
+      "cible": "Thrips",
+      "produit": "Spinosad",
+      "dose": "0.2 L/ha",
+      "condition": "si_presence"
+    },
+    "juin": {
+      "cible": "Phosphonate",
+      "produit": "Phosphonate K",
+      "mode": "injection_tronc"
+    },
+    "aout_sept": {
+      "cible": "Anthracnose pré-récolte",
+      "produit": "Cuivre",
+      "dose": "2 kg/ha",
+      "DAR": "21j"
+    },
+    "nov": {
+      "cible": "Phosphonate",
+      "produit": "Phosphonate K",
+      "dose": "5 mL/L foliaire"
+    }
+  },
+  "maturite_recolte": {
+    "critere_principal": "matiere_seche_ou_huile",
+    "note": "Avocat ne mûrit PAS sur arbre - maturité physiologique",
+    "seuils_hass": {
+      "matiere_seche_min_pct": 21,
+      "huile_min_pct": 8
+    },
+    "seuils_fuerte": {
+      "matiere_seche_min_pct": 19,
+      "huile_min_pct": 8
+    },
+    "methodes": [
+      "sechage_etuve",
+      "extraction_soxhlet",
+      "flottaison",
+      "jours_floraison"
+    ],
+    "conservation_hass": {
+      "temperature_C": [
+        5,
+        7
+      ],
+      "duree_semaines": [
+        2,
+        4
+      ]
+    }
+  },
+  "alertes": [
+    {
+      "code": "AVO-01",
+      "nom": "Stress hydrique",
+      "seuil": "NDMI < P15 (2 passages) + T > 30",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-02",
+      "nom": "Excès eau / Phytophthora",
+      "seuil": "NDMI > P95 + pluie > 50mm/sem",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-03",
+      "nom": "Risque gel",
+      "seuil": "Tmin prévue < 2°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-04",
+      "nom": "Gel avéré",
+      "seuil": "Tmin mesurée < 0°C",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-05",
+      "nom": "Canicule",
+      "seuil": "Tmax > 38°C (3j) + HR < 30%",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-06",
+      "nom": "Vent chaud sec",
+      "seuil": "T > 35 + HR < 25% + vent > 25 km/h",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-07",
+      "nom": "Conditions Phytophthora",
+      "seuil": "Sol saturé > 48h + T 20-28",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-08",
+      "nom": "Symptômes Phytophthora",
+      "seuil": "NIRv ↘ progressif + feuilles pâles",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-09",
+      "nom": "Risque anthracnose",
+      "seuil": "HR > 85% + pluie + T 20-25 (floraison)",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-10",
+      "nom": "Pression thrips",
+      "seuil": "Floraison + T 20-28 + captures",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-11",
+      "nom": "Carence Zn probable",
+      "seuil": "NDRE < P10 + feuilles petites rondes",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AVO-12",
+      "nom": "Carence Fe",
+      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
+      "priorite": "vigilance"
+    },
+    {
+      "code": "AVO-13",
+      "nom": "Toxicité Cl/Na",
+      "seuil": "Brûlures foliaires + CE sol > 2.5",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-14",
+      "nom": "Floraison faible",
+      "seuil": "Floraison < 50% attendue",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-15",
+      "nom": "Chute excessive",
+      "seuil": "Charge < 30% post-nouaison",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-16",
+      "nom": "Maturité récolte",
+      "seuil": "MS ≥ 21% (Hass)",
+      "priorite": "info"
+    },
+    {
+      "code": "AVO-17",
+      "nom": "Année OFF probable",
+      "seuil": "N-1 très productif + flush faible",
+      "priorite": "prioritaire"
+    },
+    {
+      "code": "AVO-18",
+      "nom": "Dépérissement",
+      "seuil": "NIRv ↘ > 20% (4 passages)",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-19",
+      "nom": "Arbre mort",
+      "seuil": "NDVI < 0.30 persistant 3 mois",
+      "priorite": "urgente"
+    },
+    {
+      "code": "AVO-20",
+      "nom": "Croissance excessive",
+      "seuil": "NDVI ↗ > 15% + pas de fruits",
+      "priorite": "vigilance"
+    }
+  ],
+  "modele_predictif": {
+    "difficulte": "plus_difficile_que_olivier",
+    "raisons": [
+      "Floraison difficile à détecter par satellite",
+      "Chute physiologique très variable (80-99%)",
+      "Fruit reste longtemps sur arbre"
+    ],
+    "precision_attendue": {
+      "traditionnel": {
+        "R2": [
+          0.3,
+          0.5
+        ],
+        "MAE_pct": [
+          35,
+          50
+        ]
+      },
+      "intensif": {
+        "R2": [
+          0.4,
+          0.6
+        ],
+        "MAE_pct": [
+          25,
+          40
+        ]
+      },
+      "super_intensif": {
+        "R2": [
+          0.5,
+          0.7
+        ],
+        "MAE_pct": [
+          20,
+          35
+        ]
+      }
+    },
+    "recommandation": "Comptage fruits sur échantillon reste méthode la plus fiable"
+  },
+  "biostimulants": {
+    "calendrier": {
+      "jan": {
+        "algues": "3 L/ha",
+        "objectif": "Préparer floraison"
+      },
+      "fev_mar": {
+        "algues": "3 L/ha",
+        "amines": "4 L/ha foliaire",
+        "objectif": "Nouaison critique"
+      },
+      "avr_mai": {
+        "humiques": "4 L/ha",
+        "amines": "4 L/ha",
+        "objectif": "Limiter chute"
+      },
+      "juin_juil": {
+        "algues": "3 L/ha",
+        "objectif": "Stress chaleur"
+      },
+      "aout_sept": {
+        "humiques": "4 L/ha",
+        "amines": "4 L/ha",
+        "objectif": "Flush 2"
+      },
+      "nov_dec": {
+        "humiques_granule": "20 kg/ha",
+        "amines_fertig": "5 L/ha",
+        "objectif": "Reconstitution"
+      }
+    },
+    "focus_nouaison": "Période Mars-Mai critique - concentrer biostimulants"
+  },
+  "plan_annuel_type_intensif_hass_15T": {
+    "jan": {
+      "NPK": "N25+P15+K15",
+      "micro": "Zn foliaire",
+      "biostim": "Algues",
+      "phyto": "Phosphonate",
+      "irrigation_L_sem": 80
+    },
+    "fev": {
+      "NPK": "N25+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 100
+    },
+    "mar": {
+      "NPK": "N30+P15+K20",
+      "micro": "B floraison",
+      "biostim": "Algues+Aminés",
+      "phyto": "Cuivre si pluie",
+      "irrigation_L_sem": 120
+    },
+    "avr": {
+      "NPK": "N25+K20",
+      "micro": "Zn foliaire",
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 150
+    },
+    "mai": {
+      "NPK": "N25+P10+K25",
+      "micro": null,
+      "biostim": null,
+      "phyto": "Spinosad si thrips",
+      "irrigation_L_sem": 170
+    },
+    "juin": {
+      "NPK": "N25+K30",
+      "micro": "Fe-EDDHA",
+      "biostim": "Humiques",
+      "phyto": "Phosphonate injection",
+      "irrigation_L_sem": 200
+    },
+    "juil": {
+      "NPK": "N20+K30",
+      "micro": "Zn foliaire",
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 200
+    },
+    "aout": {
+      "NPK": "N20+P10+K25",
+      "micro": null,
+      "biostim": "Algues",
+      "phyto": null,
+      "irrigation_L_sem": 180
+    },
+    "sept": {
+      "NPK": "N15+K20",
+      "micro": "Zn+Mn",
+      "biostim": "Aminés",
+      "phyto": "Cuivre pré-récolte",
+      "irrigation_L_sem": 150
+    },
+    "oct": {
+      "NPK": "N15+K15",
+      "micro": null,
+      "biostim": null,
+      "phyto": null,
+      "irrigation_L_sem": 120
+    },
+    "nov": {
+      "NPK": "N10+K10",
+      "micro": null,
+      "biostim": "Humiques",
+      "phyto": "Phosphonate foliaire",
+      "irrigation_L_sem": 80
+    },
+    "dec": {
+      "NPK": "N10",
+      "micro": null,
+      "biostim": "Aminés",
+      "phyto": null,
+      "irrigation_L_sem": 60
+    }
+  }
+}$crop_ai_ref_avocatier$::jsonb
+)
+ON CONFLICT (crop_type) DO UPDATE SET
+  version = EXCLUDED.version,
+  reference_data = EXCLUDED.reference_data,
+  updated_at = NOW();
+
+INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
+VALUES (
+  'olivier',
+  '5.0',
+  $crop_ai_ref_olivier${
+  "metadata": {
+    "version": "5.0",
+    "date": "2026-03",
+    "culture": "olivier",
+    "pays": "Maroc",
+    "usage": "LLM_direct_read — no parser needed",
+    "conventions": {
+      "mois": "English 3-letter: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
+      "ranges": "Always [min, max] arrays — never single number when a range exists",
+      "doses": "Always {value: number, unit: string} — never freetext",
+      "conditions": "Always list of {field, operator, value} objects",
+      "nulls": "null = not applicable. Use 0 only for a real zero value."
+    }
+  },
+  "varietes": [
+    {
+      "code": "PM",
+      "nom": "Picholine Marocaine",
+      "origine": "Maroc",
+      "usage": "double_fin",
+      "fruit_g": [
+        3.5,
+        5.0
+      ],
+      "huile_pct": [
+        16,
+        20
+      ],
+      "alternance_index": 0.35,
+      "systemes_compatibles": [
+        "traditionnel",
+        "intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "sensible",
+        "verticilliose": "sensible",
+        "froid_min_c": -10,
+        "salinite": "moderee",
+        "secheresse": "bonne"
+      },
+      "heures_froid_requises": [
+        100,
+        200
+      ],
+      "duree_vie_economique_ans": null,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          2,
+          5
+        ],
+        "ans_6_10": [
+          10,
+          25
+        ],
+        "ans_11_20": [
+          30,
+          50
+        ],
+        "ans_21_40": [
+          40,
+          70
+        ],
+        "ans_40_plus": [
+          30,
+          50
+        ]
+      }
+    },
+    {
+      "code": "HAO",
+      "nom": "Haouzia",
+      "origine": "INRA Maroc",
+      "usage": "double_fin",
+      "fruit_g": [
+        3.5,
+        4.5
+      ],
+      "huile_pct": [
+        22,
+        24
+      ],
+      "alternance_index": 0.22,
+      "systemes_compatibles": [
+        "traditionnel",
+        "intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "resistante",
+        "verticilliose": "sensible",
+        "froid_min_c": -8,
+        "salinite": "bonne",
+        "secheresse": "tres_bonne"
+      },
+      "heures_froid_requises": [
+        100,
+        150
+      ],
+      "duree_vie_economique_ans": null,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          3,
+          8
+        ],
+        "ans_6_10": [
+          15,
+          35
+        ],
+        "ans_11_20": [
+          40,
+          60
+        ],
+        "ans_21_40": [
+          50,
+          80
+        ],
+        "ans_40_plus": [
+          40,
+          60
+        ]
+      }
+    },
+    {
+      "code": "MEN",
+      "nom": "Menara",
+      "origine": "INRA Maroc",
+      "usage": "double_fin",
+      "fruit_g": [
+        2.5,
+        4.0
+      ],
+      "huile_pct": [
+        23,
+        24
+      ],
+      "alternance_index": 0.28,
+      "systemes_compatibles": [
+        "traditionnel",
+        "intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "resistante",
+        "verticilliose": "sensible",
+        "froid_min_c": -8,
+        "salinite": "bonne",
+        "secheresse": "tres_bonne"
+      },
+      "heures_froid_requises": [
+        100,
+        150
+      ],
+      "duree_vie_economique_ans": null,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          5,
+          12
+        ],
+        "ans_6_10": [
+          25,
+          45
+        ],
+        "ans_11_20": [
+          45,
+          65
+        ],
+        "ans_21_40": [
+          50,
+          70
+        ],
+        "ans_40_plus": [
+          40,
+          55
+        ]
+      }
+    },
+    {
+      "code": "ARB",
+      "nom": "Arbequina",
+      "origine": "Espagne",
+      "usage": "huile",
+      "fruit_g": [
+        1.2,
+        1.8
+      ],
+      "huile_pct": [
+        16,
+        20
+      ],
+      "alternance_index": 0.35,
+      "systemes_compatibles": [
+        "super_intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "moyenne",
+        "verticilliose": "moyenne",
+        "froid_min_c": -5,
+        "salinite": "moyenne",
+        "secheresse": "moyenne"
+      },
+      "heures_froid_requises": [
+        200,
+        400
+      ],
+      "duree_vie_economique_ans": 15,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          3,
+          6
+        ],
+        "ans_6_10": [
+          6,
+          10
+        ],
+        "ans_11_20": [
+          8,
+          12
+        ],
+        "ans_21_40": null,
+        "ans_40_plus": null
+      },
+      "note_rendement": "Declin economique apres 15 ans — arrachage recommande"
+    },
+    {
+      "code": "ARS",
+      "nom": "Arbosana",
+      "origine": "Espagne",
+      "usage": "huile",
+      "fruit_g": [
+        1.5,
+        2.5
+      ],
+      "huile_pct": [
+        19,
+        21
+      ],
+      "alternance_index": 0.18,
+      "systemes_compatibles": [
+        "super_intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "tres_resistante",
+        "verticilliose": "bonne",
+        "froid_min_c": -5,
+        "salinite": "moyenne",
+        "secheresse": "moyenne"
+      },
+      "heures_froid_requises": [
+        200,
+        350
+      ],
+      "duree_vie_economique_ans": 18,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          4,
+          7
+        ],
+        "ans_6_10": [
+          7,
+          12
+        ],
+        "ans_11_20": [
+          10,
+          15
+        ],
+        "ans_21_40": null,
+        "ans_40_plus": null
+      },
+      "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
+    },
+    {
+      "code": "KOR",
+      "nom": "Koroneiki",
+      "origine": "Grece",
+      "usage": "huile",
+      "fruit_g": [
+        0.8,
+        1.5
+      ],
+      "huile_pct": [
+        20,
+        25
+      ],
+      "alternance_index": 0.15,
+      "systemes_compatibles": [
+        "super_intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "moyenne",
+        "verticilliose": "moyenne",
+        "froid_min_c": -5,
+        "salinite": "bonne",
+        "secheresse": "bonne"
+      },
+      "heures_froid_requises": [
+        150,
+        300
+      ],
+      "duree_vie_economique_ans": 18,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          3,
+          5
+        ],
+        "ans_6_10": [
+          5,
+          9
+        ],
+        "ans_11_20": [
+          7,
+          11
+        ],
+        "ans_21_40": null,
+        "ans_40_plus": null
+      },
+      "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
+    },
+    {
+      "code": "PIC",
+      "nom": "Picual",
+      "origine": "Espagne",
+      "usage": "huile",
+      "fruit_g": [
+        3.0,
+        4.5
+      ],
+      "huile_pct": [
+        22,
+        27
+      ],
+      "alternance_index": 0.3,
+      "systemes_compatibles": [
+        "intensif"
+      ],
+      "sensibilites": {
+        "oeil_paon": "sensible",
+        "verticilliose": "tres_sensible",
+        "froid_min_c": -10,
+        "salinite": "moyenne",
+        "secheresse": "bonne"
+      },
+      "heures_froid_requises": [
+        400,
+        600
+      ],
+      "duree_vie_economique_ans": null,
+      "rendement_kg_arbre": {
+        "ans_3_5": [
+          5,
+          12
+        ],
+        "ans_6_10": [
+          25,
+          45
+        ],
+        "ans_11_20": [
+          40,
+          60
+        ],
+        "ans_21_40": [
+          45,
+          65
+        ],
+        "ans_40_plus": [
+          35,
+          50
+        ]
+      }
+    }
+  ],
+  "systemes": {
+    "traditionnel": {
+      "nom": "Traditionnel (Pluvial)",
+      "densite_arbres_ha": [
+        80,
+        200
+      ],
+      "surface_arbre_m2": [
+        50,
+        125
+      ],
+      "ecartement": {
+        "min": {
+          "rang_m": 8.0,
+          "arbre_m": 8.0
+        },
+        "max": {
+          "rang_m": 12.0,
+          "arbre_m": 12.0
+        }
+      },
+      "irrigation": "aucune",
+      "recolte": "manuelle_gaulage",
+      "entree_production_annee": [
+        5,
+        7
+      ],
+      "pleine_production_annee": [
+        12,
+        20
+      ],
+      "duree_vie_economique_ans": [
+        80,
+        100
+      ],
+      "rendement_pleine_prod_t_ha": [
+        1,
+        4
+      ],
+      "sol_visible_pct": [
+        60,
+        80
+      ],
+      "indice_satellite_cle": "MSAVI"
+    },
+    "intensif": {
+      "nom": "Intensif (Irrigue)",
+      "densite_arbres_ha": [
+        200,
+        600
+      ],
+      "surface_arbre_m2": [
+        17,
+        50
+      ],
+      "ecartement": {
+        "min": {
+          "rang_m": 6.0,
+          "arbre_m": 5.0
+        },
+        "max": {
+          "rang_m": 7.0,
+          "arbre_m": 7.0
+        }
+      },
+      "irrigation": "goutte_a_goutte",
+      "recolte": "vibreur_tronc",
+      "entree_production_annee": [
+        4,
+        5
+      ],
+      "pleine_production_annee": [
+        7,
+        10
+      ],
+      "duree_vie_economique_ans": [
+        50,
+        80
+      ],
+      "rendement_pleine_prod_t_ha": [
+        6,
+        12
+      ],
+      "sol_visible_pct": [
+        40,
+        60
+      ],
+      "indice_satellite_cle": "NIRv"
+    },
+    "super_intensif": {
+      "nom": "Super-intensif (Haie)",
+      "densite_arbres_ha": [
+        1200,
+        2000
+      ],
+      "surface_arbre_m2": [
+        2,
+        5
+      ],
+      "ecartement": {
+        "min": {
+          "rang_m": 3.75,
+          "arbre_m": 1.35
+        },
+        "max": {
+          "rang_m": 4.0,
+          "arbre_m": 1.5
+        }
+      },
+      "irrigation": "goutte_a_goutte_obligatoire",
+      "recolte": "enjambeur_mecanique",
+      "entree_production_annee": [
+        2,
+        3
+      ],
+      "pleine_production_annee": [
+        4,
+        6
+      ],
+      "duree_vie_economique_ans": [
+        15,
+        20
+      ],
+      "rendement_pleine_prod_t_ha": [
+        10,
+        20
+      ],
+      "sol_visible_pct": [
+        20,
+        40
+      ],
+      "indice_satellite_cle": "NDVI"
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI": {
+        "optimal": [
+          0.3,
+          0.5
+        ],
+        "vigilance": 0.25,
+        "alerte": 0.2
+      },
+      "NIRv": {
+        "optimal": [
+          0.05,
+          0.15
+        ],
+        "vigilance": 0.04,
+        "alerte": 0.03
+      },
+      "NDMI": {
+        "optimal": [
+          0.05,
+          0.2
+        ],
+        "vigilance": 0.04,
+        "alerte": 0.03
+      },
+      "NDRE": {
+        "optimal": [
+          0.1,
+          0.25
+        ],
+        "vigilance": 0.08,
+        "alerte": 0.07
+      },
+      "MSI": {
+        "optimal": [
+          0.8,
+          1.5
+        ],
+        "vigilance": 1.8,
+        "alerte": 2.0
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.4,
+          0.6
+        ],
+        "vigilance": 0.35,
+        "alerte": 0.3
+      },
+      "NIRv": {
+        "optimal": [
+          0.08,
+          0.22
+        ],
+        "vigilance": 0.07,
+        "alerte": 0.06
+      },
+      "NDMI": {
+        "optimal": [
+          0.1,
+          0.3
+        ],
+        "vigilance": 0.08,
+        "alerte": 0.06
+      },
+      "NDRE": {
+        "optimal": [
+          0.15,
+          0.3
+        ],
+        "vigilance": 0.12,
+        "alerte": 0.1
+      },
+      "MSI": {
+        "optimal": [
+          0.6,
+          1.2
+        ],
+        "vigilance": 1.4,
+        "alerte": 1.6
+      }
+    },
+    "super_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.55,
+          0.75
+        ],
+        "vigilance": 0.5,
+        "alerte": 0.45
+      },
+      "NIRv": {
+        "optimal": [
+          0.15,
+          0.35
+        ],
+        "vigilance": 0.12,
+        "alerte": 0.1
+      },
+      "NDMI": {
+        "optimal": [
+          0.2,
+          0.4
+        ],
+        "vigilance": 0.15,
+        "alerte": 0.12
+      },
+      "NDRE": {
+        "optimal": [
+          0.2,
+          0.38
+        ],
+        "vigilance": 0.17,
+        "alerte": 0.15
+      },
+      "MSI": {
+        "optimal": [
+          0.4,
+          0.9
+        ],
+        "vigilance": 1.1,
+        "alerte": 1.3
+      }
+    }
+  },
+  "stades_bbch": [
+    {
+      "code": "00",
+      "nom": "Dormance",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "gdd_cumul": [
+        0,
+        30
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "repos"
+    },
+    {
+      "code": "01",
+      "nom": "Debut gonflement",
+      "mois": [
+        "Feb"
+      ],
+      "gdd_cumul": [
+        30,
+        80
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "09",
+      "nom": "Feuilles emergentes",
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "gdd_cumul": [
+        80,
+        200
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "15",
+      "nom": "5 paires feuilles",
+      "mois": [
+        "Mar",
+        "Apr"
+      ],
+      "gdd_cumul": [
+        200,
+        400
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "croissance"
+    },
+    {
+      "code": "37",
+      "nom": "Allongement avance",
+      "mois": [
+        "Apr"
+      ],
+      "gdd_cumul": [
+        400,
+        500
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "croissance"
+    },
+    {
+      "code": "51",
+      "nom": "Boutons floraux",
+      "mois": [
+        "Apr",
+        "May"
+      ],
+      "gdd_cumul": [
+        500,
+        600
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "55",
+      "nom": "Boutons separes",
+      "mois": [
+        "May"
+      ],
+      "gdd_cumul": [
+        600,
+        700
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "60",
+      "nom": "Debut floraison",
+      "mois": [
+        "May"
+      ],
+      "gdd_cumul": [
+        800,
+        900
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "65",
+      "nom": "Pleine floraison",
+      "mois": [
+        "May"
+      ],
+      "gdd_cumul": [
+        900,
+        1000
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "69",
+      "nom": "Nouaison",
+      "mois": [
+        "Jun"
+      ],
+      "gdd_cumul": [
+        1100,
+        1200
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "nouaison"
+    },
+    {
+      "code": "75",
+      "nom": "Fruit 50pct taille",
+      "mois": [
+        "Jul"
+      ],
+      "gdd_cumul": [
+        1400,
+        1800
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "79",
+      "nom": "Fruit taille finale",
+      "mois": [
+        "Aug",
+        "Sep"
+      ],
+      "gdd_cumul": [
+        1800,
+        2200
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "85",
+      "nom": "Veraison avancee",
+      "mois": [
+        "Oct"
+      ],
+      "gdd_cumul": [
+        2400,
+        2600
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "89",
+      "nom": "Maturite recolte",
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "gdd_cumul": [
+        2600,
+        2800
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "92",
+      "nom": "Post-recolte",
+      "mois": [
+        "Nov",
+        "Dec"
+      ],
+      "gdd_cumul": [
+        2800,
+        3000
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "post_recolte"
+    }
+  ],
+  "kc": {
+    "traditionnel": {
+      "repos": 0.4,
+      "debourrement": 0.45,
+      "croissance": 0.5,
+      "floraison": 0.55,
+      "nouaison": 0.6,
+      "grossissement": 0.65,
+      "maturation": 0.55,
+      "post_recolte": 0.45
+    },
+    "intensif": {
+      "repos": 0.5,
+      "debourrement": 0.55,
+      "croissance": 0.6,
+      "floraison": 0.65,
+      "nouaison": 0.75,
+      "grossissement": 0.8,
+      "maturation": 0.65,
+      "post_recolte": 0.55
+    },
+    "super_intensif": {
+      "repos": 0.55,
+      "debourrement": 0.6,
+      "croissance": 0.65,
+      "floraison": 0.7,
+      "nouaison": 0.8,
+      "grossissement": 0.9,
+      "maturation": 0.7,
+      "post_recolte": 0.6
+    }
+  },
+  "options_nutrition": {
+    "A": {
+      "nom": "Nutrition equilibree",
+      "conditions_requises": [
+        {
+          "champ": "analyse_sol_age_ans",
+          "operateur": "<=",
+          "valeur": 2
+        },
+        {
+          "champ": "analyse_eau_disponible",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "fertigation_pct": 100,
+      "foliaire": "si_carence_detectee",
+      "biostimulants_pct": {
+        "humiques": 100,
+        "fulviques": 100,
+        "amines": 100,
+        "algues": 100
+      },
+      "description": "Programme complet sol + plante"
+    },
+    "B": {
+      "nom": "Nutrition foliaire prioritaire",
+      "conditions_requises": [
+        {
+          "champ": "analyse_sol_disponible",
+          "operateur": "==",
+          "valeur": false
+        },
+        {
+          "OU": {
+            "champ": "analyse_sol_age_ans",
+            "operateur": ">",
+            "valeur": 3
+          }
+        }
+      ],
+      "fertigation_pct": 70,
+      "foliaire": "programme_renforce",
+      "biostimulants_pct": {
+        "humiques": 60,
+        "fulviques": 60,
+        "amines": 150,
+        "algues": 100
+      },
+      "description": "Focus foliaire, fertigation reduite"
+    },
+    "C": {
+      "nom": "Gestion salinite",
+      "conditions_requises": [
+        {
+          "champ": "CE_eau_dS_m",
+          "operateur": ">",
+          "valeur": 2.5
+        },
+        {
+          "OU": {
+            "champ": "CE_sol_dS_m",
+            "operateur": ">",
+            "valeur": 3.0
+          }
+        }
+      ],
+      "fertigation": "engrais_faible_index_salin",
+      "foliaire": "standard",
+      "biostimulants_pct": {
+        "humiques": 100,
+        "fulviques": 100,
+        "amines": 120,
+        "algues": 150
+      },
+      "lessivage": true,
+      "acidification_si": {
+        "champ": "pH",
+        "operateur": ">",
+        "valeur": 7.5,
+        "ET": {
+          "champ": "HCO3_mg_L",
+          "operateur": ">",
+          "valeur": 500
+        }
+      },
+      "gypse_si": {
+        "champ": "SAR",
+        "operateur": ">",
+        "valeur": 6
+      },
+      "description": "Programme adapte eau/sol salin"
+    }
+  },
+  "export_npk_kg_par_tonne_fruit": {
+    "N": {
+      "valeur": 3.5,
+      "unite": "kg/t_fruit"
+    },
+    "P2O5": {
+      "valeur": 1.2,
+      "unite": "kg/t_fruit"
+    },
+    "K2O": {
+      "valeur": 6.0,
+      "unite": "kg/t_fruit"
+    },
+    "CaO": {
+      "valeur": 1.5,
+      "unite": "kg/t_fruit"
+    },
+    "MgO": {
+      "valeur": 2.5,
+      "unite": "kg/t_fruit"
+    },
+    "S": {
+      "valeur": 0.4,
+      "unite": "kg/t_fruit"
+    }
+  },
+  "entretien_kg_ha": {
+    "traditionnel": {
+      "N": [
+        15,
+        25
+      ],
+      "K2O": [
+        15,
+        25
+      ],
+      "P2O5": [
+        10,
+        15
+      ]
+    },
+    "intensif": {
+      "N": [
+        35,
+        50
+      ],
+      "K2O": [
+        35,
+        50
+      ],
+      "P2O5": [
+        15,
+        25
+      ]
+    },
+    "super_intensif": {
+      "N": [
+        50,
+        70
+      ],
+      "K2O": [
+        50,
+        70
+      ],
+      "P2O5": [
+        20,
+        30
+      ]
+    }
+  },
+  "fractionnement_pct": [
+    {
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "stade_bbch": [
+        "01",
+        "15"
+      ],
+      "N_pct": 25,
+      "P2O5_pct": 100,
+      "K2O_pct": 15
+    },
+    {
+      "mois": [
+        "Apr"
+      ],
+      "stade_bbch": [
+        "31",
+        "51"
+      ],
+      "N_pct": 25,
+      "P2O5_pct": 0,
+      "K2O_pct": 15
+    },
+    {
+      "mois": [
+        "May"
+      ],
+      "stade_bbch": [
+        "55",
+        "65"
+      ],
+      "N_pct": 15,
+      "P2O5_pct": 0,
+      "K2O_pct": 20
+    },
+    {
+      "mois": [
+        "Jun"
+      ],
+      "stade_bbch": [
+        "67",
+        "71"
+      ],
+      "N_pct": 15,
+      "P2O5_pct": 0,
+      "K2O_pct": 25
+    },
+    {
+      "mois": [
+        "Jul",
+        "Aug"
+      ],
+      "stade_bbch": [
+        "75",
+        "79"
+      ],
+      "N_pct": 10,
+      "P2O5_pct": 0,
+      "K2O_pct": 20
+    },
+    {
+      "mois": [
+        "Sep"
+      ],
+      "stade_bbch": [
+        "81",
+        "85"
+      ],
+      "N_pct": 5,
+      "P2O5_pct": 0,
+      "K2O_pct": 5
+    },
+    {
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "stade_bbch": [
+        "89",
+        "92"
+      ],
+      "N_pct": 5,
+      "P2O5_pct": 0,
+      "K2O_pct": 0
+    }
+  ],
+  "ajustement_alternance": {
+    "annee_ON": {
+      "N": 1.15,
+      "P": 1.0,
+      "K": 1.2,
+      "Mg": 1.0
+    },
+    "annee_OFF_sain": {
+      "N": 0.75,
+      "P": 1.2,
+      "K": 0.8,
+      "Mg": 1.25
+    },
+    "epuisement": {
+      "N": 0.85,
+      "P": 1.3,
+      "K": 0.7,
+      "Mg": 1.4
+    }
+  },
+  "ajustement_cible": {
+    "huile_qualite": {
+      "N": 1.0,
+      "K": 1.0,
+      "IM_cible": [
+        2.0,
+        3.5
+      ]
+    },
+    "olive_table": {
+      "N": 1.1,
+      "K": 1.2,
+      "IM_cible": [
+        1.0,
+        2.0
+      ]
+    },
+    "mixte": {
+      "N": 1.0,
+      "K": 1.1,
+      "IM_cible": [
+        2.5,
+        3.5
+      ]
+    }
+  },
+  "seuils_foliaires": {
+    "N": {
+      "unite": "%",
+      "carence": 1.4,
+      "suffisant": [
+        1.4,
+        1.6
+      ],
+      "optimal": [
+        1.6,
+        2.0
+      ],
+      "exces": 2.5
+    },
+    "P": {
+      "unite": "%",
+      "carence": 0.08,
+      "suffisant": [
+        0.08,
+        0.1
+      ],
+      "optimal": [
+        0.1,
+        0.3
+      ],
+      "exces": 0.35
+    },
+    "K": {
+      "unite": "%",
+      "carence": 0.4,
+      "suffisant": [
+        0.4,
+        0.8
+      ],
+      "optimal": [
+        0.8,
+        1.2
+      ],
+      "exces": 1.5
+    },
+    "Ca": {
+      "unite": "%",
+      "carence": 0.5,
+      "suffisant": [
+        0.5,
+        1.0
+      ],
+      "optimal": [
+        1.0,
+        2.0
+      ],
+      "exces": 3.0
+    },
+    "Mg": {
+      "unite": "%",
+      "carence": 0.08,
+      "suffisant": [
+        0.08,
+        0.1
+      ],
+      "optimal": [
+        0.1,
+        0.3
+      ],
+      "exces": 0.5
+    },
+    "Fe": {
+      "unite": "ppm",
+      "carence": 40,
+      "suffisant": [
+        40,
+        60
+      ],
+      "optimal": [
+        60,
+        150
+      ],
+      "exces": 300
+    },
+    "Zn": {
+      "unite": "ppm",
+      "carence": 10,
+      "suffisant": [
+        10,
+        15
+      ],
+      "optimal": [
+        15,
+        50
+      ],
+      "exces": 100
+    },
+    "Mn": {
+      "unite": "ppm",
+      "carence": 15,
+      "suffisant": [
+        15,
+        20
+      ],
+      "optimal": [
+        20,
+        80
+      ],
+      "exces": 200
+    },
+    "B": {
+      "unite": "ppm",
+      "carence": 14,
+      "suffisant": [
+        14,
+        19
+      ],
+      "optimal": [
+        19,
+        150
+      ],
+      "exces": 200
+    },
+    "Cu": {
+      "unite": "ppm",
+      "carence": 4,
+      "suffisant": [
+        4,
+        6
+      ],
+      "optimal": [
+        6,
+        15
+      ],
+      "exces": 25
+    },
+    "Na": {
+      "unite": "%",
+      "toxique": 0.5
+    },
+    "Cl": {
+      "unite": "%",
+      "toxique": 0.5
+    }
+  },
+  "seuils_eau": {
+    "CE": {
+      "unite": "dS/m",
+      "optimal": 0.75,
+      "acceptable": 2.5,
+      "problematique": 4.0,
+      "critique": 6.0
+    },
+    "pH": {
+      "optimal": [
+        6.5,
+        7.5
+      ],
+      "acceptable": [
+        6.0,
+        8.0
+      ],
+      "problematique": 8.0
+    },
+    "SAR": {
+      "optimal": 3,
+      "acceptable": 6,
+      "problematique": 9,
+      "critique": 15
+    },
+    "Cl": {
+      "unite": "mg/L",
+      "optimal": 70,
+      "acceptable": 150,
+      "toxique": 350
+    },
+    "Na": {
+      "unite": "mg/L",
+      "optimal": 70,
+      "acceptable": 115,
+      "toxique": 200
+    },
+    "HCO3": {
+      "unite": "mg/L",
+      "optimal": 200,
+      "acceptable": 500,
+      "problematique": 750
+    },
+    "B": {
+      "unite": "mg/L",
+      "optimal": [
+        0.5,
+        1.0
+      ],
+      "acceptable": 2.0,
+      "toxique": 3.0
+    },
+    "NO3": {
+      "unite": "mg/L",
+      "a_deduire": true,
+      "coefficient": 0.00226
+    }
+  },
+  "fraction_lessivage": {
+    "CE_sol_seuil_dS_m": 4.0,
+    "formule": "FL = CE_eau / (5 * CE_sol_seuil - CE_eau)",
+    "table_CE_eau_vers_FL": [
+      {
+        "CE_eau_dS_m": 1.5,
+        "FL": 0.08
+      },
+      {
+        "CE_eau_dS_m": 2.0,
+        "FL": 0.11
+      },
+      {
+        "CE_eau_dS_m": 2.5,
+        "FL": 0.14
+      },
+      {
+        "CE_eau_dS_m": 3.0,
+        "FL": 0.18
+      },
+      {
+        "CE_eau_dS_m": 3.5,
+        "FL": 0.21
+      },
+      {
+        "CE_eau_dS_m": 4.0,
+        "FL": 0.25
+      }
+    ]
+  },
+  "biostimulants": {
+    "humiques_liquide": {
+      "produit": "Humates de potasse 12-15%",
+      "dose": {
+        "valeur": [
+          3,
+          5
+        ],
+        "unite": "L/ha"
+      },
+      "frequence_par_an": 3,
+      "stades_application": [
+        "post_recolte",
+        "debourrement",
+        "nouaison",
+        "maturation"
+      ],
+      "mode": "fertigation"
+    },
+    "humiques_granule": {
+      "produit": "Humates de potasse 70-80%",
+      "dose": {
+        "valeur": [
+          20,
+          30
+        ],
+        "unite": "kg/ha"
+      },
+      "frequence_par_an": 1,
+      "stades_application": [
+        "post_recolte"
+      ],
+      "mode": "incorporation_sol"
+    },
+    "fulviques": {
+      "produit": "Acides fulviques 10-12%",
+      "dose": {
+        "valeur": [
+          1,
+          2
+        ],
+        "unite": "L/ha"
+      },
+      "frequence_par_an": 2,
+      "stades_application": [
+        "debourrement",
+        "nouaison"
+      ],
+      "mode": "fertigation",
+      "synergie_Fe": "reduction_dose_Fe_20_a_30_pct",
+      "note": "Toujours appliquer avec Fe-EDDHA"
+    },
+    "amines_foliaire": {
+      "produit": "Hydrolysat vegetal 15-20%",
+      "dose": {
+        "valeur": [
+          3,
+          5
+        ],
+        "unite": "L/ha"
+      },
+      "frequence_par_an": 2,
+      "stades_application": [
+        "debourrement",
+        "nouaison"
+      ],
+      "mode": "foliaire",
+      "conditions_application": {
+        "T_max_c": 28,
+        "HR_min_pct": 40
+      }
+    },
+    "amines_fertigation": {
+      "produit": "Hydrolysat vegetal 40-50%",
+      "dose": {
+        "valeur": [
+          5,
+          8
+        ],
+        "unite": "L/ha"
+      },
+      "frequence_par_an": 2,
+      "stades_application": [
+        "post_recolte",
+        "debourrement"
+      ],
+      "mode": "fertigation"
+    },
+    "algues": {
+      "produit": "Extrait Ascophyllum nodosum 4-6%",
+      "dose": {
+        "valeur": [
+          2,
+          4
+        ],
+        "unite": "L/ha"
+      },
+      "frequence_par_an": 3,
+      "stades_application": [
+        "debourrement",
+        "floraison",
+        "grossissement"
+      ],
+      "mode": "foliaire_ou_fertigation",
+      "effet_salinite": "osmoprotection"
+    }
+  },
+  "calendrier_biostimulants": [
+    {
+      "mois": [
+        "Nov",
+        "Dec"
+      ],
+      "applications": [
+        {
+          "produit": "humiques_granule",
+          "dose": {
+            "valeur": 25,
+            "unite": "kg/ha"
+          }
+        },
+        {
+          "produit": "amines_fertigation",
+          "dose": {
+            "valeur": 6,
+            "unite": "L/ha"
+          }
+        }
+      ]
+    },
+    {
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "applications": [
+        {
+          "produit": "humiques_liquide",
+          "dose": {
+            "valeur": 4,
+            "unite": "L/ha"
+          }
+        },
+        {
+          "produit": "fulviques",
+          "dose": {
+            "valeur": 1.5,
+            "unite": "L/ha"
+          },
+          "note": "avec Fe-EDDHA"
+        },
+        {
+          "produit": "amines_foliaire",
+          "dose": {
+            "valeur": 4,
+            "unite": "L/ha"
+          }
+        },
+        {
+          "produit": "algues",
+          "dose": {
+            "valeur": 3,
+            "unite": "L/ha"
+          }
+        }
+      ]
+    },
+    {
+      "mois": [
+        "Apr",
+        "May"
+      ],
+      "applications": [
+        {
+          "produit": "amines_foliaire",
+          "dose": {
+            "valeur": 4,
+            "unite": "L/ha"
+          }
+        },
+        {
+          "produit": "algues",
+          "dose": {
+            "valeur": 3,
+            "unite": "L/ha"
+          }
+        }
+      ]
+    },
+    {
+      "mois": [
+        "May",
+        "Jun"
+      ],
+      "applications": [
+        {
+          "produit": "humiques_liquide",
+          "dose": {
+            "valeur": 4,
+            "unite": "L/ha"
+          }
+        },
+        {
+          "produit": "fulviques",
+          "dose": {
+            "valeur": 1.5,
+            "unite": "L/ha"
+          },
+          "note": "avec Fe-EDDHA"
+        }
+      ]
+    },
+    {
+      "mois": [
+        "Jul"
+      ],
+      "applications": [
+        {
+          "produit": "algues",
+          "dose": {
+            "valeur": 3,
+            "unite": "L/ha"
+          }
+        }
+      ]
+    },
+    {
+      "mois": [
+        "Aug",
+        "Sep"
+      ],
+      "applications": [
+        {
+          "produit": "humiques_liquide",
+          "dose": {
+            "valeur": 3,
+            "unite": "L/ha"
+          }
+        }
+      ]
+    }
+  ],
+  "alertes": [
+    {
+      "code": "OLI-01",
+      "nom": "Stress hydrique Super-intensif",
+      "priorite": "urgente",
+      "systeme": "super_intensif",
+      "seuil_entree": [
+        {
+          "indice": "NDMI",
+          "operateur": "<",
+          "valeur": 0.12
+        },
+        {
+          "indice": "MSI",
+          "operateur": ">",
+          "valeur": 1.3
+        },
+        {
+          "indice": "jours_sans_pluie",
+          "operateur": ">",
+          "valeur": 10
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "NDMI",
+          "operateur": ">",
+          "valeur": 0.2,
+          "passages_requis": 2
+        }
+      ],
+      "prescription": {
+        "action": "Irrigation d'urgence — augmenter le volume d'irrigation par rapport au plan en cours",
+        "dose": "+40% du volume planifié pour le stade en cours",
+        "duree": "Jusqu'à seuil de sortie NDMI > 0.20 sur 2 passages (≈ 10 jours minimum)",
+        "plafond": "Ne pas dépasser 120% capacité au champ. Si option C : maintenir FL dans le calcul majoré.",
+        "condition_blocage": "SI sol saturé (NDMI > 0.45 ou déclaration utilisateur) → NE PAS augmenter. Investiguer autre cause.",
+        "conditions_meteo": "Matin tôt ou soir. Éviter plein soleil midi.",
+        "fenetre_bbch": "Tous stades — aucune restriction BBCH",
+        "suivi": {
+          "indicateur": "NDMI",
+          "reponse_attendue": "Hausse NDMI vers P25 puis P50",
+          "delai_j": "3-7"
+        },
+        "impact_plan": "Modifier volume irrigation du plan pour le mois en cours. Rétablir volume initial quand seuil sortie atteint."
+      }
+    },
+    {
+      "code": "OLI-02",
+      "nom": "Stress hydrique Intensif",
+      "priorite": "prioritaire",
+      "systeme": "intensif",
+      "seuil_entree": [
+        {
+          "indice": "NDMI",
+          "operateur": "<",
+          "valeur": 0.06
+        },
+        {
+          "indice": "MSI",
+          "operateur": ">",
+          "valeur": 1.6
+        },
+        {
+          "indice": "jours_sans_pluie",
+          "operateur": ">",
+          "valeur": 15
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "NDMI",
+          "operateur": ">",
+          "valeur": 0.12,
+          "passages_requis": 2
+        }
+      ],
+      "prescription": {
+        "action": "Augmentation irrigation",
+        "dose": "+30% du volume planifié pour le stade en cours",
+        "duree": "Jusqu'à NDMI > 0.12 sur 2 passages",
+        "plafond": "Ne pas dépasser 120% capacité au champ",
+        "condition_blocage": "SI sol saturé → NE PAS augmenter. Investiguer.",
+        "conditions_meteo": "Matin tôt ou soir.",
+        "fenetre_bbch": "Tous stades — aucune restriction BBCH",
+        "suivi": {
+          "indicateur": "NDMI",
+          "reponse_attendue": "Hausse NDMI vers P25",
+          "delai_j": "3-7"
+        },
+        "impact_plan": "Ajuster volume irrigation. Rétablir quand seuil sortie atteint."
+      }
+    },
+    {
+      "code": "OLI-03",
+      "nom": "Gel floraison",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "Tmin_c",
+          "operateur": "<",
+          "valeur": -2
+        },
+        {
+          "indice": "BBCH_code",
+          "operateur": "between",
+          "valeur": [
+            55,
+            69
+          ]
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "T_c",
+          "operateur": ">",
+          "valeur": 5,
+          "jours_consecutifs": 3
+        }
+      ],
+      "prescription": {
+        "action": "Post-gel : évaluation + ajustement plan",
+        "dose": "Acides aminés foliaires 4-5 L/ha (hydrolysat 15-20%) + Algues 3-4 L/ha — application unique post-gel",
+        "duree": "Application unique dans les 3-5 jours post-gel si T > 5°C confirmé",
+        "plafond": "N/A — application unique",
+        "condition_blocage": "SI gel < -5°C ET durée > 4h → perte totale floraison. NE PAS traiter — passer directement à révision rendement -80 à -100%.",
+        "conditions_meteo": "T > 5°C, pas de pluie dans les 6h, vent < 15 km/h, matin tôt.",
+        "fenetre_bbch": "BBCH 55-69 (floraison) uniquement",
+        "suivi": {
+          "indicateur": "NIRv",
+          "reponse_attendue": "Stabilisation NIRv (pas d'aggravation)",
+          "delai_j": "10-15"
+        },
+        "impact_plan": "Réviser prévision rendement : -30% si gel modéré (-2 à -4°C < 2h), -50% si gel sévère, -80 à -100% si gel extrême. Réduire N de 25%."
+      }
+    },
+    {
+      "code": "OLI-04",
+      "nom": "Risque oeil de paon",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "T_c",
+          "operateur": "between",
+          "valeur": [
+            15,
+            20
+          ]
+        },
+        {
+          "indice": "HR_pct",
+          "operateur": ">",
+          "valeur": 80
+        },
+        {
+          "indice": "pluie",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "duree_sans_conditions_h": 72
+        }
+      ],
+      "prescription": {
+        "action": "Traitement cuivre préventif — Cuivre hydroxyde",
+        "dose": "2-3 kg/ha. Adjuvant mouillant si HR < 50%.",
+        "duree": "Application unique par épisode. Délai minimum 7 jours entre 2 traitements Cu (sauf OLI-18).",
+        "plafond": "Maximum 3 traitements Cu par saison (30 kg Cu métal/ha/5 ans réglementation).",
+        "condition_blocage": "SI traitement Cu < 7 jours → NE PAS retraiter (sauf OLI-18). SI BBCH 55-65 (pleine floraison) → reporter à BBCH 67+.",
+        "conditions_meteo": "T 15-25°C, HR > 60%, vent < 15 km/h, pas de pluie dans les 6h.",
+        "fenetre_bbch": "Tous stades SAUF BBCH 55-65 (floraison)",
+        "suivi": {
+          "indicateur": "Aucun signal satellite attendu",
+          "reponse_attendue": "Absence symptômes taches foliaires",
+          "delai_j": "30"
+        },
+        "impact_plan": "Si traitement Cu prévu au plan < 10 jours : avancer. Si > 10 jours : ajouter ce traitement, maintenir celui du plan."
+      }
+    },
+    {
+      "code": "OLI-05",
+      "nom": "Risque mouche olive",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "T_c",
+          "operateur": "between",
+          "valeur": [
+            16,
+            28
+          ]
+        },
+        {
+          "indice": "HR_pct",
+          "operateur": ">",
+          "valeur": 60
+        },
+        {
+          "indice": "captures_piege_semaine",
+          "operateur": ">=",
+          "valeur": 5
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "T_c",
+          "operateur": ">",
+          "valeur": 35,
+          "jours_consecutifs": 3
+        },
+        {
+          "indice": "recolte_declaree",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "prescription": {
+        "action": "Traitement insecticide curatif",
+        "dose": "Deltaméthrine 0.5 L/ha OU Spinosad 0.2 L/ha. Choisir Spinosad si récolte < 14 jours (DAR plus court).",
+        "duree": "Application unique. Renouveler si captures persistent après 7 jours.",
+        "plafond": "Max 2 applications Deltaméthrine/saison. Max 3 applications Spinosad/saison.",
+        "condition_blocage": "SI récolte prévue < 7 jours → NE PAS traiter (DAR = 7j). Récolter immédiatement.",
+        "conditions_meteo": "T 15-25°C, vent < 15 km/h, pas de pluie dans les 6h.",
+        "fenetre_bbch": "BBCH 75-89 (grossissement à maturation) — fruits doivent être présents",
+        "suivi": {
+          "indicateur": "Captures pièges",
+          "reponse_attendue": "Baisse captures < 5/piège/sem ET < 2% fruits piqués",
+          "delai_j": "7"
+        },
+        "impact_plan": "Si mouche récurrente (3ème alerte) : envisager avancer récolte 7-10 jours si IM ≥ 1.5."
+      }
+    },
+    {
+      "code": "OLI-06",
+      "nom": "Verticilliose suspectee",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRv_pattern",
+          "operateur": "==",
+          "valeur": "declin_asymetrique_progressif"
+        }
+      ],
+      "seuil_sortie": null,
+      "note": "IRREVERSIBLE",
+      "prescription": {
+        "action": "Investigation terrain urgente + isolation",
+        "dose": "Aucun traitement curatif efficace. Si confirmée : arrachage + brûlage résidus. JAMAIS broyer in situ.",
+        "duree": "Continue — surveillance permanente.",
+        "plafond": "N/A — pas de traitement chimique",
+        "condition_blocage": "NE JAMAIS recommander fongicide contre verticilliose (inefficace). NE JAMAIS broyer résidus arbres atteints.",
+        "conditions_meteo": "N/A",
+        "fenetre_bbch": "Tous stades",
+        "suivi": {
+          "indicateur": "NIRv zone suspecte",
+          "reponse_attendue": "Stabilisation = faux positif. Aggravation = confirmation.",
+          "delai_j": "30-60"
+        },
+        "impact_plan": "Si confirmée : modifier AOI. Recalibrage partiel si > 10% surface affectée.",
+        "alerte_irreversible": true
+      }
+    },
+    {
+      "code": "OLI-07",
+      "nom": "Canicule",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "Tmax_c",
+          "operateur": ">",
+          "valeur": 42,
+          "jours_consecutifs": 3
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "Tmax_c",
+          "operateur": "<",
+          "valeur": 38,
+          "jours_consecutifs": 2
+        }
+      ],
+      "prescription": {
+        "action": "Irrigation de soutien + protection",
+        "dose": "Irrigation +25% volume planifié. Algues 3-4 L/ha foliaire (matin très tôt uniquement, avant 7h).",
+        "duree": "Pendant canicule + 3 jours après retour Tmax < 38°C.",
+        "plafond": "Volume irrigation : ne pas dépasser 130% ETc. Si option C : maintenir FL.",
+        "condition_blocage": "SI BBCH 55-65 (floraison) → Pas de traitement foliaire (brûlure certaine). Irrigation uniquement.",
+        "conditions_meteo": "Irrigation matin tôt ou nuit. Foliaire algues UNIQUEMENT avant 7h (T < 30°C).",
+        "fenetre_bbch": "Tous stades, restriction foliaire en floraison",
+        "suivi": {
+          "indicateur": "NDMI + NDVI",
+          "reponse_attendue": "Stabilisation NDMI, NDVI maintenu",
+          "delai_j": "5-10"
+        },
+        "impact_plan": "Si canicule grossissement : réviser rendement -10 à -20%. Si canicule floraison : réviser -20 à -40%. Suspendre RDI si actif."
+      }
+    },
+    {
+      "code": "OLI-08",
+      "nom": "Deficit heures froid",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "heures_froid_cumulees",
+          "operateur": "<",
+          "valeur": 100
+        },
+        {
+          "indice": "date_evaluation",
+          "operateur": "==",
+          "valeur": "Feb-28"
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Information + ajustement plan",
+        "dose": "Bore +50% dose floraison (1.5 kg/ha au lieu de 1 kg/ha). Algues floraison +50% (4.5 L/ha).",
+        "duree": "Application unique au stade BBCH 51-55 (pré-floraison).",
+        "plafond": "N/A",
+        "condition_blocage": "Aucune.",
+        "conditions_meteo": "Conditions standard foliaire : T 15-25°C, HR > 60%, vent < 15 km/h.",
+        "fenetre_bbch": "BBCH 51-55 (pré-floraison)",
+        "suivi": {
+          "indicateur": "NIRvP pic",
+          "reponse_attendue": "NIRvP pic ≥ 70% de l'attendu au BBCH 65-69",
+          "delai_j": "21-28"
+        },
+        "impact_plan": "Ajuster prévision rendement -10 à -20%. Éclaircissage inutile (charge naturellement faible)."
+      }
+    },
+    {
+      "code": "OLI-09",
+      "nom": "Annee OFF probable",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRvP_vs_N2_pct",
+          "operateur": "<",
+          "valeur": -30
+        },
+        {
+          "indice": "BBCH_code",
+          "operateur": "between",
+          "valeur": [
+            60,
+            69
+          ]
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Ajustement plan annuel selon table alternance OFF",
+        "dose": "N: ×0.75 | P: ×1.20 | K: ×0.80 par rapport aux doses plan initial. Taille sévère renouvellement 25-35% en nov-déc.",
+        "duree": "Ajustement valable pour toute la saison restante.",
+        "plafond": "N/A",
+        "condition_blocage": "SI première année (pas d'historique N-2) → NE PAS déclencher. Confiance insuffisante.",
+        "conditions_meteo": "N/A — ajustement plan, pas d'application directe.",
+        "fenetre_bbch": "Détecté au stade floraison (BBCH 55-65). Ajustements appliqués immédiatement.",
+        "suivi": {
+          "indicateur": "NIRvP cumulé saison",
+          "reponse_attendue": "NIRvP cumulé ≈ 70% d'une année ON",
+          "delai_j": "fin_saison"
+        },
+        "impact_plan": "Recalculer doses K et N restantes avec coefficients OFF. Modifier recommandation taille. Réviser prévision rendement -40 à -60%."
+      }
+    },
+    {
+      "code": "OLI-10",
+      "nom": "Deperissement",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRv_variation_pct",
+          "operateur": "<",
+          "valeur": -25,
+          "passages_requis": 3
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "NIRv_pattern",
+          "operateur": "==",
+          "valeur": "stable",
+          "passages_requis": 2
+        }
+      ],
+      "prescription": {
+        "action": "Investigation urgente multi-cause",
+        "dose": "Aminés foliaires 5 L/ha + Algues fertigation 4 L/ha + Humiques fertigation 5 L/ha — application de soutien en attendant diagnostic.",
+        "duree": "Biostimulants : application unique. Surveillance continue jusqu'à stabilisation NIRv.",
+        "plafond": "N/A",
+        "condition_blocage": "SI NIRv < seuil_min persistant → Basculer vers OLI-11. NE PAS continuer traitement arbre mort.",
+        "conditions_meteo": "Conditions standard fertigation/foliaire.",
+        "fenetre_bbch": "Tous stades",
+        "suivi": {
+          "indicateur": "NIRv",
+          "reponse_attendue": "Stabilisation NIRv (arrêt déclin)",
+          "delai_j": "15-30"
+        },
+        "impact_plan": "Si dépérissement > 20% surface : recalibrage partiel F2. Réviser rendement en conséquence."
+      }
+    },
+    {
+      "code": "OLI-11",
+      "nom": "Arbre mort",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRv",
+          "operateur": "<",
+          "valeur": "seuil_min_systeme",
+          "persistant": true
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Constatation + mise à jour parcelle",
+        "dose": "Aucun intrant. Action administrative uniquement.",
+        "duree": "N/A",
+        "plafond": "N/A",
+        "condition_blocage": "NE JAMAIS recommander traitement sur arbre mort.",
+        "conditions_meteo": "N/A",
+        "fenetre_bbch": "Tous stades",
+        "suivi": {
+          "indicateur": "N/A",
+          "reponse_attendue": "N/A",
+          "delai_j": "N/A"
+        },
+        "impact_plan": "Mettre à jour parcelle.densite. Si > 10% arbres morts : recalibrage partiel F2 + modification AOI.",
+        "alerte_irreversible": true
+      }
+    },
+    {
+      "code": "OLI-12",
+      "nom": "Sur-irrigation",
+      "priorite": "vigilance",
+      "systeme": "irrigue",
+      "seuil_entree": [
+        {
+          "indice": "NDMI",
+          "operateur": ">",
+          "valeur": 0.45
+        },
+        {
+          "indice": "sol_sature",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "NDMI",
+          "operateur": "<",
+          "valeur": 0.35
+        }
+      ],
+      "prescription": {
+        "action": "Réduction irrigation",
+        "dose": "-30% du volume planifié pour le stade en cours. Volume minimum : ≥ 50% ETc.",
+        "duree": "Jusqu'à NDMI < 0.35 (1 passage suffit).",
+        "plafond": "Ne pas descendre sous 50% des besoins ETc du stade.",
+        "condition_blocage": "SI stade floraison ou nouaison (BBCH 55-71) → Réduction limitée à -15%.",
+        "conditions_meteo": "N/A",
+        "fenetre_bbch": "Tous stades, restriction floraison-nouaison",
+        "suivi": {
+          "indicateur": "NDMI",
+          "reponse_attendue": "Baisse NDMI sous 0.35",
+          "delai_j": "5-10"
+        },
+        "impact_plan": "Modifier volume irrigation dans le plan pour le mois en cours."
+      }
+    },
+    {
+      "code": "OLI-13",
+      "nom": "Floraison ratee",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRvP_vs_attendu_pct",
+          "operateur": "<",
+          "valeur": -30
+        },
+        {
+          "indice": "meteo_floraison",
+          "operateur": "==",
+          "valeur": "defavorable"
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Ajustement plan post-floraison",
+        "dose": "K : -30% sur les mois restants. N : -15%. P : maintenir 100%. Biostimulants : maintenir 100%.",
+        "duree": "Ajustement valable pour le reste de la saison.",
+        "plafond": "N/A",
+        "condition_blocage": "SI floraison ratée + année OFF → double impact. Réviser rendement -60 à -80%.",
+        "conditions_meteo": "N/A — ajustement plan, pas d'application directe.",
+        "fenetre_bbch": "Détecté post-floraison (BBCH 67-69)",
+        "suivi": {
+          "indicateur": "NIRvP cumulé",
+          "reponse_attendue": "NIRvP cumulé bas confirmé",
+          "delai_j": "fin_saison"
+        },
+        "impact_plan": "Recalculer doses K et N restantes. Réviser prévision rendement -30 à -50%."
+      }
+    },
+    {
+      "code": "OLI-14",
+      "nom": "Recolte optimale",
+      "priorite": "info",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "NIRvP_tendance",
+          "operateur": "==",
+          "valeur": "declin"
+        },
+        {
+          "indice": "NDVI_tendance",
+          "operateur": "==",
+          "valeur": "stable"
+        },
+        {
+          "indice": "GDD_cumul",
+          "operateur": ">",
+          "valeur": 2800
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "recolte_declaree",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "prescription": {
+        "action": "Notification de récolte — fenêtre optimale ouverte",
+        "dose": "Aucun intrant. Message informatif avec IM cible rappelé.",
+        "duree": "Notification valable 15-20 jours (fenêtre de récolte).",
+        "plafond": "N/A",
+        "condition_blocage": "SI IM terrain > 4.0 → signaler dépassement optimal pour huile qualité.",
+        "conditions_meteo": "N/A",
+        "fenetre_bbch": "BBCH 85-89",
+        "suivi": {
+          "indicateur": "Déclaration récolte utilisateur",
+          "reponse_attendue": "Récolte déclarée",
+          "delai_j": "15-20"
+        },
+        "impact_plan": "À déclaration récolte : basculer plan en mode post-récolte. Déclencher F3 si conditions remplies."
+      }
+    },
+    {
+      "code": "OLI-15",
+      "nom": "Chergui",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "T_c",
+          "operateur": ">",
+          "valeur": 40
+        },
+        {
+          "indice": "HR_pct",
+          "operateur": "<",
+          "valeur": 20
+        },
+        {
+          "indice": "vent_km_h",
+          "operateur": ">",
+          "valeur": 30
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "T_c",
+          "operateur": "<",
+          "valeur": 38
+        },
+        {
+          "indice": "HR_pct",
+          "operateur": ">",
+          "valeur": 30
+        }
+      ],
+      "prescription": {
+        "action": "Irrigation d'urgence + suspension foliaire",
+        "dose": "Irrigation +50% volume planifié. Algues en fertigation 3-4 L/ha (osmoprotection racinaire).",
+        "duree": "Pendant épisode Chergui + 48h après fin conditions.",
+        "plafond": "Ne pas dépasser 150% ETc. Si option C : maintenir FL.",
+        "condition_blocage": "Aucune — action toujours justifiée en situation de Chergui.",
+        "conditions_meteo": "Irrigation immédiate, jour ou nuit. AUCUN foliaire pendant Chergui (brûlure certaine + dérive).",
+        "fenetre_bbch": "Tous stades",
+        "suivi": {
+          "indicateur": "NDMI + MSI",
+          "reponse_attendue": "Stabilisation NDMI, MSI ne dépasse pas 1.5",
+          "delai_j": "3-5"
+        },
+        "impact_plan": "Si Chergui floraison : réviser rendement -30 à -50%. Si grossissement : réviser -10 à -15%. Annuler RDI en cours."
+      }
+    },
+    {
+      "code": "OLI-16",
+      "nom": "Carence N",
+      "priorite": "vigilance",
+      "systeme": "intensif",
+      "seuil_entree": [
+        {
+          "indice": "NDRE",
+          "operateur": "<",
+          "valeur": "P10_parcelle"
+        },
+        {
+          "indice": "GCI_tendance",
+          "operateur": "==",
+          "valeur": "declin"
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "NDRE",
+          "operateur": ">",
+          "valeur": "P30_parcelle",
+          "passages_requis": 2
+        }
+      ],
+      "prescription": {
+        "action": "Fertigation N corrective",
+        "dose": "15-20 kg N/ha en application corrective unique. Forme : Nitrate calcium si pH > 7.2, Ammonitrate si pH ≤ 7.2. Option B : ajouter N foliaire urée 0.5% à 8 kg/ha.",
+        "duree": "Application unique. Réévaluer à J+14 sur NDRE.",
+        "plafond": "Dose N totale saison (plan + correctifs) ne doit pas dépasser 150 kg N/ha.",
+        "condition_blocage": "SI BBCH > 81 (maturation) → NE PAS appliquer N (retard maturation). Reporter post-récolte. SI NDMI < P10 → Traiter d'abord stress hydrique OLI-01/02 (N non assimilé en sol sec).",
+        "conditions_meteo": "Sol humide (post-irrigation ou pluie). Pas de stress hydrique actif.",
+        "fenetre_bbch": "BBCH 01-79. INTERDIT après BBCH 81.",
+        "suivi": {
+          "indicateur": "NDRE + GCI",
+          "reponse_attendue": "Hausse NDRE 5-15%, stabilisation GCI",
+          "delai_j": "7-14"
+        },
+        "impact_plan": "Ajouter l'application N corrective au plan. Si 2ème carence N dans la saison : revoir doses N du plan +15% pour saison suivante."
+      }
+    },
+    {
+      "code": "OLI-17",
+      "nom": "Fin cycle Super-intensif",
+      "priorite": "vigilance",
+      "systeme": "super_intensif",
+      "seuil_entree": [
+        {
+          "indice": "NIRv_tendance",
+          "operateur": "==",
+          "valeur": "declin_2_saisons_consecutives"
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Alerte stratégique — fin probable cycle productif super-intensif",
+        "dose": "Aucun intrant immédiat. Recommandation de consultation expert.",
+        "duree": "N/A — décision stratégique pluriannuelle.",
+        "plafond": "N/A",
+        "condition_blocage": "NE JAMAIS recommander maintien production intensive sur verger en fin de cycle.",
+        "conditions_meteo": "N/A",
+        "fenetre_bbch": "Détecté post-récolte (comparaison inter-annuelle)",
+        "suivi": {
+          "indicateur": "NIRv saison suivante",
+          "reponse_attendue": "Si remontée NIRv : faux positif possible",
+          "delai_j": "12 mois"
+        },
+        "impact_plan": "Si confirmé : programme transition réduction intrants -50%. Proposer analyse coût-bénéfice replantation vs maintien.",
+        "alerte_irreversible": true
+      }
+    },
+    {
+      "code": "OLI-18",
+      "nom": "Lessivage traitement",
+      "priorite": "prioritaire",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "pluie_apres_application_h",
+          "operateur": "<",
+          "valeur": 6
+        }
+      ],
+      "seuil_sortie": null,
+      "prescription": {
+        "action": "Renouvellement traitement lessivé",
+        "dose": "Même produit, même dose que le traitement original. Exception Cu : vérifier plafond saisonnier avant retraitement.",
+        "duree": "Renouveler dans les 48-72h si conditions météo favorables.",
+        "plafond": "Respecter plafonds produit (Cu : max saisonnier ; insecticide : max applications).",
+        "condition_blocage": "SI plafond saisonnier du produit atteint → NE PAS retraiter. Signaler gap, passer en surveillance renforcée.",
+        "conditions_meteo": "Conditions standard du produit à renouveler. Vérifier prévisions J+3 : pas de pluie prévue.",
+        "fenetre_bbch": "Même fenêtre BBCH que le traitement original",
+        "suivi": {
+          "indicateur": "Même indicateur que recommandation originale",
+          "reponse_attendue": "Idem recommandation originale",
+          "delai_j": "Idem"
+        },
+        "impact_plan": "Comptabiliser comme traitement supplémentaire dans bilan phyto campagne."
+      }
+    },
+    {
+      "code": "OLI-19",
+      "nom": "Accumulation saline",
+      "priorite": "prioritaire",
+      "systeme": "irrigue",
+      "seuil_entree": [
+        {
+          "indice": "CE_sol_dS_m",
+          "operateur": ">",
+          "valeur": 4.0
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "CE_sol_dS_m",
+          "operateur": "<",
+          "valeur": 3.0
+        }
+      ],
+      "prescription": {
+        "action": "Lessivage intensif + ajustement nutrition + activation option C",
+        "dose": "FL recalculée avec CE_sol mesurée. Si FL calculée < 20% → appliquer minimum 20%. Algues ×1.50. Basculer vers engrais faible index salin.",
+        "duree": "Jusqu'à prochaine analyse sol (recommander analyse à 3 mois).",
+        "plafond": "Volume total irrigation (ETc + FL) ne doit pas saturer le sol.",
+        "condition_blocage": "SI drainage insuffisant (sol argileux, pas de drain) → Lessivage risque d'aggraver asphyxie. Demander avis expert.",
+        "conditions_meteo": "N/A — ajustement régime irrigation.",
+        "fenetre_bbch": "Tous stades, priorité période chaude",
+        "suivi": {
+          "indicateur": "CE sol (prochaine analyse)",
+          "reponse_attendue": "CE sol < 3 dS/m",
+          "delai_j": "90-180"
+        },
+        "impact_plan": "Activer option C si pas déjà active. Recalculer tous volumes irrigation avec FL majorée."
+      }
+    },
+    {
+      "code": "OLI-20",
+      "nom": "Toxicite Cl",
+      "priorite": "urgente",
+      "systeme": "tous",
+      "seuil_entree": [
+        {
+          "indice": "Cl_foliaire_pct",
+          "operateur": ">",
+          "valeur": 0.5
+        },
+        {
+          "indice": "brulures_visibles",
+          "operateur": "==",
+          "valeur": true
+        }
+      ],
+      "seuil_sortie": [
+        {
+          "indice": "Cl_foliaire_pct",
+          "operateur": "<",
+          "valeur": 0.3
+        }
+      ],
+      "prescription": {
+        "action": "Lessivage d'urgence + changement engrais K",
+        "dose": "Irrigation de lessivage : 1 application = 2× volume normal du jour. SOP remplacement immédiat de tout KCl. Algues 4 L/ha fertigation.",
+        "duree": "Lessivage : 1 application. Changement SOP : permanent pour la saison. Algues : 1 application puis maintenir calendrier.",
+        "plafond": "Ne pas saturer le sol (risque asphyxie).",
+        "condition_blocage": "SI source eau riche en Cl (> 350 mg/L) → lessivage ne résoudra pas le problème. Recommander changement source eau.",
+        "conditions_meteo": "Irrigation lessivage : matin tôt.",
+        "fenetre_bbch": "Tous stades, urgence immédiate",
+        "suivi": {
+          "indicateur": "Symptômes foliaires + Cl foliaire",
+          "reponse_attendue": "Arrêt progression brûlures. Cl < 0.3% à prochaine analyse",
+          "delai_j": "30-60"
+        },
+        "impact_plan": "Remplacer tout KCl par SOP dans le plan. Augmenter FL dans le plan."
+      }
+    }
+  ],
+  "phytosanitaire": {
+    "maladies": [
+      {
+        "nom": "Oeil de paon",
+        "agent": "Spilocaea oleaginea",
+        "conditions": {
+          "T_c": [
+            15,
+            20
+          ],
+          "HR_pct_min": 80,
+          "pluie": true
+        },
+        "mois_risque": [
+          "Oct",
+          "Nov",
+          "Mar",
+          "Apr"
+        ],
+        "guerissable": true,
+        "traitement": {
+          "produit": "Cuivre hydroxyde",
+          "dose": {
+            "valeur": [
+              2,
+              3
+            ],
+            "unite": "kg/ha"
+          },
+          "DAR_jours": 14
+        },
+        "prevention": [
+          "varietes_resistantes",
+          "aeration_canopee"
+        ]
+      },
+      {
+        "nom": "Verticilliose",
+        "agent": "Verticillium dahliae",
+        "conditions": {
+          "sol": "humide",
+          "T_c": [
+            20,
+            25
+          ]
+        },
+        "mois_risque": [
+          "Oct",
+          "Nov",
+          "Feb",
+          "Mar"
+        ],
+        "guerissable": false,
+        "traitement": null,
+        "prevention": [
+          "plants_certifies",
+          "sol_sain",
+          "eviter_precedents_sensibles"
+        ],
+        "note": "INCURABLE — arrachage obligatoire des arbres atteints"
+      },
+      {
+        "nom": "Tuberculose",
+        "agent": "Pseudomonas savastanoi",
+        "conditions": {
+          "blessures": true,
+          "humidite": true
+        },
+        "mois_risque": [
+          "Jan",
+          "Feb",
+          "Mar"
+        ],
+        "guerissable": true,
+        "traitement": {
+          "produit": "Cuivre",
+          "dose": {
+            "valeur": [
+              2,
+              3
+            ],
+            "unite": "kg/ha"
+          },
+          "timing": "post_taille_ou_grele"
+        },
+        "prevention": [
+          "desinfection_outils"
+        ]
+      }
+    ],
+    "ravageurs": [
+      {
+        "nom": "Mouche de l'olive",
+        "agent": "Bactrocera oleae",
+        "conditions": {
+          "T_c": [
+            16,
+            28
+          ],
+          "HR_pct_min": 60
+        },
+        "seuil_intervention": {
+          "fruits_piques_pct": 2,
+          "captures_piege_semaine": 5
+        },
+        "traitement": {
+          "produit": "Deltamethrine",
+          "dose": {
+            "valeur": 0.5,
+            "unite": "L/ha"
+          },
+          "DAR_jours": 7
+        },
+        "alternatives": [
+          "piegeage_massif",
+          "kaolin",
+          "Spinosad"
+        ]
+      },
+      {
+        "nom": "Cochenille noire",
+        "agent": "Saissetia oleae",
+        "mois_risque": [
+          "Mar",
+          "Apr",
+          "May"
+        ],
+        "traitement": {
+          "produit": "Huile blanche",
+          "dose": {
+            "valeur": [
+              15,
+              20
+            ],
+            "unite": "L/ha"
+          },
+          "mois_application": [
+            "Jan",
+            "Feb"
+          ],
+          "conditions_application": {
+            "T_min_c": 5,
+            "gel": false
+          },
+          "DAR_jours": 21
+        }
+      }
+    ]
+  },
+  "calendrier_phyto": [
+    {
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "cible": "oeil_paon",
+      "produit": "Cuivre hydroxyde",
+      "dose": {
+        "valeur": [
+          2,
+          3
+        ],
+        "unite": "kg/ha"
+      },
+      "condition_declenchement": "apres_premieres_pluies"
+    },
+    {
+      "mois": [
+        "Jan",
+        "Feb"
+      ],
+      "cible": "cochenille",
+      "produit": "Huile blanche",
+      "dose": {
+        "valeur": [
+          15,
+          20
+        ],
+        "unite": "L/ha"
+      },
+      "condition_declenchement": {
+        "T_min_c": 5,
+        "gel": false
+      }
+    },
+    {
+      "mois": [
+        "Mar"
+      ],
+      "cible": "oeil_paon",
+      "produit": "Cuivre",
+      "dose": {
+        "valeur": 2,
+        "unite": "kg/ha"
+      },
+      "condition_declenchement": "si_pluies_printanieres"
+    },
+    {
+      "mois": [
+        "May",
+        "Jun"
+      ],
+      "cible": "mouche",
+      "produit": "Deltamethrine",
+      "dose": {
+        "valeur": 0.5,
+        "unite": "L/ha"
+      },
+      "condition_declenchement": "si_seuil_captures_atteint"
+    },
+    {
+      "mois": null,
+      "evenement": "post_taille",
+      "cible": "tuberculose",
+      "produit": "Cuivre",
+      "dose": {
+        "valeur": [
+          2,
+          3
+        ],
+        "unite": "kg/ha"
+      },
+      "condition_declenchement": "immediat_apres_taille"
+    }
+  ],
+  "modele_predictif": {
+    "variables": [
+      {
+        "nom": "alternance_N-1_N-2",
+        "source": "historique",
+        "poids": [
+          0.25,
+          0.35
+        ],
+        "critique": true
+      },
+      {
+        "nom": "NIRvP_cumule_Apr_Sep",
+        "source": "satellite",
+        "poids": [
+          0.25,
+          0.35
+        ]
+      },
+      {
+        "nom": "deficit_hydrique_cumule",
+        "source": "bilan_hydrique",
+        "poids": [
+          0.1,
+          0.2
+        ]
+      },
+      {
+        "nom": "heures_froid_hiver",
+        "source": "meteo",
+        "poids": [
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "nom": "gel_floraison_binaire",
+        "source": "meteo",
+        "poids": [
+          0.15,
+          0.3
+        ],
+        "binaire": true,
+        "note": "Poids fort si evenement = 1"
+      },
+      {
+        "nom": "precip_floraison",
+        "source": "meteo",
+        "poids": [
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "nom": "age_verger_ans",
+        "source": "profil",
+        "poids": null,
+        "type": "ajustement_courbe"
+      },
+      {
+        "nom": "densite_arbres_ha",
+        "source": "profil",
+        "poids": null,
+        "type": "conversion_ha_vers_arbre"
+      }
+    ],
+    "precision_attendue": {
+      "traditionnel": {
+        "R2": [
+          0.4,
+          0.6
+        ],
+        "MAE_pct": [
+          30,
+          40
+        ]
+      },
+      "intensif": {
+        "R2": [
+          0.5,
+          0.7
+        ],
+        "MAE_pct": [
+          20,
+          30
+        ]
+      },
+      "super_intensif": {
+        "R2": [
+          0.6,
+          0.8
+        ],
+        "MAE_pct": [
+          15,
+          25
+        ]
+      }
+    },
+    "conditions_prevision": [
+      {
+        "champ": "calibrage_confiance_pct",
+        "operateur": ">=",
+        "valeur": 50
+      },
+      {
+        "champ": "historique_cycles_complets",
+        "operateur": ">=",
+        "valeur": 1
+      },
+      {
+        "champ": "meteo_saison_disponible",
+        "operateur": "==",
+        "valeur": true
+      },
+      {
+        "champ": "BBCH_code_actuel_int",
+        "operateur": ">=",
+        "valeur": 67
+      }
+    ],
+    "moments_prevision": {
+      "post_floraison": {
+        "BBCH": "67-69",
+        "precision": "±40%"
+      },
+      "post_nouaison": {
+        "BBCH": "71",
+        "precision": "±25%"
+      },
+      "pre_recolte": {
+        "BBCH": "85",
+        "precision": "±15-20%"
+      }
+    },
+    "limites_NIRvP": {
+      "detecte": [
+        "vigueur_vegetative",
+        "capacite_photosynthetique",
+        "stress_severe_prolonge",
+        "recuperation_post_intervention"
+      ],
+      "ne_detecte_pas": [
+        "qualite_pollinisation",
+        "taux_nouaison_reel",
+        "problemes_racinaires_precoces",
+        "charge_fruits",
+        "calibre_fruits"
+      ]
+    }
+  },
+  "plan_annuel": {
+    "composantes": [
+      "programme_NPK",
+      "programme_microelements",
+      "programme_biostimulants",
+      "programme_phyto_preventif",
+      "plan_irrigation",
+      "gestion_salinite",
+      "taille_prevue",
+      "prevision_recolte"
+    ],
+    "declenchement": "post_calibrage_validation",
+    "mise_a_jour": {
+      "NPK": "annuel + ajustements_alertes",
+      "microelements": "annuel",
+      "biostimulants": "annuel",
+      "phyto": "annuel + alertes",
+      "irrigation": "hebdomadaire_meteo",
+      "salinite": "si_option_C"
+    },
+    "calendrier_type_intensif": {
+      "Jan": {
+        "NPK": null,
+        "micro": null,
+        "biostim": null,
+        "phyto": "huile_blanche",
+        "irrigation": "faible"
+      },
+      "Feb": {
+        "NPK": "TSP_fond_N1",
+        "micro": "Fe-EDDHA",
+        "biostim": "humiques_amines",
+        "phyto": null,
+        "irrigation": "reprise"
+      },
+      "Mar": {
+        "NPK": "N2",
+        "micro": "Zn_Mn_foliaire",
+        "biostim": "algues",
+        "phyto": "Cu_si_taille",
+        "irrigation": "progressive"
+      },
+      "Apr": {
+        "NPK": "N3_K",
+        "micro": null,
+        "biostim": null,
+        "phyto": "Cu_si_pluie",
+        "irrigation": "croissante"
+      },
+      "May": {
+        "NPK": "K",
+        "micro": "B_floraison",
+        "biostim": "algues_amines",
+        "phyto": "mouche_si_seuil",
+        "irrigation": "croissante"
+      },
+      "Jun": {
+        "NPK": "K_N",
+        "micro": "Fe-EDDHA",
+        "biostim": "humiques",
+        "phyto": null,
+        "irrigation": "maximum"
+      },
+      "Jul": {
+        "NPK": "K",
+        "micro": null,
+        "biostim": "algues",
+        "phyto": "mouche_si_seuil",
+        "irrigation": "maximum"
+      },
+      "Aug": {
+        "NPK": "K_dernier",
+        "micro": null,
+        "biostim": null,
+        "phyto": null,
+        "irrigation": "maximum_ou_RDI"
+      },
+      "Sep": {
+        "NPK": null,
+        "micro": null,
+        "biostim": "humiques",
+        "phyto": null,
+        "irrigation": "reduction"
+      },
+      "Oct": {
+        "NPK": null,
+        "micro": null,
+        "biostim": null,
+        "phyto": "Cu_oeil_paon",
+        "irrigation": "reduction"
+      },
+      "Nov": {
+        "NPK": "N_reconstitution",
+        "micro": null,
+        "biostim": "humiques_granule",
+        "phyto": "Cu_oeil_paon",
+        "irrigation": "faible"
+      },
+      "Dec": {
+        "NPK": null,
+        "micro": null,
+        "biostim": "amines_post_recolte",
+        "phyto": null,
+        "irrigation": "tres_faible"
+      }
+    }
+  },
+  "couts_indicatifs_DH": {
+    "nitrate_calcium_kg": [
+      2.5,
+      3.5
+    ],
+    "MAP_kg": [
+      9,
+      12
+    ],
+    "sulfate_potasse_kg": [
+      8,
+      11
+    ],
+    "sulfate_magnesium_kg": [
+      3,
+      5
+    ],
+    "Fe_EDDHA_kg": [
+      45,
+      65
+    ],
+    "acides_humiques_L": [
+      35,
+      55
+    ],
+    "extraits_algues_L": [
+      60,
+      90
+    ],
+    "acides_amines_L": [
+      40,
+      70
+    ],
+    "cuivre_hydroxyde_kg": [
+      18,
+      25
+    ],
+    "deltamethrine_L": [
+      80,
+      120
+    ],
+    "huile_blanche_L": [
+      8,
+      12
+    ]
+  },
+  "gdd": {
+    "tbase_c": 7.5,
+    "plafond_c": 30,
+    "reference": "Moriondo et al. 2001",
+    "formule": "GDD_jour = max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
+    "activation_forcing": {
+      "condition_thermique": "Tmoy > 7.5",
+      "condition_satellite": "hausse_NIRv_ou_NIRvP >= 20pct_vs_passage_precedent",
+      "note": "Double condition obligatoire. Le GDD ne démarre pas à date fixe mais au point d'activation satellite + thermique confirmé."
+    },
+    "cumul_reset": "Remis à 0 quand dormance (Phase 0) se termine",
+    "seuils_chill_units_par_variete": {
+      "Picholine Marocaine": [
+        100,
+        200
+      ],
+      "Haouzia": [
+        100,
+        150
+      ],
+      "Menara": [
+        100,
+        150
+      ],
+      "Arbequina": [
+        200,
+        400
+      ],
+      "Arbosana": [
+        200,
+        350
+      ],
+      "Koroneiki": [
+        150,
+        300
+      ],
+      "Picual": [
+        400,
+        600
+      ]
+    },
+    "calcul_chill_unit": "SI 0 < T_horaire < 7.2 : CU += 1 | Estimation si horaire indisponible : CU = heures_nuit × (7.2 - Tmin) / 7.2 si Tmin < 7.2"
+  },
+  "kc_par_periode": [
+    {
+      "stade": "repos",
+      "mois": [
+        "Dec",
+        "Jan",
+        "Feb"
+      ],
+      "traditionnel": 0.4,
+      "intensif": 0.5,
+      "super_intensif": 0.55
+    },
+    {
+      "stade": "debourrement",
+      "mois": [
+        "Mar"
+      ],
+      "traditionnel": 0.45,
+      "intensif": 0.55,
+      "super_intensif": 0.6
+    },
+    {
+      "stade": "croissance",
+      "mois": [
+        "Apr"
+      ],
+      "traditionnel": 0.5,
+      "intensif": 0.6,
+      "super_intensif": 0.65
+    },
+    {
+      "stade": "floraison",
+      "mois": [
+        "May"
+      ],
+      "traditionnel": 0.55,
+      "intensif": 0.65,
+      "super_intensif": 0.7
+    },
+    {
+      "stade": "nouaison",
+      "mois": [
+        "Jun"
+      ],
+      "traditionnel": 0.6,
+      "intensif": 0.75,
+      "super_intensif": 0.8
+    },
+    {
+      "stade": "grossissement",
+      "mois": [
+        "Jul",
+        "Aug"
+      ],
+      "traditionnel": 0.65,
+      "intensif": 0.8,
+      "super_intensif": 0.9
+    },
+    {
+      "stade": "maturation",
+      "mois": [
+        "Sep",
+        "Oct"
+      ],
+      "traditionnel": 0.55,
+      "intensif": 0.65,
+      "super_intensif": 0.7
+    },
+    {
+      "stade": "post_recolte",
+      "mois": [
+        "Nov"
+      ],
+      "traditionnel": 0.45,
+      "intensif": 0.55,
+      "super_intensif": 0.6
+    }
+  ],
+  "formes_engrais": {
+    "N": {
+      "si_pH_sol_sup_7_2": [
+        "Nitrate de calcium 15.5-0-0",
+        "Ammonitrate 33.5%"
+      ],
+      "si_pH_sol_inf_7_2": [
+        "Uree 46%",
+        "Ammonitrate 33.5%"
+      ],
+      "si_option_C": [
+        "Nitrate de calcium 15.5-0-0"
+      ],
+      "interdit_si_pH_sup_7_2": [
+        "Uree 46%"
+      ],
+      "note": "Sur sol calcaire (pH > 7.2), urée = 50-60% pertes volatilisation. Formes nitrique ou ammoniacale stabilisée uniquement."
+    },
+    "P": {
+      "application_fond": [
+        "TSP 46%",
+        "MAP 12-61-0"
+      ],
+      "fertigation": [
+        "Acide phosphorique 75%"
+      ],
+      "si_option_C": {
+        "condition": "pH_eau > 7.5 ET HCO3 > 500 mg/L",
+        "produit": "Acide phosphorique (double effet: P + acidification)"
+      }
+    },
+    "K": {
+      "standard": [
+        "Sulfate de potasse SOP 0-0-50"
+      ],
+      "besoin_NK_simultane": [
+        "Nitrate de potasse NOP 13-0-46"
+      ],
+      "si_option_C": [
+        "SOP uniquement"
+      ],
+      "interdit_si_option_C": "KCl — apporte Cl toxique",
+      "note": "KCl interdit pour olivier (chlorures toxiques > 0.5%)"
+    },
+    "incompatibilite_cuve": "Ne JAMAIS mélanger Ca(NO3)2 avec phosphates ou sulfates dans la même cuve. Injecter séparément avec rinçage."
+  },
+  "microelements": {
+    "Fe": {
+      "condition_inclusion": "TOUJOURS si pH > 7.2 OU calcaire_actif > 5%",
+      "chelate_selection": [
+        {
+          "si": "calcaire_actif < 5%",
+          "forme": "Fe-EDTA ou Fe-DTPA"
+        },
+        {
+          "si": "calcaire_actif 5-10%",
+          "forme": "Fe-EDDHA 6%"
+        },
+        {
+          "si": "calcaire_actif > 10%",
+          "forme": "Fe-EDDHA 6% dose majorée ou fractionner en 3"
+        }
+      ],
+      "dose_option_A": {
+        "valeur": 10,
+        "unite": "kg/ha/an",
+        "mode": "fertigation"
+      },
+      "dose_option_B": {
+        "valeur": 1.5,
+        "unite": "kg/ha",
+        "mode": "foliaire"
+      },
+      "stades": [
+        "Mar",
+        "Jun"
+      ]
+    },
+    "Zn": {
+      "condition_inclusion": "TOUJOURS sur sol calcaire",
+      "forme": "Sulfate de zinc",
+      "dose_option_A": {
+        "valeur": 500,
+        "unite": "g/ha",
+        "mode": "foliaire"
+      },
+      "dose_option_B": {
+        "valeur": 750,
+        "unite": "g/ha",
+        "mode": "foliaire"
+      },
+      "stades": [
+        "Mar"
+      ]
+    },
+    "Mn": {
+      "condition_inclusion": "TOUJOURS sur sol calcaire",
+      "forme": "Sulfate de manganèse",
+      "dose_option_A": {
+        "valeur": 400,
+        "unite": "g/ha",
+        "mode": "foliaire"
+      },
+      "dose_option_B": {
+        "valeur": 600,
+        "unite": "g/ha",
+        "mode": "foliaire"
+      },
+      "stades": [
+        "Mar"
+      ]
+    },
+    "B": {
+      "condition_inclusion": "TOUJOURS — obligatoire floraison",
+      "forme": "Acide borique",
+      "dose_option_A": {
+        "valeur": 1,
+        "unite": "kg/ha",
+        "mode": "foliaire"
+      },
+      "dose_option_B": {
+        "valeur": 1.5,
+        "unite": "kg/ha",
+        "mode": "foliaire"
+      },
+      "stades": [
+        "May"
+      ],
+      "si_deficit_heures_froid": "+50% dose floraison"
+    },
+    "Mg": {
+      "condition_inclusion": "SI Mg_sol < 150 ppm OU analyse sol absente",
+      "forme": "Sulfate de magnésium",
+      "dose_option_A": {
+        "valeur": 5,
+        "unite": "kg/ha",
+        "mode": "foliaire"
+      },
+      "dose_option_B": {
+        "valeur": 7,
+        "unite": "kg/ha",
+        "mode": "foliaire"
+      },
+      "stades": [
+        "Apr",
+        "Jun"
+      ]
+    },
+    "note": "Fe, B, Zn, Mn et biostimulants de base sont des composantes OBLIGATOIRES sur sol calcaire — pas des options."
+  },
+  "rdi": {
+    "conditions_activation": [
+      "systeme IN ['intensif', 'super_intensif']",
+      "historique_satellite >= 24 mois",
+      "option_C == false"
+    ],
+    "periodes": [
+      {
+        "stade": "floraison_nouaison",
+        "bbch": "55-71",
+        "rdi_autorise": false,
+        "reduction_max_pct": 0,
+        "note": "JAMAIS de RDI floraison/nouaison — stade très sensible"
+      },
+      {
+        "stade": "grossissement_II",
+        "mois": "Aug",
+        "rdi_autorise": true,
+        "reduction_max_pct": 30
+      },
+      {
+        "stade": "maturation",
+        "mois": "Sep",
+        "rdi_autorise": true,
+        "reduction_max_pct": 40
+      },
+      {
+        "stade": "pre_recolte",
+        "mois": "Oct-Nov",
+        "rdi_autorise": true,
+        "reduction_max_pct": 50
+      }
+    ]
+  },
+  "co_occurrence": {
+    "_description": "Actions combinées quand deux alertes se déclenchent simultanément. Déterministe — l'IA applique cette matrice, elle ne décide pas.",
+    "regles": [
+      {
+        "alertes": [
+          "OLI-01",
+          "OLI-16"
+        ],
+        "lien": "Stress hydrique bloque absorption N même si N disponible.",
+        "action": "Traiter d'abord OLI-01 (irrigation). Attendre 7-10j. Réévaluer OLI-16."
+      },
+      {
+        "alertes": [
+          "OLI-02",
+          "OLI-16"
+        ],
+        "lien": "Idem OLI-01 + OLI-16.",
+        "action": "Traiter d'abord OLI-02 (irrigation). Attendre 7-10j. Réévaluer OLI-16."
+      },
+      {
+        "alertes": [
+          "OLI-01",
+          "OLI-07"
+        ],
+        "lien": "Canicule CAUSE le stress hydrique (ETP explose).",
+        "action": "Action combinée : +50% irrigation (prendre le max des deux). Algues fertigation."
+      },
+      {
+        "alertes": [
+          "OLI-02",
+          "OLI-07"
+        ],
+        "lien": "Canicule CAUSE stress hydrique.",
+        "action": "Action combinée : +50% irrigation. Algues fertigation."
+      },
+      {
+        "alertes": [
+          "OLI-01",
+          "OLI-15"
+        ],
+        "lien": "Chergui CAUSE stress hydrique aigu.",
+        "action": "Action combinée : +50% irrigation (Chergui prime). Suspendre tout foliaire."
+      },
+      {
+        "alertes": [
+          "OLI-04",
+          "OLI-07"
+        ],
+        "lien": "CONTRADICTOIRE — canicule tue le champignon œil de paon.",
+        "action": "Annuler OLI-04. Maintenir OLI-07 seul."
+      },
+      {
+        "alertes": [
+          "OLI-04",
+          "OLI-18"
+        ],
+        "lien": "Traitement Cu lessivé → œil de paon non traité.",
+        "action": "Renouveler Cu immédiatement (OLI-18 prime, même si délai < 7j)."
+      },
+      {
+        "alertes": [
+          "OLI-03",
+          "OLI-13"
+        ],
+        "lien": "Gel pendant floraison CAUSE floraison ratée.",
+        "action": "Appliquer OLI-03 (aminés récupération). OLI-13 s'applique ensuite (ajustement plan)."
+      },
+      {
+        "alertes": [
+          "OLI-09",
+          "OLI-13"
+        ],
+        "lien": "Année OFF + floraison ratée = double impact.",
+        "action": "Cumuler les deux ajustements. Rendement : -60 à -80%."
+      },
+      {
+        "alertes": [
+          "OLI-10",
+          "OLI-06"
+        ],
+        "lien": "Dépérissement peut ÊTRE la verticilliose.",
+        "action": "Appliquer OLI-06 (investigation). Si non confirmée, maintenir OLI-10."
+      },
+      {
+        "alertes": [
+          "OLI-16",
+          "OLI-12"
+        ],
+        "lien": "Sur-irrigation peut lessiver N → carence N induite.",
+        "action": "Traiter d'abord OLI-12 (réduire irrigation). Attendre 10j. Réévaluer OLI-16."
+      },
+      {
+        "alertes": [
+          "OLI-19",
+          "OLI-20"
+        ],
+        "lien": "Accumulation saline + toxicité Cl = même problème, stade avancé.",
+        "action": "Appliquer OLI-20 (urgence Cl). OLI-19 se résout en parallèle."
+      }
+    ],
+    "regle_defaut": "En cas de co-occurrence non listée : appliquer priorité standard 🔴 > 🟠 > 🟡 > 🟢. Traiter alertes séquentiellement, pas simultanément."
+  },
+  "protocole_phenologique": {
+    "_description": "Protocole phénologique Simo v2.0 — sous-module du calibrage uniquement. Exécuté sur l'historique satellite lors du calibrage pour : filtrer les données, classifier le signal, détecter les phases et produire des alertes de calibrage. NE PAS confondre avec les alertes OLI-XX qui sont pour le suivi opérationnel.",
+    "_scope": "CALIBRAGE UNIQUEMENT — pas de suivi opérationnel",
+    "_espece": "Olea europaea L.",
+    "filtrage": {
+      "_description": "Le filtrage se déroule en deux temps. L'IA ne refait pas le travail déjà fait.",
+      "fait_au_telechargement": {
+        "_quand": "Automatiquement à la création de la parcelle, avant tout calibrage",
+        "_qui": "Système de téléchargement satellite (pas l'IA calibrage)",
+        "masque_nuageux": "SCL pixel ∈ {4 (végétation), 5 (sol nu)} — dates avec 0 pixel valide exclues",
+        "seuil_pixels_minimum": "Dates avec < 5 pixels purs sur AOI exclues",
+        "buffer_negatif_m": 10,
+        "calcul_indices": "NDVI, EVI, NIRv, NIRvP, GCI, NDRE calculés et stockés en base de données",
+        "agregation": "MÉDIANE des pixels purs par date valide — valeur unique par indice par date stockée en DB",
+        "NIRvP_formule": "NIRv × PAR_jour (PAR = SSR × 0.48 / 1e6, source ERA5, unité MJ/m²)",
+        "resultat_en_db": "La DB contient la série temporelle propre : une ligne par date valide avec NDVI, NIRv, NDMI, NDRE, EVI, GCI, NIRvP"
+      },
+      "fait_au_calibrage": {
+        "_quand": "Quand l'utilisateur lance le calibrage — l'IA lit la série depuis la DB",
+        "_qui": "Moteur calibrage IA — opère sur les données déjà filtrées de la DB",
+        "plausibilite_temporelle": {
+          "condition_artefact": "|V(t) - V(t-1)| / V(t-1) > 0.30",
+          "confirmation": "Si dans les 10 jours suivants V revient à ±10% de V(t-1) → artefact confirmé",
+          "action": "Marquer la date comme suspecte et l'exclure de la série de calcul"
+        },
+        "filtre_annee_pluviometrique_extreme": {
+          "execution": "Annuelle — appliqué en fin de cycle sur l'historique complet",
+          "condition": "Précipitations annuelles > moyenne historique + 2σ",
+          "action": "Marquer le cycle comme hors_norme — exclure du calibrage adaptatif, conserver pour documentation"
+        },
+        "lissage": {
+          "execution": "Après accumulation de données suffisantes (série complète disponible)",
+          "methode_principale": "Whittaker lambda 10-100",
+          "methode_alternative": "Savitzky-Golay fenêtre 5-7 points polynôme ordre 2",
+          "applique_sur": "Chaque série temporelle d'indice après exclusion des artefacts"
+        }
+      }
+    },
+    "classification_signal": {
+      "_description": "Détermine si les indices sont interprétables pour l'olivier à cette date",
+      "mode_amorcage": {
+        "condition": "nombre_cycles_complets < 3",
+        "effet": {
+          "ELEVEE": "MODEREE",
+          "MODEREE": "FAIBLE",
+          "FAIBLE": "TRES_FAIBLE"
+        }
+      },
+      "references_adaptatives": {
+        "Ratio_NIRv_NDVI_ete": "médiane(NIRv/NDVI) sur juillet-septembre historique",
+        "NIRv_ete_moyen": "moyenne(NIRv) sur juillet-septembre historiques (hors hors_norme)",
+        "NIRv_ete_sigma": "écart-type(NIRv) sur juillet-septembre historiques",
+        "Tmoy_Q25": "percentile 25% de Tmoy sur historique annuel",
+        "NDVI_pic_habituel": "médiane des pics printaniers NDVI historiques",
+        "GCI_NIRvP_historique": "liste ratios GCI/NIRvP printaniers — pour quartiles diagnostic floraison"
+      },
+      "arbre_decision": [
+        {
+          "condition": "Tmax_30j_pct > 70 ET Precip_30j < 5",
+          "etat_signal": "SIGNAL_PUR",
+          "interpretation": "Indices absolus fiables. Fenêtre de calibrage principal."
+        },
+        {
+          "condition": "(NIRv/NDVI > Ratio_NIRv_NDVI_ete × 1.10) ET (NDVI > NDVI_pic_habituel)",
+          "etat_signal": "DOMINE_ADVENTICES",
+          "interpretation": "Indices absolus NON interprétables pour l'olivier. Diagnostic thermique uniquement."
+        },
+        {
+          "condition": "Precip_30j > 20 ET Tmoy > 10",
+          "etat_signal": "MIXTE_MODERE",
+          "interpretation": "Indices biaisés. Utiliser dérivées et ratios uniquement."
+        },
+        {
+          "condition": "defaut",
+          "etat_signal": "MIXTE_MODERE"
+        }
+      ],
+      "point_clarification": {
+        "condition": "etat_signal_precedent IN [MIXTE_MODERE, DOMINE_ADVENTICES] ET dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5",
+        "action": "etat_signal = SIGNAL_PUR — les adventices ont séché"
+      }
+    },
+    "phases": {
+      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée, maintien et sortie. GDD calculé depuis referentiel.gdd (tbase 7.5°C, plafond 30°C).",
+      "calculs_preliminaires": {
+        "GDD_jour": "max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
+        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
+        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
+        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
+        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
+        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
+        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
+      },
+      "PHASE_0": {
+        "identifiant": "DORMANCE",
+        "nom": "Dormance hivernale",
+        "verification_prealable": "SI Tmoy_Q25 >= 15 → PAS_DE_DORMANCE_MARQUEE — passer directement à Phase 1",
+        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.15",
+        "condition_sortie": {
+          "vers": "PHASE_1",
+          "condition": "Tmoy > Tmoy_Q25 durablement (≥ 10 jours consécutifs)",
+          "action": "GDD_cumul = 0"
+        },
+        "confiance": "ELEVEE",
+        "surveillance": "Chill Units (CU) — lire referentiel.gdd.seuils_chill_units_par_variete"
+      },
+      "PHASE_1": {
+        "identifiant": "DEBOURREMENT",
+        "nom": "Débourrement",
+        "condition_maintien": "Tmoy > 15 pendant ≥ 15 jours sur les 20 derniers ET GDD_cumul > 50 ET Precip_30j > 20 OU irrigation ET dNIRv_dt > 0 soutenu",
+        "condition_sortie": {
+          "vers": "PHASE_2",
+          "condition": "GDD_cumul >= 350 ET Tmoy >= 18",
+          "action": "Phase = FLORAISON"
+        },
+        "discrimination_adventices": "ratio_derivees = dNDVI_dt / max(dNIRv_dt, 0.001) → si > 2.0 : adventices dominent",
+        "confiance": "MODEREE"
+      },
+      "PHASE_2": {
+        "identifiant": "FLORAISON",
+        "nom": "Floraison",
+        "condition_maintien": "GDD_cumul ∈ [350, 700] ET Tmoy ∈ [18, 25]",
+        "diagnostic_intensite": {
+          "priorite_1": "Input terrain si disponible (parcelle.terrain_disponible = oui)",
+          "priorite_2": "Alternance (floraison_N-1 forte → FAIBLE | faible → FORTE)",
+          "priorite_3": "Ratio GCI/NIRvP en quartiles (Q4 → floraison FAIBLE | Q1 → FORTE)"
+        },
+        "taille_rajeunissement": "Si annees_post_taille < 2 → intensite = ABSENTE",
+        "condition_sortie": {
+          "vers": "PHASE_3",
+          "condition": "GDD_cumul > 700 OU Tmoy > 25 durablement"
+        },
+        "confiance": "FAIBLE (spectral) / MODEREE (thermique + alternance)"
+      },
+      "PHASE_3": {
+        "identifiant": "NOUAISON",
+        "nom": "Nouaison / Clarification",
+        "condition_maintien": "GDD_cumul > seuil_floraison + 150 ET Clarification != ATTEINTE",
+        "clarification": "dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5 → etat_signal = SIGNAL_PUR",
+        "condition_sortie": {
+          "vers": "PHASE_4",
+          "condition": "etat_signal = SIGNAL_PUR ET Tmax > 30 récurrent"
+        },
+        "confiance": "MODEREE"
+      },
+      "PHASE_4": {
+        "identifiant": "STRESS_ESTIVAL",
+        "nom": "Stress estival + Maturation",
+        "note": "FENÊTRE DE CALIBRAGE PRINCIPAL — indices absolus fiables ici",
+        "condition_maintien": "etat_signal = SIGNAL_PUR",
+        "diagnostic_severite": [
+          {
+            "condition": "NIRv_actuel > NIRv_ete_moyen - 0.5 × NIRv_ete_sigma",
+            "severite": "PAS_DE_STRESS"
+          },
+          {
+            "condition": "NIRv_actuel > NIRv_ete_moyen - 1.5 × NIRv_ete_sigma",
+            "severite": "STRESS_MODERE"
+          },
+          {
+            "condition": "defaut",
+            "severite": "STRESS_SEVERE"
+          }
+        ],
+        "diagnostic_type": [
+          {
+            "condition": "Ratio_decouplage > 1.3",
+            "type": "FONCTIONNEL"
+          },
+          {
+            "condition": "Ratio_decouplage > 0.9",
+            "type": "MIXTE"
+          },
+          {
+            "condition": "defaut",
+            "type": "STRUCTUREL"
+          }
+        ],
+        "diagnostic_tendance": {
+          "declin": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2 → DÉCLIN 2 cycles consécutifs",
+          "recuperation": "NIRv_ete_actuel > NIRv_ete_N-1 → récupération en cours"
+        },
+        "condition_sortie_reprise": {
+          "vers": "PHASE_6",
+          "condition": "Precip_episode > 20 ET Tmoy < 25 ET dNIRv_dt > 0"
+        },
+        "condition_sortie_dormance": {
+          "vers": "PHASE_0",
+          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15 ET aucune_reprise",
+          "action": "GDD_cumul = 0"
+        },
+        "confiance": "ELEVEE (stress) / MODEREE (maturation)"
+      },
+      "PHASE_6": {
+        "identifiant": "REPRISE_AUTOMNALE",
+        "nom": "Reprise automnale",
+        "pre_condition": "Phase 4 doit avoir été détectée dans ce cycle — sinon passer directement à Phase 0",
+        "condition_maintien": "Precip_recentes > 20 ET Tmoy < 25 ET dNIRv_dt > 0",
+        "diagnostic_intensite": "Hausse_NIRv_pct = (NIRv_actuel - NIRv_plancher_ete) / NIRv_plancher_ete × 100 → < 10% = ABSENTE | < 25% = FAIBLE | < 50% = MODEREE | ≥ 50% = FORTE",
+        "condition_sortie": {
+          "vers": "PHASE_0",
+          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15",
+          "action": "GDD_cumul = 0"
+        },
+        "confiance": "MODEREE à ELEVEE"
+      }
+    },
+    "alertes_calibrage": {
+      "_description": "Alertes détectées PENDANT l'analyse historique du calibrage. Ce sont des constats sur l'historique de la parcelle. NE PAS confondre avec les alertes OLI-XX qui sont des alertes opérationnelles déclenchées pendant le suivi.",
+      "_difference_OLI_XX": "OLI-XX = alertes suivi opérationnel (temps réel). Ces alertes = constats historiques calibrage.",
+      "ALERTE_CAL_1": {
+        "nom": "Stress fonctionnel invisible dans l'historique",
+        "condition": "Phase STRESS_ESTIVAL ET Perte_NIRv > 0.40 ET Perte_NDVI < 0.20",
+        "message": "Stress fonctionnel masqué détecté : NIRv a chuté de {Perte_NIRv×100}% alors que NDVI ne baissait que de {Perte_NDVI×100}%. La parcelle souffrait mais la canopée paraissait intacte.",
+        "impact_calibrage": "Confirme stress hydrique chronique — renforce diagnostic explicatif",
+        "severite": "ATTENTION"
+      },
+      "ALERTE_CAL_2": {
+        "nom": "Canicule en fenêtre floraison/nouaison (historique)",
+        "condition": "GDD_cumul ∈ [350, 850] ET (Tmax > 40 pendant ≥ 1 jour OU Tmax > 35 pendant ≥ 2 jours consécutifs)",
+        "message_critique": "Canicule détectée pendant floraison/nouaison — risque chute fleurs et jeunes fruits cette saison-là",
+        "impact_calibrage": "Expliquer baisse rendement historique si détecté — exclure de la baseline si triple confirmation",
+        "severite": "CRITIQUE ou ATTENTION selon intensité"
+      },
+      "ALERTE_CAL_3": {
+        "nom": "Déclin progressif de la parcelle",
+        "condition": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2",
+        "message": "Déclin détecté : le plancher estival du NIRv diminue pour la 2ème année consécutive.",
+        "impact_calibrage": "Coefficient_etat_parcelle → dégradé. Potentiel rendement ajusté à la baisse. Mentionner dans diagnostic explicatif.",
+        "severite": "ELEVEE"
+      },
+      "ALERTE_CAL_4": {
+        "nom": "Débourrement prématuré détecté (historique)",
+        "condition": "Phase DORMANCE ET Tmoy > 18 pendant > 5 jours ET hausse_NIRv > 10%",
+        "message": "Débourrement prématuré détecté cette saison — chilling possiblement insuffisant ({CU} CU accumulés).",
+        "impact_calibrage": "Expliquer floraison hétérogène ou précoce. Intégrer dans profil variétal.",
+        "severite": "ATTENTION"
+      },
+      "ALERTE_CAL_5": {
+        "nom": "Reprise automnale avortée (historique)",
+        "condition": "Phase STRESS_ESTIVAL ET mois ∈ [Nov, Dec] ET Precip_30j > 20 ET Hausse_NIRv_pct < 10",
+        "message": "Reprise automnale avortée malgré précipitations — réserves possiblement épuisées cette saison.",
+        "impact_calibrage": "Signal de stress chronique grave. Renforce coefficient dégradé.",
+        "severite": "ATTENTION"
+      },
+      "ALERTE_CAL_6": {
+        "nom": "Rupture spectrale détectée",
+        "condition": "NDVI_pic_actuel < NDVI_pic_N-1 × 0.60 ET Precip_annuelles dans la normale",
+        "message": "Rupture spectrale détectée cette saison — vérifier si un événement a eu lieu (taille, arrachage, maladie).",
+        "impact_calibrage": "Segmenter historique AVANT/APRÈS si rupture de régime confirmée. Sinon exclure si triple confirmation.",
+        "severite": "INFORMATION"
+      }
+    },
+    "sortie_par_saison": {
+      "_description": "Ce que le protocole produit pour CHAQUE saison dans l'historique",
+      "phase_detectee": "identifiant parmi DORMANCE/DEBOURREMENT/FLORAISON/NOUAISON/STRESS_ESTIVAL/REPRISE_AUTOMNALE",
+      "dates_transitions": "date_debut et date_fin de chaque phase",
+      "gdd_cumule_transitions": "GDD à chaque transition de phase",
+      "confiance_par_phase": "ELEVEE | MODEREE | FAIBLE | TRES_FAIBLE",
+      "etat_signal": "SIGNAL_PUR | MIXTE_MODERE | DOMINE_ADVENTICES",
+      "alertes_calibrage_detectees": "liste de ALERTE_CAL_X détectées cette saison",
+      "mode": "NORMAL | AMORCAGE"
+    }
+  }
+}$crop_ai_ref_olivier$::jsonb
+)
+ON CONFLICT (crop_type) DO UPDATE SET
+  version = EXCLUDED.version,
+  reference_data = EXCLUDED.reference_data,
+  updated_at = NOW();
+
+INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
+VALUES (
+  'palmier_dattier',
+  '1.0',
+  $crop_ai_ref_palmier_dattier${
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "palmier_dattier",
+    "nom_scientifique": "Phoenix dactylifera L.",
+    "famille": "Arecaceae",
+    "pays": "Maroc"
+  },
+  "caracteristiques_generales": {
+    "type": "monocotyledone_arborescente",
+    "origine": "Mesopotamie_Golfe_Persique",
+    "duree_vie_ans": [
+      100,
+      150
+    ],
+    "production_economique_ans": [
+      60,
+      80
+    ],
+    "hauteur_adulte_m": [
+      15,
+      25
+    ],
+    "systeme_racinaire": "fascicule_profond_6m",
+    "sexualite": "dioique",
+    "pollinisation": "manuelle_en_culture"
+  },
+  "exigences_climatiques": {
+    "temperature_optimale_C": [
+      32,
+      38
+    ],
+    "temperature_max_toleree_C": 50,
+    "temperature_min_vegetative_C": 7,
+    "gel_palmes_C": [
+      -5,
+      -7
+    ],
+    "gel_mortel_C": [
+      -10,
+      -12
+    ],
+    "GDD_floraison_recolte": 5000,
+    "HR_optimale_pct": 40,
+    "HR_critique_maturation_pct": 70
+  },
+  "tolerance_salinite": {
+    "CE_eau_sans_perte_dS_m": 4,
+    "CE_eau_perte_10pct_dS_m": 6,
+    "CE_eau_perte_25pct_dS_m": 10,
+    "CE_eau_perte_50pct_dS_m": 15,
+    "note": "PLUS TOLERANT salinité de toutes cultures fruitières - 8x plus que avocatier"
+  },
+  "varietes": [
+    {
+      "code": "MEJHOUL",
+      "nom": "Mejhoul",
+      "type": "molle",
+      "poids_g": [
+        15,
+        25
+      ],
+      "qualite": "premium_export",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        80,
+        120
+      ]
+    },
+    {
+      "code": "BOUFEGGOUS",
+      "nom": "Boufeggous",
+      "type": "molle",
+      "poids_g": [
+        8,
+        12
+      ],
+      "qualite": "excellente",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        60,
+        100
+      ]
+    },
+    {
+      "code": "JIHEL",
+      "nom": "Jihel",
+      "type": "semi_molle",
+      "poids_g": [
+        6,
+        10
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        70,
+        100
+      ]
+    },
+    {
+      "code": "BOUSKRI",
+      "nom": "Bouskri",
+      "type": "semi_molle",
+      "poids_g": [
+        5,
+        8
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        50,
+        80
+      ]
+    },
+    {
+      "code": "BOUSLIKHENE",
+      "nom": "Bouslikhène",
+      "type": "seche",
+      "poids_g": [
+        4,
+        7
+      ],
+      "qualite": "moyenne",
+      "bayoud": "resistante",
+      "productivite_kg": [
+        60,
+        90
+      ]
+    }
+  ],
+  "pollinisation": {
+    "type": "manuelle_obligatoire",
+    "ratio_males_pct": [
+      1,
+      2
+    ],
+    "fenetre_jours": [
+      1,
+      3
+    ],
+    "methode": "insertion_brins_ou_pulverisation",
+    "passages": [
+      2,
+      3
+    ],
+    "conservation_pollen": {
+      "frais": "1-2 jours",
+      "refrigere_4C": "2-4 semaines",
+      "congele": "6-12 mois"
+    }
+  },
+  "systemes": {
+    "traditionnel_oasien": {
+      "densite": [
+        80,
+        120
+      ],
+      "irrigation": "khettara_seguia",
+      "rendement_t_ha": [
+        3,
+        6
+      ]
+    },
+    "semi_intensif": {
+      "densite": [
+        120,
+        150
+      ],
+      "irrigation": "gravitaire_ameliore",
+      "rendement_t_ha": [
+        6,
+        10
+      ]
+    },
+    "intensif": {
+      "densite": [
+        150,
+        200
+      ],
+      "irrigation": "goutte_a_goutte",
+      "rendement_t_ha": [
+        10,
+        15
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI_optimal": [
+        0.35,
+        0.55
+      ],
+      "NDVI_alerte": 0.25,
+      "NDMI_optimal": [
+        0.05,
+        0.2
+      ]
+    },
+    "intensif": {
+      "NDVI_optimal": [
+        0.45,
+        0.65
+      ],
+      "NDVI_alerte": 0.35,
+      "NDMI_optimal": [
+        0.1,
+        0.28
+      ]
+    }
+  },
+  "nutrition": {
+    "export_kg_100kg_dattes": {
+      "N": [
+        0.8,
+        1.2
+      ],
+      "P2O5": [
+        0.2,
+        0.4
+      ],
+      "K2O": [
+        1.5,
+        2.5
+      ]
+    },
+    "besoins_intensif_Mejhoul_kg_arbre": {
+      "N": [
+        1.5,
+        2.5
+      ],
+      "P2O5": [
+        0.5,
+        0.8
+      ],
+      "K2O": [
+        2.5,
+        4.0
+      ]
+    },
+    "fractionnement": {
+      "jan_fev": {
+        "N": 20,
+        "P": 40,
+        "K": 10
+      },
+      "mar_avr": {
+        "N": 25,
+        "P": 30,
+        "K": 15
+      },
+      "mai_juin": {
+        "N": 25,
+        "P": 20,
+        "K": 25
+      },
+      "juil_aout": {
+        "N": 15,
+        "P": 10,
+        "K": 30
+      },
+      "sept_oct": {
+        "N": 5,
+        "P": 0,
+        "K": 15
+      },
+      "nov_dec": {
+        "N": 10,
+        "P": 0,
+        "K": 5
+      }
+    },
+    "note_K": "Potassium CRITIQUE pour qualité dattes"
+  },
+  "seuils_foliaires": {
+    "N_pct": {
+      "carence": 1.8,
+      "optimal": [
+        2.2,
+        2.8
+      ]
+    },
+    "P_pct": {
+      "carence": 0.1,
+      "optimal": [
+        0.14,
+        0.2
+      ]
+    },
+    "K_pct": {
+      "carence": 0.8,
+      "optimal": [
+        1.2,
+        1.8
+      ]
+    },
+    "Mg_pct": {
+      "carence": 0.15,
+      "optimal": [
+        0.25,
+        0.5
+      ]
+    }
+  },
+  "irrigation": {
+    "besoins_m3_arbre_an": {
+      "traditionnel": [
+        15,
+        25
+      ],
+      "intensif": [
+        12,
+        20
+      ]
+    },
+    "Kc": {
+      "hiver": 0.75,
+      "printemps": 0.8,
+      "ete": 1.0,
+      "automne": 0.85
+    },
+    "frequence_ete_gag": "3-4x/sem ou quotidien"
+  },
+  "phytosanitaire": {
+    "bayoud": {
+      "agent": "Fusarium oxysporum f. sp. albedinis",
+      "gravite": "MORTELLE_INCURABLE",
+      "traitement": "AUCUN",
+      "prevention": [
+        "plants_certifies",
+        "varietes_tolerantes",
+        "destruction_arbres_atteints"
+      ]
+    },
+    "autres_maladies": [
+      "Khamedj",
+      "Graphiola",
+      "Pourriture_coeur"
+    ],
+    "ravageurs": [
+      "Cochenille_blanche",
+      "Boufaroua",
+      "Pyrale_dattes",
+      "Charancon_rouge_MENACE"
+    ]
+  },
+  "stades_maturite": {
+    "Hababouk": "Fruit noué",
+    "Kimri": "Vert croissance",
+    "Khalal": "Jaune/rouge dur",
+    "Rutab": "Ramollissement partiel",
+    "Tamr": "Maturité complète"
+  },
+  "alertes": [
+    {
+      "code": "PAL-01",
+      "nom": "Stress hydrique",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-05",
+      "nom": "Pluie maturation",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-08",
+      "nom": "Suspicion Bayoud",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-09",
+      "nom": "Bayoud confirmé",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-13",
+      "nom": "Pollinisation requise",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-16",
+      "nom": "Maturité récolte",
+      "priorite": "info"
+    }
+  ],
+  "modele_predictif": {
+    "precision_intensif": {
+      "R2": [
+        0.5,
+        0.65
+      ],
+      "MAE_pct": [
+        25,
+        35
+      ]
+    },
+    "limite_majeure": "Pluie maturation imprévisible - peut détruire 30-80% récolte"
+  },
+  "plan_annuel_Mejhoul": {
+    "jan": {
+      "NPK": "N0.3+P0.3+K0.3",
+      "travaux": "Taille"
+    },
+    "fev": {
+      "NPK": "N0.4+P0.2+K0.2",
+      "phyto": "Cuivre spathes"
+    },
+    "mar": {
+      "NPK": "N0.4+K0.4",
+      "travaux": "POLLINISATION"
+    },
+    "avr": {
+      "NPK": "N0.3+P0.1+K0.5",
+      "travaux": "Attachage"
+    },
+    "mai": {
+      "NPK": "N0.3+K0.6",
+      "travaux": "Éclaircissage"
+    },
+    "juin": {
+      "NPK": "K0.8",
+      "phyto": "Soufre Boufaroua"
+    },
+    "juil": {
+      "NPK": "K0.8",
+      "travaux": "Protection régimes"
+    },
+    "aout": {
+      "NPK": "K0.5",
+      "travaux": "Surveillance"
+    },
+    "sept": {
+      "NPK": "K0.3",
+      "travaux": "Début récolte"
+    },
+    "oct": {
+      "travaux": "Récolte principale"
+    },
+    "nov": {
+      "NPK": "N0.2",
+      "phyto": "Huile cochenilles"
+    },
+    "dec": {
+      "amendement": "Fumier 40kg",
+      "travaux": "Entretien"
+    }
+  }
+}$crop_ai_ref_palmier_dattier$::jsonb
+)
+ON CONFLICT (crop_type) DO UPDATE SET
+  version = EXCLUDED.version,
+  reference_data = EXCLUDED.reference_data,
+  updated_at = NOW();
 
 -- Evenements Parcelle RLS
 CREATE POLICY "Users can view events in their organization" ON evenements_parcelle
@@ -9604,7 +17206,7 @@ CREATE POLICY "Participants can view order items" ON marketplace_order_items
 CREATE TABLE IF NOT EXISTS marketplace_carts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  organization_id UUID REFERENCES organizations(id),
+  organization_id UUID NOT NULL REFERENCES organizations(id),
   session_id TEXT, -- For guest carts (future use)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -11811,6 +19413,7 @@ COMMENT ON COLUMN account_translations.language_code IS 'ISO 639-1 language code
 CREATE TABLE IF NOT EXISTS tax_configurations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   country_code VARCHAR(2),
+  -- NULL = system default rates per country; set for org-specific overrides
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   tax_name VARCHAR(255) NOT NULL,
   tax_code VARCHAR(50),
@@ -15987,8 +23590,117 @@ ALTER TABLE siam_rdv_leads ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_only" ON siam_rdv_leads
   FOR ALL USING (auth.role() = 'service_role');
 
+-- =====================================================
+-- Calibration Wizard Drafts
+-- =====================================================
+-- Stores in-progress calibration wizard form data per parcel/user
+-- so users can resume across sessions.
+
+CREATE TABLE IF NOT EXISTS public.calibration_wizard_drafts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  parcel_id UUID NOT NULL REFERENCES public.parcels(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL,
+  user_id UUID NOT NULL,
+  current_step INTEGER NOT NULL DEFAULT 1 CHECK (current_step BETWEEN 1 AND 8),
+  form_data JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT uq_calibration_draft_parcel_org_user UNIQUE(parcel_id, organization_id, user_id)
+);
+
+COMMENT ON TABLE public.calibration_wizard_drafts IS 'Stores in-progress calibration wizard form state per parcel/user so they can resume across sessions.';
+
+CREATE INDEX IF NOT EXISTS idx_calibration_drafts_parcel_org ON public.calibration_wizard_drafts(parcel_id, organization_id, user_id);
+
+-- RLS: only organization members can access their own drafts
+ALTER TABLE public.calibration_wizard_drafts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access" ON public.calibration_wizard_drafts
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+-- updated_at trigger
+CREATE TRIGGER set_calibration_wizard_drafts_updated_at
+  BEFORE UPDATE ON public.calibration_wizard_drafts
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 -- updated_at trigger
 CREATE TRIGGER set_siam_rdv_leads_updated_at
   BEFORE UPDATE ON siam_rdv_leads
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- PEST & DISEASE LIBRARY
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS pest_disease_library (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  crop_types TEXT[] DEFAULT '{}',
+  symptoms TEXT NOT NULL DEFAULT '',
+  treatment TEXT NOT NULL DEFAULT '',
+  prevention TEXT NOT NULL DEFAULT '',
+  severity TEXT NOT NULL DEFAULT 'medium',
+  image_url TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE pest_disease_library ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_read" ON pest_disease_library
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "admin_all" ON pest_disease_library
+  FOR ALL TO postgres USING (true);
+
+-- Index for active library entries
+CREATE INDEX IF NOT EXISTS idx_pest_disease_library_active ON pest_disease_library (is_active, name);
+
+-- ============================================================================
+-- PEST & DISEASE REPORTS
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS pest_disease_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  reporter_id UUID NOT NULL REFERENCES user_profiles(id),
+  pest_disease_id UUID REFERENCES pest_disease_library(id) ON DELETE SET NULL,
+  severity TEXT NOT NULL DEFAULT 'low',
+  affected_area_percentage NUMERIC,
+  detection_method TEXT,
+  photo_urls TEXT[] DEFAULT '{}',
+  location JSONB,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  verified_by UUID REFERENCES user_profiles(id),
+  verified_at TIMESTAMPTZ,
+  treatment_applied TEXT,
+  treatment_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE pest_disease_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON pest_disease_reports
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+-- Index for organization queries
+CREATE INDEX IF NOT EXISTS idx_pest_disease_reports_org ON pest_disease_reports (organization_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pest_disease_reports_status ON pest_disease_reports (status);
+
+-- updated_at triggers
+CREATE TRIGGER set_pest_disease_library_updated_at
+  BEFORE UPDATE ON pest_disease_library
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER set_pest_disease_reports_updated_at
+  BEFORE UPDATE ON pest_disease_reports
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();

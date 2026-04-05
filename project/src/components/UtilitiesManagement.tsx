@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
+import {  useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, BookOpen, Loader2 } from 'lucide-react';
 import { storageApi } from '../lib/api/storage';
@@ -12,13 +12,12 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
 import InlineFarmSelector from './InlineFarmSelector';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
@@ -68,7 +67,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 
 // No more hardcoded account codes - will be dynamically looked up by account type/subtype
 
-const UtilitiesManagement: React.FC = () => {
+const UtilitiesManagement = () => {
   const { currentOrganization, currentFarm, user } = useAuth();
   const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
   const { format: formatCurrency, symbol: currency } = useCurrency();
@@ -167,22 +166,22 @@ const UtilitiesManagement: React.FC = () => {
 
    // Helper function to upload invoice file
    const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
-     try {
-       if (!currentFarm?.id) return null;
+      try {
+        if (!currentOrganization?.id) return null;
 
-       const fileExt = file.name.split('.').pop();
-       const fileName = `${currentFarm.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentOrganization.id}/invoices/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-       const { publicUrl } = await storageApi.upload('invoices', fileName, file, {
-         cacheControl: '3600',
-         upsert: false
-       });
+        const { publicUrl } = await storageApi.upload('invoices', fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-       return { url: publicUrl, path: fileName };
-     } catch (error) {
-       console.error('Error uploading file:', error);
-       return null;
-     }
+        return { url: publicUrl, path: fileName };
+      } catch (error) {
+        console.error('Error uploading file:', error);
+        return null;
+      }
    };
 
   // Helper function to download invoice file
@@ -661,7 +660,8 @@ const UtilitiesManagement: React.FC = () => {
           <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'} shadow-md`}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''} shadow-md`}
             title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
           >
             <Plus className="h-5 w-5" />
@@ -729,7 +729,8 @@ const UtilitiesManagement: React.FC = () => {
           <Button
             onClick={() => setShowAddModal(true)}
             disabled={!currentFarm?.id}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
             title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
           >
             <Plus className="h-5 w-5" />
@@ -934,7 +935,7 @@ const UtilitiesManagement: React.FC = () => {
 
       {/* Summary Cards */}
       {utilities.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
@@ -1039,9 +1040,9 @@ const UtilitiesManagement: React.FC = () => {
             Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)
           </p>
           <PermissionGuard resource="utilities" action="create">
-            <Button
+            <Button variant="green"
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
               <Plus className="h-4 w-4 mr-2" />
               Ajouter une charge
@@ -1760,12 +1761,7 @@ const UtilitiesManagement: React.FC = () => {
             >
               Annuler
             </Button>
-            <Button
-              type="button"
-              onClick={editingUtility ? handleUpdateUtility : handleAddUtility}
-              disabled={uploading}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" type="button" onClick={editingUtility ? handleUpdateUtility : handleAddUtility} disabled={uploading} >
               {uploading && (
                 <ButtonLoader />
               )}

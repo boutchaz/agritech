@@ -14,58 +14,64 @@ export class OrdersService {
         private readonly notificationsService: NotificationsService
     ) {}
 
+    /**
+     * Atomically deduct stock using a conditional UPDATE with WHERE guard.
+     * The WHERE clause `quantity_available >= quantity` prevents overselling
+     * even under concurrent requests. If 0 rows are affected, stock was insufficient.
+     */
     private async deductMarketplaceListingStock(
-        supabase: any,
+        _supabase: any,
         listingId: string,
         quantity: number
     ): Promise<void> {
-        const { data: listing, error: fetchError } = await supabase
-            .from('marketplace_listings')
-            .select('quantity_available')
-            .eq('id', listingId)
-            .single();
+        const pool = this.databaseService.getPgPool();
+        const result = await pool.query(
+            `UPDATE marketplace_listings
+             SET quantity_available = quantity_available - $1,
+                 updated_at = NOW()
+             WHERE id = $2 AND quantity_available >= $1
+             RETURNING id, quantity_available`,
+            [quantity, listingId],
+        );
 
-        if (fetchError || !listing) {
-            throw new Error(`Listing not found: ${listingId}`);
-        }
-
-        if (listing.quantity_available < quantity) {
+        if (result.rowCount === 0) {
+            // Distinguish "not found" from "insufficient stock"
+            const check = await pool.query(
+                `SELECT quantity_available FROM marketplace_listings WHERE id = $1`,
+                [listingId],
+            );
+            if (check.rowCount === 0) {
+                throw new Error(`Listing not found: ${listingId}`);
+            }
             throw new Error('Insufficient stock available');
-        }
-
-        const { error: updateError } = await supabase
-            .from('marketplace_listings')
-            .update({ quantity_available: listing.quantity_available - quantity })
-            .eq('id', listingId);
-
-        if (updateError) {
-            throw new Error(`Failed to deduct stock: ${updateError.message}`);
         }
     }
 
+    /**
+     * Atomically restore stock using SQL addition to prevent double-restore
+     * under concurrent cancellations.
+     */
     private async restoreMarketplaceListingStock(
-        supabase: any,
+        _supabase: any,
         listingId: string,
         quantity: number
     ): Promise<void> {
-        const { data: listing, error: fetchError } = await supabase
-            .from('marketplace_listings')
-            .select('quantity_available')
-            .eq('id', listingId)
-            .single();
+        try {
+            const pool = this.databaseService.getPgPool();
+            const result = await pool.query(
+                `UPDATE marketplace_listings
+                 SET quantity_available = quantity_available + $1,
+                     updated_at = NOW()
+                 WHERE id = $2
+                 RETURNING id, quantity_available`,
+                [quantity, listingId],
+            );
 
-        if (fetchError || !listing) {
-            this.logger.error(`Failed to find listing for stock restore: ${listingId}`);
-            return;
-        }
-
-        const { error: updateError } = await supabase
-            .from('marketplace_listings')
-            .update({ quantity_available: listing.quantity_available + quantity })
-            .eq('id', listingId);
-
-        if (updateError) {
-            this.logger.error(`Failed to restore stock: ${updateError.message}`);
+            if (result.rowCount === 0) {
+                this.logger.error(`Failed to find listing for stock restore: ${listingId}`);
+            }
+        } catch (error) {
+            this.logger.error(`Failed to restore stock for listing ${listingId}: ${error.message}`);
         }
     }
 

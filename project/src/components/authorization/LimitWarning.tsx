@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../../hooks/useSubscription';
@@ -21,11 +21,11 @@ const resourceLabels = {
 /**
  * Component to show warning when approaching or at subscription limit
  */
-export const LimitWarning: React.FC<LimitWarningProps> = ({
+export const LimitWarning = ({
   resourceType,
   currentCount,
   className = '',
-}) => {
+}: LimitWarningProps) => {
   const navigate = useNavigate();
   const { data: subscription } = useSubscription();
 

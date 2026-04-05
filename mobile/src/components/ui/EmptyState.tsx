@@ -16,11 +16,11 @@ export function EmptyState({ icon, title, subtitle, action, testID }: EmptyState
   return (
     <View testID={testID} style={styles.container}>
       <Ionicons name={icon} size={48} color={colors.gray[300]} />
-      <AppText variant="subheading" align="center">
+      <AppText variant="subheading" align="center" accessibilityRole="text">
         {title}
       </AppText>
       {subtitle ? (
-        <AppText variant="body" color={colors.gray[500]} align="center">
+        <AppText variant="body" color={colors.gray[500]} align="center" accessibilityRole="text">
           {subtitle}
         </AppText>
       ) : null}

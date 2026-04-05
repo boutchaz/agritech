@@ -498,19 +498,19 @@ class SatelliteAPIClient {
     return apiClient.get<SatelliteData[]>(`${SATELLITE_PROXY_PREFIX}/supabase/parcels/${parcelId}/satellite-data${query}`);
   }
 
-  async getLatestSatelliteData(parcelId: string, indexName?: string) {
-    const params = indexName ? `?index_name=${indexName}` : '';
+  async getLatestSatelliteData(parcelId: string, vegIndex?: string) {
+    const params = vegIndex ? `?index_name=${vegIndex}` : '';
     return apiClient.get<SatelliteData[]>(`${SATELLITE_PROXY_PREFIX}/supabase/parcels/${parcelId}/latest-data${params}`);
   }
 
   async getSatelliteDataStatistics(
     parcelId: string,
-    indexName: string,
+    vegIndex: string,
     startDate: string,
     endDate: string,
   ) {
     return this.post(`/supabase/parcels/${parcelId}/statistics`, {
-      index_name: indexName,
+      index_name: vegIndex,
       start_date: startDate,
       end_date: endDate,
     });

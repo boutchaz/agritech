@@ -123,6 +123,10 @@ class SocketManager {
     this.socket.on('calibration:failed', (data: any) => {
       this.emit('calibration:failed', data);
     });
+
+    this.socket.on('calibration:progress', (data: any) => {
+      this.emit('calibration:progress', data);
+    });
   }
 
   disconnect(): void {

@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Pressable, TextInput, Alert,
-  ScrollView, ActivityIndicator, TouchableOpacity, Image, Switch,
+  ScrollView, ActivityIndicator, TouchableOpacity, Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { spacing, borderRadius } from '@/constants/theme';
@@ -159,7 +160,7 @@ export default function ProfileScreen() {
         <View style={styles.avatarSection}>
           <TouchableOpacity style={styles.avatarContainer} onPress={handlePickAvatar} activeOpacity={0.7}>
             {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} contentFit="cover" />
             ) : (
               <View style={[styles.avatar, { backgroundColor: themeColors.brandContainer }]}>
                 <Text style={[styles.avatarText, { color: themeColors.brandPrimary }]}>{initials}</Text>

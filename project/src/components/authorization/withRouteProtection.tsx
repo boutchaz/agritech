@@ -12,7 +12,7 @@ export function withRouteProtection<P extends object>(
   subject: Subject,
   redirectTo?: string
 ) {
-  const ProtectedComponent: React.FC<P> = (props) => {
+  const ProtectedComponent = (props: P) => {
     return (
       <ProtectedRoute action={action} subject={subject} redirectTo={redirectTo}>
         <Component {...props} />

@@ -52,9 +52,19 @@ class HeatmapData:
 
 @dataclass
 class TimeSeriesPoint:
-    """Single point in a time series"""
+    """Single point in a time series (parcel-level reducers over the AOI)."""
+
     date: str
     value: float
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    std_value: Optional[float] = None
+    median_value: Optional[float] = None
+    percentile_25: Optional[float] = None
+    percentile_75: Optional[float] = None
+    percentile_90: Optional[float] = None
+    pixel_count: Optional[int] = None
+    cloud_coverage: Optional[float] = None
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 

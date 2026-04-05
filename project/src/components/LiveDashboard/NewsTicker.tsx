@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import type { ActivityHeatmapPoint, FarmActivity } from '../../services/liveDashboardService';
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -25,7 +25,7 @@ interface NewsTickerProps {
   recentActivities?: FarmActivity[];
 }
 
-const NewsTicker: React.FC<NewsTickerProps> = ({ data, recentActivities = [] }) => {
+const NewsTicker = ({ data, recentActivities = [] }: NewsTickerProps) => {
   const items = useMemo(() => {
     const messages: string[] = [];
 

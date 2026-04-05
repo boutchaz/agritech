@@ -110,8 +110,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Create a client with a specific user's JWT token
-   * Useful for operations that need to respect RLS for a specific user
+   * Create a client with a specific user's JWT token.
+   * Useful for operations that need to respect RLS for a specific user.
+   *
+   * WARNING: Each call creates a new SupabaseClient instance.
+   * Callers should NOT store references beyond the request lifecycle.
+   * For high-throughput paths, prefer getAdminClient() with explicit org_id filters.
    */
   getClientWithAuth(accessToken: string): SupabaseClient {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');

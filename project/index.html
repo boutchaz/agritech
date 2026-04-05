@@ -95,14 +95,25 @@
     <meta name="theme-color" content="#10b981" />
     <meta name="msapplication-TileColor" content="#10b981" />
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Apple Web App (fullscreen on iPad) -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AgroGina" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- Favicons — same asset as sidebar logo (SVG leaf was listed first and won over PNG in most browsers) -->
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/logo.png" />
+    <link rel="apple-touch-icon" href="/assets/logo.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Leaflet CSS — loaded async to avoid blocking render -->
+    <link rel="preconnect" href="https://agritech-dashboard.thebzlab.online" crossorigin />
+    <link rel="dns-prefetch" href="https://o4511104265420800.ingest.de.sentry.io" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://unpkg.com" />
     <link
       rel="preload"
       as="style"
@@ -186,5 +197,39 @@
       <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
     </div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- Handle chunk-load failures from stale deployments -->
+    <script>
+      window.addEventListener('error', function(e) {
+        // Detect chunk load failure (stale deployment or network error)
+        if (
+          e.message && (
+            e.message.includes('Failed to fetch dynamically imported module') ||
+            e.message.includes('Importing a module script failed') ||
+            e.message.includes('error loading dynamically imported module') ||
+            e.message.includes('ChunkLoadError')
+          )
+        ) {
+          // Only auto-reload once to avoid infinite loops
+          var reloadKey = 'agrogina:chunk-reload';
+          var lastReload = sessionStorage.getItem(reloadKey);
+          if (!lastReload || Date.now() - parseInt(lastReload, 10) > 30000) {
+            sessionStorage.setItem(reloadKey, String(Date.now()));
+            console.warn('[chunk-error-handler] Stale chunk detected, reloading...');
+            window.location.reload();
+          } else {
+            console.error('[chunk-error-handler] Reload already attempted, showing error.');
+            var root = document.getElementById('root');
+            if (root) {
+              root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">' +
+                '<div style="text-align:center;max-width:400px;padding:24px;">' +
+                '<h2 style="color:#dc2626;margin-bottom:8px;">Erreur de chargement</h2>' +
+                '<p style="color:#6b7280;margin-bottom:16px;">Une nouvelle version est disponible. Veuillez rafraîchir la page.</p>' +
+                '<button onclick="sessionStorage.removeItem(\'agrogina:chunk-reload\');location.reload()" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Rafraîchir</button>' +
+                '</div></div>';
+            }
+          }
+        }
+      });
+    </script>
   </body>
 </html>

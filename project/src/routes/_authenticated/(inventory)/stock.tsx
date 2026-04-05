@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
@@ -13,10 +14,12 @@ import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t, i18n } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const router = useRouter();
+
+  useAutoStartTour('inventory', 1500);
   const { location } = useRouterState();
   const isRTL = isRTLLocale(i18n.language);
 

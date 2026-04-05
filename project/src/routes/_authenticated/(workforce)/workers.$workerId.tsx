@@ -258,7 +258,7 @@ function WorkerDetailPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -554,8 +554,8 @@ function WorkerDetailPage() {
             <CardContent>
               {paymentsLoading ? (
                 <div className="space-y-2 py-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 p-3">
+                  {Array.from({ length: 3 }).map((_, skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center gap-4 p-3">
                       <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-20 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-16 bg-muted animate-pulse rounded" />
@@ -689,8 +689,8 @@ function WorkerDetailPage() {
             <CardContent>
               {workRecordsLoading ? (
                 <div className="space-y-2 py-4">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-4 p-3">
+                  {Array.from({ length: 3 }).map((_, skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center gap-4 p-3">
                       <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-16 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-20 bg-muted animate-pulse rounded" />
@@ -822,8 +822,8 @@ function WorkerDetailPage() {
               <CardContent>
                 {settlementsLoading ? (
                   <div className="space-y-2 py-4">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 p-3">
+                    {Array.from({ length: 3 }).map((_, skIdx) => (
+                      <div key={"sk-" + skIdx} className="flex items-center gap-4 p-3">
                         <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
                         <div className="h-4 w-20 bg-muted animate-pulse rounded" />
                       </div>

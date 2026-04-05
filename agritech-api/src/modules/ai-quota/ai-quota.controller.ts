@@ -1,11 +1,12 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { AiQuotaService } from './ai-quota.service';
 
 @ApiTags('ai-quota')
 @Controller('ai-quota')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class AiQuotaController {
   constructor(private readonly aiQuotaService: AiQuotaService) {}

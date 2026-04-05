@@ -35,7 +35,7 @@ interface DataSourceRowProps {
   onAction?: () => void;
 }
 
-const DataSourceRow: React.FC<DataSourceRowProps> = ({
+const DataSourceRow = ({
   icon,
   label,
   available,
@@ -46,7 +46,7 @@ const DataSourceRow: React.FC<DataSourceRowProps> = ({
   optionalLabel,
   actionLabel,
   onAction,
-}) => {
+}: DataSourceRowProps) => {
   return (
     <div className="flex items-center justify-between py-2">
       <div className="flex items-center space-x-3">
@@ -99,11 +99,11 @@ const formatDate = (dateStr: string | null): string => {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-export const DataAvailabilityPreview: React.FC<DataAvailabilityPreviewProps> = ({
+export const DataAvailabilityPreview = ({
   parcelId,
   startDate,
   endDate,
-}) => {
+}: DataAvailabilityPreviewProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading, error } = useDataAvailability(parcelId, startDate, endDate);

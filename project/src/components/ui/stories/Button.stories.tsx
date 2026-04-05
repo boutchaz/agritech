@@ -9,7 +9,7 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link', 'orange', 'purple', 'green', 'blue', 'amber'],
+      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link', 'orange', 'purple', 'green', 'blue', 'amber', 'red', 'emerald'],
     },
     size: {
       control: 'select',
@@ -91,6 +91,8 @@ export const AllVariants: Story = {
         <Button variant="green">Green</Button>
         <Button variant="blue">Blue</Button>
         <Button variant="amber">Amber</Button>
+        <Button variant="red">Red</Button>
+        <Button variant="emerald">Emerald</Button>
       </div>
       <div className="flex flex-wrap gap-3 items-center">
         <Button size="sm">Small</Button>
@@ -110,6 +112,8 @@ export const AllVariants: Story = {
         <Button variant="green"><Plus className="h-4 w-4" /> Approve</Button>
         <Button variant="blue"><Download className="h-4 w-4" /> Export</Button>
         <Button variant="amber"><Plus className="h-4 w-4" /> Save Draft</Button>
+        <Button variant="red"><Trash2 className="h-4 w-4" /> Delete</Button>
+        <Button variant="emerald"><Plus className="h-4 w-4" /> Activate</Button>
       </div>
       <div className="flex flex-wrap gap-3 items-center">
         <Button disabled>Disabled</Button>

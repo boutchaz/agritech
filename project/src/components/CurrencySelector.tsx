@@ -8,7 +8,7 @@ interface CurrencySelectorProps {
   disabled?: boolean;
 }
 
-const CurrencySelector: React.FC<CurrencySelectorProps> = ({ value, onChange, disabled = false }) => {
+const CurrencySelector = ({ value, onChange, disabled = false }: CurrencySelectorProps) => {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const currency = CURRENCIES.find(c => c.code === e.target.value);
     if (currency) {

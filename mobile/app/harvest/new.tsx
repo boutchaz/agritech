@@ -7,11 +7,11 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -309,9 +309,9 @@ export default function NewHarvestScreen() {
             <Text style={styles.sectionTitle}>Photos</Text>
             <View style={styles.card}>
               <View style={styles.photoGrid}>
-                {formData.photos.map((photo, index) => (
-                  <View key={index} style={styles.photoItem}>
-                    <Image source={{ uri: photo }} style={styles.photoImage} />
+                {formData.photos.map((photo) => (
+                  <View key={photo} style={styles.photoItem}>
+                     <Image source={{ uri: photo }} style={styles.photoImage} contentFit="cover" />
                     <TouchableOpacity
                       style={styles.removePhoto}
                       onPress={() => removePhoto(index)}

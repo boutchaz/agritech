@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { DEFAULT_CURRENCY } from '../../utils/currencies';
@@ -142,7 +142,7 @@ export function QuoteRequestsReceived() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Total</CardTitle>
@@ -303,9 +303,8 @@ export function QuoteRequestsReceived() {
                 {/* Actions */}
                 <div className="flex gap-2">
                   {['pending', 'viewed'].includes(quote.status) && (
-                    <Button
+                    <Button variant="green"
                       onClick={() => handleRespond(quote)}
-                      className="bg-green-600 hover:bg-green-700"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       Envoyer un Devis

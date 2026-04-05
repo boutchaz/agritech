@@ -222,7 +222,7 @@ export function AccountMappingsManagement() {
       await deleteMutation.mutateAsync(deletingMapping.id);
       toast.success(t('accountMappings.delete.success', 'Account mapping deleted successfully'));
       setDeletingMapping(null);
-    } catch (error) {
+    } catch {
       toast.error(t('accountMappings.delete.failed', 'Failed to delete account mapping'));
     }
   };
@@ -238,7 +238,7 @@ export function AccountMappingsManagement() {
           ? t('accountMappings.deactivated', 'Account mapping deactivated')
           : t('accountMappings.activated', 'Account mapping activated')
       );
-    } catch (error) {
+    } catch {
       toast.error(t('accountMappings.toggleFailed', 'Failed to update mapping status'));
     }
   };

@@ -60,6 +60,7 @@ export function Badge({
   return (
     <View
       testID={testID}
+      accessibilityRole="text"
       style={[
         styles.container,
         {

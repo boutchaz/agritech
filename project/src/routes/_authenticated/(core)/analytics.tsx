@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,7 +7,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Beaker, FlaskConical, ArrowRight } from 'lucide-react';
 import { PageLoader } from '@/components/ui/loader';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 

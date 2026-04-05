@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Search, Loader2, Inbox, Clock, Filter } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
@@ -11,6 +11,7 @@ import { NotificationItem } from './NotificationItem';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter, NotificationTimeFilter } from './NotificationFilters';
 import { NotificationBulkActions } from './NotificationQuickActions';
 import { NotificationData } from '@/lib/socket';
+import { getNotificationRedirect } from '@/lib/notification-routes';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Checkbox } from '../ui/checkbox';
 
@@ -90,7 +91,6 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
     unreadCount,
     isLoading,
     markAsRead,
-    markAllAsRead,
   } = useNotifications({ limit: 100 });
 
   // State for important notifications (stored in localStorage)
@@ -174,14 +174,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
       markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
-    const { data } = notification;
-    if (data?.taskId) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
-    } else if (data?.orderId) {
-      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
-    } else if (data?.quoteRequestId) {
-      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
+    const redirect = getNotificationRedirect(notification);
+    if (redirect) {
+      navigate(redirect);
     }
 
     // Deselect if selected
@@ -222,11 +217,6 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
   }, []);
 
   // Handle mark all as read
-  const _handleMarkAllRead = useCallback(async () => {
-    await markAllAsRead();
-    toast.success('All notifications marked as read');
-  }, [markAllAsRead]);
-
   // Handle clear filters
   const handleClearFilters = useCallback(() => {
     setTypeFilter('all');
@@ -252,7 +242,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
 
   const handleBulkMarkImportant = useCallback(() => {
     const next = new Set(importantNotifications);
-    selectedIds.forEach((id) => next.add(id));
+    selectedIds.forEach((id) => {
+      next.add(id);
+    });
     setImportantNotifications(next);
     localStorage.setItem('important-notifications', JSON.stringify([...next]));
     setSelectedIds(new Set());
@@ -261,7 +253,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
 
   const handleBulkRemoveImportant = useCallback(() => {
     const next = new Set(importantNotifications);
-    selectedIds.forEach((id) => next.delete(id));
+    selectedIds.forEach((id) => {
+      next.delete(id);
+    });
     setImportantNotifications(next);
     localStorage.setItem('important-notifications', JSON.stringify([...next]));
     setSelectedIds(new Set());

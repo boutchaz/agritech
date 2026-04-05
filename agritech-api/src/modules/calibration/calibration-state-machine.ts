@@ -2,37 +2,50 @@ import { BadRequestException, Inject, Injectable, forwardRef } from "@nestjs/com
 import { DatabaseService } from "../database/database.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
 
+/**
+ * V2 parcel lifecycle states.
+ *
+ * awaiting_data → ready_calibration → calibrating → calibrated
+ *   → awaiting_nutrition_option → active → archived
+ *
+ * Recalibration loop: active → calibrating → calibrated → awaiting_nutrition_option → active
+ */
 export type AiPhase =
-  | "disabled"
-  | "downloading"
-  | "pret_calibrage"
+  | "awaiting_data"
+  | "ready_calibration"
   | "calibrating"
-  | "awaiting_validation"
+  | "calibrated"
   | "awaiting_nutrition_option"
   | "active"
-  | "paused";
+  | "archived";
 
 const VALID_TRANSITIONS: Record<AiPhase, AiPhase[]> = {
-  disabled: ["downloading", "calibrating"],
-  downloading: ["pret_calibrage", "disabled"],
-  pret_calibrage: ["calibrating", "disabled"],
-  // Recovery after a failed run may return the parcel to the phase it had before calibrating.
+  awaiting_data: ["ready_calibration"],
+  ready_calibration: ["calibrating", "awaiting_data"],
   calibrating: [
-    "awaiting_validation",
-    "disabled",
-    "active",
-    "awaiting_nutrition_option",
-    "pret_calibrage",
+    "calibrated",
+    "awaiting_data",       // failure recovery
+    "ready_calibration",   // failure recovery
+    "awaiting_nutrition_option", // auto-activate (recalibration)
+    "active",              // auto-activate (recalibration, observation mode)
   ],
-  awaiting_validation: [
+  calibrated: [
     "awaiting_nutrition_option",
-    "active",
-    "calibrating",
-    "disabled",
+    "calibrating",         // re-run calibration
+    "awaiting_data",       // boundary change reset
   ],
-  awaiting_nutrition_option: ["active", "calibrating", "disabled"],
-  active: ["awaiting_nutrition_option", "calibrating", "disabled"],
-  paused: ["disabled"],
+  awaiting_nutrition_option: [
+    "active",
+    "calibrating",         // re-run calibration
+    "awaiting_data",       // boundary change reset
+  ],
+  active: [
+    "calibrating",         // recalibration loop
+    "awaiting_nutrition_option", // nutrition option change
+    "archived",
+    "awaiting_data",       // boundary change reset
+  ],
+  archived: [],            // terminal state
 };
 
 @Injectable()
@@ -49,9 +62,8 @@ export class CalibrationStateMachine {
     toPhase: AiPhase,
     organizationId: string,
   ): Promise<void> {
-    const canResetToDisabled = toPhase === "disabled";
-    const allowed = VALID_TRANSITIONS[fromPhase] ?? [];
-    if (!canResetToDisabled && !allowed.includes(toPhase)) {
+    const allowed = VALID_TRANSITIONS[fromPhase];
+    if (!allowed || !allowed.includes(toPhase)) {
       throw new BadRequestException(
         `Invalid ai_phase transition: ${fromPhase} -> ${toPhase}`,
       );
@@ -85,14 +97,14 @@ export class CalibrationStateMachine {
     });
   }
 
-  async resetToDisabledOnBoundaryChange(
+  async resetToAwaitingDataOnBoundaryChange(
     parcelId: string,
     organizationId: string,
     currentPhase: AiPhase,
     previousBoundary: unknown,
     nextBoundary: unknown,
   ): Promise<boolean> {
-    if (currentPhase === "disabled") {
+    if (currentPhase === "awaiting_data") {
       return false;
     }
 
@@ -103,10 +115,30 @@ export class CalibrationStateMachine {
     await this.transitionPhase(
       parcelId,
       currentPhase,
-      "disabled",
+      "awaiting_data",
       organizationId,
     );
     return true;
+  }
+
+  /**
+   * @deprecated Use resetToAwaitingDataOnBoundaryChange instead.
+   * Kept for backward compatibility during migration.
+   */
+  async resetToDisabledOnBoundaryChange(
+    parcelId: string,
+    organizationId: string,
+    currentPhase: AiPhase,
+    previousBoundary: unknown,
+    nextBoundary: unknown,
+  ): Promise<boolean> {
+    return this.resetToAwaitingDataOnBoundaryChange(
+      parcelId,
+      organizationId,
+      currentPhase,
+      previousBoundary,
+      nextBoundary,
+    );
   }
 
   private boundaryChanged(

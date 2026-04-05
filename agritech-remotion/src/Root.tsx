@@ -1,8 +1,8 @@
-import React from "react";
+
 import { Composition } from "remotion";
 import { PromotionalVideo } from "./compositions/PromotionalVideo";
 
-export const RemotionRoot: React.FC = () => {
+export const RemotionRoot = () => {
   return (
     <>
       <Composition

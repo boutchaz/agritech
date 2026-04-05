@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Module } from '../types';
@@ -10,7 +10,7 @@ interface ReportsProps {
   activeModules?: Module[];
 }
 
-const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
+const Reports = ({ activeModules: _activeModules = [] }: ReportsProps) => {
   const { currentOrganization } = useOrganizationStore();
   const [baseReports, setBaseReports] = useState<ReportCategory[]>([]);
   const [moduleReports, setModuleReports] = useState<ReportCategory[]>([]);
@@ -178,9 +178,9 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
                       </div>
                     </div>
 
-                    <Button
+                    <Button variant="blue"
                       onClick={() => handleDownloadReport(reportType.id, reportType.name)}
-                      className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors"
                       data-tour="reports-export"
                     >
                       <Download className="h-5 w-5" />

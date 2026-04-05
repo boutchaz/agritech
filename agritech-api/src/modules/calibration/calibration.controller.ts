@@ -50,11 +50,9 @@ export class CalibrationController {
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.calibrationService.startCalibration(
-      parcelId,
-      organizationId,
-      dto,
-    );
+    return this.calibrationService.startCalibration(parcelId, organizationId, dto, {
+      authToken: this.getRawToken(req),
+    });
   }
 
   @Post("partial")
@@ -72,6 +70,7 @@ export class CalibrationController {
       parcelId,
       organizationId,
       dto,
+      { authToken: this.getRawToken(req) },
     );
   }
 
@@ -160,6 +159,18 @@ export class CalibrationController {
       parcelId,
       organizationId,
     );
+  }
+
+  @Get("review")
+  @ApiOperation({ summary: "Get 5-level calibration review for a parcel" })
+  @ApiResponse({ status: 200, description: "Calibration review retrieved" })
+  @ApiResponse({ status: 404, description: "No completed calibration found" })
+  async getCalibrationReview(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCalibrationReview(parcelId, organizationId);
   }
 
   @Post("validate")
@@ -253,7 +264,11 @@ export class CalibrationController {
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.calibrationService.getPercentiles(parcelId, organizationId);
+    return this.calibrationService.getPercentiles(
+      parcelId,
+      organizationId,
+      this.getRawToken(req),
+    );
   }
 
   @Get("zones")
@@ -264,7 +279,11 @@ export class CalibrationController {
   })
   async getZones(@Param("parcelId") parcelId: string, @Req() req: Request) {
     const organizationId = this.getOrganizationId(req);
-    return this.calibrationService.getZones(parcelId, organizationId);
+    return this.calibrationService.getZones(
+      parcelId,
+      organizationId,
+      this.getRawToken(req),
+    );
   }
 
   @Get("annual/eligibility")
@@ -361,6 +380,7 @@ export class CalibrationController {
       parcelId,
       organizationId,
       dto,
+      this.getRawToken(req),
     );
   }
 
@@ -438,6 +458,11 @@ export class CalibrationController {
     const organizationId = this.getOrganizationId(req);
     const userId = (req as any).user?.id;
     return this.calibrationService.deleteDraft(parcelId, organizationId, userId);
+  }
+
+  private getRawToken(req: Request): string | undefined {
+    const raw = (req as Request & { rawToken?: string }).rawToken;
+    return typeof raw === "string" && raw.length > 0 ? raw : undefined;
   }
 
   private getOrganizationId(req: Request): string {

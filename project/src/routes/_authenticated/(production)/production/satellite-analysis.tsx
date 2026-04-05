@@ -3,6 +3,7 @@ import { useState, lazy, Suspense } from 'react';
 import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
 import { ContentSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { useParcels } from '@/hooks/useParcels';
 import { IndexCalculationResponse } from '@/lib/satellite-api';
 import { useCan } from '@/lib/casl';
@@ -17,6 +18,8 @@ const TimeSeriesChart = lazy(() => import('@/components/SatelliteAnalysisView/Ti
 function SatelliteAnalysisPage() {
   const { t } = useTranslation();
   const { currentFarm } = useAuth();
+
+  useAutoStartTour('satellite', 1500);
   const { can } = useCan();
   const navigate = useNavigate();
   const farmId = currentFarm?.id ?? null;
@@ -64,9 +67,9 @@ function SatelliteAnalysisPage() {
               <span>{t('production.satelliteAnalysis.featureHistorical')}</span>
             </div>
           </div>
-          <Button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
+            className="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
           >
             {t('production.satelliteAnalysis.upgradeButton')}
             <span>→</span>
@@ -212,12 +215,16 @@ function SatelliteAnalysisPage() {
                 <div>
                   <h3 className="font-medium mb-3">{t('production.satelliteAnalysis.latestResultsTitle')}</h3>
                   <div className="space-y-2">
-                    {calculationResults.indices.map((result, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-600">{result.index}:</span>
-                        <span className="font-medium">{result.value.toFixed(3)}</span>
-                      </div>
-                    ))}
+                    {calculationResults.indices.map((result) => {
+                      const vegIndex = result.index;
+
+                      return (
+                        <div key={vegIndex} className="flex justify-between items-center">
+                          <span className="text-gray-600">{result.index}:</span>
+                          <span className="font-medium">{result.value.toFixed(3)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>

@@ -84,13 +84,13 @@ const toInputDate = (value: string | null | undefined) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
+export const QuoteDetailDialog = ({
   quote,
   open,
   onOpenChange,
   onEdit,
   onDownloadPDF,
-}) => {
+}: QuoteDetailDialogProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -284,14 +284,12 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         return;
       }
 
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_SERVICE_URL ||
-        import.meta.env.VITE_SATELLITE_SERVICE_URL ||
-        'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/quotes/${resolvedQuote.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/quotes/${resolvedQuote.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'X-Organization-Id': resolvedQuote.organization_id || '',
         },
       });
 
@@ -844,7 +842,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
                   <TableBody>
                     {q.items && q.items.length > 0 ? (
                       q.items.map((item: any, index: number) => (
-                        <TableRow key={index} className="border-b border-gray-100 dark:border-gray-800">
+                        <TableRow key={item.item_name} className="border-b border-gray-100 dark:border-gray-800">
                           <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
                             {item.item_name}
                           </TableCell>

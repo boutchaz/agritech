@@ -120,6 +120,20 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
     }
 
+    # Service Worker files — NEVER cache (critical for PWA updates)
+    location ~ ^/(sw\.js|workbox-.*\.js)$ {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # Web manifest — short cache for fast PWA install checks
+    location = /site.webmanifest {
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
     # React Router support - redirect all requests to index.html
     location / {
         try_files \$uri \$uri/ /index.html;

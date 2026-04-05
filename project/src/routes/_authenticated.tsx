@@ -30,10 +30,17 @@ export const Route = createFileRoute('/_authenticated')({
     const user = contextUser || storeUser
     
     if (!user) {
+      const hasRefreshToken = !!storeState.tokens?.refresh_token
+      if (hasRefreshToken && storeState.isTokenExpired()) {
+        const refreshed = await storeState.refreshAccessToken()
+        if (refreshed && useAuthStore.getState().isAuthenticated) {
+          return
+        }
+      }
       throw redirect({
         to: '/login',
         search: {
-          redirect: location.href,
+          redirect: location.pathname,
         },
       })
     }
@@ -107,7 +114,9 @@ function AuthenticatedLayout() {
   // Check if subscription is valid
   // Allow access to settings pages even without valid subscription
   const hasValidSubscription = isSubscriptionValid(subscription)
-  const isOnSettingsPage = window.location.pathname.includes('/settings/')
+  const settingsPath = window.location.pathname.replace(/\/$/, '') || '/'
+  const isOnSettingsPage =
+    settingsPath === '/settings' || settingsPath.startsWith('/settings/')
 
   // Block access if no valid subscription (unless on settings page)
   if (!hasValidSubscription && !isOnSettingsPage && currentOrganization) {
@@ -125,7 +134,7 @@ function AuthenticatedLayout() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      <div className="h-screen min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
         <Sidebar
           modules={modules}
           activeModule={activeModule}
@@ -135,7 +144,7 @@ function AuthenticatedLayout() {
         />
         {/* Main content with margin for fixed sidebar (desktop only) */}
         <div
-          className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+          className="flex min-h-0 min-w-0 flex-col h-screen transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
           <LegacyUserBanner />
@@ -157,9 +166,14 @@ function AuthenticatedLayout() {
               </div>
             </div>
           </header> */}
-          <main data-main-scroll className="flex-1 min-h-0 overflow-y-auto bg-gray-50 dark:bg-gray-900 pb-16 lg:pb-0">
+          <main
+            data-main-scroll
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0"
+          >
             <ErrorBoundary>
-              <Outlet />
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <Outlet />
+              </div>
             </ErrorBoundary>
           </main>
         </div>

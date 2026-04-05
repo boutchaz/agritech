@@ -1,9 +1,9 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { moroccanData } from "../../data/mock-data";
 
-export const AccountingScene: React.FC = () => {
+export const AccountingScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -63,8 +63,9 @@ export const AccountingScene: React.FC = () => {
             justifyContent: "space-around",
           }}
         >
-          {moroccanData.revenueData.map((value, index) => {
-            const barDelay = 40 + index * 10;
+          {moroccanData.revenueData.map((value, barIdx) => {
+            const barDelay = 40 + barIdx * 10;
+            const month = moroccanData.months[barIdx];
             const barHeight = interpolate(
               frame,
               [barDelay, barDelay + 40],
@@ -73,19 +74,19 @@ export const AccountingScene: React.FC = () => {
             );
 
             return (
-              <div key={index} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div key={`item-${month}`} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <div
                   style={{
                     width: 50,
                     height: barHeight,
-                    backgroundColor: index === moroccanData.revenueData.length - 1 ? "#7c3aed" : "#a78bfa",
+                    backgroundColor: barIdx === moroccanData.revenueData.length - 1 ? "#7c3aed" : "#a78bfa",
                     borderRadius: 8,
                     marginBottom: 12,
                     boxShadow: "0 4px 12px rgba(124, 58, 237, 0.3)",
                   }}
                 />
                 <span style={{ fontSize: 16, color: "#6b7280", fontWeight: "bold" }}>
-                  {moroccanData.months[index]}
+                  {moroccanData.months[barIdx]}
                 </span>
               </div>
             );
@@ -102,8 +103,8 @@ export const AccountingScene: React.FC = () => {
               gap: 80,
             }}
           >
-            {["500k", "250k", "0"].map((label, i) => (
-              <span key={i} style={{ fontSize: 14, color: "#9ca3af", fontWeight: "bold" }}>
+            {["500k", "250k", "0"].map((label) => (
+              <span key={label} style={{ fontSize: 14, color: "#9ca3af", fontWeight: "bold" }}>
                 {label} MAD
               </span>
             ))}
@@ -143,14 +144,14 @@ export const AccountingScene: React.FC = () => {
             "📊 Export PDF/Excel",
             "💰 Suivi des subventions PMV",
             "🏦 Compatible avec les banques marocaines",
-          ].map((feature, i) => {
-            const featureOpacity = interpolate(frame, [100 + i * 10, 125 + i * 10], [0, 1], {
+          ].map((feature, featureIdx) => {
+            const featureOpacity = interpolate(frame, [100 + featureIdx * 10, 125 + featureIdx * 10], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={feature}
                 style={{
                   backgroundColor: "#ffffff",
                   padding: "12px 24px",

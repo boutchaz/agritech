@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import type { AIAlert } from '@/lib/api/ai-alerts';
 import { Button } from '@/components/ui/button';
@@ -11,13 +11,13 @@ interface AlertCardProps {
   isResolving?: boolean;
 }
 
-export const AlertCard: React.FC<AlertCardProps> = ({
+export const AlertCard = ({
   alert,
   onAcknowledge,
   onResolve,
   isAcknowledging,
   isResolving,
-}) => {
+}: AlertCardProps) => {
   const getSeverityColor = () => {
     switch (alert.severity) {
       case 'critical': return 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400';

@@ -22,12 +22,12 @@ interface PaymentAllocationDialogProps {
   onAllocated?: () => void;
 }
 
-export const PaymentAllocationDialog: React.FC<PaymentAllocationDialogProps> = ({
+export const PaymentAllocationDialog = ({
   payment,
   open,
   onOpenChange,
   onAllocated,
-}) => {
+}: PaymentAllocationDialogProps) => {
   const { t } = useTranslation();
   const invoiceType = payment.payment_type === 'receive' ? 'sales' : 'purchase';
   const { data: invoices = [], isLoading } = useInvoices();

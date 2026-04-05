@@ -1,5 +1,5 @@
 // Calibration Types for Mobile App
-// Adapted from web: project/src/types/calibration-v2.ts
+// Adapted from web: project/src/types/calibration-output.ts
 
 export type CalibrationMaturityPhase =
   | 'juvenile'
@@ -183,7 +183,7 @@ export interface CalibrationMetadata {
   data_quality_flags: string[];
 }
 
-export interface CalibrationV2Output {
+export interface CalibrationOutput {
   parcel_id: string;
   maturity_phase: CalibrationMaturityPhase;
   nutrition_option_suggestion?: NutritionOption | null;
@@ -240,7 +240,7 @@ export interface CalibrationHistoryRecord {
 export interface CalibrationReportResponse {
   calibration: CalibrationStatusRecord;
   report: {
-    output?: CalibrationV2Output;
+    output?: CalibrationOutput;
     [key: string]: unknown;
   } | null;
 }

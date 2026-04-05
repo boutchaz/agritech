@@ -22,12 +22,12 @@ interface StatisticsCalculatorProps {
   boundary?: number[][];
 }
 
-const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
+const StatisticsCalculator = ({
   parcelId,
   parcelName,
   farmId,
   boundary
-}) => {
+}: StatisticsCalculatorProps) => {
   const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -358,20 +358,20 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         {/* Index Selection */}
         <div>
           <label className="text-sm font-medium mb-3 block">Vegetation Indices</label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {VEGETATION_INDICES.map(index => (
-              <label key={index} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {VEGETATION_INDICES.map(vegIndex => (
+              <label key={vegIndex} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
-                  checked={selectedIndices.includes(index)}
-                  onChange={() => handleIndexToggle(index)}
+                  checked={selectedIndices.includes(vegIndex)}
+                  onChange={() => handleIndexToggle(vegIndex)}
                   className="mr-2"
                 />
                 <span
                   className="text-sm font-medium"
-                  style={{ color: getIndexColor(index) }}
+                  style={{ color: getIndexColor(vegIndex) }}
                 >
-                  {index}
+                  {vegIndex}
                 </span>
               </label>
             ))}
@@ -406,11 +406,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             Actualiser le cache
           </Button>
 
-          <Button
-            onClick={calculateStatistics}
-            disabled={isLoading || !boundary || selectedIndices.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-          >
+          <Button variant="blue" onClick={calculateStatistics} disabled={isLoading || !boundary || selectedIndices.length === 0} className="flex items-center gap-2 px-4 py-2 rounded-md disabled:bg-gray-400" >
             <Satellite className="w-4 h-4" />
             {isLoading ? 'Calcul en cours...' : 'Récupérer depuis satellite'}
           </Button>
@@ -430,7 +426,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             <h3 className="font-medium">Cloud Coverage Analysis</h3>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Available Images:</span>
               <div className="font-medium">{cloudCoverageInfo.available_images_count}</div>
@@ -485,7 +481,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
             return (
               <>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-blue-600">Images utilisées:</span>
                       <div className="font-medium">{displayStats.cloud_coverage_info.images_found}</div>
@@ -507,22 +503,22 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
 
                 {/* Statistics for each index */}
                 <div className="grid gap-4">
-                  {Object.entries(displayStats.statistics).map(([index, stats]) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  {Object.entries(displayStats.statistics).map(([vegIndex, stats]) => (
+                    <div key={vegIndex} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-medium" style={{ color: getIndexColor(index as VegetationIndexType) }}>
-                            {index}
+                          <h4 className="font-medium" style={{ color: getIndexColor(vegIndex as VegetationIndexType) }}>
+                            {vegIndex}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType]}
+                            {VEGETATION_INDEX_DESCRIPTIONS[vegIndex as VegetationIndexType]}
                           </p>
                         </div>
-                        {displayStats.tiff_files?.[index as VegetationIndexType] && (
+                        {displayStats.tiff_files?.[vegIndex as VegetationIndexType] && (
                           <Button
                             onClick={() => downloadTiff(
-                              index as VegetationIndexType,
-                              displayStats.tiff_files![index as VegetationIndexType].url
+                              vegIndex as VegetationIndexType,
+                              displayStats.tiff_files![vegIndex as VegetationIndexType].url
                             )}
                             className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-sm"
                           >
@@ -532,7 +528,7 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
                         )}
                       </div>
 
-                      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 text-sm">
+                      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
                         <div className="bg-gray-50 p-2 rounded">
                           <div className="text-gray-600">Moyenne</div>
                           <div className="font-medium">{stats.mean.toFixed(3)}</div>

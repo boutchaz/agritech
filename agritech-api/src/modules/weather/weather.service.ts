@@ -269,7 +269,7 @@ export class WeatherService {
         daily:
           'temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max',
         timezone: 'auto',
-        forecast_days: '7',
+        forecast_days: '16',
       });
 
       const res = await fetch(`${this.forecastUrl}?${params}`);
@@ -307,7 +307,7 @@ export class WeatherService {
               max: d.temperature_2m_max?.[i] ?? 0,
             },
             humidity: 0,
-            windSpeed: d.wind_speed_10m_max?.[i] ?? 0,
+            windSpeed: Math.round((d.wind_speed_10m_max?.[i] ?? 0) * 3.6),
             description: wmoToDesc(d.weather_code?.[i] ?? 0),
             icon: wmoToIcon(d.weather_code?.[i] ?? 0),
             precipitation: d.precipitation_sum?.[i] ?? 0,

@@ -117,7 +117,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
         )}
 
         {fields.map((field, index) => (
-          <div key={field.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div key={field.id} className="rounded-md border border-gray-200 dark:border-gray-700 p-3 grid grid-cols-1 lg:grid-cols-4 gap-3 items-end">
             <FormField label="Type" htmlFor={`stress_type_${index}`} error={errors.stress_events?.[index]?.type?.message}>
               <Select id={`stress_type_${index}`} {...register(`stress_events.${index}.type`)}>
                 <option value="drought">Secheresse</option>

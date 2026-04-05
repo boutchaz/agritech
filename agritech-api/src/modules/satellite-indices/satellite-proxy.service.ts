@@ -6,6 +6,7 @@ import { AlertService } from '../health/alert.service';
 export class SatelliteProxyService {
   private readonly logger = new Logger(SatelliteProxyService.name);
   private readonly satelliteBaseUrl: string;
+  private readonly internalServiceToken: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -13,7 +14,30 @@ export class SatelliteProxyService {
   ) {
     const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
+    this.internalServiceToken = (
+      this.configService.get<string>('INTERNAL_SERVICE_TOKEN') ?? ''
+    ).trim();
     this.logger.log(`Satellite proxy targeting: ${this.satelliteBaseUrl}`);
+    this.logger.log(
+      this.internalServiceToken.length > 0
+        ? `Satellite proxy auth: INTERNAL_SERVICE_TOKEN loaded (${this.internalServiceToken.length} chars) — used for all outbound satellite requests`
+        : 'Satellite proxy auth: INTERNAL_SERVICE_TOKEN NOT SET — satellite calls use user JWT only; mismatch with FastAPI INTERNAL_SERVICE_TOKEN causes 401',
+    );
+  }
+
+  /**
+   * Prefer INTERNAL_SERVICE_TOKEN for Nest→satellite calls so the satellite service
+   * authenticates with the shared secret even when a user JWT is present (user JWT
+   * can fail if satellite Supabase env differs from the API project).
+   */
+  private bearerAuthHeaders(authToken?: string): Record<string, string> {
+    if (this.internalServiceToken) {
+      return { authorization: `Bearer ${this.internalServiceToken}` };
+    }
+    if (authToken) {
+      return { authorization: `Bearer ${authToken}` };
+    }
+    return {};
   }
 
   async proxy(
@@ -24,9 +48,10 @@ export class SatelliteProxyService {
       query?: Record<string, string | string[] | undefined>;
       organizationId?: string;
       timeout?: number;
+      authToken?: string;
     } = {},
   ): Promise<unknown> {
-    const { body, query, organizationId, timeout = 120_000 } = options;
+    const { body, query, organizationId, timeout = 120_000, authToken } = options;
 
     const params = new URLSearchParams();
     if (query) {
@@ -47,6 +72,7 @@ export class SatelliteProxyService {
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...this.bearerAuthHeaders(authToken),
     };
     if (organizationId) {
       headers['x-organization-id'] = organizationId;
@@ -110,11 +136,55 @@ export class SatelliteProxyService {
     }
   }
 
-  async get(path: string, query?: Record<string, string | string[] | undefined>, organizationId?: string) {
-    return this.proxy('GET', path, { query, organizationId });
+  async get(path: string, query?: Record<string, string | string[] | undefined>, organizationId?: string, authToken?: string) {
+    return this.proxy('GET', path, { query, organizationId, authToken });
   }
 
-  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number) {
-    return this.proxy('POST', path, { body, organizationId, query, timeout });
+  async post(path: string, body: unknown, organizationId?: string, query?: Record<string, string | string[] | undefined>, timeout?: number, authToken?: string) {
+    return this.proxy('POST', path, { body, organizationId, query, timeout, authToken });
+  }
+
+  /**
+   * Proxy a request and return the raw Response (for binary content like PDFs).
+   * The caller is responsible for piping to the NestJS response.
+   */
+  async proxyRaw(
+    method: string,
+    path: string,
+    options: { organizationId?: string; timeout?: number; authToken?: string } = {},
+  ): Promise<{ buffer: Buffer; contentType: string; status: number }> {
+    const { organizationId, timeout = 60_000, authToken } = options;
+    const url = `${this.satelliteBaseUrl}/api${path}`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+
+    const headers: Record<string, string> = {
+      ...this.bearerAuthHeaders(authToken),
+    };
+    if (organizationId) {
+      headers['x-organization-id'] = organizationId;
+    }
+
+    try {
+      const res = await fetch(url, { method, headers, signal: controller.signal });
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new HttpException(
+          errorText || `Satellite service error: ${res.statusText}`,
+          res.status >= 500 ? HttpStatus.BAD_GATEWAY : res.status,
+        );
+      }
+
+      const buffer = Buffer.from(await res.arrayBuffer());
+      const contentType = res.headers.get('content-type') || 'application/octet-stream';
+      return { buffer, contentType, status: res.status };
+    } catch (error) {
+      clearTimeout(timer);
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Satellite service unavailable', HttpStatus.BAD_GATEWAY);
+    }
   }
 }

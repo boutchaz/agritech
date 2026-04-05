@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Droplets, Thermometer, Wind, FlaskRound as Flask, Calendar, LineChart, AlertTriangle, Leaf, Edit2 } from 'lucide-react';
 import type { Parcel, SoilAnalysis } from '../types';
 import SoilAnalysisForm from './SoilAnalysisForm';
@@ -9,7 +9,7 @@ interface ParcelViewProps {
   onSoilDataUpdate: (parcelId: string, soilData: SoilAnalysis) => void;
 }
 
-const ParcelView: React.FC<ParcelViewProps> = ({ parcel, onSoilDataUpdate }) => {
+const ParcelView = ({ parcel, onSoilDataUpdate }: ParcelViewProps) => {
   const [showSoilForm, setShowSoilForm] = useState(false);
 
   const handleSoilDataSave = (soilData: SoilAnalysis) => {
@@ -174,7 +174,7 @@ const ParcelView: React.FC<ParcelViewProps> = ({ parcel, onSoilDataUpdate }) => 
               <h4 className="font-medium mb-2">Recommandations</h4>
               <ul className="space-y-2">
                 {parcel.soilData.recommendations.map((rec, index) => (
-                  <li key={index} className="flex items-start space-x-2">
+                  <li key={rec} className="flex items-start space-x-2">
                     <span className="text-green-500">•</span>
                     <span>{rec}</span>
                   </li>

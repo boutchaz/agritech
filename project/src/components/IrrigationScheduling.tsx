@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Droplets, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
@@ -11,10 +11,10 @@ interface IrrigationSchedulingProps {
   parcelName: string;
 }
 
-const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
+const IrrigationScheduling = ({
   parcelId,
   parcelName
-}) => {
+}: IrrigationSchedulingProps) => {
   const { currentOrganization } = useAuth();
   const [soilMoisture, setSoilMoisture] = useState<number>(50);
   const [growthStage, setGrowthStage] = useState<string>('vegetative');
@@ -121,11 +121,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           </div>
         )}
 
-        <Button
-          onClick={handleGenerateSchedule}
-          disabled={scheduleMutation.isPending}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button variant="blue" onClick={handleGenerateSchedule} disabled={scheduleMutation.isPending} className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors disabled:cursor-not-allowed" >
           {scheduleMutation.isPending ? (
             <>
               <Loader className="w-5 h-5 animate-spin" />
@@ -206,7 +202,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           {parcelInfo && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <h5 className="font-medium text-gray-900 dark:text-white mb-3">Informations de la parcelle</h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Surface:</span>
                   <div className="font-medium text-gray-900 dark:text-white">{parcelInfo.area} ha</div>
@@ -235,7 +231,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
               <h5 className="font-medium text-gray-900 dark:text-white mb-3">Analyse</h5>
               <ul className="space-y-2">
                 {schedule.reasoning.map((reason, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li key={reason} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-gray-400">
                     <span className="text-blue-500 mt-1">•</span>
                     <span>{reason}</span>
                   </li>
@@ -253,7 +249,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
                   <h5 className="font-medium text-yellow-900 dark:text-yellow-300 mb-2">Avertissements</h5>
                   <ul className="space-y-1">
                     {schedule.warnings.map((warning, index) => (
-                      <li key={index} className="text-sm text-yellow-700 dark:text-yellow-400">
+                      <li key={warning} className="text-sm text-yellow-700 dark:text-yellow-400">
                         {warning}
                       </li>
                     ))}

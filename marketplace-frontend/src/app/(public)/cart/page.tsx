@@ -48,8 +48,8 @@ export default function CartPage() {
                     <div className="animate-pulse">
                         <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
                         <div className="space-y-4">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="h-24 bg-gray-200 rounded"></div>
+                            {[1, 2, 3].map((n) => (
+                                <div key={"sk-" + n} className="h-24 bg-gray-200 rounded"></div>
                             ))}
                         </div>
                     </div>

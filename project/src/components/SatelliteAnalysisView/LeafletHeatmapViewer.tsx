@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import {  useState, useCallback, useEffect, useRef, useMemo  } from "react";
 import { Download, Layers, ZoomIn, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
-import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
+import { MapContainer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -13,8 +13,10 @@ import {
   DEFAULT_CLOUD_COVERAGE,
   formatDateForAPI
 } from '../../lib/satellite-api';
-import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
+import { type ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
+import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 // Fix Leaflet default icon issue - only in browser
 if (typeof window !== 'undefined') {
@@ -43,12 +45,12 @@ interface LeafletHeatmapViewerProps {
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-export const GridHeatmapLayer: React.FC<{
+export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }: {
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
   colorPalette?: ColorPalette;
   opacity?: number;
-}> = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }) => {
+}) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -162,7 +164,83 @@ export const GridHeatmapLayer: React.FC<{
   return null;
 };
 
-const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
+interface ColorScaleProps {
+  data: HeatmapDataResponse;
+  colorPalette: ColorPalette | string;
+}
+
+const ColorScale = ({ data, colorPalette }: ColorScaleProps) => {
+  const steps = 20;
+  const stepHeight = 20;
+  const scaleHeight = steps * stepHeight;
+  const palette = COLOR_PALETTES[(colorPalette || 'red-green') as ColorPalette];
+
+  const getColorForNormalized = (normalized: number): string => {
+    const colors = palette.colors;
+    const safeNorm = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0.5;
+    const index = safeNorm * (colors.length - 1);
+    const lowerIndex = Math.floor(index);
+    const upperIndex = Math.min(Math.ceil(index), colors.length - 1);
+
+    if (lowerIndex === upperIndex || !colors[lowerIndex] || !colors[upperIndex]) {
+      return colors[lowerIndex] || colors[0];
+    }
+
+    const t = index - lowerIndex;
+    const lower = colors[lowerIndex];
+    const upper = colors[upperIndex];
+
+    const lowerRGB = {
+      r: parseInt(lower.slice(1, 3), 16),
+      g: parseInt(lower.slice(3, 5), 16),
+      b: parseInt(lower.slice(5, 7), 16)
+    };
+    const upperRGB = {
+      r: parseInt(upper.slice(1, 3), 16),
+      g: parseInt(upper.slice(3, 5), 16),
+      b: parseInt(upper.slice(5, 7), 16)
+    };
+
+    const r = Math.round(lowerRGB.r + (upperRGB.r - lowerRGB.r) * t);
+    const g = Math.round(lowerRGB.g + (upperRGB.g - lowerRGB.g) * t);
+    const b = Math.round(lowerRGB.b + (upperRGB.b - lowerRGB.b) * t);
+
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  return (
+    <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-[1000]">
+      <div className="flex items-center">
+        <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
+          {Array.from({ length: steps }).map((_, stepIdx) => {
+            const value = data.statistics.max - (stepIdx / (steps - 1)) * (data.statistics.max - data.statistics.min);
+            const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
+            const color = getColorForNormalized(normalized);
+
+            return (
+              <div
+                key={"step-" + stepIdx}
+                style={{
+                  backgroundColor: color,
+                  height: stepHeight,
+                  width: '20px',
+                  border: '0.5px solid #ccc'
+                }}
+              />
+            );
+          })}
+        </div>
+        <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
+          <span>{(data.statistics?.max ?? 0).toFixed(1)}</span>
+          <span>{(((data.statistics?.max ?? 0) + (data.statistics?.min ?? 0)) / 2).toFixed(1)}</span>
+          <span>{(data.statistics?.min ?? 0).toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LeafletHeatmapViewer = ({
   parcelId,
   parcelName,
   boundary,
@@ -173,7 +251,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   colorPalette = 'red-green',
   compact = false,
   baseLayer = 'satellite'
-}) => {
+}: LeafletHeatmapViewerProps) => {
+  const { t } = useTranslation('satellite');
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NIRv');
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
   const [samplePoints, setSamplePoints] = useState(10000); // Start with high detail
@@ -239,11 +318,11 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
     } catch (err) {
       console.error('Error checking available dates:', err);
-      setError('Failed to check available dates. Using current date as fallback.');
+      setError(t('satellite:heatmap.warnings.failedToCheckDates'));
     } finally {
       setIsCheckingDates(false);
     }
-  }, [boundary, parcelName, embedded]);
+  }, [boundary, parcelName, embedded, t]);
 
   useEffect(() => {
     if (!embedded && boundary && boundary.length > 0) {
@@ -284,11 +363,11 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
 
       setData(result as HeatmapDataResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate heatmap visualization');
+      setError(err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate'));
     } finally {
       setIsLoading(false);
     }
-  }, [boundary, parcelName, selectedDate, selectedIndex, samplePoints, parcelId]);
+  }, [boundary, parcelName, selectedDate, selectedIndex, samplePoints, parcelId, t]);
 
   const getIndexColor = (index: VegetationIndexType) => {
     const colors: Record<VegetationIndexType, string> = {
@@ -335,102 +414,27 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     return [];
   }, [data?.aoi_boundary, boundary]);
 
-  // Color scale component using the selected color palette
-  const ColorScale: React.FC = () => {
-    if (!data) return null;
-
-    const steps = 20;
-    const stepHeight = 20;
-    const scaleHeight = steps * stepHeight;
-    const palette = COLOR_PALETTES[colorPalette || 'red-green'];
-
-    // Helper function to interpolate colors from the palette
-    const getColorForNormalized = (normalized: number): string => {
-      const colors = palette.colors;
-      const safeNorm = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0.5;
-      const index = safeNorm * (colors.length - 1);
-      const lowerIndex = Math.floor(index);
-      const upperIndex = Math.min(Math.ceil(index), colors.length - 1);
-
-      if (lowerIndex === upperIndex || !colors[lowerIndex] || !colors[upperIndex]) {
-        return colors[lowerIndex] || colors[0];
-      }
-
-      const t = index - lowerIndex;
-      const lower = colors[lowerIndex];
-      const upper = colors[upperIndex];
-
-      const lowerRGB = {
-        r: parseInt(lower.slice(1, 3), 16),
-        g: parseInt(lower.slice(3, 5), 16),
-        b: parseInt(lower.slice(5, 7), 16)
-      };
-      const upperRGB = {
-        r: parseInt(upper.slice(1, 3), 16),
-        g: parseInt(upper.slice(3, 5), 16),
-        b: parseInt(upper.slice(5, 7), 16)
-      };
-
-      const r = Math.round(lowerRGB.r + (upperRGB.r - lowerRGB.r) * t);
-      const g = Math.round(lowerRGB.g + (upperRGB.g - lowerRGB.g) * t);
-      const b = Math.round(lowerRGB.b + (upperRGB.b - lowerRGB.b) * t);
-
-      return `rgb(${r}, ${g}, ${b})`;
-    };
-
-    return (
-      <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-[1000]">
-        <div className="flex items-center">
-          <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
-            {Array.from({ length: steps }).map((_, i) => {
-              const value = data.statistics.max - (i / (steps - 1)) * (data.statistics.max - data.statistics.min);
-              const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
-              const color = getColorForNormalized(normalized);
-
-              return (
-                <div
-                  key={i}
-                  style={{
-                    backgroundColor: color,
-                    height: stepHeight,
-                    width: '20px',
-                    border: '0.5px solid #ccc'
-                  }}
-                />
-              );
-            })}
-          </div>
-          <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
-            <span>{(data.statistics?.max ?? 0).toFixed(1)}</span>
-            <span>{(((data.statistics?.max ?? 0) + (data.statistics?.min ?? 0)) / 2).toFixed(1)}</span>
-            <span>{(data.statistics?.min ?? 0).toFixed(1)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className={`bg-white rounded-lg shadow p-6 space-y-6 ${embedded ? 'p-0 shadow-none' : ''}`}>
       {!embedded && (
         <>
           <div className="text-center mb-4">
-            <h1 className="text-2xl font-bold">{selectedIndex} - évolution temporelle</h1>
+            <h1 className="text-2xl font-bold">{t('satellite:heatmap.leafletViewer.title', { index: selectedIndex })}</h1>
             <div className="text-lg text-gray-600 mt-2">{selectedDate}</div>
           </div>
 
           {/* Configuration Panel - Only shown when not embedded */}
           <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-            <h3 className="font-medium text-gray-900">Configuration</h3>
+            <h3 className="font-medium text-gray-900">{t('satellite:heatmap.configuration')}</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Date
                   {isCheckingDates && (
                     <span className="ml-2 text-xs text-gray-500">
                       <RefreshCw className="inline w-3 h-3 animate-spin mr-1" />
-                      Checking availability...
+                      {t('satellite:heatmap.leafletViewer.checkingAvailability')}
                     </span>
                   )}
                 </label>
@@ -446,9 +450,9 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                     }`}
                   />
                   {recommendedDate && recommendedDate !== selectedDate && (
-                    <Button
+                    <Button variant="blue"
                       onClick={() => setSelectedDate(recommendedDate)}
-                      className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      className="absolute right-1 top-1 bottom-1 px-2 text-xs bg-blue-500 rounded hover:bg-blue-600"
                       title={`Use recommended date: ${recommendedDate}`}
                     >
                       <Calendar className="w-3 h-3" />
@@ -457,53 +461,49 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                 </div>
                 {availableDates.length > 0 && !availableDates.includes(selectedDate) && (
                   <p className="text-xs text-yellow-600 mt-1">
-                    No data for selected date. Recommended: {recommendedDate}
+                    {t('satellite:heatmap.warnings.noDataForDate', { date: recommendedDate })}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Vegetation Index</label>
+                <label className="text-sm font-medium mb-2 block">{t('satellite:heatmap.labels.vegetationIndex')}</label>
                 <select
                   value={selectedIndex}
                   onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  {VEGETATION_INDICES.map(index => (
-                    <option key={index} value={index}>{index}</option>
+                  {VEGETATION_INDICES.map((vegIndex) => (
+                    <option key={vegIndex} value={vegIndex}>{vegIndex}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Sample Points</label>
+                <label className="text-sm font-medium mb-2 block">{t('satellite:heatmap.samplePoints.label')}</label>
                 <select
                   value={samplePoints}
                   onChange={(e) => setSamplePoints(Number(e.target.value))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  <option value={1000}>1000 (Fast)</option>
-                  <option value={2000}>2000 (Balanced)</option>
-                  <option value={5000}>5000 (Detailed)</option>
-                  <option value={10000}>10000 (High Detail)</option>
-                  <option value={25000}>25000 (Maximum Detail)</option>
+                  <option value={1000}>1000 ({t('satellite:heatmap.samplePoints.fast')})</option>
+                  <option value={2000}>2000 ({t('satellite:heatmap.samplePoints.balanced')})</option>
+                  <option value={5000}>5000 ({t('satellite:heatmap.samplePoints.detailed')})</option>
+                  <option value={10000}>10000 ({t('satellite:heatmap.samplePoints.highDetail')})</option>
+                  <option value={25000}>25000 ({t('satellite:heatmap.samplePoints.maximumDetail')})</option>
                 </select>
               </div>
 
               <div className="flex items-end">
-                <Button
-                  onClick={generateVisualization}
-                  disabled={isLoading || !boundary}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
+                <Button variant="green" onClick={generateVisualization} disabled={isLoading || !boundary} className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" >
                   {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : <ZoomIn className="w-4 h-4" />}
-                  {isLoading ? 'Loading...' : data ? 'Regenerate' : 'Generate'}
+                  {isLoading ? t('satellite:heatmap.actions.loading') : data ? t('satellite:heatmap.actions.regenerate') : t('satellite:heatmap.actions.generate')}
                 </Button>
               </div>
             </div>
 
             <div className="text-sm text-gray-600">
-              <strong>Index Description:</strong> {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
+              <strong>{t('satellite:heatmap.labels.indexDescription')}</strong> {VEGETATION_INDEX_DESCRIPTIONS[selectedIndex]}
             </div>
           </div>
         </>
@@ -521,11 +521,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-amber-800 font-medium text-sm">Date de données différente</p>
-            <p className="text-amber-700 text-sm mt-1">
-              Aucune image satellite disponible pour le <strong>{dateMismatch.requested}</strong>.
-              Données du <strong>{dateMismatch.actual}</strong> affichées à la place.
-            </p>
+            <p className="text-amber-800 font-medium text-sm">{t('satellite:heatmap.warnings.dateMismatchTitle')}</p>
+            <p className="text-amber-700 text-sm mt-1" dangerouslySetInnerHTML={{ __html: t('satellite:heatmap.warnings.dateMismatchDescription', { requested: dateMismatch.requested, actual: dateMismatch.actual }) }} />
           </div>
         </div>
       )}
@@ -536,15 +533,12 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             <Layers className="w-5 h-5" style={{ color: getIndexColor(selectedIndex) }} />
-            {selectedIndex} Heatmap - {selectedDate}
+            {t('satellite:heatmap.leafletViewer.heatmapTitle', { index: selectedIndex, date: selectedDate })}
           </h3>
           {data && (
-            <Button
-              onClick={downloadData}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
+            <Button variant="blue" onClick={downloadData} className="flex items-center gap-2 px-4 py-2 rounded-md" >
               <Download className="w-4 h-4" />
-              Export Data
+              {t('satellite:heatmap.leafletViewer.exportData')}
             </Button>
           )}
         </div>
@@ -555,7 +549,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             <Button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="absolute top-4 right-4 z-[1000] bg-white hover:bg-gray-100 border-2 border-gray-300 rounded-lg p-2 shadow-lg transition-colors"
-              title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+              title={isFullscreen ? t('satellite:heatmap.fullscreen.exit') : t('satellite:heatmap.fullscreen.enter')}
             >
               {isFullscreen ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -568,15 +562,15 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               )}
             </Button>
           )}
-          <ColorScale />
+          {data && <ColorScale data={data} colorPalette={colorPalette} />}
           {/* Statistics Box (like desired.png) */}
           {data?.statistics && (
             <div key="stats-box" className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">
-              <div>Mean: {(data.statistics.mean ?? 0).toFixed(3)}</div>
-              <div>Median: {(data.statistics.median ?? 0).toFixed(3)}</div>
-              <div>P10: {(data.statistics.p10 ?? 0).toFixed(3)}</div>
-              <div>P90: {(data.statistics.p90 ?? 0).toFixed(3)}</div>
-              <div>Std: {(data.statistics.std ?? 0).toFixed(3)}</div>
+              <div>{t('satellite:heatmap.leafletViewer.statistics.mean')}: {(data.statistics.mean ?? 0).toFixed(3)}</div>
+              <div>{t('satellite:heatmap.leafletViewer.statistics.median')}: {(data.statistics.median ?? 0).toFixed(3)}</div>
+              <div>{t('satellite:heatmap.leafletViewer.statistics.p10')}: {(data.statistics.p10 ?? 0).toFixed(3)}</div>
+              <div>{t('satellite:heatmap.leafletViewer.statistics.p90')}: {(data.statistics.p90 ?? 0).toFixed(3)}</div>
+              <div>{t('satellite:heatmap.leafletViewer.statistics.std')}: {(data.statistics.std ?? 0).toFixed(3)}</div>
             </div>
           )}
           <MapContainer
@@ -585,17 +579,10 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             style={{ height: '100%', width: '100%' }}
             className="leaflet-container"
           >
-            {baseLayer === 'satellite' ? (
-              <TileLayer
-                attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-            ) : (
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-            )}
+            <LeafletBaseTileLayers
+              variant={baseLayer === 'satellite' ? 'satellite' : 'streets'}
+              withSatelliteReferenceLabels={baseLayer === 'satellite'}
+            />
 
             {/* AOI Polygon Boundary - Matching research notebook style */}
             {polygonPositions.length > 0 && (

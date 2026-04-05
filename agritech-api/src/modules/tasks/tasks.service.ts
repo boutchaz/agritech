@@ -20,6 +20,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationType } from "../notifications/dto/notification.dto";
 import { ProductApplicationsService } from "../product-applications/product-applications.service";
 import { paginate, paginatedResponse, emptyPaginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
+import { sanitizeSearch } from "../../common/utils/sanitize-search";
 
 @Injectable()
 export class TasksService {
@@ -159,7 +160,7 @@ export class TasksService {
       if (filters?.parcel_id) q = q.eq("parcel_id", filters.parcel_id);
       if (filters?.date_from) q = q.gte("scheduled_start", filters.date_from);
       if (filters?.date_to) q = q.lte("scheduled_start", filters.date_to);
-      if (filters?.search) q = q.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`title.ilike.%${s}%,description.ilike.%${s}%`); }
       return q;
     };
 
@@ -1572,8 +1573,20 @@ export class TasksService {
   /**
    * Get all comments for a task
    */
-  async getComments(taskId: string) {
+  async getComments(organizationId: string, taskId: string) {
     const client = this.databaseService.getAdminClient();
+
+    // Verify the task belongs to the organization
+    const { data: task, error: taskError } = await client
+      .from("tasks")
+      .select("id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskError || !task) {
+      throw new NotFoundException("Task not found in this organization");
+    }
 
     // Fetch comments with worker join only (user_profiles has no direct FK from task_comments)
     const { data, error } = await client
@@ -1618,8 +1631,20 @@ export class TasksService {
   /**
    * Add a comment to a task
    */
-  async addComment(userId: string, taskId: string, commentData: any) {
+  async addComment(userId: string, organizationId: string, taskId: string, commentData: any) {
     const client = this.databaseService.getAdminClient();
+
+    // Verify the task belongs to the organization
+    const { data: taskRecord, error: taskCheckError } = await client
+      .from("tasks")
+      .select("id, title, organization_id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskCheckError || !taskRecord) {
+      throw new NotFoundException("Task not found in this organization");
+    }
 
     const { data, error } = await client
       .from("task_comments")
@@ -1650,13 +1675,9 @@ export class TasksService {
       }
     }
 
-    // Get the task title and commenter name for the notification
+    // Get the commenter name for the notification
     if (mentionedUserIds.size > 0) {
-      const { data: task } = await client
-        .from("tasks")
-        .select("title, organization_id")
-        .eq("id", taskId)
-        .maybeSingle();
+      const task = taskRecord;
 
       const { data: commenter } = await client
         .from("user_profiles")
@@ -1980,8 +2001,20 @@ export class TasksService {
   /**
    * Get all time logs for a task
    */
-  async getTimeLogs(taskId: string) {
+  async getTimeLogs(organizationId: string, taskId: string) {
     const client = this.databaseService.getAdminClient();
+
+    // Verify the task belongs to the organization
+    const { data: task, error: taskError } = await client
+      .from("tasks")
+      .select("id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskError || !task) {
+      throw new NotFoundException("Task not found in this organization");
+    }
 
     const { data, error } = await client
       .from("task_time_logs")
@@ -2062,8 +2095,25 @@ export class TasksService {
   /**
    * Clock out from a task (end time tracking)
    */
-  async clockOut(userId: string, timeLogId: string, clockOutData: any) {
+  async clockOut(userId: string, organizationId: string, timeLogId: string, clockOutData: any) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    // First verify the time log belongs to a task in this organization
+    const { data: timeLog, error: fetchError } = await client
+      .from("task_time_logs")
+      .select("id, task:tasks!task_id(id, organization_id)")
+      .eq("id", timeLogId)
+      .single();
+
+    if (fetchError || !timeLog) {
+      throw new NotFoundException("Time log not found");
+    }
+
+    const taskOrg = (timeLog.task as any)?.organization_id;
+    if (taskOrg !== organizationId) {
+      throw new ForbiddenException("Time log does not belong to this organization");
+    }
 
     const { data, error } = await client
       .from("task_time_logs")
@@ -2135,16 +2185,17 @@ export class TasksService {
    * Auto-clock-out sessions that exceed max duration
    * Can be run periodically (e.g., every hour) to clean up stale sessions
    */
-  async autoClockOutStaleSessions(maxHours: number = 12) {
+  async autoClockOutStaleSessions(organizationId: string, maxHours: number = 12) {
     const client = this.databaseService.getAdminClient();
     const cutoffTime = new Date(
       Date.now() - maxHours * 60 * 60 * 1000,
     ).toISOString();
 
     // Find all sessions that started before cutoff and haven't ended
+    // Scoped to the organization via task join
     const { data: staleSessions, error } = await client
       .from("task_time_logs")
-      .select("id, worker_id, task_id, start_time")
+      .select("id, worker_id, task_id, start_time, task:tasks!task_id(organization_id)")
       .is("end_time", null)
       .lt("start_time", cutoffTime);
 
@@ -2153,10 +2204,15 @@ export class TasksService {
       return { autoClockedOut: 0, error: error.message };
     }
 
+    // Filter sessions to only those belonging to this organization
+    const orgSessions = (staleSessions || []).filter(
+      (s) => (s.task as any)?.organization_id === organizationId,
+    );
+
     let autoClockedOut = 0;
     const now = new Date().toISOString();
 
-    for (const session of staleSessions || []) {
+    for (const session of orgSessions) {
       try {
         const { error: updateError } = await client
           .from("task_time_logs")
@@ -2179,7 +2235,7 @@ export class TasksService {
       }
     }
 
-    return { autoClockedOut, totalFound: staleSessions?.length || 0 };
+    return { autoClockedOut, totalFound: orgSessions.length };
   }
 
   /**

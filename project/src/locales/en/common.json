@@ -1825,7 +1825,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "Higher-quality satellite imagery. Requires an API token.",
     "mapProviderDescription": "Select the tile source for map backgrounds.",
-    "mapProviderTokenWarning": "Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.",
+    "mapProviderTokenWarning": "Mapbox basemaps need VITE_MAPBOX_TOKEN and VITE_MAP_PROVIDER=mapbox. Set VITE_MAP_PROVIDER=default to use free OSM/Esri tiles only and avoid Mapbox tile usage.",
     "placeholders": {
       "name": "Your organization name",
       "slug": "organization-slug",
@@ -3242,6 +3242,7 @@
     "detail": {
       "tabs": {
         "overview": "Overview",
+        "agromind": "Agromind IA",
         "soil": "Analysis",
         "satellite": "Satellite",
         "weather": "Weather",
@@ -3252,6 +3253,7 @@
       "loading": "Loading parcel details...",
       "notFound": "Parcel not found",
       "backToParcels": "Back to Parcels",
+      "tabsNavAria": "Parcel sections",
       "breadcrumbs": {
         "farm": "Farm",
         "parcels": "Parcels"
@@ -4588,300 +4590,296 @@
     },
     "welcome": {
       "step1": {
-        "title": "Welcome to AgriTech! 🌾",
-        "content": "Discover how to efficiently manage your farm. This guided tour will introduce you to the main features of the platform."
+        "title": "Welcome to AgroGina! 🌾",
+        "content": "Your complete farm management platform. This quick tour shows you the main areas — it takes less than a minute."
       },
       "step2": {
-        "title": "Main Navigation",
-        "content": "Use this menu to access all sections of the application: farms, parcels, tasks, stock, accounting and more."
+        "title": "Navigation",
+        "content": "Everything is organized in this sidebar: your land, your team, your production, and your finances. We'll walk through each layer."
       },
       "step3": {
-        "title": "Organization Switcher",
-        "content": "If you manage multiple farms, you can easily switch between them here."
+        "title": "Your Organization",
+        "content": "Switch between organizations if you manage multiple farms or cooperatives. All data is isolated per organization."
       },
       "step4": {
-        "title": "Your Profile",
-        "content": "Access your settings, preferences and logout options from this menu."
+        "title": "Your Account",
+        "content": "Access your profile, preferences, language settings, and logout from here."
       }
     },
     "fullApp": {
       "step1": {
-        "title": "Complete App Tour 🌾",
-        "content": "Discover all the features of AgriTech in one complete guided tour. We will go through each module of the platform."
+        "title": "The Complete Tour 🌾",
+        "content": "AgroGina follows your farm's natural workflow: Define your land → Work it → Grow & monitor → Sell & account. Let's see how each module fits."
       },
       "step2": {
-        "title": "1. Main Navigation",
-        "content": "The sidebar gives you access to all modules. Let's explore each section of your farm together."
+        "title": "Your Organization",
+        "content": "Everything starts here. Switch between farms or cooperatives — each has its own data, team, and settings."
       },
       "step3": {
-        "title": "2. Multi-Organization",
-        "content": "AgriTech is multi-tenant. Manage multiple farms from a single account and easily switch between them."
+        "title": "Dashboard — Your Command Center",
+        "content": "See key metrics at a glance: parcel health, urgent tasks, and production stats. This is where you start your day."
       },
       "step4": {
-        "title": "3. Dashboard",
-        "content": "Your command center. View key statistics, urgent tasks and crop health status at a glance."
+        "title": "🌍 Layer 1: Farms",
+        "content": "Start by defining your farms. A farm groups parcels, workers, and equipment under one roof. Think of it as your organizational unit."
       },
       "step5": {
-        "title": "4. Farm Management",
-        "content": "Organize your operations into farms and sub-farms. Each farm can contain multiple parcels with their own crops."
+        "title": "🌍 Layer 1: Parcels",
+        "content": "Each farm contains parcels — the actual plots of land. Define their boundaries, soil type, irrigation, and current crop. Parcels are the heart of everything."
       },
       "step6": {
-        "title": "5. Parcels",
-        "content": "Define your parcels with their geographic boundaries, soil types, irrigation systems and crops."
+        "title": "🌍 Layer 1: Infrastructure",
+        "content": "Wells, basins, pumping stations, hangars — register your physical assets. They connect to parcels and appear in maintenance schedules."
       },
       "step7": {
-        "title": "6. Inventory",
-        "content": "Track your input stock: seeds, fertilizers, plant protection products, equipment. Receive low stock alerts."
+        "title": "👥 Layer 2: Personnel",
+        "content": "Your team: permanent workers, day laborers, managers. Assign tasks, track hours, calculate pay. Tasks link people to parcels."
       },
       "step8": {
-        "title": "7. Infrastructure",
-        "content": "Manage your buildings, wells, basins, pumping stations and other equipment."
+        "title": "📦 Layer 2: Inventory",
+        "content": "Seeds, fertilizers, plant protection products, equipment. Track stock levels, get low-stock alerts, and record every movement in/out."
       },
       "step9": {
-        "title": "8. Personnel",
-        "content": "Manage your team: workers, assigned tasks. Track their hours and calculate their salaries."
+        "title": "🌱 Layer 3: Production",
+        "content": "Campaigns, crop cycles, harvests, quality control. This is where parcels + tasks + inputs come together into actual production data."
       },
       "step10": {
-        "title": "9. Production",
-        "content": "Track your campaigns, crop cycles, harvests and quality control. Complete production traceability."
+        "title": "✅ Layer 3: Compliance",
+        "content": "Certifications (GlobalGAP, Bio, etc.), audits, and corrective actions. All your traceability data feeds into compliance reports automatically."
       },
       "step11": {
-        "title": "10. Sales & Purchases",
-        "content": "Create quotes, purchase orders and manage your commercial transactions."
+        "title": "💰 Layer 4: Sales & Purchases",
+        "content": "Create quotes, convert to orders, manage suppliers and customers. The commercial side of your operation."
       },
       "step12": {
-        "title": "11. Accounting",
-        "content": "Double-entry accounting adapted to agriculture. Chart of accounts, journals, invoices and financial reports."
+        "title": "📊 Layer 4: Accounting",
+        "content": "Invoices, payments, journal entries, chart of accounts — double-entry bookkeeping adapted for agriculture. Connected to sales and production."
       },
       "step13": {
-        "title": "12. Reports",
-        "content": "Generate detailed reports: production, profitability, labor. Export to PDF or Excel."
+        "title": "🤖 AgromindIA — Your AI Assistant",
+        "content": "The brain of AgroGina. Ask questions about your farm in natural language. It sees your stocks, tasks, weather, and costs to give actionable advice."
       },
       "step14": {
-        "title": "13. Settings & Profile",
-        "content": "Access your personal settings, preferences, organization configuration and logout options from this menu."
+        "title": "📈 Reports & Analytics",
+        "content": "Production reports, profitability per parcel, labor costs, financial statements. Export to PDF or Excel."
       },
       "step15": {
-        "title": "Ready to Start! 🚀",
-        "content": "You now have an overview of all features. Click the help button (?) at the bottom right to review this tour or access module guides."
+        "title": "Settings & Profile",
+        "content": "Configure your organization, manage team access, enable/disable modules, and set your preferences."
+      },
+      "step16": {
+        "title": "You're Ready! 🚀",
+        "content": "Start with Farms → Parcels → Tasks — that's the core workflow. Click the help button (?) anytime to replay a module tour."
       }
     },
     "dashboard": {
       "step1": {
-        "title": "Key Statistics",
-        "content": "View important metrics of your farm at a glance: area, harvests, revenue and ongoing tasks."
+        "title": "Key Metrics",
+        "content": "Your farm stats at a glance — total area, active parcels, harvests, and revenue. These update in real-time from your data."
       },
       "step2": {
-        "title": "Recent Tasks",
-        "content": "Track urgent tasks and their progress directly from the dashboard."
+        "title": "Parcel Health",
+        "content": "Quick view of your parcels and their current status. Click any parcel to see satellite analysis, tasks, and profitability."
       },
       "step3": {
-        "title": "Weather",
-        "content": "Check weather forecasts to plan your agricultural activities."
-      },
-      "step4": {
-        "title": "Parcel Overview",
-        "content": "View the health status of your crops using satellite indices."
+        "title": "Upcoming Tasks",
+        "content": "Tasks that need attention today. Each task links to a parcel, assigned worker, and required inputs — the core of daily operations."
       }
     },
     "farmManagement": {
       "step1": {
-        "title": "Your Farms",
-        "content": "Manage all your agricultural operations from this view. Each farm can contain multiple parcels."
+        "title": "Farm Overview",
+        "content": "Your farms at a glance — total count, combined area, and import/export options. Farms are the top level of your organizational hierarchy."
       },
       "step2": {
-        "title": "Add a Farm",
-        "content": "Click here to create a new farm and define its characteristics: name, location, area, soil type, etc."
+        "title": "Create a Farm",
+        "content": "Add a new farm to get started. You'll then add parcels inside it, assign workers, and begin tracking production."
       },
       "step3": {
-        "title": "Map View",
-        "content": "View your farms and parcels on the map. You can draw parcel boundaries directly on the map."
+        "title": "Your Farms",
+        "content": "Each card is a farm with its parcels and sub-farms. Click to see details, manage parcels, or assign a farm manager."
       }
     },
     "parcels": {
       "step1": {
-        "title": "Parcel List",
-        "content": "All your parcels are displayed here with their current crops, areas and health status."
+        "title": "Your Parcels",
+        "content": "Each parcel represents a plot of land with its crop, area, and health status. Parcels are where production, tasks, and satellite data meet."
       },
       "step2": {
-        "title": "Filters",
-        "content": "Filter your parcels by crop, farm or status to quickly find what you're looking for."
+        "title": "Filter & Search",
+        "content": "Filter by farm, crop type, or status to focus on what matters. Useful when managing dozens of parcels across multiple farms."
       },
       "step3": {
-        "title": "Quick Actions",
-        "content": "Quickly access satellite analysis, weather, tasks and profitability for each parcel."
+        "title": "Parcel Actions",
+        "content": "For each parcel: view satellite imagery, check weather, assign tasks, or analyze profitability. Everything is one click away."
       }
     },
     "tasks": {
       "step1": {
-        "title": "Task Management",
-        "content": "Plan and track all agricultural tasks: irrigation, fertilization, harvest, treatments, etc."
+        "title": "Task List",
+        "content": "All agricultural tasks: irrigation, fertilization, harvest, treatments. Each task links to a parcel and can be assigned to a worker."
       },
       "step2": {
         "title": "Calendar View",
-        "content": "View your tasks on a calendar to better plan your activities."
+        "content": "Switch to calendar view to plan your week. See task distribution across time and avoid worker conflicts."
       },
       "step3": {
         "title": "Create a Task",
-        "content": "Create new tasks, assign them to workers and set priorities and deadlines."
+        "content": "New task: pick a parcel, assign a worker, set priority and deadline. Tasks with stock inputs will automatically deduct from inventory."
       }
     },
     "workers": {
       "step1": {
-        "title": "Worker Management",
-        "content": "Manage your team: permanent workers, day laborers, and sharecroppers. Track their payments and performance."
+        "title": "Your Team",
+        "content": "All workers — permanent, day laborers, and sharecroppers. See their assigned tasks, availability, and payment history."
       },
       "step2": {
         "title": "Payments",
-        "content": "Automatically calculate salaries based on time worked, tasks completed or piece work."
+        "content": "Calculate pay based on hours worked, tasks completed, or piece rates. Payments flow into your accounting journal automatically."
       },
       "step3": {
         "title": "Add a Worker",
-        "content": "Register new team members with their information and payment terms."
+        "content": "Register a new team member with their role, contact info, and pay terms. They'll appear in task assignment dropdowns immediately."
       }
     },
     "inventory": {
       "step1": {
         "title": "Stock Overview",
-        "content": "View the status of your inventory: products in stock, low levels, and total value."
+        "content": "Your inventory dashboard: total value, low-stock alerts, and recent movements. Stock is consumed when tasks are completed."
       },
       "step2": {
         "title": "Item Catalog",
-        "content": "Manage your product catalog: inputs, fertilizers, seeds, equipment, etc."
+        "content": "All your products: seeds, fertilizers, chemicals, equipment. Each item tracks current quantity, min threshold, and cost."
       },
       "step3": {
         "title": "Warehouses",
-        "content": "Organize your stock by warehouse and track movements between locations."
+        "content": "Organize stock by location. Transfer between warehouses and keep track of what's stored where."
       },
       "step4": {
         "title": "Stock Movements",
-        "content": "Record entries, exits and stock transfers with complete traceability."
+        "content": "Every entry and exit is recorded: supplier deliveries, field consumption, transfers. Full traceability for compliance."
       }
     },
     "accounting": {
       "step1": {
-        "title": "Accounting",
-        "content": "Manage all your agricultural accounting: invoices, payments, journals and financial reports."
+        "title": "Accounting Hub",
+        "content": "Your financial overview: outstanding invoices, recent payments, and journal activity. All connected to your sales and production."
       },
       "step2": {
         "title": "Invoices",
-        "content": "Create and manage your customer and supplier invoices. Track payments and receivables."
+        "content": "Customer and supplier invoices. Created from sales orders or manually. Track payment status and send reminders."
       },
       "step3": {
-        "title": "Accounting Journal",
-        "content": "Record your journal entries in double-entry according to the agricultural chart of accounts."
+        "title": "Journal Entries",
+        "content": "Double-entry bookkeeping with the Moroccan agricultural chart of accounts. Worker payments and stock movements generate entries automatically."
       },
       "step4": {
         "title": "Financial Reports",
-        "content": "Generate reports: balance sheet, income statement, trial balance, and profitability analyses."
+        "content": "Balance sheet, income statement, trial balance, and profitability analysis. Export for your accountant or for bank submissions."
       }
     },
     "satellite": {
       "step1": {
-        "title": "Satellite Analysis",
-        "content": "View the health of your crops using satellite imagery. NDVI, NDWI and other indices help you detect problems."
+        "title": "Satellite Imagery",
+        "content": "See your parcels from space. NDVI shows crop vigor, NDWI shows water stress. Detect problems before they're visible in the field."
       },
       "step2": {
         "title": "Vegetation Indices",
-        "content": "Compare different indices to understand the status of your crops: water stress, vegetative vigor, etc."
+        "content": "Compare different indices side by side. Each tells a different story — vegetative health, moisture, chlorophyll concentration."
       },
       "step3": {
-        "title": "History",
-        "content": "Navigate through time to see the evolution of your parcels and detect trends."
+        "title": "Time Travel",
+        "content": "Navigate through historical imagery to see how your parcels evolved. Spot trends, compare seasons, and validate treatment effects."
       }
     },
     "reports": {
       "step1": {
-        "title": "Reports",
-        "content": "Access all your reports: production, finance, labor, and profitability analyses."
+        "title": "Reports Center",
+        "content": "All your reports in one place: production, finance, labor, and profitability. Each report pulls live data from across all modules."
       },
       "step2": {
         "title": "Export",
-        "content": "Export your reports to PDF or Excel to share or archive them."
+        "content": "Download as PDF or Excel. Share with your team, your bank, or your certification auditor."
       },
       "step3": {
-        "title": "Filters and Periods",
-        "content": "Customize your reports by filtering by period, farm, parcel or crop type."
+        "title": "Filters & Periods",
+        "content": "Customize by date range, farm, parcel, or crop. Compare this season to last season to measure improvement."
       }
     },
     "harvests": {
       "step1": {
-        "title": "Harvest Statistics",
-        "content": "View the summary of your harvests: total quantities, estimated value, distribution by crop."
+        "title": "Harvest Dashboard",
+        "content": "Total quantities, estimated revenue, and distribution by crop. This is the output of your entire production chain."
       },
       "step2": {
-        "title": "Harvest List",
-        "content": "All your harvests are listed here with date, parcel, crop, quantity and quality."
+        "title": "Harvest Records",
+        "content": "Each record links to a parcel and includes quantity, quality grade, and date. Quality data feeds into compliance reports."
       },
       "step3": {
-        "title": "New Harvest",
-        "content": "Record a new harvest by specifying the parcel, quantity harvested and product quality."
+        "title": "Record a Harvest",
+        "content": "Log a harvest: select parcel, enter quantity and quality. This updates your production stats and can trigger a sales order."
       },
       "step4": {
-        "title": "Filters",
-        "content": "Filter your harvests by period, farm, crop or status to quickly find information."
+        "title": "Filter & Analyze",
+        "content": "Filter by period, crop, or farm to compare yields. Which parcels perform best? Which crops are most profitable?"
       }
     },
     "infrastructure": {
       "step1": {
         "title": "Your Infrastructure",
-        "content": "Manage all your buildings and equipment: wells, basins, pumping stations, hangars, offices."
+        "content": "Wells, basins, pumping stations, hangars, offices. Each links to a farm and can have maintenance schedules."
       },
       "step2": {
         "title": "Add Infrastructure",
-        "content": "Create new infrastructure with their type, location, capacity and commissioning date."
-      },
-      "step3": {
-        "title": "Maintenance",
-        "content": "Plan and track maintenance of your equipment to avoid breakdowns and optimize their lifespan."
+        "content": "Register a new asset: type, location, capacity, and commissioning date. Maintenance reminders keep your equipment running."
       }
     },
     "billing": {
       "step1": {
         "title": "Billing Overview",
-        "content": "View the summary of your billing: quotes in progress, orders to deliver, invoices to collect."
+        "content": "Quotes pending, orders to deliver, invoices to collect. The commercial pipeline that turns your production into revenue."
       },
       "step2": {
         "title": "Quotes",
-        "content": "Create professional quotes for your clients. Track their status: sent, accepted, converted to order."
+        "content": "Create professional quotes for buyers. When accepted, convert to a sales order with one click."
       },
       "step3": {
-        "title": "Purchase Orders",
-        "content": "Manage your customer and supplier orders. Track deliveries and receipts."
+        "title": "Orders",
+        "content": "Sales orders and purchase orders. Track deliveries and receipts. Orders generate invoices and update your accounting."
       },
       "step4": {
         "title": "Invoices",
-        "content": "Issue invoices and track payments. Manage reminders and customer receivables."
+        "content": "Issue invoices and track payments. Overdue invoices show in your dashboard and can trigger automatic reminders."
       },
       "step5": {
-        "title": "Customers and Suppliers",
-        "content": "Manage your address book: customers, suppliers, transporters with their contact details and history."
+        "title": "Contacts",
+        "content": "Your customers, suppliers, and transporters. Contact history and transaction records in one place."
       }
     },
     "settings": {
       "step1": {
-        "title": "Settings",
-        "content": "Access all your organization settings from this menu."
+        "title": "Settings Menu",
+        "content": "All configuration options organized by category. Start with Organization to set up your farm details."
       },
       "step2": {
         "title": "Organization",
-        "content": "Configure your farm information: name, address, logo, currency and fiscal year."
+        "content": "Your farm's identity: name, address, logo, currency, and fiscal year. This information appears on invoices and reports."
       },
       "step3": {
-        "title": "Users",
-        "content": "Manage your team members, their roles and access permissions to the platform."
+        "title": "Team Members",
+        "content": "Invite team members and assign roles: admin, farm manager, agronomist, worker, or viewer. Each role sees different features."
       },
       "step4": {
         "title": "Subscription",
-        "content": "Check your current plan, included features and upgrade if needed."
+        "content": "Your current plan and features. Upgrade to unlock more parcels, satellite analysis, or advanced AI recommendations."
       },
       "step5": {
         "title": "Modules",
-        "content": "Enable or disable modules according to your needs: accounting, satellite, sharecropping, etc."
+        "content": "Enable only what you need: accounting, satellite, compliance, fruit trees. Disabled modules are hidden from the sidebar."
       },
       "step6": {
-        "title": "Preferences",
-        "content": "Customize your experience: language, theme, date format, notifications."
+        "title": "Your Profile",
+        "content": "Personal preferences: language (French, English, Arabic), theme, notification settings. Your settings follow you across devices."
       }
     }
   },
@@ -5300,7 +5298,11 @@
     "dataRange": "Data from {{startDate}} to {{endDate}}",
     "location": "Location",
     "forecast": {
-      "title": "15-Day Weather Forecast"
+      "title": "16-day weather forecast",
+      "empty": "No short-range forecast is available right now.",
+      "precip": "Precip.",
+      "wind": "Wind",
+      "humidity": "Humidity"
     },
     "summary": {
       "avgTemperature": "Average Temperature",
@@ -5730,6 +5732,14 @@
   },
   "moduleView": {
     "moduleNotFound": "Module not found",
+    "moduleNotFoundDesc": "The module \"{{name}}\" does not exist or is not active.",
+    "moduleNotFoundSuggestion": "Did you mean:",
+    "availableModules": "Available modules",
+    "searchModules": "Search modules...",
+    "noModulesMatch": "No modules match your search.",
+    "goToDashboard": "Back to Dashboard",
+    "allCategories": "All",
+    "moduleNotFoundHint": "Press Esc to return to the dashboard",
     "fruitTrees": "Fruit Trees",
     "noParcelsFound": "No parcels found",
     "noParcelsDescription": "No parcels have been found for this farm. First create parcels in the Parcels section.",
@@ -5912,6 +5922,9 @@
       "voiceNotSupported": "Voice input is not supported in this browser",
       "clear": "Clear",
       "send": "Send",
+      "imageUpload": "Upload image",
+      "imageRemove": "Remove image",
+      "analyzingImage": "Analyzing image...",
       "error": "Error sending message",
       "retry": "Retry",
       "suggestions": {

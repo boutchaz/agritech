@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,12 +36,12 @@ const itemSchema = z.object({
 
 type ItemFormData = z.infer<typeof itemSchema>;
 
-export const QuickCreateItem: React.FC<QuickCreateItemProps> = ({
+export const QuickCreateItem = ({
   open,
   onOpenChange,
   onSuccess,
   type = 'sales',
-}) => {
+}: QuickCreateItemProps) => {
   const createItem = useCreateItem();
 
   const {

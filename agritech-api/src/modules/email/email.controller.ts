@@ -1,7 +1,18 @@
-import { Controller, Post, Body, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EmailService } from './email.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 
+/**
+ * Email controller — restricted to internal admins only.
+ * These endpoints send emails with sensitive content (temp passwords).
+ * They must NEVER be publicly accessible.
+ */
+@ApiTags('email')
+@ApiBearerAuth()
 @Controller('email')
+@UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class EmailController {
   constructor(private readonly emailService: EmailService) {}
 

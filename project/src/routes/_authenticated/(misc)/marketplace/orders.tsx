@@ -175,8 +175,8 @@ function OrderCard({
               Articles command\u00e9s:
             </p>
             <div className="space-y-2">
-              {order.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between text-sm">
+              {order.items.map((item) => (
+                <div key={`${item.title}-${item.price}-${item.quantity}`} className="flex justify-between text-sm">
                   <span>
                     {item.quantity}x {item.title}
                   </span>

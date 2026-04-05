@@ -25,7 +25,7 @@ interface CashFlowLineItem {
   amount: number;
 }
 
-const CashFlowSection: React.FC<{
+const CashFlowSection = ({ title, items, total, currencySymbol, color, icon, tableLabel }: {
   title: string;
   items: CashFlowLineItem[];
   total: number;
@@ -33,7 +33,7 @@ const CashFlowSection: React.FC<{
   color: string;
   icon: React.ReactNode;
   tableLabel: string;
-}> = ({ title, items, total, currencySymbol, color, icon, tableLabel }) => (
+}) => (
   <Card>
     <CardHeader className={`${color} text-white rounded-t-lg`}>
       <CardTitle className="flex items-center justify-between">
@@ -234,7 +234,7 @@ function exportCashFlowCsv(
   URL.revokeObjectURL(url);
 }
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -390,7 +390,7 @@ const AppContent: React.FC = () => {
         {cashFlowReport && !isLoading && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { ParcelsService } from './parcels.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -27,7 +28,7 @@ import { ListParcelApplicationsResponseDto } from './dto/list-parcel-application
 
 @ApiTags('parcels')
 @Controller('parcels')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class ParcelsController {
   constructor(private parcelsService: ParcelsService) { }
 

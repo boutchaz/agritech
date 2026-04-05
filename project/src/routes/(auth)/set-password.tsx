@@ -273,12 +273,7 @@ function SetPasswordPage() {
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={loading || !password || !confirmPassword || password !== confirmPassword}
-                className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg shadow-green-600/20"
-                size="lg"
-              >
+              <Button variant="green" type="submit" disabled={loading || !password || !confirmPassword || password !== confirmPassword} className="w-full h-11 font-medium shadow-lg shadow-green-600/20" size="lg" >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />

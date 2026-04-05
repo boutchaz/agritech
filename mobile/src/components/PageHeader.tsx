@@ -21,6 +21,7 @@ type PageHeaderProps = {
   actions?: HeaderAction[];
   onMorePress?: () => void;
   transparent?: boolean;
+  backButtonAccessibilityLabel?: string;
 };
 
 export default function PageHeader({
@@ -30,6 +31,7 @@ export default function PageHeader({
   actions,
   onMorePress,
   transparent = false,
+  backButtonAccessibilityLabel = 'Go back',
 }: PageHeaderProps) {
   const router = useRouter();
   const navigation = useNavigation();
@@ -57,6 +59,8 @@ export default function PageHeader({
           style={styles.iconBtn}
           onPress={() => router.back()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={backButtonAccessibilityLabel}
         >
           <Ionicons name="arrow-back" size={24} color={iconColor} />
         </TouchableOpacity>

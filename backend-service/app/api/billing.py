@@ -1,14 +1,15 @@
-from fastapi import APIRouter, HTTPException, Header, Path
+from fastapi import APIRouter, HTTPException, Header, Path, Depends
 from fastapi.responses import Response
 from typing import Optional
 from app.services.pdf import PDFGeneratorFactory
 from app.core.config import settings
 from app.core.supabase_client import verify_auth_and_get_client
+from app.middleware.auth import get_current_user
 import logging
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(get_current_user)])
 
 async def fetch_organization(supabase, organization_id: str):
     """Fetch organization details"""
@@ -64,7 +65,8 @@ async def fetch_template(supabase, organization_id: str, document_type: str):
 @router.get("/quotes/{quote_id}/pdf")
 async def generate_quote_pdf_endpoint(
     quote_id: str = Path(..., description="UUID of the quote"),
-    authorization: Optional[str] = Header(None, alias="Authorization")
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_organization_id: Optional[str] = Header(None, alias="X-Organization-Id"),
 ):
     """
     Generate PDF for a quote
@@ -80,10 +82,13 @@ async def generate_quote_pdf_endpoint(
         # Verify authorization
         user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
-        # Fetch quote with items
-        quote_response = supabase.table("quotes").select(
+        # Fetch quote with items — scoped to organization
+        query = supabase.table("quotes").select(
             "*, items:quote_items(*)"
-        ).eq("id", quote_id).execute()
+        ).eq("id", quote_id)
+        if x_organization_id:
+            query = query.eq("organization_id", x_organization_id)
+        quote_response = query.execute()
 
         if not quote_response.data or len(quote_response.data) == 0:
             raise HTTPException(status_code=404, detail="Quote not found")
@@ -148,13 +153,14 @@ async def generate_quote_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for quote {quote_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/invoices/{invoice_id}/pdf")
 async def generate_invoice_pdf_endpoint(
     invoice_id: str = Path(..., description="UUID of the invoice"),
-    authorization: Optional[str] = Header(None, alias="Authorization")
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_organization_id: Optional[str] = Header(None, alias="X-Organization-Id"),
 ):
     """
     Generate PDF for an invoice
@@ -170,10 +176,13 @@ async def generate_invoice_pdf_endpoint(
         # Verify authorization
         user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
-        # Fetch invoice with items
-        invoice_response = supabase.table("invoices").select(
+        # Fetch invoice with items — scoped to organization
+        query = supabase.table("invoices").select(
             "*, items:invoice_items(*)"
-        ).eq("id", invoice_id).execute()
+        ).eq("id", invoice_id)
+        if x_organization_id:
+            query = query.eq("organization_id", x_organization_id)
+        invoice_response = query.execute()
 
         if not invoice_response.data or len(invoice_response.data) == 0:
             raise HTTPException(status_code=404, detail="Invoice not found")
@@ -238,13 +247,14 @@ async def generate_invoice_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for invoice {invoice_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/purchase-orders/{purchase_order_id}/pdf")
 async def generate_purchase_order_pdf_endpoint(
     purchase_order_id: str = Path(..., description="UUID of the purchase order"),
-    authorization: Optional[str] = Header(None, alias="Authorization")
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_organization_id: Optional[str] = Header(None, alias="X-Organization-Id"),
 ):
     """
     Generate PDF for a purchase order
@@ -260,10 +270,13 @@ async def generate_purchase_order_pdf_endpoint(
         # Verify authorization
         user, supabase = await verify_auth_and_get_client(authorization, use_service_key=False)
 
-        # Fetch purchase order with items
-        po_response = supabase.table("purchase_orders").select(
+        # Fetch purchase order with items — scoped to organization
+        query = supabase.table("purchase_orders").select(
             "*, items:purchase_order_items(*)"
-        ).eq("id", purchase_order_id).execute()
+        ).eq("id", purchase_order_id)
+        if x_organization_id:
+            query = query.eq("organization_id", x_organization_id)
+        po_response = query.execute()
 
         if not po_response.data or len(po_response.data) == 0:
             raise HTTPException(status_code=404, detail="Purchase order not found")
@@ -323,7 +336,7 @@ async def generate_purchase_order_pdf_endpoint(
         raise
     except Exception as e:
         logger.error(f"PDF generation failed for purchase order {purchase_order_id}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="PDF generation failed. Please try again later.")
 
 
 @router.get("/supported-document-types")

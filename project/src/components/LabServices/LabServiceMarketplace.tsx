@@ -148,8 +148,8 @@ export function LabServiceMarketplace({
                               Paramètres analysés:
                             </p>
                             <div className="flex flex-wrap gap-1">
-                              {service.parameters_tested.slice(0, 3).map((param: string, idx: number) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
+                              {service.parameters_tested.slice(0, 3).map((param: string) => (
+                                <Badge key={param} variant="outline" className="text-xs">
                                   {param}
                                 </Badge>
                               ))}

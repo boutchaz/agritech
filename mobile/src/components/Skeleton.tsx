@@ -81,8 +81,8 @@ function FieldCardSkeleton() {
 function StatRowSkeleton({ count = 3 }: { count?: number }) {
   return (
     <View style={styles.statRow}>
-      {Array.from({ length: count }).map((_, idx) => (
-        <View key={`skeleton-stat-col-${String(idx)}`} style={styles.statCard}>
+      {Array.from({ length: count }).map((_, colIdx) => (
+        <View key={`skeleton-stat-col-${String(colIdx)}`} style={styles.statCard}>
           <SkeletonBox width={40} height={40} radius={borderRadius.full} />
           <SkeletonBox width={40} height={24} style={{ marginTop: spacing.sm }} />
           <SkeletonBox width={60} height={12} style={{ marginTop: spacing.xs }} />

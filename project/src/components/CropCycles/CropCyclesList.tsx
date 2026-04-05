@@ -557,7 +557,7 @@ export function CropCyclesList() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>
@@ -924,9 +924,9 @@ export function CropCyclesList() {
             <div className="hidden md:block overflow-x-auto">
               <div className="min-w-[800px]">
                 <div className="grid grid-cols-12 gap-1 mb-4 border-b pb-2 text-sm font-medium text-muted-foreground text-center">
-                  {Array.from({ length: 12 }).map((_, i) => (
-                    <div key={i}>
-                      {new Date(0, i).toLocaleString("default", {
+                  {Array.from({ length: 12 }).map((_, monthIdx) => (
+                    <div key={"month-" + monthIdx}>
+                      {new Date(0, monthIdx).toLocaleString("default", {
                         month: "short",
                       })}
                     </div>

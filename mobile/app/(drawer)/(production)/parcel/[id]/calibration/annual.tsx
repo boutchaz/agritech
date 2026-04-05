@@ -117,7 +117,7 @@ export default function AnnualRecalibrationScreen() {
         <Card variant="elevated">
           <Text style={styles.cardTitle}>{t('missingTasks')}</Text>
           {missingTasks.map((task, index) => (
-            <View key={index} style={styles.taskItem}>
+            <View key={task.action} style={styles.taskItem}>
               <Ionicons
                 name={task.action === 'quick_entry' ? 'create-outline' : 'checkmark-circle-outline'}
                 size={20}

@@ -152,7 +152,7 @@ export default function OrdersPage() {
                                         <div className="flex -space-x-2">
                                             {(order.items || []).slice(0, 3).map((item, index) => (
                                                 <div
-                                                    key={index}
+                                                    key={(item as any).image_url}
                                                     className="w-12 h-12 bg-gray-100 rounded-lg border-2 border-white overflow-hidden"
                                                 >
                                                     {(item as any).image_url ? (

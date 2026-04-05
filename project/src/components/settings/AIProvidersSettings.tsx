@@ -60,7 +60,7 @@ const providers: ProviderConfig[] = [
   },
 ];
 
-export const AIProvidersSettings: React.FC = () => {
+export const AIProvidersSettings = () => {
   const { t } = useTranslation();
   const { data: settings = [], isLoading } = useOrganizationAISettings();
   const upsertMutation = useUpsertAIProvider();
@@ -68,11 +68,7 @@ export const AIProvidersSettings: React.FC = () => {
   const toggleMutation = useToggleAIProvider();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [apiKeys, setApiKeys] = useState<Record<AIProviderType, string>>({
     openai: '',
@@ -358,10 +354,10 @@ export const AIProvidersSettings: React.FC = () => {
                             {t('app.cancel', 'Annuler')}
                           </Button>
                         )}
-                        <Button
+                        <Button variant="green"
                           onClick={() => handleSaveKey(provider.id)}
                           disabled={!apiKeys[provider.id].trim() || isPending}
-                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
                         >
                           {upsertMutation.isPending ? (
                             <Loader2 className="w-4 h-4 animate-spin" />

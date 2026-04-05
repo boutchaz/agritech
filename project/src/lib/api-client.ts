@@ -48,29 +48,21 @@ async function fetchWithRetry(
  * Handle session expiration by clearing auth state and redirecting to login
  */
 function handleSessionExpired(): void {
-  // Prevent multiple redirects
   if (isRedirectingToLogin) {
     return;
   }
 
   isRedirectingToLogin = true;
 
-  // Clear all auth-related data
-  useAuthStore.getState().clearAuth();
-  useOrganizationStore.getState().clearOrganization();
-  localStorage.removeItem("currentOrganization");
-  localStorage.removeItem("currentFarm");
-
-  // Redirect to login after a short delay to allow error handling
   setTimeout(() => {
     if (
       typeof window !== "undefined" &&
       window.location.pathname !== "/login"
     ) {
-      window.location.href = "/login";
+      const redirectPath = window.location.pathname + window.location.search;
+      window.location.href = `/login?redirect=${encodeURIComponent(redirectPath)}`;
     }
-    isRedirectingToLogin = false;
-  }, 100);
+  }, 300);
 }
 
 // Device Analytics Headers
@@ -180,7 +172,6 @@ export async function getApiHeaders(
   const analyticsHeaders = getAnalyticsHeaders();
 
   const headers: HeadersInit = {
-    "Content-Type": "application/json",
     Authorization: `Bearer ${accessToken}`,
     "Cache-Control": "no-cache, no-store, must-revalidate",
     Pragma: "no-cache",
@@ -219,40 +210,48 @@ export async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    let error;
+    // Try to parse JSON error body (may fail for non-JSON responses)
+    let error: Record<string, unknown> | undefined;
     try {
       error = await response.json();
     } catch {
-      if (response.status === 0 || response.status >= 500) {
-        throw new Error(
-          "Connection error. The server may be unavailable. Please check your internet connection and try again.",
-        );
-      } else if (response.status === 401) {
-        if (retryOnUnauthorized) {
-          const refreshed = await useAuthStore.getState().refreshAccessToken();
-          if (refreshed) {
-            return apiRequest<T>(url, options, organizationId, false);
-          }
-        }
-        // Clear auth state and redirect to login
-        handleSessionExpired();
-        throw new Error("Session expired. Please log in again.");
-      } else if (response.status === 403) {
-        throw new Error(
-          "Access denied. You may not have permission to perform this action.",
-        );
-      } else if (response.status === 404) {
-        throw new Error("The requested resource was not found.");
-      } else {
-        error = {
-          message: response.statusText || "API request failed",
-          error: "Unknown error",
-          statusCode: response.status,
-        };
-      }
+      // Not a JSON response — use status text
+      error = {
+        message: response.statusText || "API request failed",
+        statusCode: response.status,
+      };
     }
 
-    const errorMessage = error?.message || error?.error || "API request failed";
+    // Handle 401 — attempt token refresh before giving up
+    if (response.status === 401) {
+      if (retryOnUnauthorized) {
+        const refreshed = await useAuthStore.getState().refreshAccessToken();
+        if (refreshed) {
+          return apiRequest<T>(url, options, organizationId, false);
+        }
+      }
+      handleSessionExpired();
+      throw new Error("Session expired. Please log in again.");
+    }
+
+    if (response.status === 0 || response.status >= 500) {
+      throw new Error(
+        "Connection error. The server may be unavailable. Please check your internet connection and try again.",
+      );
+    }
+
+    if (response.status === 403) {
+      throw new Error(
+        "Access denied. You may not have permission to perform this action.",
+      );
+    }
+
+    if (response.status === 404) {
+      throw new Error("The requested resource was not found.");
+    }
+
+    const errorMessage =
+      (error?.message as string) || (error?.error as string) || "API request failed";
 
     if (errorMessage.includes("Connection error") || response.status === 0) {
       throw new Error(
@@ -367,6 +366,7 @@ export class ApiClient {
       {
         ...options,
         method: "POST",
+        headers: { "Content-Type": "application/json", ...options.headers },
         body: data ? JSON.stringify(data) : undefined,
       },
       orgId,
@@ -393,6 +393,7 @@ export class ApiClient {
       {
         ...options,
         method: "PUT",
+        headers: { "Content-Type": "application/json", ...options.headers },
         body: data ? JSON.stringify(data) : undefined,
       },
       orgId,
@@ -419,6 +420,7 @@ export class ApiClient {
       {
         ...options,
         method: "PATCH",
+        headers: { "Content-Type": "application/json", ...options.headers },
         body: data ? JSON.stringify(data) : undefined,
       },
       orgId,

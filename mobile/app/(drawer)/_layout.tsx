@@ -1,16 +1,18 @@
 import { useMemo } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Drawer } from 'expo-router/drawer';
 import { Redirect, useRouter, usePathname, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useTranslation } from 'react-i18next';
+import { Image } from 'expo-image';
 import { spacing } from '@/constants/theme';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useAbility } from '@/hooks/useAbility';
 import type { Action, Subject } from '@/lib/ability';
 import { useAuthStore } from '@/stores/authStore';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -246,6 +248,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
 
   function renderItem(item: NavItem) {
     const active = isActive(item.route as string);
+    const itemLabel = t(item.labelKey, { ns: 'navigation' });
     return (
       <TouchableOpacity
         key={item.key}
@@ -262,6 +265,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           navigation.closeDrawer();
           router.push(item.route);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={`Navigate to ${itemLabel}`}
+        accessibilityState={{ selected: active }}
       >
         <View
           style={[
@@ -286,7 +292,7 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
             },
           ]}
         >
-          {t(item.labelKey, { ns: 'navigation' })}
+          {itemLabel}
         </Text>
       </TouchableOpacity>
     );
@@ -302,11 +308,15 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           navigation.closeDrawer();
           router.push('/(drawer)/(settings)/profile' as Href);
         }}
+        accessibilityRole="button"
+        accessibilityLabel="Open profile settings"
+        accessibilityHint="Opens your profile details and account settings"
       >
         {profile?.avatar_url ? (
           <Image
             source={{ uri: profile.avatar_url }}
             style={{ width: 44, height: 44, borderRadius: 22 }}
+            contentFit="cover"
           />
         ) : (
           <View style={[styles.avatar, { backgroundColor: themeColors.brandPrimary }]}>
@@ -358,6 +368,9 @@ function CustomDrawerContent({ navigation }: DrawerContentComponentProps) {
           style={styles.logoutButton}
           activeOpacity={0.65}
           onPress={handleSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          accessibilityHint="Logs you out and returns to the login screen"
         >
           <Ionicons name="log-out-outline" size={20} color={themeColors.error} />
           <Text style={[styles.logoutLabel, { color: themeColors.error }]}>
@@ -384,23 +397,25 @@ export default function DrawerLayout() {
   }
 
   return (
-    <Drawer
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        headerShown: false,
-        drawerStyle: { width: 280 },
-        sceneStyle: { backgroundColor: themeColors.background },
-      }}
-    >
-      <Drawer.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(production)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(workforce)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(inventory)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(accounting)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(pest-alerts)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(settings)" options={{ headerShown: false }} />
-      <Drawer.Screen name="(misc)" options={{ headerShown: false }} />
-    </Drawer>
+    <ErrorBoundary>
+      <Drawer
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          headerShown: false,
+          drawerStyle: { width: 280 },
+          sceneStyle: { backgroundColor: themeColors.background },
+        }}
+      >
+        <Drawer.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(production)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(workforce)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(inventory)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(accounting)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(pest-alerts)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(settings)" options={{ headerShown: false }} />
+        <Drawer.Screen name="(misc)" options={{ headerShown: false }} />
+      </Drawer>
+    </ErrorBoundary>
   );
 }
 

@@ -378,6 +378,35 @@ export class BlogSsrService implements OnModuleInit {
       contentHtml = post.content || '';
     }
 
+    // Sanitize HTML from CMS using sanitize-html library
+    const sanitizeHtml = require('sanitize-html');
+    contentHtml = sanitizeHtml(contentHtml, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+        'img', 'figure', 'figcaption', 'picture', 'source',
+        'details', 'summary', 'mark', 'del', 'ins', 'sup', 'sub',
+        'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      ]),
+      allowedAttributes: {
+        ...sanitizeHtml.defaults.allowedAttributes,
+        img: ['src', 'alt', 'title', 'width', 'height', 'loading', 'class'],
+        a: ['href', 'name', 'target', 'rel', 'class', 'id'],
+        source: ['srcset', 'type', 'media'],
+        td: ['colspan', 'rowspan'],
+        th: ['colspan', 'rowspan'],
+        '*': ['class', 'id', 'style'],
+      },
+      allowedSchemes: ['http', 'https', 'mailto'],
+      allowedStyles: {
+        '*': {
+          'color': [/.*/],
+          'text-align': [/.*/],
+          'font-size': [/.*/],
+          'font-weight': [/.*/],
+          'background-color': [/.*/],
+        },
+      },
+    });
+
     const headings = this.extractHeadings(contentHtml);
     contentHtml = this.addHeadingIds(contentHtml);
 
@@ -390,7 +419,8 @@ export class BlogSsrService implements OnModuleInit {
     const canonicalUrl = `${this.siteUrl}/blog/${slug}`;
     const authorInitial = (post.author || 'A').charAt(0).toUpperCase();
 
-    const jsonLdData = JSON.stringify({
+    // Sanitize JSON-LD: escape </script> to prevent script tag breakout
+    const jsonLdRaw = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'Article',
       headline: post.title,
@@ -432,7 +462,7 @@ export class BlogSsrService implements OnModuleInit {
       ogImage: post.featured_image?.url || `${this.siteUrl}/og-image.png`,
       ogLocale: LOCALE_MAP[locale] || 'fr_FR',
       canonicalUrl,
-      jsonLd: `<script type="application/ld+json">${jsonLdData}</script>`,
+      jsonLd: `<script type="application/ld+json">${jsonLdRaw.replace(/<\//g, '<\/')}</script>`,
       categories,
       appUrl: this.appUrl,
       year: new Date().getFullYear(),

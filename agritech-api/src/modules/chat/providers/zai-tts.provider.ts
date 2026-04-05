@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
 import * as jwt from 'jsonwebtoken';
+import { formatAxiosErrorForLog } from '../../../common/utils/safe-json-stringify';
 
 export interface TTSRequest {
   text: string;
@@ -125,9 +126,7 @@ export class ZaiTTSProvider {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const errorMessage = (error as AxiosError).response?.data
-          ? JSON.stringify((error as AxiosError).response?.data)
-          : error.message;
+        const errorMessage = formatAxiosErrorForLog(error as AxiosError);
         this.logger.error(`Z.ai TTS API error: ${errorMessage}`);
         throw new Error(`Z.ai TTS API error: ${errorMessage}`);
       }

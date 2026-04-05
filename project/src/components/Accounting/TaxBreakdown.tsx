@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { formatCurrency, type TaxBreakdownItem } from '@/lib/taxCalculations';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
@@ -12,11 +12,11 @@ interface TaxBreakdownProps {
 /**
  * Component to display tax breakdown in a clean, readable format
  */
-export const TaxBreakdown: React.FC<TaxBreakdownProps> = ({
+export const TaxBreakdown = ({
   taxBreakdown,
   currency = DEFAULT_CURRENCY,
   className = '',
-}) => {
+}: TaxBreakdownProps) => {
   if (taxBreakdown.length === 0) {
     return null;
   }
@@ -67,14 +67,14 @@ interface InvoiceTotalsDisplayProps {
 /**
  * Component to display invoice totals with tax breakdown
  */
-export const InvoiceTotalsDisplay: React.FC<InvoiceTotalsDisplayProps> = ({
+export const InvoiceTotalsDisplay = ({
   subtotal,
   taxTotal,
   grandTotal,
   taxBreakdown = [],
   currency = DEFAULT_CURRENCY,
   className = '',
-}) => {
+}: InvoiceTotalsDisplayProps) => {
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Subtotal */}
@@ -134,14 +134,14 @@ interface LineItemTaxDisplayProps {
 /**
  * Component to display tax information for a single line item
  */
-export const LineItemTaxDisplay: React.FC<LineItemTaxDisplayProps> = ({
+export const LineItemTaxDisplay = ({
   amount,
   taxAmount,
   taxRate,
   taxName,
   currency = DEFAULT_CURRENCY,
   compact = false,
-}) => {
+}: LineItemTaxDisplayProps) => {
   if (taxAmount === 0) {
     return compact ? (
       <span className="text-xs text-gray-500">No tax</span>

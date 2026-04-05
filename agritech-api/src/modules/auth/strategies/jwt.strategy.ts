@@ -31,20 +31,8 @@ export class JwtStrategy implements CanActivate {
     const token = authHeader.substring(7);
 
     try {
-      // Decode JWT payload (without verification - we'll verify with Supabase)
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new UnauthorizedException('Invalid token format');
-      }
-
-      const payload = JSON.parse(
-        Buffer.from(parts[1], 'base64url').toString('utf-8')
-      );
-
-      // Attach payload to request
-      request.userPayload = payload;
-
-      // Validate with Supabase (real security check - verifies RS256 signature)
+      // Validate with Supabase first (real security check - verifies RS256 signature)
+      // SECURITY: Do NOT decode or trust JWT payload before server-side verification.
       const user = await this.authService.validateToken(token);
 
       // Resolve organizationId from organization_users table
@@ -56,8 +44,9 @@ export class JwtStrategy implements CanActivate {
           .select('organization_id')
           .eq('user_id', user.id)
           .eq('is_active', true)
+          .order('created_at', { ascending: true })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         organizationId = orgUser?.organization_id || null;
       } catch (orgError) {
@@ -71,6 +60,9 @@ export class JwtStrategy implements CanActivate {
         userId: user.id, // Add userId alias for backward compatibility
         organizationId,   // Resolved from organization_users table
       };
+
+      // Store raw token for forwarding to internal services (satellite, etc.)
+      request.rawToken = token;
 
       this.logger.debug(`Token validated: user=${user.id}, org=${organizationId}`);
 

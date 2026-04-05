@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { Download, Loader2, CheckCircle, AlertCircle, Lock, FileArchive } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -66,7 +66,7 @@ async function encryptData(data: string, passphrase: string): Promise<ArrayBuffe
   return result.buffer;
 }
 
-export const ExportData: React.FC = () => {
+export const ExportData = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [step, setStep] = useState<ExportStep>('configure');

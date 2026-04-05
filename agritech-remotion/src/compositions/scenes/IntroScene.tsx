@@ -1,7 +1,7 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 
-export const IntroScene: React.FC = () => {
+export const IntroScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -62,9 +62,9 @@ export const IntroScene: React.FC = () => {
       }}
     >
       {/* Floating particles */}
-      {particles.map((p, i) => (
+      {particles.map((p, itemIdx) => (
         <div
-          key={i}
+          key={"item-" + itemIdx}
           style={{
             position: "absolute",
             left: p.x,

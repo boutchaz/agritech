@@ -91,7 +91,6 @@ export default function CalibrationScreen() {
 
   const handleHistoryItemPress = (record: CalibrationHistoryRecord) => {
     // Navigate to history detail if needed
-    console.log('History item pressed:', record.id);
   };
 
   if (isLoading && !statusData) {

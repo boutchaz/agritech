@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import {  useState, useMemo  } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { PageLayout } from "@/components/PageLayout";
@@ -78,20 +78,22 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 
 interface JournalLineInput {
+  id: string;
   account_id: string;
   debit: number;
   credit: number;
   description: string;
 }
 
-const emptyLine: JournalLineInput = {
+const createEmptyLine = (): JournalLineInput => ({
+  id: crypto.randomUUID(),
   account_id: "",
   debit: 0,
   credit: 0,
   description: "",
-};
+});
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { currentOrganization } = useAuth();
 
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -147,8 +149,8 @@ const AppContent: React.FC = () => {
     reference_number: "",
   });
   const [lines, setLines] = useState<JournalLineInput[]>([
-    { ...emptyLine },
-    { ...emptyLine },
+    createEmptyLine(),
+    createEmptyLine(),
   ]);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -223,7 +225,7 @@ const AppContent: React.FC = () => {
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
   const addLine = () => {
-    setLines([...lines, { ...emptyLine }]);
+    setLines([...lines, createEmptyLine()]);
   };
 
   const removeLine = (index: number) => {
@@ -249,7 +251,7 @@ const AppContent: React.FC = () => {
       reference_type: "",
       reference_number: "",
     });
-    setLines([{ ...emptyLine }, { ...emptyLine }]);
+    setLines([createEmptyLine(), createEmptyLine()]);
     setCreateError(null);
   };
 
@@ -463,7 +465,7 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -855,16 +857,16 @@ const AppContent: React.FC = () => {
             {isEntryLoading ? (
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="space-y-2">
+                  {Array.from({ length: 4 }).map((_, skIdx) => (
+                    <div key={"sk-" + skIdx} className="space-y-2">
                       <div className="h-3 w-16 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-24 bg-muted animate-pulse rounded" />
                     </div>
                   ))}
                 </div>
                 <div className="h-px bg-gray-200 dark:bg-gray-700" />
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-4 p-3 border-b border-gray-100 dark:border-gray-700">
+                {Array.from({ length: 3 }).map((_, skIdx) => (
+                  <div key={"sk-" + skIdx} className="flex items-center gap-4 p-3 border-b border-gray-100 dark:border-gray-700">
                     <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
                     <div className="h-4 w-20 bg-muted animate-pulse rounded" />
                     <div className="h-4 w-20 bg-muted animate-pulse rounded" />
@@ -1155,7 +1157,7 @@ const AppContent: React.FC = () => {
               <div className="space-y-3">
                 {lines.map((line, index) => (
                   <div
-                    key={index}
+                    key={line.id}
                     className="grid grid-cols-12 gap-2 items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
                     <div className="col-span-5">

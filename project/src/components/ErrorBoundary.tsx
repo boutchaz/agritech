@@ -92,10 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Go Home
                 </Button>
                 
-                <Button
-                  onClick={this.handleRetry}
-                  className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
+                <Button variant="green" onClick={this.handleRetry} className="gap-2" >
                   <RefreshCw className="w-4 h-4" />
                   Try Again
                 </Button>

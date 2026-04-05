@@ -477,8 +477,8 @@ function SelectTrialPage() {
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     Key Features:
                   </p>
-                  {plan.features.slice(0, 4).map((feature, idx) => (
-                    <div key={idx} className="flex items-start space-x-2">
+                  {plan.features.slice(0, 4).map((feature) => (
+                    <div key={feature} className="flex items-start space-x-2">
                       <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-green-600 flex-shrink-0" />
                       <span className="text-xs text-gray-600 dark:text-gray-400">
                         {feature}

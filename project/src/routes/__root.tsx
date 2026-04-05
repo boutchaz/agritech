@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
+import { createRootRoute, Outlet, useLocation, useRouterState } from '@tanstack/react-router'
 import { Toaster } from 'sonner'
 import { HotkeysProvider } from '@tanstack/react-hotkeys'
 import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
@@ -6,14 +6,45 @@ import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
 import { OfflineIndicator } from '../components/OfflineIndicator'
+import { ServiceWorkerUpdate } from '../components/ServiceWorkerUpdate'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { NotFoundPage } from '../components/NotFoundPage'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from 'react'
+
+/**
+ * Wrapper that catches errors from lazy-loaded components.
+ * Without this, a chunk-load failure would leave the Suspense fallback showing forever
+ * (empty div → "white page").
+ */
+class LazyErrorBoundary extends Component<
+  { children: ReactNode; fallback?: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('[LazyErrorBoundary] Chunk load failed:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render children directly — the lazy wrapper failed but the rest of the
+      // tree (Outlet, providers, etc.) can still render.
+      return this.props.fallback ?? this.props.children;
+    }
+    return this.props.children;
+  }
+}
 
 // Lazy load non-critical UI — command palette, tour, devtools
 // Eagerly start loading these chunks since they wrap the main Outlet
 const globalCommandPaletteImport = import('../components/GlobalCommandPalette');
 const tourContextImport = import('../contexts/TourContext');
+
 
 const GlobalCommandPalette = lazy(() =>
   globalCommandPaletteImport.then((mod) => ({
@@ -54,6 +85,21 @@ function RootComponent() {
   const location = useLocation();
   const isOnboardingRoute = location.pathname.startsWith('/onboarding');
 
+  // Detect not-found state: only the root route matched → no child route matched.
+  // Render the 404 page directly without auth providers to avoid loading skeletons
+  // and auth redirects blocking the not-found page.
+  const matches = useRouterState({ select: (s) => s.matches });
+  const isNotFound = matches.length <= 1;
+
+  if (isNotFound) {
+    return (
+      <div className="h-screen bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </div>
+    );
+  }
+
   return (
       <ErrorBoundary>
         <HotkeysProvider
@@ -68,38 +114,60 @@ function RootComponent() {
           <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
             <AuthProviderSwitch>
               <ExperienceLevelProvider>
-                <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                  <TourProvider>
-                    <AbilityProvider>
-                      <Suspense fallback={<div className="h-screen bg-gray-50 dark:bg-gray-900" />}>
-                        <GlobalCommandPalette>
-                          <div className="h-screen bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-                            <Outlet />
-                            <OfflineIndicator />
-                            {!isOnboardingRoute && (
-                              <Suspense>
-                                <TourHelpButton />
-                              </Suspense>
-                            )}
-                            <Toaster richColors position="top-right" />
-                            {import.meta.env.DEV && (
-                              <Suspense>
-                                <TanStackRouterDevtools />
-                                <ReactQueryDevtools initialIsOpen={false} />
-                              </Suspense>
-                            )}
-                          </div>
-                        </GlobalCommandPalette>
-                      </Suspense>
-                    </AbilityProvider>
-                  </TourProvider>
-                </Suspense>
+                <LazyErrorBoundary fallback={<FallbackShell />}>
+                  <Suspense fallback={<FallbackShell />}>
+                    <TourProvider>
+                      <AbilityProvider>
+                        <LazyErrorBoundary fallback={<FallbackShell />}>
+                          <Suspense fallback={<FallbackShell />}>
+                            <GlobalCommandPalette>
+                              <AppShell isOnboardingRoute={isOnboardingRoute} />
+                            </GlobalCommandPalette>
+                          </Suspense>
+                        </LazyErrorBoundary>
+                      </AbilityProvider>
+                    </TourProvider>
+                  </Suspense>
+                </LazyErrorBoundary>
               </ExperienceLevelProvider>
             </AuthProviderSwitch>
           </NetworkStatusProvider>
         </HotkeysProvider>
       </ErrorBoundary>
     );
+}
+
+/**
+ * Fallback shown while lazy chunks load.
+ * Must NOT render <Outlet /> — that can itself suspend, creating an infinite loop.
+ */
+function FallbackShell() {
+  return <div className="h-screen bg-slate-50 dark:bg-slate-950" />;
+}
+
+/**
+ * Inner shell extracted to keep the JSX tree readable.
+ */
+function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
+  return (
+    <div className="h-screen bg-slate-50 dark:bg-slate-950 overflow-y-auto">
+      <Outlet />
+      <OfflineIndicator />
+      <ServiceWorkerUpdate />
+      {!isOnboardingRoute && (
+        <Suspense>
+          <TourHelpButton />
+        </Suspense>
+      )}
+      <Toaster richColors position="top-right" />
+      {import.meta.env.DEV && (
+        <Suspense>
+          <TanStackRouterDevtools />
+          <ReactQueryDevtools initialIsOpen={false} />
+        </Suspense>
+      )}
+    </div>
+  );
 }
 
 export const Route = createRootRoute({

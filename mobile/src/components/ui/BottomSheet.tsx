@@ -10,9 +10,17 @@ export interface BottomSheetProps {
   title?: string;
   children: ReactNode;
   testID?: string;
+  accessibilityViewIsModal?: boolean;
 }
 
-export function BottomSheet({ visible, onDismiss, title, children, testID }: BottomSheetProps) {
+export function BottomSheet({
+  visible,
+  onDismiss,
+  title,
+  children,
+  testID,
+  accessibilityViewIsModal = true,
+}: BottomSheetProps) {
   const [mounted, setMounted] = useState(visible);
   const translateY = useRef(new Animated.Value(360)).current;
 
@@ -42,7 +50,13 @@ export function BottomSheet({ visible, onDismiss, title, children, testID }: Bot
   }
 
   return (
-    <Modal transparent visible={mounted} animationType="none" onRequestClose={dismiss}>
+    <Modal
+      transparent
+      visible={mounted}
+      animationType="none"
+      onRequestClose={dismiss}
+      accessibilityViewIsModal={accessibilityViewIsModal}
+    >
       <View style={styles.overlay} testID={testID}>
         <Pressable style={styles.backdrop} onPress={dismiss} />
         <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>

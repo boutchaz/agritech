@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AGROGINA — Widget OS Mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ag-green: #2d6a4f;
+    --ag-green-light: #52b788;
+    --ag-green-bright: #74c69d;
+    --ag-green-pale: #d8f3dc;
+    --ag-dark: #081c15;
+    --ag-darker: #040d07;
+    --ag-amber: #f4a261;
+    --ag-red: #e63946;
+    --ag-blue: #4895ef;
+    --ag-purple: #7b5ea7;
+    --ag-teal: #06d6a0;
+    --bg: #0a0f0d;
+    --surface: #111a15;
+    --card: #162019;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: #e8f5e9;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* === HEADER === */
+  header {
+    text-align: center;
+    padding: 4rem 2rem 2rem;
+    position: relative;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(82,183,136,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .logo-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(82,183,136,0.1);
+    border: 1px solid rgba(82,183,136,0.25);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+    color: var(--ag-green-bright);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+  .logo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ag-green-bright); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  header h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 300; letter-spacing: -0.02em; color: #fff; margin-bottom: 0.5rem; }
+  header h1 span { color: var(--ag-green-bright); font-weight: 600; }
+  header p { font-size: 15px; color: rgba(255,255,255,0.45); max-width: 500px; margin: 0 auto; }
+
+  /* === SECTION LABELS === */
+  .section {
+    padding: 3rem 2rem 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .section-label {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 2.5rem;
+  }
+  .section-label .line { flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+  .section-label span {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+  }
+
+  /* === PHONE GRID === */
+  .phones-grid {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .phone-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .role-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(255,255,255,0.4);
+  }
+  .role-name {
+    font-size: 15px; font-weight: 500; color: #fff;
+    margin-top: 2px; text-align: center;
+  }
+
+  /* === PHONE FRAME === */
+  .phone {
+    width: 280px;
+    height: 580px;
+    background: #0d0d0d;
+    border-radius: 44px;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.8),
+      0 40px 80px rgba(0,0,0,0.7),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .phone-notch {
+    position: absolute;
+    top: 12px; left: 50%; transform: translateX(-50%);
+    width: 90px; height: 28px;
+    background: #0d0d0d;
+    border-radius: 100px;
+    z-index: 10;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding-right: 10px; gap: 5px;
+  }
+  .phone-cam { width: 10px; height: 10px; border-radius: 50%; background: #1a1a1a; border: 1.5px solid #2a2a2a; }
+  .phone-screen {
+    position: absolute;
+    inset: 6px;
+    border-radius: 38px;
+    overflow: hidden;
+    background: #1a2420;
+  }
+  .phone-status {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 20px 8px;
+    font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.8);
+    font-family: 'DM Mono', monospace;
+  }
+  .status-right { display: flex; gap: 5px; align-items: center; }
+  .battery { width: 20px; height: 10px; border: 1.5px solid rgba(255,255,255,0.5); border-radius: 2px; position: relative; }
+  .battery::after { content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%); width:3px; height:5px; background: rgba(255,255,255,0.4); border-radius: 1px; }
+  .battery-fill { height: 100%; width: 70%; background: var(--ag-green-bright); border-radius: 1px; }
+  .wifi-icon { font-size: 10px; }
+
+  /* home screen bg */
+  .phone-wallpaper {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, #0d1f16 0%, #0a1a10 40%, #061008 100%);
+  }
+  .phone-wallpaper::before {
+    content:'';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(82,183,136,0.15) 0%, transparent 70%);
+  }
+
+  /* === WIDGETS INSIDE PHONE === */
+  .widgets-area {
+    position: relative;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 2;
+  }
+
+  .widget-row { display: flex; gap: 8px; }
+
+  /* Base widget */
+  .w {
+    border-radius: 18px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .w-sm { width: 120px; height: 120px; }
+  .w-md { width: 120px; height: 120px; }
+  .w-lg { width: 248px; height: 120px; }
+  .w-xl { width: 248px; height: 248px; }
+  .w-tall { width: 120px; height: 248px; }
+
+  /* Widget color themes */
+  .wt-green { background: linear-gradient(135deg, #1a3d2b 0%, #0f2419 100%); border: 1px solid rgba(82,183,136,0.2); }
+  .wt-dark { background: rgba(12,20,15,0.95); border: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(20px); }
+  .wt-amber { background: linear-gradient(135deg, #2d1f0a 0%, #1a1006 100%); border: 1px solid rgba(244,162,97,0.2); }
+  .wt-red { background: linear-gradient(135deg, #2d0f0f 0%, #1a0808 100%); border: 1px solid rgba(230,57,70,0.25); }
+  .wt-blue { background: linear-gradient(135deg, #0a1a2d 0%, #060f1a 100%); border: 1px solid rgba(72,149,239,0.2); }
+  .wt-glass { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(30px); }
+  .wt-teal { background: linear-gradient(135deg, #061f1a 0%, #030f0d 100%); border: 1px solid rgba(6,214,160,0.2); }
+  .wt-purple { background: linear-gradient(135deg, #1a0f2d 0%, #0d0817 100%); border: 1px solid rgba(123,94,167,0.25); }
+
+  /* Widget glow effect */
+  .w::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .wt-green::before { background: radial-gradient(circle, var(--ag-green-bright), transparent); }
+  .wt-amber::before { background: radial-gradient(circle, var(--ag-amber), transparent); }
+  .wt-red::before { background: radial-gradient(circle, var(--ag-red), transparent); }
+  .wt-blue::before { background: radial-gradient(circle, var(--ag-blue), transparent); }
+  .wt-teal::before { background: radial-gradient(circle, var(--ag-teal), transparent); }
+
+  /* Widget typography */
+  .w-icon { font-size: 16px; margin-bottom: 6px; display: block; }
+  .w-label { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.5; margin-bottom: 3px; }
+  .w-value { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; line-height: 1; }
+  .w-value.big { font-size: 34px; }
+  .w-value.sm { font-size: 20px; font-weight: 400; }
+  .w-value-unit { font-size: 12px; opacity: 0.6; font-weight: 400; margin-left: 2px; }
+  .w-sub { font-size: 10px; opacity: 0.5; margin-top: 4px; }
+  .w-title { font-size: 11px; font-weight: 600; margin-bottom: 8px; opacity: 0.85; }
+
+  /* NDVI bar */
+  .ndvi-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); margin-top: 8px; overflow: hidden; }
+  .ndvi-fill { height: 100%; border-radius: 2px; }
+
+  /* Sparkline */
+  .sparkline { margin-top: 8px; }
+
+  /* Alert dot */
+  .alert-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--ag-red);
+    position: absolute; top: 12px; right: 12px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Mini task list */
+  .task-item {
+    display: flex; align-items: center; gap: 7px;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 10px;
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-check {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .task-check.done { background: var(--ag-green-bright); border-color: var(--ag-green-bright); }
+  .task-check.done::after { content: '✓'; font-size: 8px; color: #000; }
+  .task-check.late { border-color: var(--ag-red); }
+  .task-text { flex: 1; opacity: 0.8; }
+  .task-time { opacity: 0.4; font-family: 'DM Mono', monospace; font-size: 9px; }
+
+  /* Ouvrier big task widget */
+  .ouvrier-task {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; text-align: center; gap: 6px;
+  }
+  .ouvrier-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: rgba(244,162,97,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .ouvrier-title { font-size: 13px; font-weight: 600; }
+  .ouvrier-sub { font-size: 10px; opacity: 0.5; }
+  .ouvrier-btn {
+    margin-top: 6px;
+    background: var(--ag-green-bright);
+    color: #000;
+    border: none;
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 10px; font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Indices grid */
+  .indices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+  .index-item { }
+  .index-name { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; opacity: 0.5; }
+  .index-val { font-size: 15px; font-weight: 400; margin-top: 1px; }
+
+  /* === WATCH SECTION === */
+  .watches-grid {
+    display: flex;
+    gap: 60px;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .watch-wrapper {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+
+  /* Apple Watch */
+  .apple-watch {
+    width: 200px;
+    height: 240px;
+    position: relative;
+  }
+  .aw-strap-top {
+    position: absolute;
+    top: -40px; left: 50%; transform: translateX(-50%);
+    width: 76px; height: 50px;
+    background: linear-gradient(180deg, #1a1a1a, #222);
+    border-radius: 10px 10px 0 0;
+  }
+  .aw-strap-bot {
+    position: absolute;
+    bottom: -40px; left: 50%; transform: translateX(-50%);
+    width: 76px; height: 50px;
+    background: linear-gradient(0deg, #1a1a1a, #222);
+    border-radius: 0 0 10px 10px;
+  }
+  .aw-body {
+    position: absolute;
+    inset: 0;
+    background: #1a1a1a;
+    border-radius: 46px;
+    border: 2px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .aw-crown {
+    position: absolute;
+    right: -8px; top: 50%; transform: translateY(-50%);
+    width: 8px; height: 30px;
+    background: #2a2a2a;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .aw-screen {
+    position: absolute;
+    inset: 8px;
+    border-radius: 38px;
+    overflow: hidden;
+    background: #000;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 12px;
+  }
+
+  /* Huawei Round Watch */
+  .huawei-watch {
+    width: 220px; height: 220px;
+    position: relative;
+  }
+  .hw-strap-top {
+    position: absolute;
+    top: -45px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 55px;
+    background: linear-gradient(180deg, #222, #2a2a2a);
+    border-radius: 8px 8px 0 0;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .hw-strap-bot {
+    position: absolute;
+    bottom: -45px; left: 50%; transform: translateX(-50%);
+    width: 60px; height: 55px;
+    background: linear-gradient(0deg, #222, #2a2a2a);
+    border-radius: 0 0 8px 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .hw-body {
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: #151515;
+    border: 3px solid rgba(255,255,255,0.12);
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.5),
+      0 25px 70px rgba(0,0,0,0.9),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+    position: relative;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hw-crown {
+    position: absolute;
+    right: -10px; top: 35%;
+    width: 9px; height: 22px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .hw-btn {
+    position: absolute;
+    right: -10px; top: 58%;
+    width: 9px; height: 14px;
+    background: #252525;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .hw-screen {
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: #000;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 16px;
+    position: relative;
+  }
+
+  /* Watch content */
+  .watch-time { font-size: 36px; font-weight: 300; letter-spacing: -0.03em; color: #fff; line-height: 1; }
+  .watch-date { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 3px; letter-spacing: 0.05em; }
+  .watch-divider { width: 60%; height: 1px; background: rgba(255,255,255,0.08); margin: 8px 0; }
+  .watch-stat { text-align: center; }
+  .watch-stat-val { font-size: 18px; font-weight: 400; }
+  .watch-stat-lbl { font-size: 9px; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 1px; }
+
+  .watch-comps {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; width: 100%; margin-top: 6px;
+  }
+  .watch-comp {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 5px 7px;
+    text-align: center;
+  }
+  .wc-val { font-size: 13px; font-weight: 500; }
+  .wc-lbl { font-size: 8px; opacity: 0.4; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Round watch specific */
+  .rw-arc {
+    position: absolute;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+  }
+
+  /* Colors */
+  .c-green { color: var(--ag-green-bright); }
+  .c-amber { color: var(--ag-amber); }
+  .c-red { color: var(--ag-red); }
+  .c-blue { color: var(--ag-blue); }
+  .c-teal { color: var(--ag-teal); }
+  .c-purple { color: var(--ag-purple); }
+  .c-white { color: #fff; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255,255,255,0.2);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  footer span { color: var(--ag-green-bright); }
+
+  /* Scroll reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge"><div class="logo-dot"></div> AGROGINA · Widget OS · Maquette visuelle</div>
+  <h1>Widgets <span>AGROGINA</span></h1>
+  <p>Aperçu par rôle — Android · iOS · Apple Watch · Huawei Watch</p>
+</header>
+
+<!-- PHONES SECTION -->
+<div class="section reveal">
+  <div class="section-label">
+    <div class="line"></div>
+    <span>Écran d'accueil téléphone</span>
+    <div class="line"></div>
+  </div>
+
+  <div class="phones-grid">
+
+    <!-- PROPRIÉTAIRE -->
+    <div class="phone-wrapper reveal" style="transition-delay:.05s">
+      <div class="role-label">Rôle</div>
+      <div class="role-name">Propriétaire</div>
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-cam"></div></div>
+        <div class="phone-screen">
+          <div class="phone-wallpaper"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="status-right">
+              <span class="wifi-icon">▲</span>
+              <div class="battery"><div class="battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="widgets-area">
+
+            <!-- KPIs ferme - large -->
+            <div class="w w-lg wt-green">
+              <span class="w-label">État global — Ferme Benyagrine</span>
+              <div style="display:flex; align-items:flex-end; gap:6px; margin-top:4px;">
+                <div class="w-value c-green">0.74</div>
+                <div class="w-value-unit c-green">NDVI moy.</div>
+              </div>
+              <div class="ndvi-bar"><div class="ndvi-fill" style="width:74%;background:var(--ag-green-bright)"></div></div>
+              <div class="w-sub">↑ +0.06 vs semaine passée · 463 oliviers</div>
+            </div>
+
+            <!-- Alertes + Irrigation -->
+            <div class="widget-row">
+              <div class="w w-sm wt-red">
+                <div class="alert-dot"></div>
+                <span class="w-icon">⚠️</span>
+                <div class="w-label">Alertes</div>
+                <div class="w-value c-red">2</div>
+                <div class="w-sub">actives</div>
+              </div>
+              <div class="w w-sm wt-blue">
+                <span class="w-icon">💧</span>
+                <div class="w-label">Irrigation</div>
+                <div class="w-value c-blue" style="font-size:18px;margin-top:2px;">06:00</div>
+                <div class="w-sub">demain · 18 m³</div>
+              </div>
+            </div>
+
+            <!-- Phase phénologique + Dépenses -->
+            <div class="widget-row">
+              <div class="w w-sm wt-teal">
+                <span class="w-icon">🌿</span>
+                <div class="w-label">Phase</div>
+                <div class="w-value c-teal" style="font-size:16px;margin-top:2px;">BBCH 53</div>
+                <div class="w-sub">Floraison</div>
+              </div>
+              <div class="w w-sm wt-amber">
+                <span class="w-icon">💰</span>
+                <div class="w-label">Dépenses</div>
+                <div class="w-value c-amber" style="font-size:15px;margin-top:2px;">8,400<span class="w-value-unit">DH</span></div>
+                <div class="w-sub">/ 12 000 budget</div>
+              </div>
+            </div>
+
+            <!-- Tâches du jour -->
+            <div class="w w-lg wt-dark">
+              <div class="w-title c-white">Agenda aujourd'hui</div>
+              <div class="task-item"><div class="task-check done"></div><span class="task-text">Irrigation Bloc Nord</span><span class="task-time">06:00</span></div>
+              <div class="task-item"><div class="task-check done"></div><span class="task-text">Application Difcor</span><span class="task-time">09:00</span></div>
+              <div class="task-item"><div class="task-check late"></div><span class="task-text">Contrôle goutteurs</span><span class="task-time">11:00</span></div>
+              <div class="task-item"><div class="task-check"></div><span class="task-text">Bilan hebdo AgromindIA</span><span class="task-time">15:00</span></div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MANAGER -->
+    <div class="phone-wrapper reveal" style="transition-delay:.15s">
+      <div class="role-label">Rôle</div>
+      <div class="role-name">Manager terrain</div>
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-cam"></div></div>
+        <div class="phone-screen">
+          <div class="phone-wallpaper"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="status-right">
+              <span class="wifi-icon">▲</span>
+              <div class="battery"><div class="battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="widgets-area">
+
+            <!-- Tâches équipe - grand -->
+            <div class="w w-lg wt-dark">
+              <div class="w-title c-white" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>Tâches équipe</span>
+                <span style="font-size:9px;background:rgba(116,198,157,0.15);color:var(--ag-green-bright);padding:2px 8px;border-radius:10px;font-weight:600;">7 / 12</span>
+              </div>
+              <div class="task-item"><div class="task-check done"></div><span class="task-text">Ahmed — Irrigation Bloc A</span><span class="task-time">✓</span></div>
+              <div class="task-item"><div class="task-check done"></div><span class="task-text">Khalid — Taille Bloc B</span><span class="task-time">✓</span></div>
+              <div class="task-item"><div class="task-check late"></div><span class="task-text c-red">Omar — Contrôle goutteurs</span><span class="task-time c-red">retard</span></div>
+              <div class="task-item"><div class="task-check"></div><span class="task-text">Youssef — Traitement N2</span><span class="task-time">14:00</span></div>
+            </div>
+
+            <!-- Présence + Alerte -->
+            <div class="widget-row">
+              <div class="w w-sm wt-glass">
+                <span class="w-icon">👷</span>
+                <div class="w-label">Présence</div>
+                <div style="display:flex;align-items:baseline;gap:3px;">
+                  <div class="w-value c-green">8</div>
+                  <div class="w-value-unit">/10</div>
+                </div>
+                <div class="w-sub" style="color:var(--ag-amber)">2 manquants</div>
+              </div>
+              <div class="w w-sm wt-red">
+                <div class="alert-dot"></div>
+                <span class="w-icon">🚨</span>
+                <div class="w-label">Alerte</div>
+                <div class="w-value c-red" style="font-size:11px;margin-top:4px;line-height:1.3">Stress hydrique<br>Bloc Sud</div>
+              </div>
+            </div>
+
+            <!-- Parcelle active -->
+            <div class="w w-lg wt-green">
+              <span class="w-label">Parcelle active — Bloc Nord</span>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:6px;">
+                <div>
+                  <div class="w-value c-green">0.81</div>
+                  <div class="w-sub">NDVI · Excellent</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:11px;color:var(--ag-amber)">ETP: 4.2 mm</div>
+                  <div class="w-sub">28°C · Ensoleillé</div>
+                </div>
+              </div>
+              <div class="ndvi-bar" style="margin-top:10px;"><div class="ndvi-fill" style="width:81%;background:var(--ag-green-bright)"></div></div>
+            </div>
+
+            <!-- Avancement semaine -->
+            <div class="w w-lg wt-dark">
+              <div class="w-title c-white">Avancement semaine</div>
+              <div style="display:flex;gap:4px;align-items:flex-end;height:40px;">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="width:100%;background:var(--ag-green-bright);border-radius:3px 3px 0 0;height:90%"></div>
+                  <div style="font-size:8px;opacity:0.4">L</div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="width:100%;background:var(--ag-green-bright);border-radius:3px 3px 0 0;height:75%"></div>
+                  <div style="font-size:8px;opacity:0.4">M</div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="width:100%;background:rgba(255,255,255,0.1);border-radius:3px 3px 0 0;height:60%;border:1px solid var(--ag-green-bright)"></div>
+                  <div style="font-size:8px;opacity:0.4;color:var(--ag-green-bright)">A</div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="width:100%;background:rgba(255,255,255,0.08);border-radius:3px 3px 0 0;height:50%"></div>
+                  <div style="font-size:8px;opacity:0.4">J</div>
+                </div>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                  <div style="width:100%;background:rgba(255,255,255,0.08);border-radius:3px 3px 0 0;height:40%"></div>
+                  <div style="font-size:8px;opacity:0.4">V</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OUVRIER -->
+    <div class="phone-wrapper reveal" style="transition-delay:.25s">
+      <div class="role-label">Rôle</div>
+      <div class="role-name">Ouvrier agricole</div>
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-cam"></div></div>
+        <div class="phone-screen">
+          <div class="phone-wallpaper" style="background:linear-gradient(160deg,#1a1a0d,#0f0f08)"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="status-right">
+              <span class="wifi-icon">▲</span>
+              <div class="battery"><div class="battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="widgets-area">
+
+            <!-- Tâche principale - très grande, ultra simple -->
+            <div class="w w-lg wt-amber" style="height:180px;">
+              <div class="ouvrier-task">
+                <div class="ouvrier-icon">💧</div>
+                <div class="ouvrier-title">ري المنطقة الشمالية</div>
+                <div class="ouvrier-sub">Irrigation Bloc Nord · 09:00</div>
+                <button class="ouvrier-btn" onclick="this.textContent='✓ Confirmé!';this.style.background='#52b788'">Confirmer ✓</button>
+              </div>
+            </div>
+
+            <!-- Prochaines tâches simple -->
+            <div class="w w-lg wt-dark">
+              <div class="w-title c-white">Mes tâches du jour</div>
+              <div class="task-item"><div class="task-check done"></div><span class="task-text">Application engrais</span><span class="task-time">07:00</span></div>
+              <div class="task-item" style="opacity:1"><div class="task-check" style="border-color:var(--ag-amber)"></div><span class="task-text c-amber">Irrigation Bloc Nord</span><span class="task-time c-amber">09:00 ▶</span></div>
+              <div class="task-item" style="opacity:0.4"><div class="task-check"></div><span class="task-text">Taille branches mortes</span><span class="task-time">14:00</span></div>
+            </div>
+
+            <!-- Rappel meteo simple -->
+            <div class="widget-row">
+              <div class="w w-sm wt-glass" style="text-align:center;">
+                <div style="font-size:28px;margin-bottom:4px;">☀️</div>
+                <div style="font-size:22px;font-weight:300;color:#fff;">28°</div>
+                <div class="w-sub">Beni Mellal</div>
+              </div>
+              <div class="w w-sm wt-green">
+                <span class="w-icon">📅</span>
+                <div class="w-label">Semaine</div>
+                <div style="display:flex;gap:3px;margin-top:8px;">
+                  <div style="width:14px;height:14px;border-radius:4px;background:var(--ag-green-bright);opacity:1"></div>
+                  <div style="width:14px;height:14px;border-radius:4px;background:var(--ag-green-bright);opacity:1"></div>
+                  <div style="width:14px;height:14px;border-radius:4px;background:rgba(255,255,255,0.15);border:1px solid var(--ag-amber)"></div>
+                  <div style="width:14px;height:14px;border-radius:4px;background:rgba(255,255,255,0.08)"></div>
+                  <div style="width:14px;height:14px;border-radius:4px;background:rgba(255,255,255,0.08)"></div>
+                </div>
+                <div class="w-sub" style="margin-top:5px">2/5 faites</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGRONOME -->
+    <div class="phone-wrapper reveal" style="transition-delay:.35s">
+      <div class="role-label">Rôle</div>
+      <div class="role-name">Agronome / Conseiller</div>
+      <div class="phone">
+        <div class="phone-notch"><div class="phone-cam"></div></div>
+        <div class="phone-screen">
+          <div class="phone-wallpaper" style="background:linear-gradient(160deg,#0d1520,#080f18)"></div>
+          <div class="phone-status">
+            <span>9:41</span>
+            <div class="status-right">
+              <span class="wifi-icon">▲</span>
+              <div class="battery"><div class="battery-fill"></div></div>
+            </div>
+          </div>
+          <div class="widgets-area">
+
+            <!-- Indices satellitaires -->
+            <div class="w w-lg wt-blue">
+              <span class="w-label">Indices satellitaires — Ferme Benyagrine</span>
+              <div class="indices-grid" style="margin-top:8px;">
+                <div class="index-item">
+                  <div class="index-name">NDVI</div>
+                  <div class="index-val c-green">0.74</div>
+                </div>
+                <div class="index-item">
+                  <div class="index-name">NIRv</div>
+                  <div class="index-val c-teal">0.61</div>
+                </div>
+                <div class="index-item">
+                  <div class="index-name">NDMI</div>
+                  <div class="index-val c-blue">0.42</div>
+                </div>
+                <div class="index-item">
+                  <div class="index-name">EVI</div>
+                  <div class="index-val c-green">0.55</div>
+                </div>
+                <div class="index-item">
+                  <div class="index-name">NDRE</div>
+                  <div class="index-val" style="color:#a78bfa">0.38</div>
+                </div>
+                <div class="index-item">
+                  <div class="index-name">GCI</div>
+                  <div class="index-val c-teal">2.84</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alertes AgromindIA -->
+            <div class="w w-lg wt-red">
+              <div class="alert-dot"></div>
+              <span class="w-label">AgromindIA · Alertes actives</span>
+              <div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">
+                <div style="background:rgba(230,57,70,0.15);border-radius:8px;padding:6px 8px;">
+                  <div style="font-size:10px;font-weight:600;color:var(--ag-red)">🔴 Stress hydrique · Bloc Sud</div>
+                  <div style="font-size:9px;opacity:0.5;margin-top:2px;">Confiance 87% · NDMI &lt; seuil critique</div>
+                </div>
+                <div style="background:rgba(244,162,97,0.1);border-radius:8px;padding:6px 8px;">
+                  <div style="font-size:10px;font-weight:600;color:var(--ag-amber)">🟡 Risque Cycloconium · Bloc Est</div>
+                  <div style="font-size:9px;opacity:0.5;margin-top:2px;">Confiance 62% · Humidité élevée</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Météo + ETP -->
+            <div class="widget-row">
+              <div class="w w-sm wt-glass">
+                <span class="w-icon">🌡️</span>
+                <div class="w-label">ETP jour</div>
+                <div class="w-value c-amber" style="font-size:22px">4.2</div>
+                <div class="w-sub">mm · Penman</div>
+              </div>
+              <div class="w w-sm wt-teal">
+                <span class="w-icon">🧠</span>
+                <div class="w-label">Recomm.</div>
+                <div class="w-value c-teal" style="font-size:28px">3</div>
+                <div class="w-sub">à valider</div>
+              </div>
+            </div>
+
+            <!-- BBCH + météo -->
+            <div class="w w-lg wt-dark">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div class="w-label">Phase phénologique</div>
+                  <div style="font-size:16px;font-weight:500;color:var(--ag-teal);margin-top:3px;">BBCH 53 — Floraison</div>
+                  <div class="w-sub">Boutons floraux visibles · 8–10 jours</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:20px">☀️</div>
+                  <div style="font-size:18px;font-weight:300;color:#fff">28°</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- WATCHES SECTION -->
+<div class="section reveal" style="margin-top:3rem">
+  <div class="section-label">
+    <div class="line"></div>
+    <span>Smartwatch — Complications</span>
+    <div class="line"></div>
+  </div>
+
+  <div class="watches-grid">
+
+    <!-- APPLE WATCH - Propriétaire -->
+    <div class="watch-wrapper reveal" style="transition-delay:.05s">
+      <div class="apple-watch">
+        <div class="aw-strap-top"></div>
+        <div class="aw-strap-bot"></div>
+        <div class="aw-body">
+          <div class="aw-crown"></div>
+          <div class="aw-screen">
+            <!-- Apple Watch face -->
+            <div class="watch-time" style="font-size:42px">9:41</div>
+            <div class="watch-date">MER 2 AVR</div>
+            <div class="watch-divider"></div>
+
+            <!-- Complications -->
+            <div class="watch-comps">
+              <div class="watch-comp">
+                <div class="wc-val c-green">0.74</div>
+                <div class="wc-lbl">NDVI</div>
+              </div>
+              <div class="watch-comp">
+                <div class="wc-val c-red">2</div>
+                <div class="wc-lbl">Alertes</div>
+              </div>
+              <div class="watch-comp">
+                <div class="wc-val c-blue">06h</div>
+                <div class="wc-lbl">Irrigation</div>
+              </div>
+              <div class="watch-comp">
+                <div class="wc-val c-amber">3/5</div>
+                <div class="wc-lbl">Tâches</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="role-label">Apple Watch</div>
+      <div class="role-name">Propriétaire</div>
+    </div>
+
+    <!-- APPLE WATCH - Ouvrier -->
+    <div class="watch-wrapper reveal" style="transition-delay:.15s">
+      <div class="apple-watch">
+        <div class="aw-strap-top" style="background:linear-gradient(180deg,#2a1a0a,#331f0a)"></div>
+        <div class="aw-strap-bot" style="background:linear-gradient(0deg,#2a1a0a,#331f0a)"></div>
+        <div class="aw-body">
+          <div class="aw-crown"></div>
+          <div class="aw-screen" style="background:#0a0800">
+            <div style="font-size:16px;margin-bottom:4px">💧</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ag-amber);text-align:center;margin-bottom:6px">Irrigation Bloc Nord</div>
+            <div style="font-size:10px;opacity:0.4;margin-bottom:10px">09:00 · En cours</div>
+            <div class="watch-divider"></div>
+            <button onclick="this.textContent='✓ Fait!';this.style.background='#52b788';this.style.color='#000'"
+              style="background:var(--ag-amber);color:#000;border:none;border-radius:100px;padding:7px 18px;font-size:11px;font-weight:700;cursor:pointer;margin-top:6px;font-family:'DM Sans',sans-serif">
+              ✓ Confirmer
+            </button>
+            <div style="font-size:9px;opacity:0.3;margin-top:8px">Suivante: Taille 14:00</div>
+          </div>
+        </div>
+      </div>
+      <div class="role-label">Apple Watch</div>
+      <div class="role-name">Ouvrier</div>
+    </div>
+
+    <!-- HUAWEI ROUND - Agronome -->
+    <div class="watch-wrapper reveal" style="transition-delay:.25s">
+      <div class="huawei-watch">
+        <div class="hw-strap-top"></div>
+        <div class="hw-strap-bot"></div>
+        <div class="hw-body">
+          <div class="hw-crown"></div>
+          <div class="hw-btn"></div>
+          <div class="hw-screen">
+            <!-- SVG arc NDVI -->
+            <svg style="position:absolute;top:0;left:0;width:180px;height:180px;" viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="82" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="6"/>
+              <circle cx="90" cy="90" r="82" fill="none" stroke="#74c69d" stroke-width="6"
+                stroke-dasharray="370" stroke-dashoffset="100"
+                stroke-linecap="round" transform="rotate(-90 90 90)" opacity="0.7"/>
+              <circle cx="90" cy="90" r="82" fill="none" stroke="rgba(230,57,70,0.5)" stroke-width="3"
+                stroke-dasharray="50" stroke-dashoffset="-320"
+                stroke-linecap="round" transform="rotate(-90 90 90)"/>
+            </svg>
+            <!-- Content -->
+            <div style="text-align:center;z-index:1;position:relative;">
+              <div class="watch-time" style="font-size:32px">9:41</div>
+              <div class="watch-date" style="font-size:9px">Mer 2 Avr</div>
+              <div style="margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:5px;">
+                <div style="display:flex;gap:12px;">
+                  <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:400;color:var(--ag-green-bright)">0.74</div>
+                    <div style="font-size:8px;opacity:0.35;text-transform:uppercase;letter-spacing:0.05em">NDVI</div>
+                  </div>
+                  <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
+                  <div style="text-align:center">
+                    <div style="font-size:16px;font-weight:400;color:var(--ag-red)">2</div>
+                    <div style="font-size:8px;opacity:0.35;text-transform:uppercase;letter-spacing:0.05em">Alertes</div>
+                  </div>
+                </div>
+                <div style="font-size:9px;color:var(--ag-teal);background:rgba(6,214,160,0.1);padding:3px 10px;border-radius:10px;">ETP 4.2mm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="role-label">Huawei Watch (ronde)</div>
+      <div class="role-name">Agronome</div>
+    </div>
+
+    <!-- HUAWEI ROUND - Manager -->
+    <div class="watch-wrapper reveal" style="transition-delay:.35s">
+      <div class="huawei-watch">
+        <div class="hw-strap-top" style="background:linear-gradient(180deg,#1a1a2a,#22223a)"></div>
+        <div class="hw-strap-bot" style="background:linear-gradient(0deg,#1a1a2a,#22223a)"></div>
+        <div class="hw-body" style="background:#101018;border-color:rgba(72,149,239,0.15)">
+          <div class="hw-crown"></div>
+          <div class="hw-btn"></div>
+          <div class="hw-screen">
+            <!-- SVG arc tâches -->
+            <svg style="position:absolute;top:0;left:0;width:180px;height:180px;" viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="82" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
+              <circle cx="90" cy="90" r="82" fill="none" stroke="#4895ef" stroke-width="8"
+                stroke-dasharray="515" stroke-dashoffset="146"
+                stroke-linecap="round" transform="rotate(-90 90 90)" opacity="0.6"/>
+            </svg>
+            <div style="text-align:center;z-index:1;position:relative;">
+              <div class="watch-time" style="font-size:30px">9:41</div>
+              <div class="watch-date" style="font-size:9px">Mer 2 Avr</div>
+              <div style="margin-top:8px">
+                <div style="font-size:28px;font-weight:300;color:var(--ag-blue)">7<span style="font-size:14px;opacity:0.5">/12</span></div>
+                <div style="font-size:9px;opacity:0.35;text-transform:uppercase;letter-spacing:0.05em;margin-top:1px">Tâches faites</div>
+                <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;">
+                  <div style="text-align:center">
+                    <div style="font-size:13px;color:var(--ag-green-bright)">8</div>
+                    <div style="font-size:8px;opacity:0.3">Présents</div>
+                  </div>
+                  <div style="width:1px;background:rgba(255,255,255,0.1)"></div>
+                  <div style="text-align:center">
+                    <div style="font-size:13px;color:var(--ag-red)">1</div>
+                    <div style="font-size:8px;opacity:0.3">Retard</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="role-label">Huawei Watch (ronde)</div>
+      <div class="role-name">Manager terrain</div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <p>AGROGINA · Maquette widgets OS · Phase 2–3 · <span>agrogina.ma</span></p>
+  <p style="margin-top:8px;font-size:10px;">Android · iOS · Wear OS · watchOS · Huawei HarmonyOS</p>
+</footer>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

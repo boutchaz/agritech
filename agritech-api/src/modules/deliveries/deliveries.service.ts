@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class DeliveriesService {
@@ -59,7 +60,7 @@ export class DeliveriesService {
         if (filters?.driver_id) q = q.eq('driver_id', filters.driver_id);
         if (filters?.date_from) q = q.gte('delivery_date', filters.date_from);
         if (filters?.date_to) q = q.lte('delivery_date', filters.date_to);
-        if (filters?.customer_name) q = q.ilike('customer_name', `%${filters.customer_name}%`);
+        if (filters?.customer_name) { const s = sanitizeSearch(filters.customer_name); if (s) q = q.ilike('customer_name', `%${s}%`); }
         return q;
       },
       page: filters?.page || 1,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Sliders, Save, Loader2 } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
@@ -12,7 +12,7 @@ import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 
-const PreferencesSettings: React.FC = () => {
+const PreferencesSettings = () => {
   const { i18n, t } = useTranslation();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
@@ -140,11 +140,7 @@ const PreferencesSettings: React.FC = () => {
             {t('preferences.title')}
           </h2>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button variant="green" onClick={handleSave} disabled={isSaving} >
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? t('preferences.saving') : t('preferences.save')}
         </Button>

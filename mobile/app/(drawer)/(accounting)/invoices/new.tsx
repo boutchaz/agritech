@@ -3,81 +3,86 @@ import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
+import { Controller, useForm, useFieldArray } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '@/constants/theme';
 import PageHeader from '@/components/PageHeader';
 import { useCreateInvoice, useCustomers } from '@/hooks/useAccounting';
 import type { CreateInvoiceInput } from '@/types/accounting';
 
-interface InvoiceLineItem {
-  description: string;
-  quantity: string;
-  unit_price: string;
-}
+const lineItemSchema = z.object({
+  description: z.string().min(1, 'Description is required'),
+  quantity: z.string().refine((v) => parseFloat(v) > 0, 'Quantity must be > 0'),
+  unit_price: z.string().refine((v) => parseFloat(v) >= 0, 'Price must be >= 0'),
+});
+
+const invoiceSchema = z.object({
+  customerId: z.string().min(1, 'Please select a customer'),
+  issueDate: z.string().min(1, 'Issue date is required'),
+  dueDate: z.string(),
+  notes: z.string(),
+  lineItems: z.array(lineItemSchema).min(1, 'At least one line item is required'),
+});
+
+type InvoiceFormData = z.infer<typeof invoiceSchema>;
 
 export default function NewInvoiceScreen() {
   const { t } = useTranslation(['common', 'navigation']);
-  const [customerId, setCustomerId] = useState<string>('');
-  const [issueDate, setIssueDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
-  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([
-    { description: '', quantity: '1', unit_price: '' },
-  ]);
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<InvoiceFormData>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      customerId: '',
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      notes: '',
+      lineItems: [{ description: '', quantity: '1', unit_price: '' }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'lineItems',
+  });
 
   const createInvoice = useCreateInvoice();
   const { data: customersResponse } = useCustomers();
   const customers = customersResponse?.data || [];
 
-  const updateLineItem = (index: number, field: keyof InvoiceLineItem, value: string) => {
-    const updated = [...lineItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setLineItems(updated);
-  };
-
-  const addLineItem = () => {
-    setLineItems([...lineItems, { description: '', quantity: '1', unit_price: '' }]);
-  };
-
-  const removeLineItem = (index: number) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((_, i) => i !== index));
-    }
-  };
-
+  const watchedLineItems = watch('lineItems');
   const calculateTotal = () => {
-    return lineItems.reduce((sum, item) => {
+    return (watchedLineItems || []).reduce((sum, item) => {
       const qty = parseFloat(item.quantity) || 0;
       const price = parseFloat(item.unit_price) || 0;
       return sum + qty * price;
     }, 0);
   };
 
-  const handleSubmit = () => {
-    if (!customerId) {
-      Alert.alert(t('errors.missingFields', 'Missing Fields'), t('errors.selectCustomer', 'Please select a customer'));
-      return;
-    }
-
-    const validItems = lineItems.filter(
+  const onSubmit = handleSubmit((data) => {
+    const validItems = data.lineItems.filter(
       (item) => item.description.trim() && parseFloat(item.quantity) > 0 && parseFloat(item.unit_price) >= 0
     );
 
     if (validItems.length === 0) {
-      Alert.alert(t('errors.missingFields', 'Missing Fields'), t('errors.addLineItems', 'Please add at least one line item'));
       return;
     }
 
     const input: CreateInvoiceInput = {
-      customer_id: customerId,
-      issue_date: issueDate,
-      due_date: dueDate || issueDate,
+      customer_id: data.customerId,
+      issue_date: data.issueDate,
+      due_date: data.dueDate || data.issueDate,
       items: validItems.map((item) => ({
         description: item.description,
         quantity: parseFloat(item.quantity),
         unit_price: parseFloat(item.unit_price),
       })),
-      notes: notes || undefined,
+      notes: data.notes || undefined,
     };
 
     createInvoice.mutate(input, {
@@ -88,7 +93,7 @@ export default function NewInvoiceScreen() {
         Alert.alert(t('errors.error', 'Error'), error.message);
       },
     });
-  };
+  });
 
   return (
     <View style={styles.container}>
@@ -97,86 +102,162 @@ export default function NewInvoiceScreen() {
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         {/* Customer Selection */}
         <Text style={styles.label}>{t('accounting.customer', 'Customer')} *</Text>
-        <View style={styles.pickerContainer}>
-          {customers.slice(0, 10).map((customer) => (
-            <Pressable
-              key={customer.id}
-              style={[styles.pickerOption, customerId === customer.id && styles.pickerOptionActive]}
-              onPress={() => setCustomerId(customer.id)}
-            >
-              <Ionicons
-                name={customerId === customer.id ? 'radio-button-on' : 'radio-button-off'}
-                size={20}
-                color={customerId === customer.id ? colors.primary[500] : colors.gray[400]}
-              />
-              <View style={styles.pickerContent}>
-                <Text style={styles.pickerText}>{customer.name}</Text>
-                {customer.email && <Text style={styles.pickerSubtext}>{customer.email}</Text>}
+        <Controller
+          name="customerId"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <>
+              <View style={styles.pickerContainer}>
+                {customers.slice(0, 10).map((customer) => (
+                  <Pressable
+                    key={customer.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: value === customer.id }}
+                    accessibilityLabel={customer.name}
+                    style={[styles.pickerOption, value === customer.id && styles.pickerOptionActive]}
+                    onPress={() => onChange(customer.id)}
+                  >
+                    <Ionicons
+                      name={value === customer.id ? 'radio-button-on' : 'radio-button-off'}
+                      size={20}
+                      color={value === customer.id ? colors.primary[500] : colors.gray[400]}
+                    />
+                    <View style={styles.pickerContent}>
+                      <Text style={styles.pickerText}>{customer.name}</Text>
+                      {customer.email && <Text style={styles.pickerSubtext}>{customer.email}</Text>}
+                    </View>
+                  </Pressable>
+                ))}
               </View>
-            </Pressable>
-          ))}
-        </View>
+              {errors.customerId ? <Text style={styles.fieldError}>{errors.customerId.message}</Text> : null}
+            </>
+          )}
+        />
 
         {/* Dates */}
         <View style={styles.dateRow}>
           <View style={styles.dateField}>
             <Text style={styles.label}>{t('accounting.issueDate', 'Issue Date')} *</Text>
-            <TextInput
-              style={styles.input}
-              value={issueDate}
-              onChangeText={setIssueDate}
-              placeholder="YYYY-MM-DD"
+            <Controller
+              name="issueDate"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    accessibilityLabel={t('accounting.issueDate', 'Issue Date')}
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder={t('common.form.dateFormat', 'YYYY-MM-DD')}
+                  />
+                  {errors.issueDate ? <Text style={styles.fieldError}>{errors.issueDate.message}</Text> : null}
+                </>
+              )}
             />
           </View>
           <View style={styles.dateField}>
             <Text style={styles.label}>{t('accounting.dueDate', 'Due Date')}</Text>
-            <TextInput
-              style={styles.input}
-              value={dueDate}
-              onChangeText={setDueDate}
-              placeholder="YYYY-MM-DD"
+            <Controller
+              name="dueDate"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  accessibilityLabel={t('accounting.dueDate', 'Due Date')}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder={t('common.form.dateFormat', 'YYYY-MM-DD')}
+                />
+              )}
             />
           </View>
         </View>
 
         {/* Line Items */}
         <Text style={styles.sectionTitle}>{t('accounting.lineItems', 'Line Items')}</Text>
-        {lineItems.map((item, index) => (
-          <View key={index} style={styles.lineItemCard}>
+        {errors.lineItems?.root ? <Text style={styles.fieldError}>{errors.lineItems.root.message}</Text> : null}
+        {fields.map((field, index) => (
+          <View key={field.id} style={styles.lineItemCard}>
             <View style={styles.lineItemHeader}>
               <Text style={styles.lineItemNumber}>#{index + 1}</Text>
-              {lineItems.length > 1 && (
-                <Pressable onPress={() => removeLineItem(index)} hitSlop={8}>
+              {fields.length > 1 && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove line item ${index + 1}`}
+                  onPress={() => remove(index)}
+                  hitSlop={8}
+                >
                   <Ionicons name="trash-outline" size={18} color={colors.red[500]} />
                 </Pressable>
               )}
             </View>
-            <TextInput
-              style={styles.input}
-              value={item.description}
-              onChangeText={(value) => updateLineItem(index, 'description', value)}
-              placeholder={t('accounting.description', 'Description')}
+            <Controller
+              name={`lineItems.${index}.description`}
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    accessibilityLabel={`${t('accounting.description', 'Description')} ${index + 1}`}
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder={t('accounting.description', 'Description')}
+                  />
+                  {errors.lineItems?.[index]?.description ? (
+                    <Text style={styles.fieldError}>{errors.lineItems[index].description?.message}</Text>
+                  ) : null}
+                </>
+              )}
             />
             <View style={styles.lineItemRow}>
-              <TextInput
-                style={[styles.input, styles.qtyInput]}
-                value={item.quantity}
-                onChangeText={(value) => updateLineItem(index, 'quantity', value)}
-                placeholder="Qty"
-                keyboardType="decimal-pad"
+              <Controller
+                name={`lineItems.${index}.quantity`}
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      style={[styles.input, styles.qtyInput]}
+                      accessibilityLabel={`${t('common.form.quantity', 'Qty')} ${index + 1}`}
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder={t('common.form.quantity', 'Qty')}
+                      keyboardType="decimal-pad"
+                    />
+                    {errors.lineItems?.[index]?.quantity ? (
+                      <Text style={styles.fieldError}>{errors.lineItems[index].quantity?.message}</Text>
+                    ) : null}
+                  </View>
+                )}
               />
-              <TextInput
-                style={[styles.input, styles.priceInput]}
-                value={item.unit_price}
-                onChangeText={(value) => updateLineItem(index, 'unit_price', value)}
-                placeholder="Unit Price"
-                keyboardType="decimal-pad"
+              <Controller
+                name={`lineItems.${index}.unit_price`}
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <View style={{ flex: 2 }}>
+                    <TextInput
+                      style={[styles.input, styles.priceInput]}
+                      accessibilityLabel={`${t('common.form.unitPrice', 'Unit Price')} ${index + 1}`}
+                      value={value}
+                      onChangeText={onChange}
+                      placeholder={t('common.form.unitPrice', 'Unit Price')}
+                      keyboardType="decimal-pad"
+                    />
+                    {errors.lineItems?.[index]?.unit_price ? (
+                      <Text style={styles.fieldError}>{errors.lineItems[index].unit_price?.message}</Text>
+                    ) : null}
+                  </View>
+                )}
               />
             </View>
           </View>
         ))}
 
-        <Pressable style={styles.addLineButton} onPress={addLineItem}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add line item"
+          style={styles.addLineButton}
+          onPress={() => append({ description: '', quantity: '1', unit_price: '' })}
+        >
           <Ionicons name="add-circle-outline" size={20} color={colors.primary[500]} />
           <Text style={styles.addLineText}>{t('accounting.addLineItem', 'Add Line Item')}</Text>
         </Pressable>
@@ -189,25 +270,38 @@ export default function NewInvoiceScreen() {
 
         {/* Notes */}
         <Text style={styles.label}>{t('accounting.notes', 'Notes')}</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder={t('accounting.notesPlaceholder', 'Add any notes...')}
-          multiline
-          numberOfLines={3}
-          textAlignVertical="top"
+        <Controller
+          name="notes"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              accessibilityLabel={t('accounting.notes', 'Notes')}
+              value={value}
+              onChangeText={onChange}
+              placeholder={t('accounting.notesPlaceholder', 'Add any notes...')}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+          )}
         />
 
         {/* Submit Button */}
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            createInvoice.isPending
+              ? t('common.actions.creating', 'Creating...')
+              : t('accounting.createInvoice', 'Create Invoice')
+          }
           style={[styles.submitButton, createInvoice.isPending && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
+          onPress={onSubmit}
           disabled={createInvoice.isPending}
         >
           <Text style={styles.submitButtonText}>
             {createInvoice.isPending
-              ? t('common.creating', 'Creating...')
+              ? t('common.actions.creating', 'Creating...')
               : t('accounting.createInvoice', 'Create Invoice')}
           </Text>
         </Pressable>
@@ -355,6 +449,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.primary[600],
+  },
+  fieldError: {
+    color: colors.red[600],
+    fontSize: fontSize.xs,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.xs,
   },
   submitButton: {
     backgroundColor: colors.primary[500],

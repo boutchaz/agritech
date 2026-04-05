@@ -79,6 +79,9 @@ interface AuthState {
   setHasHydrated: (state: boolean) => void;
 }
 
+// Mutex for token refresh — prevents concurrent refresh calls
+let _refreshPromise: Promise<boolean> | null = null;
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -125,33 +128,44 @@ export const useAuthStore = create<AuthState>()(
       },
 
       refreshAccessToken: async () => {
-        const { tokens } = get();
-        if (!tokens?.refresh_token) return false;
+        // Deduplicate concurrent refresh calls — return the same promise
+        if (_refreshPromise) return _refreshPromise;
 
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+        _refreshPromise = (async () => {
+          const { tokens } = get();
+          if (!tokens?.refresh_token) return false;
 
-        try {
-          const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ refreshToken: tokens.refresh_token }),
-          });
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-          if (!response.ok) {
+          try {
+            const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ refreshToken: tokens.refresh_token }),
+            });
+
+            if (!response.ok) {
+              return false;
+            }
+
+            const data: AuthTokens = await response.json();
+            get().setTokens({
+              access_token: data.access_token,
+              refresh_token: data.refresh_token,
+              expires_in: data.expires_in,
+            });
+            return true;
+          } catch {
             return false;
           }
+        })();
 
-          const data: AuthTokens = await response.json();
-          get().setTokens({
-            access_token: data.access_token,
-            refresh_token: data.refresh_token,
-            expires_in: data.expires_in,
-          });
-          return true;
-        } catch {
-          return false;
+        try {
+          return await _refreshPromise;
+        } finally {
+          _refreshPromise = null;
         }
       },
 
@@ -167,21 +181,19 @@ export const useAuthStore = create<AuthState>()(
       name: AUTH_STORAGE_KEY, // localStorage/sessionStorage key
       storage: authStorage,
       onRehydrateStorage: () => (state) => {
-        // IMPORTANT: Check if tokens are expired on hydration
-        // This fixes the issue where users get stuck on onboarding with expired tokens
         if (state) {
           const isExpired = state.tokens?.expires_at
             ? Date.now() >= state.tokens.expires_at
             : false;
 
           if (isExpired && state.isAuthenticated) {
-            // Clear expired auth state
-            state.tokens = null;
-            state.user = null;
-            state.isAuthenticated = false;
+            if (!state.tokens?.refresh_token) {
+              state.tokens = null;
+              state.user = null;
+              state.isAuthenticated = false;
+            }
           }
         }
-        // Mark hydration as complete
         state?.setHasHydrated(true);
       },
     }

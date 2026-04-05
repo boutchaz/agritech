@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react'
+import {  lazy, Suspense  } from "react";
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
@@ -12,7 +12,7 @@ import { PageLoader } from '@/components/ui/loader';
 // Lazy load utilities component (includes Recharts ~600KB)
 const UtilitiesManagement = lazy(() => import('@/components/UtilitiesManagement'))
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 

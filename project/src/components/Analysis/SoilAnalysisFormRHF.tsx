@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, X } from 'lucide-react';
@@ -135,7 +135,7 @@ const DEFAULT_SOIL_PARAMS: SoilParamKey[] = [
 ];
 
 // TextField component using useFormContext
-const TextField: React.FC<{
+const TextField = ({ name, label, type = 'text', step, min, max, required, placeholder }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   type?: 'text' | 'number' | 'date';
@@ -144,7 +144,7 @@ const TextField: React.FC<{
   max?: string;
   required?: boolean;
   placeholder?: string;
-}> = ({ name, label, type = 'text', step, min, max, required, placeholder }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -176,12 +176,12 @@ const TextField: React.FC<{
 };
 
 // SelectField component using useFormContext
-const SelectField: React.FC<{
+const SelectField = ({ name, label, options, required }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   options: { value: string; label: string }[];
   required?: boolean;
-}> = ({ name, label, options, required }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -209,12 +209,12 @@ const SelectField: React.FC<{
 };
 
 // TextareaField component using useFormContext
-const TextareaField: React.FC<{
+const TextareaField = ({ name, label, placeholder, rows = 4 }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   placeholder?: string;
   rows?: number;
-}> = ({ name, label, placeholder, rows = 4 }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -237,7 +237,7 @@ const TextareaField: React.FC<{
   );
 };
 
-const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const SoilAnalysisForm = ({ onSave, onCancel, selectedParcel }: SoilAnalysisFormProps) => {
   const methods = useForm<SoilAnalysisFormValues>({
     resolver: zodResolver(soilAnalysisSchema),
     mode: 'onSubmit',
@@ -460,11 +460,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
             >
               Annuler
             </Button>
-            <Button
-              type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
+            <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2 disabled:cursor-not-allowed" disabled={isSubmitting} >
               <Save className="h-4 w-4" />
               <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
             </Button>

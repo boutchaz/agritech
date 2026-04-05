@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 import math
 
-router = APIRouter()
+from app.middleware.auth import get_current_user_or_service
+
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 CORE_INDICES = ["NIRv", "EVI", "NDRE", "NDMI"]
@@ -90,17 +92,34 @@ async def _run_parcel_sync(
                 if point.value is None:
                     continue
                 try:
-                    await supabase_service.save_satellite_data(
-                        {
-                            "parcel_id": parcel_id,
-                            "organization_id": organization_id,
-                            "farm_id": farm_id,
-                            "index_name": index,
-                            "date": str(point.date)[:10],
-                            "mean_value": float(point.value),
-                            "image_source": "sentinel-2",
-                        }
-                    )
+                    row: Dict[str, Any] = {
+                        "parcel_id": parcel_id,
+                        "organization_id": organization_id,
+                        "farm_id": farm_id,
+                        "index_name": index,
+                        "date": str(point.date)[:10],
+                        "mean_value": float(point.value),
+                        "image_source": "sentinel-2",
+                    }
+                    for key in (
+                        "min_value",
+                        "max_value",
+                        "std_value",
+                        "median_value",
+                        "percentile_25",
+                        "percentile_75",
+                        "percentile_90",
+                    ):
+                        v = getattr(point, key, None)
+                        if v is not None:
+                            row[key] = float(v)
+                    pc = getattr(point, "pixel_count", None)
+                    if pc is not None:
+                        row["pixel_count"] = int(pc)
+                    cc = getattr(point, "cloud_coverage", None)
+                    if cc is not None:
+                        row["cloud_coverage_percentage"] = float(cc)
+                    await supabase_service.save_satellite_data(row)
                     total_saved += 1
                 except Exception:
                     pass

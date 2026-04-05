@@ -362,7 +362,7 @@ The NestJS notifications module exposes a Socket.IO gateway on the `/notificatio
 | Endpoint | Description |
 |----------|-------------|
 | `POST /api/calibration/v2/run` | Start the 8-step calibration pipeline |
-| `GET /api/calibration/v2/precompute-gdd` | Precompute growing degree days |
+| `POST /api/calibration/v2/precompute-gdd` | Precompute GDD per daily row (`latitude`, `longitude`, `crop_type`, `rows[]` with temps — see `calibration.py` / OpenAPI) |
 | `POST /api/calibration/v2/extract-raster` | Extract raster values for a parcel geometry |
 | `GET /api/weather/historical` | Fetch historical weather data |
 | `GET /api/weather/forecast` | Fetch weather forecast |

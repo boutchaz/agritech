@@ -1,16 +1,25 @@
 export * from './agricultural-expert.prompt';
+
+// V2 prompt builders (config-driven)
 export {
-  CALIBRATION_EXPERT_SYSTEM_PROMPT,
-  buildCalibrationPrompt,
-} from '../../../libs/agromind-ia/prompts/calibration_prompt';
+  buildCalibrageSystemPrompt,
+  buildCalibrageUserPrompt,
+} from '../../../libs/agromind-ia/prompts/calibrage.prompt.v3';
 export {
-  RECOMMENDATIONS_EXPERT_SYSTEM_PROMPT,
-  buildRecommendationsPrompt,
-} from '../../../libs/agromind-ia/prompts/recommendations_prompt';
+  buildOperationnelSystemPrompt,
+  buildOperationnelUserPrompt,
+} from '../../../libs/agromind-ia/prompts/operationnel.prompt.v3';
 export {
-  ANNUAL_PLAN_EXPERT_SYSTEM_PROMPT,
-  buildAnnualPlanPrompt,
-} from '../../../libs/agromind-ia/prompts/annual_plan_prompt';
+  buildPlanAnnuelSystemPrompt,
+  buildPlanAnnuelUserPrompt,
+} from '../../../libs/agromind-ia/prompts/plan_annuel.prompt.v3';
+export {
+  buildRecalibrageSystemPrompt,
+  buildRecalibragePartielUserPrompt,
+  buildRecalibrageCompletUserPrompt,
+} from '../../../libs/agromind-ia/prompts/recalibrage.prompt';
+
+// Follow-up prompt (kept — may adapt to V2 later)
 export {
   FOLLOWUP_EXPERT_SYSTEM_PROMPT,
   buildFollowUpPrompt,

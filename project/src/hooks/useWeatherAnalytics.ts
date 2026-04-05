@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react';
-import { weatherClimateService, WeatherAnalyticsData, MonthlyWeatherData, TemperatureTimeSeries, EvapotranspirationTimeSeries, MonthlyEvapotranspirationData } from '../services/weatherClimateService';
+import {
+  weatherClimateService,
+  WeatherAnalyticsData,
+  MonthlyWeatherData,
+  TemperatureTimeSeries,
+  EvapotranspirationTimeSeries,
+  MonthlyEvapotranspirationData,
+  ParcelForecastDay,
+} from '../services/weatherClimateService';
 import { apiRequest } from '../lib/api-client';
 
 export type TimeRange = 'last-3-months' | 'last-6-months' | 'last-12-months' | 'ytd' | 'custom';
@@ -14,8 +22,8 @@ interface UseWeatherAnalyticsOptions {
 
 /**
  * Weather analytics hook.
- * Tries NestJS GET /weather/parcel/:id first (single source of truth).
- * Falls back to client-side Open-Meteo if NestJS is unavailable.
+ * Tries NestJS GET /weather/parcel/:id first (Open-Meteo on server; optional OpenWeather only for chat context on API).
+ * Falls back to client-side Open-Meteo if NestJS is unavailable — no weather API key in the browser.
  */
 export function useWeatherAnalytics({
   parcelId,
@@ -48,7 +56,12 @@ export function useWeatherAnalytics({
             `/api/v1/weather/parcel/${parcelId}?start_date=${startDate}&end_date=${endDate}`,
           );
 
-          if (result && (result.temperature_series?.length || result.daily?.length)) {
+          if (
+            result &&
+            (result.forecast?.length ||
+              result.temperature_series?.length ||
+              result.daily?.length)
+          ) {
             setData({
               temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily),
               monthly_precipitation: result.monthly?.map(mapMonthlyToWeatherData) ?? [],
@@ -57,6 +70,7 @@ export function useWeatherAnalytics({
               start_date: startDate,
               end_date: endDate,
               location: result.location ?? { latitude: 0, longitude: 0 },
+              forecast: normalizeApiForecast(result.forecast),
             });
             setLoading(false);
             return;
@@ -87,6 +101,23 @@ export function useWeatherAnalytics({
   }, [parcelId, parcelBoundary, timeRange, customStartDate, customEndDate]);
 
   return { data, loading, error };
+}
+
+function normalizeApiForecast(raw: unknown): ParcelForecastDay[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+  return raw.map((day: any) => ({
+    date: typeof day.date === 'string' ? day.date : String(day.date ?? ''),
+    temp: {
+      day: Number(day.temp?.day ?? 0),
+      min: Number(day.temp?.min ?? 0),
+      max: Number(day.temp?.max ?? 0),
+    },
+    humidity: Number(day.humidity ?? 0),
+    windSpeed: Number(day.windSpeed ?? 0),
+    description: String(day.description ?? ''),
+    icon: String(day.icon ?? '03d'),
+    precipitation: Number(day.precipitation ?? 0),
+  }));
 }
 
 function mapDailyToETSeries(daily: any[]): EvapotranspirationTimeSeries[] {

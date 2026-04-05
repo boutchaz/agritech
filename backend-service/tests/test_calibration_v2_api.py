@@ -131,7 +131,11 @@ def test_precompute_gdd_v2_updates_rows() -> None:
     response = client.post("/api/calibration/v2/precompute-gdd", json=payload)
 
     assert response.status_code == 200
-    assert response.json() == {"crop_type": "olivier", "updated_rows": 1}
+    body = response.json()
+    assert body["crop_type"] == "olivier"
+    assert body["updated_rows"] == 1
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["gdd_olivier"] is not None
 
 
 def test_v1_run_endpoint_removed() -> None:

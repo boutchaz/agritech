@@ -101,7 +101,7 @@ function buildAbilityFromBackend(
 }
 
 // Provider component
-export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AbilityProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, currentOrganization, userRole } = useAuth();
   const { data: subscription } = useSubscription();
 

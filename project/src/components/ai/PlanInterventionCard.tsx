@@ -74,8 +74,8 @@ export function PlanInterventionCard({
           </p>
           {farmerCopy.bullets.length > 0 && (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
-              {farmerCopy.bullets.map((line, index) => (
-                <li key={`${intervention.id}-${index}`}>{line}</li>
+              {farmerCopy.bullets.map((line) => (
+                <li key={`${intervention.id}-${line}`}>{line}</li>
               ))}
             </ul>
           )}
@@ -93,11 +93,11 @@ export function PlanInterventionCard({
       </div>
 
       {canMarkDone && (
-        <Button
+        <Button variant="green"
           type="button"
           onClick={() => onExecute(intervention.id)}
           disabled={isExecuting}
-          className="flex-shrink-0 flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
+          className="flex-shrink-0 flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm"
         >
           <Play className="w-4 h-4 shrink-0" aria-hidden />
           <span>{t('planIntervention.markDone')}</span>

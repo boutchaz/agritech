@@ -28,7 +28,7 @@ interface CalibrationRow {
   health_score: number | string | null;
   yield_potential_min: number | string | null;
   yield_potential_max: number | string | null;
-  calibration_data: unknown;
+  profile_snapshot: unknown;
 }
 
 interface HarvestRow {
@@ -536,6 +536,7 @@ export class AnnualRecalibrationService {
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
+    authToken?: string,
   ): Promise<CalibrationRecord> {
     const eligibility = await this.checkEligibility(parcelId, organizationId);
 
@@ -575,14 +576,14 @@ export class AnnualRecalibrationService {
         mode_calibrage: "annual",
         recalibration_motif: "post_campaign",
       },
-      { skipReadinessCheck: true },
+      { skipReadinessCheck: true, authToken },
     );
 
     const supabase = this.databaseService.getAdminClient();
     const { data: latestCalibrationRow, error: latestCalibrationError } =
       await supabase
         .from("calibrations")
-        .select("calibration_data")
+        .select("profile_snapshot")
         .eq("id", calibration.id)
         .eq("organization_id", organizationId)
         .maybeSingle();
@@ -594,7 +595,7 @@ export class AnnualRecalibrationService {
     }
 
     const currentCalibrationData = this.toJsonObject(
-      latestCalibrationRow?.calibration_data ?? calibration.calibration_data,
+      latestCalibrationRow?.profile_snapshot ?? calibration.profile_snapshot,
     );
     const existingRecalibration = this.toJsonObject(
       currentCalibrationData.recalibration,
@@ -618,7 +619,7 @@ export class AnnualRecalibrationService {
         recalibration_motif: "post_campaign",
         previous_baseline: previousBaseline,
         campaign_bilan: campaignBilan,
-        calibration_data: persistedCalibrationData,
+        profile_snapshot: persistedCalibrationData,
       })
       .eq("id", calibration.id)
       .eq("organization_id", organizationId)
@@ -719,7 +720,7 @@ export class AnnualRecalibrationService {
       return false;
     }
 
-    const calibrationData = this.toJsonObject(baseline.calibration_data);
+    const calibrationData = this.toJsonObject(baseline.profile_snapshot);
     const validation = this.toJsonObject(calibrationData.validation);
     return validation.validated === true;
   }
@@ -732,7 +733,7 @@ export class AnnualRecalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, created_at, completed_at, health_score, yield_potential_min, yield_potential_max, calibration_data",
+        "id, status, created_at, completed_at, health_score, yield_potential_min, yield_potential_max, profile_snapshot",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
@@ -767,7 +768,7 @@ export class AnnualRecalibrationService {
       };
     }
 
-    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const calibrationData = this.toJsonObject(calibration.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
     const step6 = this.toJsonObject(output.step6);
     const yieldPotential = this.toJsonObject(step6.yield_potential);
@@ -786,7 +787,7 @@ export class AnnualRecalibrationService {
       return "indetermine";
     }
 
-    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const calibrationData = this.toJsonObject(calibration.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
     const step6 = this.toJsonObject(output.step6);
     const alternanceInfo = this.toJsonObject(step6.alternance_info);
@@ -1131,7 +1132,7 @@ export class AnnualRecalibrationService {
       return {};
     }
 
-    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const calibrationData = this.toJsonObject(calibration.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
 
     return {
@@ -1191,7 +1192,7 @@ export class AnnualRecalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -1200,13 +1201,13 @@ export class AnnualRecalibrationService {
       return;
     }
 
-    const calibrationData = this.toJsonObject(data.calibration_data);
+    const calibrationData = this.toJsonObject(data.profile_snapshot);
     const annualData = this.toJsonObject(calibrationData.annual);
 
     await supabase
       .from("calibrations")
       .update({
-        calibration_data: {
+        profile_snapshot: {
           ...calibrationData,
           annual: {
             ...annualData,

@@ -26,6 +26,7 @@ def extract_weather_history(
     tbase: float,
     frost_threshold: float = 0.0,
     heat_threshold: float = 38.0,
+    tupper: float | None = None,
 ) -> Step2Output:
     _ = crop_type
 
@@ -60,7 +61,10 @@ def extract_weather_history(
         )
 
         month_key = current_date.strftime("%Y-%m")
-        gdd_daily = max(0.0, ((temp_max + temp_min) / 2.0) - tbase)
+        tmoy = (temp_max + temp_min) / 2.0
+        if tupper is not None:
+            tmoy = min(tmoy, tupper)
+        gdd_daily = max(0.0, tmoy - tbase)
 
         monthly_precip[month_key] += precip
         monthly_gdd[month_key] += gdd_daily

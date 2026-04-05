@@ -11,7 +11,7 @@ interface FeatureGateProps {
   fallback?: React.ReactNode;
 }
 
-const FeatureGate: React.FC<FeatureGateProps> = ({ feature, children, fallback }) => {
+const FeatureGate = ({ feature, children, fallback }: FeatureGateProps) => {
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
 
@@ -29,7 +29,7 @@ interface FeatureLockedMessageProps {
   onUpgrade: () => void;
 }
 
-const FeatureLockedMessage: React.FC<FeatureLockedMessageProps> = ({ onUpgrade }) => {
+const FeatureLockedMessage = ({ onUpgrade }: FeatureLockedMessageProps) => {
   return (
     <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
       <Lock className="h-12 w-12 text-gray-400 mb-4" />
@@ -39,10 +39,7 @@ const FeatureLockedMessage: React.FC<FeatureLockedMessageProps> = ({ onUpgrade }
       <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
         This feature is available on Professional and Enterprise plans.
       </p>
-      <Button
-        onClick={onUpgrade}
-        className="flex items-center space-x-2 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
-      >
+      <Button variant="green" onClick={onUpgrade} className="flex items-center space-x-2 px-6 py-3 rounded-md font-medium" >
         <Zap className="h-5 w-5" />
         <span>Upgrade Now</span>
       </Button>

@@ -252,6 +252,72 @@ export class NotificationsService {
   }
 
   /**
+   * Emails of active members in an organization whose role name is in `roleNames`.
+   */
+  async getManagementEmailsForOrganization(
+    organizationId: string,
+    roleNames: string[] = MANAGEMENT_ROLES,
+  ): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('organization_users')
+      .select(
+        'user_id, user_profiles!organization_users_user_profile_fkey(email), roles!inner(name)',
+      )
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .in('roles.name', roleNames);
+
+    if (error) {
+      this.logger.warn(
+        `getManagementEmailsForOrganization: query failed for org ${organizationId}: ${error.message}`,
+      );
+      return [];
+    }
+
+    const emails = new Set<string>();
+    for (const row of data ?? []) {
+      const profile = (row as { user_profiles?: { email?: string | null } }).user_profiles;
+      const e = profile?.email?.trim().toLowerCase();
+      if (e && e.includes('@')) {
+        emails.add(e);
+      }
+    }
+    return [...emails];
+  }
+
+  /**
+   * Send the same operational email to each deduped management email (best-effort, no throw).
+   */
+  async sendOperationalEmailToManagementRoles(
+    organizationId: string,
+    payload: Pick<EmailOptions, 'subject' | 'html' | 'text'>,
+    roleNames: string[] = MANAGEMENT_ROLES,
+  ): Promise<void> {
+    const recipients = await this.getManagementEmailsForOrganization(
+      organizationId,
+      roleNames,
+    );
+    if (recipients.length === 0) {
+      this.logger.debug(
+        `No management emails for org ${organizationId}; skipping operational email`,
+      );
+      return;
+    }
+    for (const to of recipients) {
+      try {
+        const ok = await this.sendEmail({ to, ...payload });
+        if (!ok) {
+          this.logger.warn(`Operational email not delivered to ${to} (transporter disabled or error)`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Operational email failed for ${to}: ${msg}`);
+      }
+    }
+  }
+
+  /**
    * Get notifications for a user
    */
   async getNotifications(

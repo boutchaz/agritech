@@ -68,7 +68,7 @@ export function ValidationPanel({
         {/* Checks List */}
         <View style={styles.checksContainer}>
           {checks.map((check, index) => (
-            <View key={index} style={styles.checkItem}>
+            <View key={check.check} style={styles.checkItem}>
               <View style={[styles.checkDot, { backgroundColor: checkStatusColors[check.status] || colors.gray[500] }]} />
               <View style={styles.checkContent}>
                 <Text style={styles.checkMessage}>{check.message}</Text>
@@ -109,7 +109,7 @@ export function ValidationPanel({
           <View style={styles.improvementsContainer}>
             <Text style={styles.improvementsTitle}>{t('calibration.improvements')}</Text>
             {readiness.improvements.map((improvement, index) => (
-              <Text key={index} style={styles.improvementItem}>
+              <Text key={improvement} style={styles.improvementItem}>
                 • {improvement}
               </Text>
             ))}

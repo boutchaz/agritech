@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCropCycleDto, CropCycleStatus } from './dto';
@@ -35,10 +36,10 @@ export class CropCyclesService {
       query = query.eq('parcel_id', filters.parcel_id);
     }
     if (filters.variety_name) {
-      query = query.ilike('variety_name', `%${filters.variety_name}%`);
+      { const sv = sanitizeSearch(filters.variety_name); if (sv) query = query.ilike('variety_name', `%${sv}%`); }
     }
     if (filters.crop_type) {
-      query = query.ilike('crop_type', `%${filters.crop_type}%`);
+      { const sc = sanitizeSearch(filters.crop_type); if (sc) query = query.ilike('crop_type', `%${sc}%`); }
     }
     if (filters.planting_date_from) {
       query = query.gte('planting_date', filters.planting_date_from);
@@ -62,7 +63,8 @@ export class CropCyclesService {
       query = query.eq('is_perennial', filters.is_perennial);
     }
     if (filters.search) {
-      query = query.or(`cycle_name.ilike.%${filters.search}%,variety_name.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`cycle_name.ilike.%${s}%,variety_name.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting

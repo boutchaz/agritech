@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from "react";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +40,7 @@ const formatCurrency = (amount: number, currencyCode = 'MAD') =>
 
 const formatPercent = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id ?? null;
@@ -252,11 +252,7 @@ const AppContent: React.FC = () => {
                 />
               </div>
 
-              <Button
-                className="h-9 bg-emerald-600 hover:bg-emerald-700 text-white"
-                onClick={handleApply}
-                disabled={needsValue && !filterValue}
-              >
+              <Button variant="emerald" className="h-9" onClick={handleApply} disabled={needsValue && !filterValue} >
                 <Search className="h-4 w-4 mr-1.5" />
                 {t('reports.analysis.analyze', 'Analyser')}
               </Button>

@@ -176,7 +176,7 @@ describe('AnnualPlanService', () => {
       parcel_id: parcelId,
       organization_id: organizationId,
       calibration_id: null,
-      year: 2026,
+      season: '2026',
       status: 'draft',
       crop_type: 'olivier',
       variety: 'Picholine Marocaine',
@@ -209,7 +209,7 @@ describe('AnnualPlanService', () => {
     expect(summary).toEqual({
       plan_id: planId,
       parcel_id: parcelId,
-      year: 2026,
+      season: '2026',
       status: 'draft',
       total_interventions: 4,
       executed: 1,
@@ -299,6 +299,75 @@ describe('AnnualPlanService', () => {
     await expect(service.validatePlan(planId, organizationId)).rejects.toThrow(
       BadRequestException,
     );
+  });
+
+  describe('getValidatedPlanOrNull', () => {
+    it('returns plan with interventions when a validated plan exists', async () => {
+      const validatedPlanRow = {
+        id: planId,
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        season: '2025-2026',
+        status: 'validated',
+        crop_type: 'olivier',
+        variety: 'Picholine Marocaine',
+        plan_data: null,
+        validated_at: '2026-03-12T12:00:00.000Z',
+        calibration_id: null,
+        created_at: '2026-03-10T10:00:00.000Z',
+        updated_at: null,
+      };
+
+      const annualQuery = createMockQueryBuilder();
+      annualQuery.select.mockReturnValue(annualQuery);
+      annualQuery.eq.mockReturnValue(annualQuery);
+      annualQuery.in.mockReturnValue(annualQuery);
+      annualQuery.order.mockReturnValue(annualQuery);
+      annualQuery.limit.mockReturnValue(annualQuery);
+      annualQuery.maybeSingle.mockResolvedValue(mockQueryResult(validatedPlanRow));
+
+      const interventionsQuery = createInterventionsQuery([
+        createInterventionRecord(3, 'planned'),
+      ]);
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'annual_plans') {
+          return annualQuery;
+        }
+        if (table === 'plan_interventions') {
+          return interventionsQuery;
+        }
+        return createMockQueryBuilder();
+      });
+
+      const result = await service.getValidatedPlanOrNull(parcelId, organizationId);
+
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe('validated');
+      expect(result!.interventions).toHaveLength(1);
+      expect(annualQuery.in).toHaveBeenCalledWith('status', ['validated', 'active']);
+    });
+
+    it('returns null when no validated or active plan exists', async () => {
+      const annualQuery = createMockQueryBuilder();
+      annualQuery.select.mockReturnValue(annualQuery);
+      annualQuery.eq.mockReturnValue(annualQuery);
+      annualQuery.in.mockReturnValue(annualQuery);
+      annualQuery.order.mockReturnValue(annualQuery);
+      annualQuery.limit.mockReturnValue(annualQuery);
+      annualQuery.maybeSingle.mockResolvedValue(mockQueryResult(null));
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'annual_plans') {
+          return annualQuery;
+        }
+        return createMockQueryBuilder();
+      });
+
+      const result = await service.getValidatedPlanOrNull(parcelId, organizationId);
+
+      expect(result).toBeNull();
+    });
   });
 
   function createLookupQuery(data: unknown): MockQueryBuilder {

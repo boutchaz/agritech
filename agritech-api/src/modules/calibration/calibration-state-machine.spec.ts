@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../database/database.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
-import { CalibrationStateMachine } from './calibration-state-machine';
+import { CalibrationStateMachine, AiPhase } from './calibration-state-machine';
 import {
   createMockDatabaseService,
   createMockQueryBuilder,
@@ -10,7 +10,7 @@ import {
   setupThenableMock,
 } from '../../../test/helpers/mock-database.helper';
 
-describe('CalibrationStateMachine', () => {
+describe('CalibrationStateMachine — V2 lifecycle', () => {
   let service: CalibrationStateMachine;
   const parcelId = 'parcel-001';
   const organizationId = 'org-001';
@@ -48,53 +48,94 @@ describe('CalibrationStateMachine', () => {
     jest.clearAllMocks();
   });
 
-  it('allows all valid transitions', async () => {
-    const validTransitions: Array<
-      ['disabled' | 'calibrating' | 'awaiting_validation' | 'awaiting_nutrition_option' | 'active' | 'paused',
-      'disabled' | 'calibrating' | 'awaiting_validation' | 'awaiting_nutrition_option' | 'active' | 'paused']
-    > = [
-      ['disabled', 'calibrating'],
-      ['calibrating', 'awaiting_validation'],
-      ['calibrating', 'disabled'],
-      ['calibrating', 'active'],
-      ['calibrating', 'awaiting_nutrition_option'],
-      ['calibrating', 'pret_calibrage'],
-      ['awaiting_validation', 'awaiting_nutrition_option'],
+  describe('V2 valid transitions', () => {
+    const validTransitions: Array<[AiPhase, AiPhase]> = [
+      // Happy path
+      ['awaiting_data', 'ready_calibration'],
+      ['ready_calibration', 'calibrating'],
+      ['calibrating', 'calibrated'],
+      ['calibrated', 'awaiting_nutrition_option'],
       ['awaiting_nutrition_option', 'active'],
-      ['active', 'awaiting_nutrition_option'],
+      // Recalibration loop from active
       ['active', 'calibrating'],
-      ['active', 'disabled'],
-      ['paused', 'disabled'],
+      // Archive
+      ['active', 'archived'],
+      // Recovery / fallback
+      ['calibrating', 'ready_calibration'],
+      ['calibrating', 'awaiting_data'],
+      ['calibrated', 'calibrating'],
     ];
 
-    for (const [fromPhase, toPhase] of validTransitions) {
-      await expect(
-        service.transitionPhase(parcelId, fromPhase, toPhase, organizationId),
-      ).resolves.toBeUndefined();
-    }
-  });
-
-  it('rejects invalid transition disabled -> active', async () => {
-    await expect(
-      service.transitionPhase(parcelId, 'disabled', 'active', organizationId),
-    ).rejects.toThrow(BadRequestException);
-  });
-
-  it('resets to disabled when boundary changed and phase is active', async () => {
-    const changed = await service.resetToDisabledOnBoundaryChange(
-      parcelId,
-      organizationId,
-      'active',
-      [
-        [-7.1, 31.7],
-        [-7.0, 31.8],
-      ],
-      [
-        [-7.2, 31.7],
-        [-7.0, 31.8],
-      ],
+    it.each(validTransitions)(
+      'allows transition %s → %s',
+      async (from, to) => {
+        await expect(
+          service.transitionPhase(parcelId, from, to, organizationId),
+        ).resolves.toBeUndefined();
+      },
     );
+  });
 
-    expect(changed).toBe(true);
+  describe('V2 invalid transitions', () => {
+    const invalidTransitions: Array<[AiPhase, AiPhase]> = [
+      ['awaiting_data', 'active'],
+      ['awaiting_data', 'calibrated'],
+      ['ready_calibration', 'active'],
+      ['calibrated', 'active'],  // must go through awaiting_nutrition_option
+      ['awaiting_nutrition_option', 'calibrated'],
+    ];
+
+    it.each(invalidTransitions)(
+      'rejects transition %s → %s',
+      async (from, to) => {
+        await expect(
+          service.transitionPhase(parcelId, from, to, organizationId),
+        ).rejects.toThrow(BadRequestException);
+      },
+    );
+  });
+
+  describe('old V1 states are NOT valid', () => {
+    it('rejects disabled as a state', async () => {
+      await expect(
+        service.transitionPhase(parcelId, 'disabled' as AiPhase, 'calibrating' as AiPhase, organizationId),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('boundary change reset', () => {
+    it('resets to awaiting_data when boundary changes on active parcel', async () => {
+      const changed = await service.resetToAwaitingDataOnBoundaryChange(
+        parcelId,
+        organizationId,
+        'active',
+        [[-7.1, 31.7], [-7.0, 31.8]],
+        [[-7.2, 31.7], [-7.0, 31.8]],
+      );
+      expect(changed).toBe(true);
+    });
+
+    it('does not reset when already awaiting_data', async () => {
+      const changed = await service.resetToAwaitingDataOnBoundaryChange(
+        parcelId,
+        organizationId,
+        'awaiting_data',
+        [[-7.1, 31.7]],
+        [[-7.2, 31.7]],
+      );
+      expect(changed).toBe(false);
+    });
+
+    it('does not reset when boundary is unchanged', async () => {
+      const boundary = [[-7.1, 31.7], [-7.0, 31.8]];
+      const changed = await service.resetToAwaitingDataOnBoundaryChange(
+        parcelId,
+        organizationId,
+        'active',
+        boundary,
+        boundary,
+      );
+      expect(changed).toBe(false);
+    });
   });
 });

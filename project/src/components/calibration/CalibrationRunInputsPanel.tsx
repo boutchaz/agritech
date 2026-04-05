@@ -168,13 +168,7 @@ export function CalibrationRunInputsPanel({
               </Button>
             )}
             {onOpenFullRecalibration && (
-              <Button
-                type="button"
-                onClick={onOpenFullRecalibration}
-                disabled={fullRecalibrationDisabled}
-                title={fullTitle}
-                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
+              <Button variant="green" type="button" onClick={onOpenFullRecalibration} disabled={fullRecalibrationDisabled} title={fullTitle} className="rounded-lg px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed" >
                 {t('calibration.runInputs.btnFull')}
               </Button>
             )}

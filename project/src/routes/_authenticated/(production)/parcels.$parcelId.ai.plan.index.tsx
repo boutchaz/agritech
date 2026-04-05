@@ -47,11 +47,11 @@ const AIPlanCalendarPage = () => {
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          <Button
+          <Button variant="green"
             type="button"
             onClick={() => generateAIPlan()}
             disabled={isGenerating || isRegenerating}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
+            className="flex items-center justify-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm"
           >
             <Sparkles className={`w-4 h-4 ${isGenerating ? 'animate-pulse' : ''}`} aria-hidden />
             <span>{isGenerating ? t('plan.calendar.aiGenerating') : t('plan.calendar.aiGenerate')}</span>

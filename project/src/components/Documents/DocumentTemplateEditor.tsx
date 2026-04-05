@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import {  useEffect  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -440,7 +440,7 @@ export function DocumentTemplateEditor({
                         <Ruler className="h-4 w-4" />
                         {t('documents.editor.pageMargins', 'Page Margins (mm)')}
                       </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                           <Label htmlFor="page_margin_top">{t('documents.editor.marginTop', 'Top')}</Label>
                           <Input

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
@@ -26,8 +26,8 @@ export function StockAlertCard({ data }: { data: StockAlertData }) {
           Low Stock Alerts
           <Badge variant="destructive" className="ml-auto">{data.items.length}</Badge>
         </div>
-        {data.items.slice(0, 5).map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-sm">
+        {data.items.slice(0, 5).map((item) => (
+          <div key={item.item_name} className="flex items-center justify-between text-sm">
             <span>{item.item_name}</span>
             <span className="text-xs text-destructive font-medium">
               {item.current_quantity}/{item.min_quantity} {localizeUnit(item.unit, i18n.language)}

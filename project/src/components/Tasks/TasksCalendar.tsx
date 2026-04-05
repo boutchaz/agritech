@@ -109,14 +109,12 @@ const getDueDateStatus = (dueDate: string | null | undefined) => {
 };
 
 // Calendar content component (needs to be inside CalendarProvider)
-const CalendarContent: React.FC<{
-  tasks: Task[];
+const CalendarContent = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }: { tasks: Task[];
   organizationId: string;
   onTaskSelect: (task: Task) => void;
   onCreateTask: () => void;
   currentMonth: number;
-  currentYear: number;
-}> = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }) => {
+  currentYear: number; }) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
@@ -249,7 +247,7 @@ const CalendarContent: React.FC<{
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {/* Total */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow border-l-4 border-slate-500">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('tasks.calendarPage.stats.total', 'Total')}</p>
@@ -526,10 +524,7 @@ const CalendarContent: React.FC<{
                         )}
 
                         {canComplete && (
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
-                            onClick={(e) => handleQuickComplete(e, task)}
+                          <Button variant="green" size="sm" className="h-7 text-xs" onClick={(e) => handleQuickComplete(e, task)}
                             disabled={updateTask.isPending}
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />
@@ -578,7 +573,7 @@ const CalendarContent: React.FC<{
 };
 
 // Wrapper to track calendar month/year changes
-const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farms }) => {
+const TasksCalendarInner = ({ organizationId, farms }: TasksCalendarProps) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -648,7 +643,7 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
 };
 
 // Main component wraps with CalendarProvider
-const TasksCalendar: React.FC<TasksCalendarProps> = (props) => {
+const TasksCalendar = (props: TasksCalendarProps) => {
   const { i18n } = useTranslation();
 
   // Map i18n language to calendar locale

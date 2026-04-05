@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -188,7 +188,7 @@ const waterAnalysisSchema = z.object({
 
 type WaterAnalysisFormData = z.infer<typeof waterAnalysisSchema>;
 
-const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const WaterAnalysisForm = ({ onSave, onCancel, selectedParcel }: WaterAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<WaterAnalysisFormData>();
   const [selectedParams, setSelectedParams] = useState<WaterParamKey[]>(DEFAULT_WATER_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
@@ -427,10 +427,7 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
           >
             Annuler
           </Button>
-          <Button
-            type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
-          >
+          <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
             <span>Enregistrer</span>
           </Button>

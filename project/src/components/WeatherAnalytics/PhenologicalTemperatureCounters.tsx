@@ -352,13 +352,13 @@ interface PhenologicalTemperatureCountersProps {
   endDate?: string;
 }
 
-const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersProps> = ({
+const PhenologicalTemperatureCounters = ({
   temperatureData,
   cropType,
   treeType,
   startDate,
   endDate,
-}) => {
+}: PhenologicalTemperatureCountersProps) => {
   const { t } = useTranslation();
 
   // State for date range customization per stage
@@ -745,7 +745,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
         </div>
 
         {/* Universal counters grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {universalRanges.map((range) => {
             const hours = universalCounters[range.key as keyof typeof universalCounters] as number;
             const percentage = universalCounters.totalHours > 0

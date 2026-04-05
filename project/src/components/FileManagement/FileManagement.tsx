@@ -96,6 +96,19 @@ export function FileManagement() {
     enabled: !!currentOrganization?.id && showOrphansOnly,
   });
 
+  // Sync existing files mutation
+  const syncFilesMutation = useMutation({
+    mutationFn: () => filesApi.syncExisting(currentOrganization?.id),
+    onSuccess: (data) => {
+      toast.success(`${data.synced} fichiers synchronisés, ${data.skipped} ignorés`);
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      queryClient.invalidateQueries({ queryKey: ['file-stats'] });
+    },
+    onError: () => {
+      toast.error('Erreur lors de la synchronisation des fichiers');
+    },
+  });
+
   // Mark orphaned files mutation
   const markOrphanedMutation = useMutation({
     mutationFn: () => filesApi.markOrphaned(currentOrganization?.id),
@@ -162,6 +175,13 @@ export function FileManagement() {
     return <File className="h-4 w-4" />;
   };
 
+  const resolveFileOpenUrl = (file: FileRegistry): string | null => {
+    if (file.public_url && /^https?:\/\//i.test(file.public_url)) {
+      return file.public_url;
+    }
+    return null;
+  };
+
   const filteredFiles = files.filter((file) =>
     file.file_name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
@@ -187,7 +207,7 @@ export function FileManagement() {
       </div>
 
       {/* Storage Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total fichiers</CardTitle>
@@ -248,6 +268,15 @@ export function FileManagement() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => syncFilesMutation.mutate()}
+              disabled={syncFilesMutation.isPending}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Synchroniser les fichiers
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -357,9 +386,18 @@ export function FileManagement() {
                   filteredFiles.map((file) => (
                     <TableRow key={file.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getFileIcon(file.mime_type)}
-                          <span className="font-medium">{file.file_name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {file.mime_type.startsWith('image/') && resolveFileOpenUrl(file) ? (
+                            <img
+                              src={resolveFileOpenUrl(file)!}
+                              alt=""
+                              className="h-9 w-9 rounded-md object-cover border border-border shrink-0"
+                              loading="lazy"
+                            />
+                          ) : (
+                            getFileIcon(file.mime_type)
+                          )}
+                          <span className="font-medium truncate">{file.file_name}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -399,7 +437,16 @@ export function FileManagement() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => window.open(file.file_path, '_blank')}
+                            disabled={!resolveFileOpenUrl(file)}
+                            onClick={() => {
+                              const url = resolveFileOpenUrl(file);
+                              if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                            }}
+                            title={
+                              resolveFileOpenUrl(file)
+                                ? undefined
+                                : 'URL publique indisponible (vérifiez la config API / bucket)'
+                            }
                           >
                             <ExternalLink className="h-4 w-4" />
                           </Button>

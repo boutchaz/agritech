@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -32,11 +32,11 @@ const customerSchema = z.object({
 
 type CustomerFormData = z.infer<typeof customerSchema>;
 
-export const QuickCreateCustomer: React.FC<QuickCreateCustomerProps> = ({
+export const QuickCreateCustomer = ({
   open,
   onOpenChange,
   onSuccess,
-}) => {
+}: QuickCreateCustomerProps) => {
   const createCustomer = useCreateCustomer();
 
   const {

@@ -540,7 +540,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
 
         {/* Harvests Tab */}
         <TabsContent value="harvests" className="mt-6">
-          <div className="grid gap-6 md:grid-cols-4 mb-6">
+          <div className="grid gap-6 lg:grid-cols-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{harvestStats?.total_harvests || 0}</div>

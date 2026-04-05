@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useHotkey, useHotkeyRegistrations } from '@tanstack/react-hotkeys';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useTranslation } from 'react-i18next';
 import {
   CommandDialog,
@@ -25,7 +25,6 @@ import {
   FileText,
   Users,
   Sun,
-  Keyboard,
 } from 'lucide-react';
 
 interface GlobalCommandPaletteProps {
@@ -42,11 +41,11 @@ interface CommandAction {
   onSelect: () => void;
 }
 
-export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ children }) => {
+export const GlobalCommandPalette = ({ children }: GlobalCommandPaletteProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
-  const { hotkeys } = useHotkeyRegistrations();
+
 
   // Listen for programmatic toggle from useCommandPaletteToggle()
   useEffect(() => {
@@ -55,9 +54,14 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
     return () => window.removeEventListener('toggle-command-palette', handler);
   }, []);
 
-  useHotkey('Mod+K', () => setOpen((prev) => !prev), {
-    meta: { name: t('keyboardShortcuts', 'Keyboard shortcuts'), description: 'Toggle command palette' },
-  });
+  const togglePaletteHotkeyOptions = useMemo(
+    () => ({
+      meta: { name: t('keyboardShortcuts', 'Keyboard shortcuts'), description: 'Toggle command palette' },
+    }),
+    [t],
+  );
+
+  useHotkey('Mod+K', () => setOpen((prev) => !prev), togglePaletteHotkeyOptions);
 
   const handleSelect = useCallback(
     (action: () => void) => {
@@ -139,7 +143,7 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
         icon: <Settings className="h-4 w-4" />,
         shortcut: ['g', 't'],
         keywords: ['settings', 'organization'],
-        onSelect: () => navigate({ to: '/settings' }),
+        onSelect: () => navigate({ to: '/settings/account' }),
       },
     ],
     [navigate],
@@ -229,14 +233,6 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
     );
   };
 
-  const shortcutRegistrations = useMemo(
-    () =>
-      hotkeys
-        .filter((reg) => reg.options.meta?.name)
-        .slice(0, 10),
-    [hotkeys],
-  );
-
   return (
     <>
       {children}
@@ -291,24 +287,6 @@ export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ chil
             ))}
           </CommandGroup>
 
-          {shortcutRegistrations.length > 0 && (
-            <>
-              <CommandSeparator />
-              <CommandGroup heading={t('keyboardShortcuts', 'Keyboard shortcuts')}>
-                {shortcutRegistrations.map((reg) => (
-                  <CommandItem
-                    key={reg.hotkey}
-                    value={`shortcut-${reg.hotkey}`}
-                    onSelect={() => setOpen(false)}
-                  >
-                    <Keyboard className="h-4 w-4" />
-                    <span>{reg.options.meta?.name}</span>
-                    <CommandShortcut>{reg.hotkey}</CommandShortcut>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </>
-          )}
         </CommandList>
       </CommandDialog>
     </>

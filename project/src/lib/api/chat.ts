@@ -8,6 +8,7 @@ export interface SendMessageDto {
   query: string;
   language?: 'en' | 'fr' | 'ar';
   save_history?: boolean;
+  image?: string;
 }
 
 export interface ChatContextSummary {
@@ -41,11 +42,13 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   suggestions?: string[];
+  image?: string;
 }
 
 export interface ChatHistoryResponse {
   messages: ChatMessage[];
   total: number;
+  hasMore: boolean;
 }
 
 export const chatApi = {
@@ -67,12 +70,15 @@ export const chatApi = {
   async getHistory(
     organizationId?: string,
     limit = 20,
+    before?: string,
   ): Promise<ChatHistoryResponse> {
     if (!organizationId) {
       throw new OrganizationRequiredError();
     }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (before) params.append('before', before);
     return apiClient.get(
-      `${BASE_URL}/organizations/${organizationId}/chat/history?limit=${limit}`,
+      `${BASE_URL}/organizations/${organizationId}/chat/history?${params.toString()}`,
       {},
       organizationId,
     );
@@ -131,6 +137,7 @@ export const chatApi = {
     onToken: (token: string) => void,
     onComplete: (metadata: any) => void,
     onError: (error: Error) => void,
+    signal?: AbortSignal,
   ): Promise<void> {
     const headers = await getApiHeaders(organizationId);
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -145,6 +152,7 @@ export const chatApi = {
         },
         credentials: 'include',
         body: JSON.stringify(dto),
+        signal,
       },
     );
 
@@ -157,6 +165,11 @@ export const chatApi = {
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+
+    // Cancel the reader if the signal is aborted
+    if (signal) {
+      signal.addEventListener('abort', () => reader.cancel(), { once: true });
+    }
 
     try {
       while (true) {
@@ -180,6 +193,8 @@ export const chatApi = {
         }
       }
     } catch (error) {
+      // Ignore abort errors — they're expected when the user navigates away
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       onError(error instanceof Error ? error : new Error('Stream read error'));
     }
   },

@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  BadRequestException,
   ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -113,10 +112,17 @@ describe('SubscriptionsService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should reject if organization already has active subscription', async () => {
+    it('should return existing subscription idempotently when already active or trialing', async () => {
       const dto = {
         organization_id: TEST_IDS.organization,
         plan_type: TrialPlanInput.PROFESSIONAL,
+      };
+
+      const existingRow = {
+        id: 'existing-sub',
+        organization_id: TEST_IDS.organization,
+        status: 'active',
+        formula: 'professional',
       };
 
       mockClient.from.mockImplementation((table: string) => {
@@ -126,16 +132,15 @@ describe('SubscriptionsService', () => {
             mockQueryResult(mockOrganizationUsers.adminMembership),
           );
         } else if (table === 'subscriptions') {
-          qb.maybeSingle.mockResolvedValue(
-            mockQueryResult({ id: 'existing-sub', status: 'active' }),
-          );
+          qb.maybeSingle.mockResolvedValue(mockQueryResult(existingRow));
         }
         return qb;
       });
 
-      await expect(
-        service.createTrialSubscription(TEST_IDS.user, dto),
-      ).rejects.toThrow(BadRequestException);
+      const result = await service.createTrialSubscription(TEST_IDS.user, dto);
+
+      expect(result.success).toBe(true);
+      expect(result.subscription).toEqual(existingRow);
     });
 
     it('should update existing inactive subscription', async () => {

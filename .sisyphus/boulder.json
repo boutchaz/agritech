@@ -4,7 +4,40 @@
   "session_ids": [
     "ses_2fccf6f46ffe4J8UWniqyvKGj1",
     "ses_2fccf6f46ffe4J8UWniqyvKGj1",
-    "ses_2fc3af19cffecY5i4xHV0zUk08"
+    "ses_2fc3af19cffecY5i4xHV0zUk08",
+    "ses_2b4b180d8ffeTxxqnlunYqxoo3",
+    "ses_2b4aed070ffeLfjNiOKNnvSBir",
+    "ses_2b4aea5edffeAfr3KlDlKaRlt2",
+    "ses_2b4ab7f56ffe4WJ2QE0tyWLwQ1",
+    "ses_2b2521658fferIyveEZa5JGJuv",
+    "ses_2b2521306ffeRejcgELT8MKH9o",
+    "ses_2b252110effesBAGAV3kxJFLU2",
+    "ses_2b24aecbeffeSbVBmruCPrJctQ",
+    "ses_2b23c5a90ffeegXYy4hjU5EQRy",
+    "ses_2b239946fffeN0sCF0Jz4YKayX",
+    "ses_2b23c5c00ffebPnpFeY9TD5PSC",
+    "ses_2b2329752ffevOTM2TDQUxzNX7",
+    "ses_2b234ec95ffeHOLJjj3ghlE2ru",
+    "ses_2b234ea81ffe9NjfRB7rJ5qFiR",
+    "ses_2b22ffbc4ffe2HQyHiEybN8UbJ",
+    "ses_2b22b3479ffecmvpb9416l3JDI",
+    "ses_2b226161affebzCGAlOlnVcLvm",
+    "ses_2b226148affeNuJqSDqErDayFH",
+    "ses_2b21fe1bfffeoc52E8mXP44Z4V",
+    "ses_2b219ac9cffeQ0R6KPziB9X7nN",
+    "ses_2b218e97affeYV7rCtVH33psNf",
+    "ses_2b2161e47ffen5hjX3jB6DV6KT",
+    "ses_2b2161c1fffeiQv7riGmP1ycht",
+    "ses_2b18fccbdffe48U7FqQwl5G9vy",
+    "ses_2b18fcac7ffeJCAMf7IdpK2eHS",
+    "ses_2b18f7987ffe7KQAy5INXCdBj2",
+    "ses_2b18c2695ffe03SBNZZ7a25pZy",
+    "ses_2b187845effeq9qTndyp7rnsNQ",
+    "ses_2b186e9b6ffeIwTEiArDw78OV1",
+    "ses_2b18078a1ffe969e4WU37UQpn6",
+    "ses_2b17907a9ffenAgCjIfMuoVync",
+    "ses_2b17620ceffeMCcItUqQ7ybwqW",
+    "ses_2b17195d7ffeMibBWorAlzUqGa"
   ],
   "plan_name": "mobile-feature-parity",
   "worktree_path": "/Users/boutchaz/Documents/CodeLovers/agritech",
@@ -15,5 +48,15 @@
     "4",
     "5",
     "6"
-  ]
+  ],
+  "task_sessions": {
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Workforce — Tasks Full CRUD + Calendar",
+      "session_id": "ses_2b17195d7ffeMibBWorAlzUqGa",
+      "agent": "oracle",
+      "updated_at": "2026-04-02T14:19:19.582Z"
+    }
+  }
 }

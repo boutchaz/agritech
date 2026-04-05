@@ -1,0 +1,1 @@
+/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/health/SKILL.md

@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
 import { MonitoringCronService } from './monitoring-cron.service';
 import { DatabaseService } from '../database/database.service';
 import { SatelliteCacheService } from './satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   createMockDatabaseService,
   createMockQueryBuilder,
@@ -20,6 +22,18 @@ describe('MonitoringCronService — delta sync', () => {
     getParcelSyncStartDate: jest.fn().mockResolvedValue('2026-03-29'),
   };
 
+  const mockNotificationsService = {
+    sendOperationalEmailToManagementRoles: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockConfigService = {
+    get: jest.fn((key: string) => {
+      if (key === 'CALIBRATION_SATELLITE_CRON_EMAIL') return 'true';
+      if (key === 'FRONTEND_URL') return 'https://app.example.test';
+      return undefined;
+    }),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockDatabaseService = createMockDatabaseService();
@@ -31,6 +45,8 @@ describe('MonitoringCronService — delta sync', () => {
         MonitoringCronService,
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: SatelliteCacheService, useValue: mockCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 
@@ -105,6 +121,17 @@ describe('MonitoringCronService — delta sync', () => {
         startDate: '2026-03-29',
         endDate: TODAY,
       }),
+    );
+
+    expect(
+      mockNotificationsService.sendOperationalEmailToManagementRoles,
+    ).toHaveBeenCalledWith(
+      'org-1',
+      expect.objectContaining({
+        subject: expect.stringContaining('Synchronisation satellite'),
+        html: expect.stringContaining('synchronisées'),
+      }),
+      expect.any(Array),
     );
   });
 

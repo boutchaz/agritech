@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import {  useState  } from "react";
 import {
   Plus,
   Trash2,
@@ -24,7 +24,7 @@ interface TreeManagementProps {
   onDataChange?: () => void;
 }
 
-const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
+const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
   const { currentOrganization } = useAuth();
 
   // Use the hooks to fetch data from the backend
@@ -284,10 +284,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
               placeholder="Nouvelle catégorie..."
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-            <Button
-              onClick={handleAddCategory}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
-            >
+            <Button variant="green" onClick={handleAddCategory} className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2" >
               <Plus className="h-4 w-4" />
               <span>Ajouter catégorie</span>
             </Button>
@@ -356,9 +353,9 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                       placeholder="Ajouter un arbre..."
                       className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     />
-                    <Button
+                    <Button variant="green"
                       onClick={() => handleAddTree(category.id)}
-                      className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                      className="px-3 py-1 rounded text-sm"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -431,7 +428,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
               Ajouter un type de plantation
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
               <input
                 type="text"
                 value={newPlantationType.type}
@@ -468,10 +465,7 @@ const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
                 placeholder="Arbres/ha"
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <Button
-                onClick={handleAddPlantationType}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-              >
+              <Button variant="green" onClick={handleAddPlantationType} className="px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2" >
                 <Plus className="h-4 w-4" />
                 <span>Ajouter</span>
               </Button>

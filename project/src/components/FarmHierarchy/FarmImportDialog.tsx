@@ -17,12 +17,12 @@ interface FarmImportDialogProps {
   onSuccess: () => void;
 }
 
-const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
+const FarmImportDialog = ({
   open,
   onOpenChange,
   organizationId,
   onSuccess,
-}) => {
+}: FarmImportDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -217,11 +217,7 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
             >
               Annuler
             </Button>
-            <Button
-              onClick={handleImport}
-              disabled={!file || isImporting}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-            >
+            <Button variant="green" onClick={handleImport} disabled={!file || isImporting} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
               {isImporting ? 'Import en cours...' : 'Importer'}
             </Button>
           </div>

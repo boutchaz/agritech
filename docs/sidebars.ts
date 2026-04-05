@@ -49,7 +49,7 @@ const sidebars: SidebarsConfig = {
         'features/marketplace',
         'features/compliance',
         'features/cron-jobs',
-        'features/calibration-v2-validation-report',
+        'features/calibration-validation-report',
       ],
     },
     {

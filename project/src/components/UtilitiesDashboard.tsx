@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, PieChart, Activity } from 'lucide-react';
 
@@ -12,7 +12,7 @@ interface UtilitiesDashboardProps {
   currency: string;
 }
 
-const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, utilities, currency }) => {
+const UtilitiesDashboard = ({ chartData, utilities, currency }: UtilitiesDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Chart Grid */}
@@ -73,8 +73,8 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
                   outerRadius={80}
                   label={({ label, percent }: any) => `${label}: ${(percent * 100).toFixed(1)}%`}
                 >
-                  {chartData.costByType.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
+                  {chartData.costByType.map((entry, hueIdx) => (
+                    <Cell key={`cell-${entry.label}`} fill={`hsl(${hueIdx * 45}, 70%, 60%)`} />
                   ))}
                 </Pie>
               </RechartsPieChart>
@@ -127,7 +127,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Statistiques détaillées
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {chartData.costByType.length}

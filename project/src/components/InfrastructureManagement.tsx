@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from "react";
 import { Plus, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask, Building, MapPin } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -17,7 +17,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog';
-import { Button } from './ui/button';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
@@ -32,7 +31,7 @@ const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well', 'other
 // Basin shape keys for translation lookup
 const BASIN_SHAPE_KEYS = ['trapezoidal', 'rectangular', 'cubic', 'circular'] as const;
 
-const InfrastructureManagement: React.FC = () => {
+const InfrastructureManagement = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -45,7 +44,7 @@ const InfrastructureManagement: React.FC = () => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -666,7 +665,7 @@ const InfrastructureManagement: React.FC = () => {
                 <p className="font-medium text-xs text-gray-500 mb-1">{t('infrastructure.fields.equipment')}:</p>
                 <ul className="list-disc list-inside text-xs space-y-0.5">
                   {structure.structure_details.equipment.slice(0, 3).map((item: string, index: number) => (
-                    <li key={index}>{item}</li>
+                    <li key={item}>{item}</li>
                   ))}
                   {structure.structure_details.equipment.length > 3 && (
                     <li className="text-gray-400">+{structure.structure_details.equipment.length - 3} {t('infrastructure.more')}...</li>
@@ -709,10 +708,10 @@ const InfrastructureManagement: React.FC = () => {
             {t('infrastructure.subtitle')}
           </p>
         </div>
-        <Button
+        <Button variant="green"
           data-tour="infrastructure-add"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center justify-center space-x-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
+          className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           <span className="font-medium">{t('infrastructure.actions.new')}</span>
@@ -783,7 +782,10 @@ const InfrastructureManagement: React.FC = () => {
           </div>
 
           {organizationStructures.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+            <div
+              data-tour="infrastructure-list"
+              className="flex flex-col items-center justify-center py-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600"
+            >
               <Building2 className="h-16 w-16 text-gray-400 dark:text-gray-500 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
                 {t('infrastructure.empty.organizationTitle')}
@@ -791,12 +793,12 @@ const InfrastructureManagement: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                 {t('infrastructure.empty.organizationDescription')}
               </p>
-              <Button
+              <Button variant="green"
                 onClick={() => {
                   setActiveTab('organization');
                   setShowAddModal(true);
                 }}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md"
               >
                 <Plus className="h-5 w-5" />
                 <span>{t('infrastructure.actions.add')}</span>
@@ -858,12 +860,12 @@ const InfrastructureManagement: React.FC = () => {
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6 max-w-md">
                   {t('infrastructure.empty.farmDescription')}
                 </p>
-                <Button
+                <Button variant="green"
                   onClick={() => {
                     setActiveTab('farm');
                     setShowAddModal(true);
                   }}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-5 w-5" />
                   <span>{t('infrastructure.actions.add')}</span>
@@ -1171,11 +1173,7 @@ const InfrastructureManagement: React.FC = () => {
             >
               {t('infrastructure.actions.cancel')}
             </Button>
-            <Button
-              type="button"
-              onClick={editingStructure ? handleUpdateStructure : handleAddStructure}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" type="button" onClick={editingStructure ? handleUpdateStructure : handleAddStructure} >
               {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
             </Button>
           </DialogFooter>

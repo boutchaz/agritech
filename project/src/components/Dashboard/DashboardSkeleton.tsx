@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * Rendered when `currentOrganization` is null (auth still loading).
  * Once org loads, individual widget skeletons take over (Layer 2).
  */
-const DashboardSkeleton: React.FC = () => {
+const DashboardSkeleton = () => {
   return (
     <>
       {/* ===== HEADER SKELETON ===== */}
@@ -71,34 +71,37 @@ const DashboardSkeleton: React.FC = () => {
       </div>
 
       {/* ===== CONTENT SKELETON ===== */}
-      <div className="p-3 sm:p-4 lg:p-6 pb-6 space-y-6">
+      <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8">
         {/* Unified view heading */}
-        <div>
-          <Skeleton className="h-6 w-40 mb-2" />
-          <Skeleton className="h-4 w-72" />
+        <div className="border-b border-slate-100 dark:border-slate-800 pb-6 flex justify-between items-end">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48 rounded-lg" />
+            <Skeleton className="h-4 w-72 rounded-md" />
+          </div>
+          <Skeleton className="h-8 w-40 rounded-full" />
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Farm selector skeleton */}
-          <Skeleton className="h-14 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-3xl" />
 
-          {/* Row 1: 4 stat cards (Parcels, Stock, Harvest, Sales) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <WidgetCardSkeleton key={`row1-${i}`} variant="stat" />
+          {/* KPI Tier */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+            {[1, 2, 3, 4].map((_, row1Idx) => (
+              <WidgetCardSkeleton key={`row1-${row1Idx}`} variant="stat" />
             ))}
           </div>
 
-          {/* Row 2: 2 wide cards (Tasks, Accounting) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <WidgetCardSkeleton variant="list" lines={3} />
-            <WidgetCardSkeleton variant="list" lines={3} />
-          </div>
-
-          {/* Row 3: 2 wide cards (Analysis, Workers) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <WidgetCardSkeleton variant="list" lines={3} />
-            <WidgetCardSkeleton variant="list" lines={3} />
+          {/* Operational Tier */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-7 space-y-8">
+              <WidgetCardSkeleton variant="list" lines={4} rounded="rounded-[2.5rem]" />
+              <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
+            </div>
+            <div className="lg:col-span-5 space-y-8">
+              <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
+              <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
+            </div>
           </div>
         </div>
       </div>
@@ -111,42 +114,56 @@ const DashboardSkeleton: React.FC = () => {
  * "stat" variant matches Row 1 cards (header + 2-col stats + small list).
  * "list" variant matches Row 2/3 cards (header + taller list items).
  */
-function WidgetCardSkeleton({ variant, lines = 3 }: { variant: 'stat' | 'list'; lines?: number }) {
+function WidgetCardSkeleton({ 
+  variant, 
+  lines = 3, 
+  rounded = "rounded-3xl" 
+}: { 
+  variant: 'stat' | 'list'; 
+  lines?: number;
+  rounded?: string;
+}) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-7">
+    <div className={`bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 p-6 ${rounded} h-full`}>
       {/* Header: icon + title + link */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Skeleton className="h-10 w-10 rounded-xl" />
-          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-10 w-10 rounded-2xl" />
+          <Skeleton className="h-5 w-24 rounded-lg" />
         </div>
-        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-8 w-8 rounded-xl" />
       </div>
 
       {variant === 'stat' ? (
         <>
           {/* 2-column stat boxes */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <Skeleton className="h-28 rounded-xl" />
-            <Skeleton className="h-28 rounded-xl" />
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <Skeleton className="h-24 rounded-2xl" />
+            <Skeleton className="h-24 rounded-2xl" />
           </div>
           {/* Small list items */}
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-20 mb-1" />
-            {Array.from({ length: lines }).map((_, i) => (
-              <Skeleton key={i} className="h-10 rounded-lg" />
+          <div className="space-y-2 mt-auto">
+            <div className="flex items-center justify-between px-1 mb-3">
+              <Skeleton className="h-3 w-20 rounded" />
+              <Skeleton className="h-px flex-1 mx-3 rounded" />
+            </div>
+            {Array.from({ length: 2 }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
             ))}
           </div>
         </>
       ) : (
         <>
           {/* Calendar / tab bar placeholder */}
-          <Skeleton className="h-12 w-full rounded-lg mb-4" />
+          <Skeleton className="h-12 w-full rounded-2xl mb-6" />
           {/* List items */}
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-40 mb-1" />
-            {Array.from({ length: lines }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1 mb-4">
+              <Skeleton className="h-3 w-32 rounded" />
+              <Skeleton className="h-px flex-1 mx-3 rounded" />
+            </div>
+            {Array.from({ length: lines }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-16 w-full rounded-2xl" />
             ))}
           </div>
         </>

@@ -53,14 +53,14 @@ interface DataTransparencyModalProps {
  * Modal component for displaying detailed data transparency information
  * Shows all source data used to generate an AI report
  */
-export const DataTransparencyModal: React.FC<DataTransparencyModalProps> = ({
+export const DataTransparencyModal = ({
   open,
   onOpenChange,
   metadata,
   isLoading = false,
   onRefreshData,
   isRefreshing = false,
-}) => {
+}: DataTransparencyModalProps) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedSources, setExpandedSources] = useState<string[]>(['satellite', 'weather']);
@@ -190,12 +190,10 @@ export const DataTransparencyModal: React.FC<DataTransparencyModalProps> = ({
 /**
  * Overview tab showing summary of data transparency
  */
-const OverviewTab: React.FC<{
-  metadata: SourceDataMetadata;
+const OverviewTab = ({ metadata, formatDate, onRefreshData, isRefreshing }: { metadata: SourceDataMetadata;
   formatDate: (date: string | null) => string;
   onRefreshData?: (sources: string[]) => void;
-  isRefreshing?: boolean;
-}> = ({ metadata, formatDate, onRefreshData, isRefreshing }) => {
+  isRefreshing?: boolean; }) => {
   const { t } = useTranslation();
 
   const staleSources = Object.entries(metadata.sources)
@@ -285,9 +283,9 @@ const OverviewTab: React.FC<{
             {t('dataTransparency.warnings', 'Warnings & Alerts')}
           </h4>
           <div className="space-y-2">
-            {metadata.warnings.map((warning, idx) => (
+            {metadata.warnings.map((warning) => (
               <div
-                key={idx}
+                key={`${warning.type}-${warning.source ?? 'general'}-${warning.message}`}
                 className={cn(
                   'p-3 rounded-lg border flex items-start gap-3',
                   warning.severity === 'critical'
@@ -404,13 +402,11 @@ const OverviewTab: React.FC<{
 /**
  * Sources tab showing detailed info for each data source
  */
-const SourcesTab: React.FC<{
-  metadata: SourceDataMetadata;
+const SourcesTab = ({ metadata, expandedSources, toggleSource, getSourceIcon, formatDate }: { metadata: SourceDataMetadata;
   expandedSources: string[];
   toggleSource: (source: string) => void;
   getSourceIcon: (source: string) => React.ReactNode;
-  formatDate: (date: string | null) => string;
-}> = ({ metadata, expandedSources, toggleSource, getSourceIcon, formatDate }) => {
+  formatDate: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   const sourceOrder = ['satellite', 'weather', 'soil', 'water', 'plant'] as const;
@@ -490,11 +486,9 @@ const SourcesTab: React.FC<{
 /**
  * Detailed view for a single data source
  */
-const SourceDetails: React.FC<{
-  source: DataSourceInfo & { details?: SatelliteDataDetails | WeatherDataDetails | AnalysisDataDetails };
+const SourceDetails = ({ source, sourceName, formatDate }: { source: DataSourceInfo & { details?: SatelliteDataDetails | WeatherDataDetails | AnalysisDataDetails };
   sourceName: string;
-  formatDate: (date: string | null) => string;
-}> = ({ source, sourceName, formatDate }) => {
+  formatDate: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   if (!source.available) {
@@ -512,7 +506,7 @@ const SourceDetails: React.FC<{
   return (
     <div className="space-y-4">
       {/* Basic Info Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {t('dataTransparency.dataPoints', 'Data Points')}
@@ -559,15 +553,15 @@ const SourceDetails: React.FC<{
   );
 };
 
-const SatelliteDetails: React.FC<{ details: SatelliteDataDetails }> = ({ details }) => {
+const SatelliteDetails = ({ details }: { details: SatelliteDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <span className="text-xs text-gray-500">{t('dataTransparency.satellite.indices', 'Indices')}:</span>
-        {details.indices.map((idx) => (
-          <span key={idx} className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
-            {idx}
+        {details.indices.map((vegIndex) => (
+          <span key={vegIndex} className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
+            {vegIndex}
           </span>
         ))}
       </div>
@@ -585,7 +579,7 @@ const SatelliteDetails: React.FC<{ details: SatelliteDataDetails }> = ({ details
   );
 };
 
-const WeatherDetails: React.FC<{ details: WeatherDataDetails }> = ({ details }) => {
+const WeatherDetails = ({ details }: { details: WeatherDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
@@ -606,7 +600,7 @@ const WeatherDetails: React.FC<{ details: WeatherDataDetails }> = ({ details }) 
   );
 };
 
-const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }) => {
+const AnalysisDetails = ({ details }: { details: AnalysisDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
@@ -632,8 +626,8 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
               </TableRow>
             </TableHeader>
             <TableBody>
-              {details.parameters.slice(0, 10).map((param, idx) => (
-                <TableRow key={idx} className="border-b border-gray-100 dark:border-gray-800">
+              {details.parameters.slice(0, 10).map((param) => (
+                <TableRow key={`${param.name}-${param.unit ?? ''}`} className="border-b border-gray-100 dark:border-gray-800">
                   <TableCell className="py-2 text-gray-900 dark:text-white">{param.name}</TableCell>
                   <TableCell className="py-2 text-gray-900 dark:text-white">
                     {param.value} {param.unit}
@@ -674,7 +668,7 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
 /**
  * Raw data tab showing actual data used (read-only)
  */
-const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) => {
+const RawDataTab = ({ metadata }: { metadata: SourceDataMetadata }) => {
   const { t } = useTranslation();
   const [selectedSource, setSelectedSource] = useState<string>('satellite');
   const [page, setPage] = useState(1);
@@ -787,10 +781,8 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
 /**
  * Audit trail tab showing processing timestamps
  */
-const AuditTab: React.FC<{
-  metadata: SourceDataMetadata;
-  formatDateTime: (date: string | null) => string;
-}> = ({ metadata, formatDateTime }) => {
+const AuditTab = ({ metadata, formatDateTime }: { metadata: SourceDataMetadata;
+  formatDateTime: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   return (

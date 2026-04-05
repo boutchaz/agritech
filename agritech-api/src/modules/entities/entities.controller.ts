@@ -1,12 +1,13 @@
 import { Controller, Post, Get, Delete, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { EntitiesService, RegisterAbstractEntityDto, LogEntityEventDto, EntitySearchParams } from './entities.service';
 
 @ApiTags('entities')
 @ApiBearerAuth('JWT-auth')
 @Controller('organizations/:organizationId/entities')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class EntitiesController {
   constructor(private readonly entitiesService: EntitiesService) {}
 

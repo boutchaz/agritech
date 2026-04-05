@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 import { ModuleConfigService } from './module-config.service';
 import {
   ModuleConfigResponseDto,
@@ -45,9 +47,11 @@ export class ModuleConfigController {
 
   @Post('clear-cache')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard, InternalAdminGuard)
+  @ApiBearerAuth()
   @ApiOperation({ 
     summary: 'Clear configuration cache',
-    description: 'Clears the in-memory cache for module configuration. Useful after admin updates.'
+    description: 'Clears the in-memory cache for module configuration. Useful after admin updates. Requires internal admin privileges.'
   })
   async clearCache(): Promise<void> {
     this.moduleConfigService.clearCache();

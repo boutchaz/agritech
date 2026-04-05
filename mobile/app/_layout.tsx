@@ -11,6 +11,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/constants/theme';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { registerForPushNotifications } from '@/lib/notifications';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -19,6 +21,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000,
       retry: 2,
+      networkMode: 'offlineFirst',
     },
   },
 });
@@ -104,36 +107,39 @@ export default function RootLayout() {
     <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="auto" />
-        <Stack
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: colors.primary[600],
-            },
-            headerTintColor: colors.white,
-            headerTitleStyle: {
-              fontWeight: '600',
-            },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(drawer)" options={{ headerShown: false, title: '' }} />
-          <Stack.Screen
-            name="task/[id]"
-            options={{
-              title: 'Task Details',
-              presentation: 'card',
+        <OfflineBanner />
+        <ErrorBoundary>
+          <StatusBar style="auto" />
+          <Stack
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: colors.primary[600],
+              },
+              headerTintColor: colors.white,
+              headerTitleStyle: {
+                fontWeight: '600',
+              },
             }}
-          />
-          <Stack.Screen
-            name="harvest/new"
-            options={{
-              title: 'Record Harvest',
-              presentation: 'modal',
-            }}
-          />
-        </Stack>
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(drawer)" options={{ headerShown: false, title: '' }} />
+            <Stack.Screen
+              name="task/[id]"
+              options={{
+                title: 'Task Details',
+                presentation: 'card',
+              }}
+            />
+            <Stack.Screen
+              name="harvest/new"
+              options={{
+                title: 'Record Harvest',
+                presentation: 'modal',
+              }}
+            />
+          </Stack>
+        </ErrorBoundary>
       </GestureHandlerRootView>
     </QueryClientProvider>
     </ThemeProvider>

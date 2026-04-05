@@ -1,4 +1,3 @@
-// New Analysis Screen
 import { View, Text, StyleSheet, ScrollView, Pressable, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,10 +39,9 @@ export default function NewAnalysisScreen() {
       return;
     }
 
-    // Create minimal analysis data based on type
     let data: AnalysisData = {};
     if (analysisType === 'soil') {
-      data = {}; // Will be filled in later
+      data = {};
     } else if (analysisType === 'water') {
       data = { water_source: 'well' as const };
     } else if (analysisType === 'plant') {
@@ -73,7 +71,6 @@ export default function NewAnalysisScreen() {
       <PageHeader title={t('analyses.newAnalysis', 'New Analysis')} />
 
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* Analysis Type Selection */}
         <Text style={styles.label}>{t('analyses.type', 'Analysis Type')}</Text>
         <View style={styles.typeSelector}>
           {ANALYSIS_TYPES.map((option) => (
@@ -92,7 +89,6 @@ export default function NewAnalysisScreen() {
           ))}
         </View>
 
-        {/* Farm Selection */}
         <Text style={styles.label}>{t('analyses.farm', 'Farm')}</Text>
         <View style={styles.pickerContainer}>
           {farms.map((farm) => (
@@ -114,7 +110,6 @@ export default function NewAnalysisScreen() {
           ))}
         </View>
 
-        {/* Parcel Selection */}
         {farmId && (
           <>
             <Text style={styles.label}>{t('analyses.parcel', 'Parcel')}</Text>
@@ -137,7 +132,6 @@ export default function NewAnalysisScreen() {
           </>
         )}
 
-        {/* Analysis Date */}
         <Text style={styles.label}>{t('analyses.date', 'Analysis Date')}</Text>
         <TextInput
           style={styles.input}
@@ -146,7 +140,6 @@ export default function NewAnalysisScreen() {
           placeholder="YYYY-MM-DD"
         />
 
-        {/* Notes */}
         <Text style={styles.label}>{t('analyses.notes', 'Notes')}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -158,7 +151,6 @@ export default function NewAnalysisScreen() {
           textAlignVertical="top"
         />
 
-        {/* Submit Button */}
         <Pressable
           style={[styles.submitButton, createAnalysis.isPending && styles.submitButtonDisabled]}
           onPress={handleSubmit}

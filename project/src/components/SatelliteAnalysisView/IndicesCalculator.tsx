@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Satellite, Download, Database, RefreshCw } from 'lucide-react';
+import {  useState, useEffect, useCallback  } from "react";
+import { AlertCircle, Satellite, Download, Database, RefreshCw, Calculator, Calendar, Layers, Activity, Zap, Info, Check } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   satelliteApi,
@@ -13,8 +13,14 @@ import {
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
-import { ButtonLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface IndicesCalculatorProps {
   parcelId: string;
@@ -30,13 +36,13 @@ interface CachedIndexResult {
   date: string;
 }
 
-const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
+const IndicesCalculator = ({
   parcelId,
   parcelName,
   farmId,
   boundary,
   onResultsUpdate
-}) => {
+}: IndicesCalculatorProps) => {
   const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -83,9 +89,9 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
           organizationId
         );
         // Get the most recent entry with mean_value for each index
-        const sorted = response
-          .filter(item => item.mean_value !== undefined && item.mean_value !== null)
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const sorted = response
+            .filter(item => item.mean_value !== undefined && item.mean_value !== null)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         if (sorted.length > 0) {
           allIndices.push({
@@ -106,6 +112,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     if (!cachedIndices || cachedIndices.length === 0) return null;
 
     return {
+      request_id: 'cache',
       timestamp: new Date().toISOString(),
       indices: cachedIndices.map(item => ({
         index: item.index,
@@ -166,7 +173,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
       return;
     }
 
-    // Check if date range is reasonable (not too old, as very old data might not be available)
+    // Check if date range is reasonable
     const threeYearsAgo = new Date();
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
 
@@ -195,12 +202,10 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
 
       const response = await satelliteApi.calculateIndices(request);
 
-      // Validate response
       if (!response || !response.indices || response.indices.length === 0) {
-        throw new Error('No satellite imagery data available for the selected date range and location. Try another nearby date range.');
+        throw new Error('No satellite imagery data available for the selected date range and location.');
       }
 
-       // Save results to database cache
        for (const indexResult of response.indices) {
          try {
            await satelliteIndicesApi.create(
@@ -215,12 +220,9 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
              },
              organizationId
            );
-         } catch (_saveError) {
-           // Continue anyway - the main result is what matters
-         }
+         } catch (_saveError) {}
        }
 
-      // Refetch cache
       await refetchCache();
       queryClient.invalidateQueries({ queryKey: ['satellite-indices-calc-cache', parcelId] });
 
@@ -229,230 +231,298 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Échec du calcul des indices';
-      console.error('[IndicesCalculator] Error:', errorMessage, err);
-
-      // Provide more helpful error messages
-      if (errorMessage.includes('API Error') || errorMessage.includes('fetch')) {
-        setError('Unable to connect to satellite service. Please check your internet connection and try again. If the problem persists, the satellite service may be temporarily unavailable.');
-      } else if (errorMessage.includes('No satellite imagery')) {
-        setError(errorMessage);
-      } else {
-        setError(errorMessage);
-      }
+      setError(errorMessage);
     } finally {
       setIsCalculating(false);
     }
   };
 
-  const getIndexColor = (index: VegetationIndexType) => {
-    const colors: Record<VegetationIndexType, string> = {
-      NDVI: 'bg-green-100 text-green-800 border-green-200',
-      NDRE: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      NDMI: 'bg-blue-100 text-blue-800 border-blue-200',
-      MNDWI: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      GCI: 'bg-lime-100 text-lime-800 border-lime-200',
-      SAVI: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      OSAVI: 'bg-amber-100 text-amber-800 border-amber-200',
-      MSAVI2: 'bg-orange-100 text-orange-800 border-orange-200',
-      NIRv: 'bg-red-100 text-red-800 border-red-200',
-      EVI: 'bg-sky-100 text-sky-800 border-sky-200',
-      MSI: 'bg-purple-100 text-purple-800 border-purple-200',
-      MCARI: 'bg-pink-100 text-pink-800 border-pink-200',
-      TCARI: 'bg-rose-100 text-rose-800 border-rose-200'
+  const getIndexColors = (index: VegetationIndexType) => {
+    const colors: Record<VegetationIndexType, { bg: string, text: string, border: string }> = {
+      NDVI: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
+      NDRE: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-100' },
+      NDMI: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100' },
+      MNDWI: { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-100' },
+      GCI: { bg: 'bg-lime-50', text: 'text-lime-700', border: 'border-lime-100' },
+      SAVI: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-100' },
+      OSAVI: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100' },
+      MSAVI2: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100' },
+      NIRv: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-100' },
+      EVI: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-sky-100' },
+      MSI: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100' },
+      MCARI: { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-100' },
+      TCARI: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-100' }
     };
-    return colors[index] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colors[index] || { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-100' };
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Satellite className="w-5 h-5" />
-          <h2 className="text-xl font-semibold">Vegetation Indices Calculator</h2>
-        </div>
-        <p className="text-gray-600 mb-6">
-          Calculate vegetation indices for {parcelName || 'selected area'} using satellite imagery
-        </p>
-
-        {/* Date Range Selection */}
-        <div className="mb-6">
-          <label className="text-sm font-medium mb-2 block">Date Range</label>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                max={todayDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
+    <TooltipProvider>
+      <div className="space-y-6">
+        <Card className="border-slate-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50 border-b border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 rounded-lg shadow-lg shadow-blue-100">
+                  <Calculator className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-slate-900 tracking-tight">Vegetation Indices Calculator</CardTitle>
+                  <CardDescription className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-0.5">
+                    Batch analysis for {parcelName || 'selected area'}
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {getCacheStats().fromCache && (
+                  <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-bold px-2 py-1">
+                    <Database className="w-3 h-3 mr-1.5" />
+                    {getCacheStats().total} IN CACHE
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-xs text-gray-500">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                max={todayDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-        </div>
+          </CardHeader>
+          
+          <CardContent className="p-6 space-y-8">
+            {/* Configuration Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Date Range */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-sm uppercase tracking-tight">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  Analysis Period
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Start Date</Label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      max={todayDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">End Date</Label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      max={todayDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 transition-all outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
 
-        {/* Vegetation Indices Selection */}
-        <div className="mb-6">
-          <label className="text-sm font-medium mb-3 block">Vegetation Indices</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {VEGETATION_INDICES.map((index: VegetationIndexType) => (
-              <div
-                key={index}
-                className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                  selectedIndices.includes(index)
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handleIndexToggle(index)}
+              {/* Settings */}
+              <div className="space-y-4 lg:col-span-2">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-sm uppercase tracking-tight">
+                  <Satellite className="w-4 h-4 text-blue-600" />
+                  Parameters & Quality
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cloud Coverage Threshold</Label>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold">{CLOUD_COVERAGE_FIXED}%</Badge>
+                      <span className="text-[11px] text-slate-500 font-medium leading-tight">Fixed for optimal data consistency and accuracy.</span>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pixel Scale</Label>
+                      <span className="text-xs font-bold text-blue-600">{scale}m</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="500"
+                      step="10"
+                      value={scale}
+                      onChange={(e) => setScale(parseInt(e.target.value))}
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 py-1"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium">Lower scale = higher resolution, slower processing.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator className="opacity-50" />
+
+            {/* Indices Selection */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-800 font-bold text-sm uppercase tracking-tight">
+                  <Layers className="w-4 h-4 text-blue-600" />
+                  Select Indices to Calculate
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{selectedIndices.length} Selected</span>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                {VEGETATION_INDICES.map((vegIndex: VegetationIndexType) => {
+                  const isSelected = selectedIndices.includes(vegIndex);
+                  const colors = getIndexColors(vegIndex);
+                  return (
+                    <button
+                      type="button"
+                      key={vegIndex}
+                      onClick={() => handleIndexToggle(vegIndex)}
+                      className={cn(
+                        "group flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
+                        isSelected 
+                          ? "bg-white border-blue-500 shadow-lg shadow-blue-50" 
+                          : "bg-slate-50/50 border-transparent hover:border-slate-200"
+                      )}
+                    >
+                      <div className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-bold mb-2 uppercase tracking-tighter border",
+                        colors.bg, colors.text, colors.border
+                      )}>
+                        {vegIndex}
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium leading-snug line-clamp-2">{VEGETATION_INDEX_DESCRIPTIONS[vegIndex]}</p>
+                      
+                      {isSelected && (
+                        <div className="absolute top-2 right-2">
+                          <Check className="w-3 h-3 text-blue-600" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => refetchCache()}
+                disabled={isLoadingCache || isCalculating}
+                className="bg-white border-slate-200 text-slate-700 font-bold text-[11px] uppercase tracking-widest hover:bg-slate-50 h-11 px-6 shadow-sm"
               >
-                <div className={`inline-block px-2 py-1 rounded text-xs font-medium mb-2 ${getIndexColor(index)}`}>
-                  {index}
-                </div>
-                <p className="text-xs text-gray-500">
-                  {VEGETATION_INDEX_DESCRIPTIONS[index]}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+                <RefreshCw className={cn("w-4 h-4 mr-2", isLoadingCache && "animate-spin")} />
+                Refresh Cache
+              </Button>
 
-        {/* Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Cloud Coverage Threshold
-            </label>
-            <p className="text-sm text-gray-600">
-              Fixed at {CLOUD_COVERAGE_FIXED}% for consistent date quality.
-            </p>
-          </div>
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Pixel Scale: {scale}m
-            </label>
-            <input
-              type="range"
-              min="10"
-              max="500"
-              step="10"
-              value={scale}
-              onChange={(e) => setScale(Number(e.target.value))}
-              className="w-full"
-            />
-          </div>
-        </div>
+              <Button 
+                onClick={handleCalculate} 
+                disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] uppercase tracking-widest h-11 px-8 shadow-lg shadow-blue-100 flex-1 sm:flex-none"
+              >
+                {isCalculating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Process Satellite Data
+                  </>
+                )}
+              </Button>
 
-        {/* Actions */}
-        <div className="flex gap-3 items-center">
-          {/* Cache indicator */}
-          {getCacheStats().fromCache && (
-            <div className="flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-              <Database className="w-3 h-3" />
-              <span>{getCacheStats().total} indices en cache</span>
+              {getDisplayResults() && (
+                <Button variant="outline" className="ml-auto border-slate-200 font-bold text-[11px] uppercase tracking-widest h-11">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Results
+                </Button>
+              )}
             </div>
-          )}
+          </CardContent>
+        </Card>
 
-          <Button
-            onClick={() => refetchCache()}
-            disabled={isLoadingCache}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoadingCache ? 'animate-spin' : ''}`} />
-            Actualiser le cache
-          </Button>
+        {/* Error Display */}
+        {error && (
+          <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 shadow-sm animate-in">
+            <AlertCircle className="h-4 w-4 text-rose-600" />
+            <AlertTitle className="text-sm font-bold uppercase tracking-tight">Calculation Error</AlertTitle>
+            <AlertDescription className="text-xs">{error}</AlertDescription>
+          </Alert>
+        )}
 
-          <Button
-            onClick={handleCalculate}
-            disabled={isCalculating || selectedIndices.length === 0 || !startDate || !endDate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {isCalculating ? (
-              <>
-                <ButtonLoader className="text-white" />
-                Calcul en cours...
-              </>
-            ) : (
-              <>
-                <Satellite className="w-4 h-4" />
-                Récupérer depuis satellite
-              </>
-            )}
-          </Button>
+        {/* Results Display */}
+        {getDisplayResults() && (
+          <Card className="border-slate-200 shadow-sm overflow-hidden border-t-4 border-t-emerald-500 animate-in">
+            <CardHeader className="bg-white px-6 py-4 flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-lg font-bold text-slate-900 tracking-tight">
+                  {getCacheStats().fromCache ? 'Cached Analysis Results' : 'Satellite Processing Results'}
+                </CardTitle>
+                <CardDescription className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mt-0.5">
+                  Processed on {new Date(getDisplayResults()!.timestamp).toLocaleDateString()}
+                </CardDescription>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">
+                COMPLETE
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {getDisplayResults()!.indices.map((result: any) => {
+                  const vegIndex = result.index as VegetationIndexType;
+                  const colors = getIndexColors(vegIndex);
+                  return (
+                    <Card key={vegIndex} className="border-slate-100 shadow-none bg-slate-50/30 overflow-hidden group hover:border-slate-200 transition-colors">
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-tight",
+                            colors.bg, colors.text, colors.border
+                          )}>
+                            {vegIndex}
+                          </div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[250px] text-[10px]">
+                              {VEGETATION_INDEX_DESCRIPTIONS[vegIndex]}
+                          </TooltipContent>
+                        </Tooltip>
+                        </div>
+                        <div className="flex items-end gap-1">
+                          <span className="text-2xl font-black text-slate-800 tabular-nums tracking-tighter">
+                            {result.value.toFixed(3)}
+                          </span>
+                          <Activity className="w-4 h-4 text-emerald-500 mb-1 opacity-40" />
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium italic line-clamp-1">
+                          {VEGETATION_INDEX_DESCRIPTIONS[result.index as VegetationIndexType]}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
 
-          {getDisplayResults() && (
-            <Button variant="outline">
-              <Download className="w-4 h-4" />
-              Exporter les résultats
-            </Button>
-          )}
-        </div>
+              {getDisplayResults()!.metadata && (
+                <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="flex items-center gap-2 mb-3 text-slate-600 font-bold text-[10px] uppercase tracking-widest">
+                    <Info className="w-3 h-3" />
+                    Processing Metadata
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                    {Object.entries(getDisplayResults()!.metadata).map(([key, value]) => (
+                      <div key={key} className="space-y-0.5">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">{key}</span>
+                        <span className="text-xs font-bold text-slate-700">{String(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <h4 className="text-red-800 font-medium">Error</h4>
-            <p className="text-red-700">{error}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Results Display */}
-      {getDisplayResults() && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-2">
-            {getCacheStats().fromCache ? 'Résultats (depuis cache)' : 'Résultats du calcul'}
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Traité le {new Date(getDisplayResults()!.timestamp).toLocaleDateString()}
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {getDisplayResults()!.indices.map((result: any, index: number) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${getIndexColor(result.index as VegetationIndexType)}`}>
-                    {result.index}
-                  </div>
-                  <span className="text-lg font-semibold">
-                    {result.value.toFixed(3)}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500">
-                  {VEGETATION_INDEX_DESCRIPTIONS[result.index as VegetationIndexType]}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {getDisplayResults()!.metadata && (
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <h4 className="font-medium mb-2">Métadonnées de traitement</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-                {Object.entries(getDisplayResults()!.metadata).map(([key, value]) => (
-                  <div key={key}>
-                    <span className="text-gray-500">{key}:</span>
-                    <span className="ml-1 font-medium">{String(value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   );
 };
 

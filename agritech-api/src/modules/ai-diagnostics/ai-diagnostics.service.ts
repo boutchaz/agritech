@@ -355,7 +355,7 @@ export class AiDiagnosticsService {
       id: parcel.id,
       cropType: parcel.crop_type,
       boundary: parcel.boundary,
-      aiPhase: typeof parcel.ai_phase === 'string' ? parcel.ai_phase : 'disabled',
+      aiPhase: typeof parcel.ai_phase === 'string' ? parcel.ai_phase : 'awaiting_data',
       aiObservationOnly: parcel.ai_observation_only === true,
     };
   }

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Calendar, MapPin, Package, TrendingUp, Edit, Trash2, Eye, Award, ClipboardCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -13,7 +13,7 @@ interface HarvestCardProps {
   onCreateReception?: (harvest: HarvestSummary) => void;
 }
 
-const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, onViewDetails, onCreateReception }) => {
+const HarvestCard = ({ harvest, onEdit, onDelete, onViewDetails, onCreateReception }: HarvestCardProps) => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       stored: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',

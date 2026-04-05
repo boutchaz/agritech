@@ -22,7 +22,7 @@ interface Parcel {
   boundary?: number[][];
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
+const ModuleView = ({ module, sensorData }: ModuleViewProps) => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
@@ -190,9 +190,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           <p className="text-gray-500 dark:text-gray-400 mb-4">
             {t('moduleView.noParcelsDescription')}
           </p>
-          <Button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/parcels' })}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="inline-flex items-center px-4 py-2 rounded-md"
           >
             <MapPin className="h-4 w-4 mr-2" />
             {t('moduleView.goToParcels')}
@@ -229,17 +229,13 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
               </p>
             </div>
             <div className="flex space-x-2">
-              <Button
-                onClick={loadParcels}
-                disabled={loadingParcels}
-                className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
+              <Button variant="blue" onClick={loadParcels} disabled={loadingParcels} className="flex items-center space-x-2 px-3 py-2 rounded-md" >
                 <RefreshCw className={`h-4 w-4 ${loadingParcels ? 'animate-spin' : ''}`} />
                 <span>{t('moduleView.refresh')}</span>
               </Button>
-              <Button
+              <Button variant="green"
                 onClick={() => setShowParcelManager(!showParcelManager)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                className="flex items-center space-x-2 px-4 py-2 rounded-md"
               >
                 <Settings className="h-4 w-4" />
                 <span>{t('moduleView.manage')}</span>
@@ -356,15 +352,11 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {/* Pagination dots */}
           {parcelsToDisplay.length > 1 && (
             <div className="flex justify-center space-x-2 mt-4">
-              {parcelsToDisplay.map((_, index) => (
-                <Button
-                  key={index}
+              {parcelsToDisplay.map((parcel, index) => (
+                <Button variant="green"
+                  key={"dot-" + parcel.id}
                   onClick={() => setCurrentParcelIndex(index)}
-                  className={`w-3 h-3 rounded-full transition-colors ${
-                    index === currentParcelIndex
-                      ? 'bg-green-600'
-                      : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-                  }`}
+                  className={`w-3 h-3 rounded-full transition-colors ${ index === currentParcelIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
                   aria-label={t('moduleView.goToParcel', { number: index + 1 })}
                 />
               ))}
@@ -389,7 +381,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {module.metrics?.map((metric, index) => (
             <div
-              key={index}
+              key={metric.name}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6"
             >
               <div className="flex items-center justify-between">
@@ -422,9 +414,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               {t('moduleView.assignDescription')}
             </p>
-            <Button
+            <Button variant="blue"
               onClick={() => setShowParcelManager(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="inline-flex items-center px-4 py-2 rounded-md"
             >
               <MapPin className="h-4 w-4 mr-2" />
               {t('moduleView.assignParcels')}

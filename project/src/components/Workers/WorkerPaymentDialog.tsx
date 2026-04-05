@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import {  useState, useEffect, useMemo  } from "react";
 import { useTranslation } from "react-i18next";
 import { Banknote, Calculator, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import {
@@ -97,7 +97,7 @@ function isCustomAmountType(type: PaymentType): boolean {
   return ["bonus", "overtime", "advance"].includes(type);
 }
 
-const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
+const WorkerPaymentDialog = ({
   open,
   worker,
   onClose,
@@ -105,7 +105,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   initialPeriodStart,
   initialPeriodEnd,
   initialPaymentType,
-}) => {
+}: WorkerPaymentDialogProps) => {
   const { t } = useTranslation();
   const defaultDates = useMemo(() => getDefaultPeriodDates(), []);
   const [periodStart, setPeriodStart] = useState(
@@ -131,6 +131,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const { data: accounts = [] } = useAccounts();
   const hasChartOfAccounts = accounts.length > 0;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset form when dialog opens */
   useEffect(() => {
     if (open) {
       setPaymentType(
@@ -151,12 +152,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     initialPeriodEnd,
     defaultDates,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- clear calculated when type changes */
   useEffect(() => {
     if (requiresCustomAmount) {
       setCalculatedPayment(null);
     }
   }, [paymentType, requiresCustomAmount]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCalculate = async () => {
     setError(null);
@@ -489,11 +493,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 </Card>
               )}
 
-              <Button
-                onClick={handleCreatePayment}
-                disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
+              <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts} className="w-full" >
                 {createPayment.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -661,11 +661,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 >
                   {t("dialogs.workerPayment.recalculate")}
                 </Button>
-                <Button
-                  onClick={handleCreatePayment}
-                  disabled={isLoading || !hasChartOfAccounts}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || !hasChartOfAccounts} className="flex-1" >
                   {createPayment.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (

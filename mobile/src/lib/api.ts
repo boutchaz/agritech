@@ -5,6 +5,12 @@ import * as Device from 'expo-device';
 import { Config, APP_CONFIG } from '@/constants/config';
 import { trackError } from './gtm';
 
+export const queryClientDefaultQueryOptions = {
+  staleTime: 5 * 60 * 1000,
+  retry: 2,
+  networkMode: 'offlineFirst' as const,
+};
+
 function resolveOrganizationId(): string | null {
   try {
     const mod = require('../stores/authStore');

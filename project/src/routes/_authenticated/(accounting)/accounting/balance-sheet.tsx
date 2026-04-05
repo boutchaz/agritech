@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,13 +21,13 @@ const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const BalanceSheetSection: React.FC<{
+const BalanceSheetSection = ({ title, accounts, total, currencySymbol, color }: {
   title: string;
   accounts: BalanceSheetRow[];
   total: number;
   currencySymbol: string;
   color: string;
-}> = ({ title, accounts, total, currencySymbol, color }) => (
+}) => (
   <Card>
     <CardHeader className={`${color} text-white rounded-t-lg`}>
       <CardTitle className="flex items-center justify-between">
@@ -72,7 +72,7 @@ const BalanceSheetSection: React.FC<{
   </Card>
 );
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
@@ -151,7 +151,7 @@ const AppContent: React.FC = () => {
         {report && !isLoading && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <Card className="border-blue-200 bg-blue-50 dark:bg-blue-900/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">{t('reportsModule.balanceSheet.totalAssets', 'Total Assets')}</CardTitle>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -38,7 +38,7 @@ const getAccountTypeColor = (accountType: string): string => {
   }
 };
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);

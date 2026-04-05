@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, InvoiceEmailData, MANAGEMENT_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
@@ -54,9 +55,12 @@ export class InvoicesService {
       .eq('organization_id', organizationId);
 
     if (search) {
-      const searchFilter = `invoice_number.ilike.%${search}%,party_name.ilike.%${search}%`;
-      countQuery = countQuery.or(searchFilter);
-      dataQuery = dataQuery.or(searchFilter);
+      const safeSearch = sanitizeSearch(search);
+      if (safeSearch) {
+        const searchFilter = `invoice_number.ilike.%${safeSearch}%,party_name.ilike.%${safeSearch}%`;
+        countQuery = countQuery.or(searchFilter);
+        dataQuery = dataQuery.or(searchFilter);
+      }
     }
 
     if (invoice_type) {

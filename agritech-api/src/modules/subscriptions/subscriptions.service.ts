@@ -317,7 +317,7 @@ export class SubscriptionsService {
     const { data: existingSubscription, error: existingError } =
       await this.supabaseAdmin
         .from('subscriptions')
-        .select('id, status, formula')
+        .select('*')
         .eq('organization_id', organization_id)
         .maybeSingle();
 
@@ -327,6 +327,7 @@ export class SubscriptionsService {
       );
     }
 
+    // Idempotent: signup already creates a trialing row; /onboarding/select-trial calls this again.
     if (
       existingSubscription &&
       [
@@ -334,9 +335,13 @@ export class SubscriptionsService {
         SubscriptionLifecycleStatus.TRIALING,
       ].includes(existingSubscription.status as SubscriptionLifecycleStatus)
     ) {
-      throw new BadRequestException(
-        'Organization already has an active subscription',
+      this.logger.log(
+        `createTrialSubscription: org ${organization_id} already ${existingSubscription.status}, returning existing row`,
       );
+      return {
+        success: true,
+        subscription: existingSubscription,
+      };
     }
 
     const trialStart = new Date();
@@ -1273,7 +1278,7 @@ export class SubscriptionsService {
     const { data: module, error: moduleError } = await this.supabaseAdmin
       .from('modules')
       .select('id, required_plan, is_active, is_available, is_required, slug, name')
-      .or(`slug.eq.${normalizedFeature},name.eq.${normalizedFeature}`)
+      .or(`slug.eq.${normalizedFeature.replace(/[,.()'"]/g, '')},name.eq.${normalizedFeature.replace(/[,.()'"]/g, '')}`)
       .maybeSingle();
 
     if (moduleError || !module || !module.is_active || !module.is_available) {

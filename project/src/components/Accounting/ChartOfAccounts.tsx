@@ -91,7 +91,7 @@ const accountTypeIcons: Record<AccountType, string> = {
   Expense: '💸',
 };
 
-export const ChartOfAccounts: React.FC = () => {
+export const ChartOfAccounts = () => {
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { data: accounts = [], isLoading, createAccount, updateAccount, deleteAccount } = useAccounts();

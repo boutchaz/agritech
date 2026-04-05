@@ -37,6 +37,7 @@ export const SUBSCRIPTION_CONFIG = {
    * Paths that don't require subscription (always accessible)
    */
   EXEMPT_PATHS: [
+    '/settings',
     '/settings/subscription',
     '/settings/organization',
     '/settings/account',

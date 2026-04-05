@@ -7,6 +7,7 @@ import {
 } from '@nestjs/swagger';
 import { FarmsService } from './farms.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -32,7 +33,7 @@ import { ApiParam } from '@nestjs/swagger';
 
 @ApiTags('farms')
 @Controller('farms')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class FarmsController {
   constructor(private farmsService: FarmsService) { }
 

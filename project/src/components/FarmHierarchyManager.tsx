@@ -24,11 +24,11 @@ interface FarmHierarchyManagerProps {
   onManageRoles?: (farmId: string, farmName: string) => void;
 }
 
-const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
+const FarmHierarchyManager = ({
   organizationId,
   currentUserId,
   onManageRoles
-}) => {
+}: FarmHierarchyManagerProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const queryClient = useQueryClient();
   const [expandedFarms, setExpandedFarms] = useState<Set<string>>(new Set());
@@ -236,9 +236,9 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
           <h2 className="text-2xl font-bold text-gray-900">Farm Hierarchy</h2>
           <p className="text-gray-600">Manage your organization's farm structure and management roles</p>
         </div>
-        <Button
+        <Button variant="blue"
           onClick={() => setShowCreateFarm(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center px-4 py-2 rounded-lg"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Farm
@@ -388,11 +388,7 @@ const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
+                <Button variant="blue" type="submit" disabled={loading} className="px-4 py-2 rounded-md" >
                   {loading ? 'Creating...' : 'Create Farm'}
                 </Button>
               </div>

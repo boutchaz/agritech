@@ -1,6 +1,7 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
+import { useAutoStartTour } from '@/contexts/TourContext'
 import { PageLayout } from '@/components/PageLayout'
 import InfrastructureManagement from '@/components/InfrastructureManagement'
 import ModernPageHeader from '@/components/ModernPageHeader'
@@ -9,9 +10,11 @@ import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+
+  useAutoStartTour('infrastructure', 1500);
 
   if (!currentOrganization) {
     return (

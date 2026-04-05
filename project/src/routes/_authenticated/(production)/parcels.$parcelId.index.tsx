@@ -39,8 +39,8 @@ const ParcelOverview = () => {
     return value.toFixed(2);
   };
 
-  // Check if we have satellite data
-  const hasSatelliteData = indices?.ndvi !== null || indices?.ndmi !== null;
+  // Check if we have satellite data (hide banner while loading or when data exists)
+  const hasSatelliteData = _isLoadingIndices || (indices?.ndvi != null || indices?.ndmi != null);
 
   const data = {
     irrigation: irrigationIndex,
@@ -233,8 +233,8 @@ const ParcelOverview = () => {
 
         {isLoadingTasks ? (
           <div className="space-y-2 py-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            {Array.from({ length: 3 }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-lg" />
             ))}
           </div>
         ) : parcelTasks && parcelTasks.length > 0 ? (

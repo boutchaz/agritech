@@ -33,12 +33,7 @@ export function RecalibrationValidationStep({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Button
-          type="button"
-          onClick={onValidate}
-          disabled={!canSubmit || isSubmitting}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-        >
+        <Button variant="blue" type="button" onClick={onValidate} disabled={!canSubmit || isSubmitting} className="w-full" >
           <CheckCircle2 className="h-4 w-4" />
           <span>{isSubmitting ? 'Validation...' : 'Valider le recalibrage partiel'}</span>
         </Button>

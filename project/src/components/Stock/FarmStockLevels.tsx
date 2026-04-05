@@ -1,4 +1,3 @@
-import React from 'react';
 import { Package, Warehouse, Building2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';

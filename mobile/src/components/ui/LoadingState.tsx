@@ -10,7 +10,12 @@ export interface LoadingStateProps {
 
 export function LoadingState({ message, size = 'large', testID }: LoadingStateProps) {
   return (
-    <View testID={testID} style={styles.container}>
+    <View
+      testID={testID}
+      style={styles.container}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading"
+    >
       <ActivityIndicator size={size} color={colors.primary[600]} />
       {message ? (
         <AppText variant="body" color={colors.gray[500]} align="center">

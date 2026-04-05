@@ -1,0 +1,200 @@
+{
+  "timeSeries": {
+    "title": "Vegetation Index Time Series",
+    "subtitle": "Historical trends for {{name}}",
+    "subtitleFallback": "Historical trends for Parcel {{id}}",
+    "dataPoints": "{{count}} points",
+    "warnings": {
+      "sparseData": "Limited data.",
+      "sparseDataDescription": "Only {{count}} data points available for this period due to cloud or satellite coverage.",
+      "noDataTitle": "No data available for this period.",
+      "noDataHint": "Try widening the date range or click \"Fetch from satellite\" to sync data.",
+      "partialDataTitle": "Data unavailable for:",
+      "weatherError": "Error loading weather data"
+    },
+    "dateRange": {
+      "3months": "3 months",
+      "6months": "6 months",
+      "1year": "1 year",
+      "2years": "2 years"
+    },
+    "labels": {
+      "vegetationIndices": "Vegetation Indices",
+      "indicesSelected": "{{count}} indices selected",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "showTemperature": "Show Temp."
+    },
+    "table": {
+      "index": "Index",
+      "mean": "Mean",
+      "min": "Min",
+      "max": "Max",
+      "std": "Std Dev",
+      "trend": "Trend",
+      "noData": "No data available",
+      "tempMean": "Avg. Temperature"
+    },
+    "trend": {
+      "stable": "Stable",
+      "increasing": "Increasing",
+      "decreasing": "Decreasing"
+    },
+    "chart": {
+      "tempMin": "Temp. Min",
+      "tempMax": "Temp. Max",
+      "tempMean": "Temp. Avg",
+      "emptyState": "No data available for this period"
+    },
+    "actions": {
+      "refreshCache": "Refresh cache",
+      "fetchFromSatellite": "Fetch from satellite",
+      "launching": "Launching..."
+    },
+    "indexDescriptions": {
+      "NIRvP": "NIRvP — Photosynthetic productivity (NIRv × PAR)",
+      "TCARI_OSAVI": "TCARI/OSAVI — LAI-resistant chlorophyll ratio"
+    }
+  },
+  "heatmap": {
+    "title": "Interactive Vegetation Analysis",
+    "subtitle": "Explore interactive satellite data with hover details, zoom, and pan capabilities for {{name}}",
+    "subtitleFallback": "Explore interactive satellite data with hover details, zoom, and pan capabilities for Parcel {{id}}",
+    "viewModes": {
+      "single": "Simple View",
+      "multiGrid": "Multi-Grid",
+      "multiOverlay": "Multi-Overlay",
+      "temporalCompare": "Comparison"
+    },
+    "header": {
+      "single": "{{index}} Interactive Visualization",
+      "multiGrid": "Multi-Index Comparison (Grid)",
+      "temporalCompare": "Temporal Comparison — {{index}}",
+      "multiOverlay": "Multi-Index Overlay (Same Map)",
+      "singleDesc": "Compare multiple indices side by side",
+      "temporalDesc": "Compare the same index between two different dates",
+      "overlayDesc": "Overlay multiple indices on the same map"
+    },
+    "configuration": "Configuration",
+    "baseMap": {
+      "label": "Base Map",
+      "osm": "OpenStreetMap",
+      "satellite": "Satellite View"
+    },
+    "dateNavigator": {
+      "datesAvailable": "{{count}} date(s) available",
+      "date": "Date",
+      "placeholder": "Select date with satellite data"
+    },
+    "temporalCompare": {
+      "vegetationIndex": "Vegetation Index",
+      "colorPalette": "Color Palette",
+      "dateA": "Date A (Before)",
+      "dateB": "Date B (After)",
+      "dateRefPlaceholder": "Reference date",
+      "dateComparePlaceholder": "Date to compare",
+      "selectBothDates": "Please select both dates for comparison.",
+      "dateALabel": "Date A: {{date}}",
+      "dateBLabel": "Date B: {{date}}",
+      "statisticalComparison": "Statistical Comparison — {{index}}",
+      "variationBetween": "Variation between {{dateA}} and {{dateB}}",
+      "visualComparison": "Visual Comparison"
+    },
+    "labels": {
+      "vegetationIndex": "Vegetation Index",
+      "visualizationType": "Visualization Type",
+      "leafletMap": "Leaflet Map (Recommended)",
+      "scatterPlot": "Scatter Plot",
+      "indicesToCompare": "Indices to Compare",
+      "overlayOpacity": "Overlay Opacity",
+      "colorPalette": "Color Palette",
+      "colorPalettePerIndex": "Color Palette per Index",
+      "indexDescription": "Index Description",
+      "index": "Index",
+      "mean": "Mean",
+      "median": "Median",
+      "std": "Std Dev",
+      "count": "Count",
+      "pixels": "Pixels",
+      "min": "Min",
+      "max": "Max"
+    },
+    "stats": {
+      "moy": "Avg.",
+      "mean": "Mean",
+      "median": "Median",
+      "min": "Min",
+      "max": "Max",
+      "std": "Std Dev",
+      "count": "Count",
+      "pixels": "Pixels",
+      "p10": "P10",
+      "p90": "P90",
+      "delta": "Delta",
+      "variation": "Variation %",
+      "statistic": "Statistic"
+    },
+    "actions": {
+      "generate": "Generate Visualization",
+      "generating": "Generating...",
+      "compareDates": "Compare Dates",
+      "exportData": "Export Data",
+      "regenerate": "Regenerate",
+      "loading": "Loading..."
+    },
+    "multiGrid": {
+      "title": "Index Comparison - {{date}}",
+      "meanComparison": "Average Comparison",
+      "indexComparison": "Indices",
+      "average": "Average",
+      "median": "Median",
+      "stdDev": "Std Dev",
+      "minMax": "Min / Max"
+    },
+    "multiOverlay": {
+      "title": "Index Overlay - {{date}}",
+      "opacityHint": "Use the opacity sliders to adjust the visibility of each index",
+      "indexLegend": "Index Legend",
+      "averagesByIndex": "Averages by Index",
+      "detailedStats": "Detailed Statistics",
+      "value": "Value"
+    },
+    "temporal": {
+      "barChartLabels": ["Mean", "Median", "Min", "Max", "P10", "P90", "Std Dev"]
+    },
+    "warnings": {
+      "dateMismatchTitle": "Different data date",
+      "dateMismatchDescription": "No satellite image available for <strong>{{requested}}</strong>. Data from <strong>{{actual}}</strong> displayed instead.",
+      "noImagesForDate": "No satellite imagery available for {{date}}. Please select a different date from the calendar.",
+      "cloudCoverageError": "Error processing cloud coverage. The selected date may have too much cloud cover.",
+      "failedToGenerate": "Failed to generate interactive visualization",
+      "failedToCheckDates": "Failed to check available dates. Using current date as fallback.",
+      "noDataForDate": "No data for selected date. Recommended: {{date}}"
+    },
+    "samplePoints": {
+      "label": "Sample Points",
+      "fast": "Fast",
+      "balanced": "Balanced",
+      "detailed": "Detailed",
+      "highDetail": "High Detail",
+      "maximumDetail": "Maximum Detail"
+    },
+    "fullscreen": {
+      "enter": "Fullscreen",
+      "exit": "Exit fullscreen"
+    },
+    "leafletViewer": {
+      "title": "{{index}} - temporal evolution",
+      "heatmapTitle": "{{index}} Heatmap - {{date}}",
+      "exportData": "Export Data",
+      "checkingAvailability": "Checking availability...",
+      "statistics": {
+        "mean": "Mean",
+        "median": "Median",
+        "p10": "P10",
+        "p90": "P90",
+        "std": "Std"
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@ export function ErrorState({
       <AppText variant="subheading" align="center">
         {title}
       </AppText>
-      <AppText variant="body" color={colors.gray[500]} align="center">
+      <AppText variant="body" color={colors.gray[500]} align="center" accessibilityRole="alert">
         {message}
       </AppText>
       {onRetry ? (

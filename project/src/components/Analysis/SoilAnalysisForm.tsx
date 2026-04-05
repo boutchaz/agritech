@@ -1,4 +1,4 @@
-import React from 'react';
+
 import SoilAnalysisFormRHF from './SoilAnalysisFormRHF';
 import type { SoilAnalysisData } from '../../types/analysis';
 import type { SoilAnalysisFormValues } from '../../schemas/analysisSchemas';
@@ -15,7 +15,7 @@ interface SoilAnalysisFormProps {
   selectedParcel?: Parcel | null;
 }
 
-const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const SoilAnalysisForm = ({ onSave, onCancel, selectedParcel }: SoilAnalysisFormProps) => {
   const handleSave = async (values: SoilAnalysisFormValues) => {
     const { analysisDate, laboratory, notes, ...data } = values;
     onSave(data, analysisDate, laboratory || undefined, notes || undefined);

@@ -4,20 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
 import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
-import {
-  useCalibrationReport,
-  useCalibrationPhase,
-  useCalibrationHistory,
-  useValidateCalibration,
-  useNutritionSuggestion,
-  useConfirmNutritionOption,
-} from '@/hooks/useCalibrationV2';
+import { useCalibrationReport,
+useCalibrationPhase,
+useCalibrationHistory,
+useValidateCalibration,
+useNutritionSuggestion,
+useConfirmNutritionOption, } from '@/hooks/useCalibrationReport';
 import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
 import { useAIPlan } from '@/hooks/useAIPlan';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
-import type { CalibrationHistoryRecord } from '@/lib/api/calibration-v2';
+import type { CalibrationHistoryRecord } from '@/lib/api/calibration-output';
 import type {
-  CalibrationV2Output,
+  CalibrationOutput,
   AnomalyRecord,
   Recommendation,
   SeverityLevel,
@@ -29,8 +27,8 @@ import type {
   MonthlyWeatherAggregate,
   ExtremeEvent,
   ConfidenceComponent,
-} from '@/types/calibration-v2';
-import type { CalibrationPhase } from '@/lib/api/calibration-v2';
+} from '@/types/calibration-output';
+import type { CalibrationPhase } from '@/lib/api/calibration-output';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -86,13 +84,16 @@ import {
   ArrowRight,
   Lightbulb,
   FileText,
+  Sparkles,
 } from 'lucide-react';
+import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
+import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
@@ -106,20 +107,13 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
 }
 
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+const CollapsibleSection = ({
   title,
   icon,
   defaultOpen = true,
   badge,
   children,
-}) => {
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
-
+}: CollapsibleSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -220,13 +214,13 @@ function toSeverityLevel(value: string): SeverityLevel {
   return 'low';
 }
 
-const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
-  if (phase === 'awaiting_validation') {
+const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
+  if (phase === 'calibrated') {
     return (
       <div
         className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4"
         data-testid="calibration-phase-banner"
-        data-phase="awaiting_validation"
+        data-phase="calibrated"
       >
         <div className="flex items-center space-x-3">
           <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -295,13 +289,15 @@ function normalizeConfidenceScore(score: number): number {
   return score;
 }
 
-const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
-  const health = output.step8.health_score;
+const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
+  const health = output.step8?.health_score;
   const confidence = output.confidence;
-  const normalizedConfidence = normalizeConfidenceScore(confidence.normalized_score);
-  const yieldPotential = output.step6.yield_potential;
-  const alternance = output.step6.alternance;
-  const zones = output.step7.zone_summary;
+  const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
+  const yieldPotential = output.step6?.yield_potential;
+  const alternance = output.step6?.alternance;
+  const zones = output.step7?.zone_summary;
+
+  if (!health) return null;
 
   return (
     <div className="space-y-6" data-testid="calibration-executive-summary">
@@ -322,7 +318,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
           </div>
 
           <div className="mt-4 space-y-2">
-            {Object.entries(health.components).map(([key, value]) => (
+            {Object.entries(health.components ?? {}).map(([key, value]) => (
               <div key={key} className="flex items-center space-x-3">
                 <span className="text-xs text-gray-500 dark:text-gray-400 w-24">{HEALTH_COMPONENT_LABELS[key] ?? key}</span>
                 <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
@@ -356,7 +352,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Maturity Phase</div>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-              {MATURITY_LABELS[output.maturity_phase]}
+              {MATURITY_LABELS[output.phase_age]}
             </span>
           </div>
 
@@ -419,7 +415,7 @@ interface IndexChartProps {
   percentiles?: SpectralPercentiles;
 }
 
-const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, percentiles }) => {
+const IndexTimeSeriesChart = ({ title, data, color, percentiles }: IndexChartProps) => {
   const chartData = data.map((pt) => ({
     date: new Date(pt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     value: Number(pt.value.toFixed(3)),
@@ -469,7 +465,7 @@ const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, p
   );
 };
 
-const ZonePieChart: React.FC<{ zones: ZoneSummary[]; t: (key: string) => string }> = ({ zones, t }) => {
+const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => string }) => {
   const data = zones.map((z) => ({
     name: t(`calibrationZones.${z.class_name}`),
     value: z.surface_percent,
@@ -500,7 +496,7 @@ const ZonePieChart: React.FC<{ zones: ZoneSummary[]; t: (key: string) => string 
   );
 };
 
-const PhenologyTimeline: React.FC<{ dates: Record<string, string> }> = ({ dates }) => {
+const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
   const stages = [
     { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
     { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
@@ -538,7 +534,7 @@ const PhenologyTimeline: React.FC<{ dates: Record<string, string> }> = ({ dates 
   );
 };
 
-const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> = ({ aggregates }) => {
+const MonthlyWeatherChart = ({ aggregates }: { aggregates: MonthlyWeatherAggregate[] }) => {
   const data = aggregates.map((m) => ({
     month: m.month,
     precipitation: Number(m.precipitation_total.toFixed(1)),
@@ -564,13 +560,19 @@ const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> =
   );
 };
 
-const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
-  const ndviData = output.step1.index_time_series.NDVI;
-  const ndmiData = output.step1.index_time_series.NDMI;
-  const ndreData = output.step1.index_time_series.NDRE;
-  const ndviPercentiles = output.step3.global_percentiles.NDVI;
-  const ndmiPercentiles = output.step3.global_percentiles.NDMI;
-  const ndrePercentiles = output.step3.global_percentiles.NDRE;
+const DetailedAnalysis = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
+  const step1 = output.step1;
+  const step2 = output.step2;
+  const step3 = output.step3;
+  const step4 = output.step4;
+  const step7 = output.step7;
+
+  const ndviData = step1?.index_time_series?.NDVI;
+  const ndmiData = step1?.index_time_series?.NDMI;
+  const ndreData = step1?.index_time_series?.NDRE;
+  const ndviPercentiles = step3?.global_percentiles?.NDVI;
+  const ndmiPercentiles = step3?.global_percentiles?.NDMI;
+  const ndrePercentiles = step3?.global_percentiles?.NDRE;
 
   return (
     <div className="space-y-4">
@@ -599,8 +601,8 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
             percentiles={ndrePercentiles}
           />
         )}
-        {output.step7.zone_summary.length > 1 ? (
-          <ZonePieChart zones={output.step7.zone_summary} t={t} />
+        {step7?.zone_summary && step7.zone_summary.length > 1 ? (
+          <ZonePieChart zones={step7.zone_summary} t={t} />
         ) : (
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
@@ -617,7 +619,7 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
         )}
       </div>
 
-      {output.metadata.data_quality_flags.includes('evergreen_phenology_approximate') && (
+      {output?.metadata?.data_quality_flags?.includes('evergreen_phenology_approximate') && (
         <div className="flex items-start space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30">
           <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
@@ -626,19 +628,19 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
           </p>
         </div>
       )}
-      <PhenologyTimeline dates={output.step4.mean_dates as unknown as Record<string, string>} />
+      <PhenologyTimeline dates={step4?.mean_dates as unknown as Record<string, string>} />
 
-      {output.step2.monthly_aggregates.length > 0 && (
-        <MonthlyWeatherChart aggregates={output.step2.monthly_aggregates} />
+      {step2?.monthly_aggregates && step2.monthly_aggregates.length > 0 && (
+        <MonthlyWeatherChart aggregates={step2.monthly_aggregates} />
       )}
     </div>
   );
 };
 
-const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }> = ({
+const AnomalyList = ({
   anomalies,
   extremeEvents,
-}) => {
+}: { anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }) => {
   if (anomalies.length === 0 && extremeEvents.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -738,7 +740,7 @@ const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: Extreme
   );
 };
 
-const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ recommendations }) => {
+const RecommendationsList = ({ recommendations }: { recommendations: Recommendation[] }) => {
   if (recommendations.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -750,13 +752,13 @@ const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ 
 
   return (
     <div className="space-y-3">
-      {recommendations.map((recommendation, index) => {
+      {recommendations.map((recommendation) => {
         const severity = toSeverityLevel(recommendation.severity);
         const sev = SEVERITY_COLORS[severity];
 
         return (
           <div
-            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${index}`}
+            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${recommendation.message}`}
             className={`p-4 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
           >
             <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -780,10 +782,10 @@ const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ 
   );
 };
 
-const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceComponent> }> = ({ components }) => {
+const ConfidenceBreakdown = ({ components }: { components: Record<string, ConfidenceComponent> }) => {
   return (
     <div className="space-y-2">
-      {Object.entries(components).map(([name, comp]) => {
+      {Object.entries(components ?? {}).map(([name, comp]) => {
         const pct = comp.max_score > 0 ? (comp.score / comp.max_score) * 100 : 0;
         return (
           <div key={name} className="flex items-center space-x-3">
@@ -835,12 +837,14 @@ function getRunSatelliteImages(report: Record<string, unknown> | null | undefine
   return satelliteImages.filter(isRecord);
 }
 
-const CalibrationImprovement: React.FC<{
-  output: CalibrationV2Output;
-  report?: Record<string, unknown> | null;
-}> = ({ output, report }) => {
-  const flags = output.metadata.data_quality_flags;
+const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
+  report?: Record<string, unknown> | null; }) => {
+  const flags = output?.metadata?.data_quality_flags;
   const conf = output.confidence;
+  const step1 = output.step1;
+
+  if (!conf || !step1) return null;
+
   const satelliteImages = getRunSatelliteImages(report);
   const runCloudValues = satelliteImages
     .map((image) => toFiniteNumber(image.cloud_coverage))
@@ -849,10 +853,10 @@ const CalibrationImprovement: React.FC<{
     ? runCloudValues.reduce((sum, value) => sum + value, 0) / runCloudValues.length
     : null;
   const retainedImageCount = satelliteImages.length > 0
-    ? Math.max(0, satelliteImages.length - output.step1.filtered_image_count)
-    : output.step1.index_time_series.NDVI?.filter((point) => !point.interpolated).length ?? 0;
+    ? Math.max(0, satelliteImages.length - (step1.filtered_image_count ?? 0))
+    : step1.index_time_series?.NDVI?.filter((point) => !point.interpolated).length ?? 0;
   const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
-  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && output.step1.filtered_image_count === 0;
+  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && (step1.filtered_image_count ?? 0) === 0;
 
   return (
     <div className="space-y-6">
@@ -870,7 +874,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Avg Input Cloud</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {(averageInputCloudCoverage ?? output.step1.cloud_coverage_mean).toFixed(1)}%
+            {(averageInputCloudCoverage ?? step1.cloud_coverage_mean).toFixed(1)}%
           </span>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Across cached satellite readings used for this run
@@ -894,7 +898,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Rejected for Clouds</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {output.step1.filtered_image_count}
+            {step1.filtered_image_count ?? 0}
           </span>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Images above the 20% cloud threshold
@@ -906,7 +910,7 @@ const CalibrationImprovement: React.FC<{
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Outliers Removed</span>
           </div>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {output.step1.outlier_count}
+            {step1.outlier_count ?? 0}
           </span>
         </div>
       </div>
@@ -945,15 +949,15 @@ const CalibrationImprovement: React.FC<{
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
         <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-          <span>Version: {output.metadata.version}</span>
-          <span>Generated: {formatDate(output.metadata.generated_at)}</span>
+          <span>Version: {output?.metadata?.version}</span>
+          <span>Generated: {formatDate(output?.metadata?.generated_at)}</span>
         </div>
       </div>
     </div>
   );
 };
 
-const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> = ({ records }) => {
+const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord[] }) => {
   if (records.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
@@ -1000,9 +1004,9 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
                     {record.status}
                   </span>
                 </div>
-                {record.maturity_phase && (
+                {record.phase_age && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {MATURITY_LABELS[record.maturity_phase as CalibrationMaturityPhase] ?? record.maturity_phase}
+                    {MATURITY_LABELS[record.phase_age as CalibrationMaturityPhase] ?? record.phase_age}
                   </span>
                 )}
                 {record.status === 'failed' && record.error_message && (
@@ -1038,16 +1042,14 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationV2Report: React.FC<{
-  output: CalibrationV2Output;
+const CalibrationReport = ({ output, report, t, phase }: { output: CalibrationOutput;
   report?: Record<string, unknown> | null;
   t: (key: string) => string;
-  phase?: string;
-}> = ({ output, report, t, phase }) => {
-  const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
+  phase?: string; }) => {
+  const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
 
   return (
-    <div className="space-y-4" data-testid="calibration-v2-report">
+      <div className="space-y-4" data-testid="calibration-report">
       {hasInsufficientData && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
           <div className="flex items-start space-x-3">
@@ -1080,11 +1082,11 @@ const CalibrationV2Report: React.FC<{
       </CollapsibleSection>
 
       <CollapsibleSection
-        title={`Detected Anomalies (${output.step5.anomalies.length})`}
+        title={`Detected Anomalies (${output.step5?.anomalies?.length ?? 0})`}
         icon={<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
         defaultOpen={false}
       >
-        <AnomalyList anomalies={output.step5.anomalies} extremeEvents={output.step2.extreme_events} />
+        <AnomalyList anomalies={output.step5?.anomalies ?? []} extremeEvents={output.step2?.extreme_events ?? []} />
       </CollapsibleSection>
 
       {phase === 'active' && (output.recommendations ?? []).length > 0 && (
@@ -1128,13 +1130,20 @@ const NUTRITION_OPTION_LABELS: Record<NutritionOption, { name: string; descripti
   },
 };
 
-const ValidationPanel: React.FC<{
-  calibrationId: string;
+const NUTRITION_OPTION_ICONS: Record<
+  NutritionOption,
+  React.ReactNode
+> = {
+  A: <Leaf className="w-5 h-5" aria-hidden />,
+  B: <Sparkles className="w-5 h-5" aria-hidden />,
+  C: <TreePine className="w-5 h-5" aria-hidden />,
+};
+
+const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }: { calibrationId: string;
   parcelId: string;
   healthScore: number;
   confidence: number;
-  onReCalibrate: () => void;
-}> = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }) => {
+  onReCalibrate: () => void; }) => {
   const { mutate: validate, isPending: isValidating } = useValidateCalibration(parcelId);
 
   return (
@@ -1165,11 +1174,7 @@ const ValidationPanel: React.FC<{
           <div className="flex items-center space-x-3 mt-5">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  type="button"
-                  disabled={isValidating}
-                  className="inline-flex items-center space-x-2 px-6 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
-                >
+                <Button variant="amber" type="button" disabled={isValidating} className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium" >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
                 </Button>
@@ -1209,10 +1214,10 @@ const ValidationPanel: React.FC<{
   );
 };
 
-const NutritionOptionSelector: React.FC<{
+const NutritionOptionSelector = ({ parcelId, calibrationId }: {
   parcelId: string;
   calibrationId: string;
-}> = ({ parcelId, calibrationId }) => {
+}) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
   const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
@@ -1258,7 +1263,7 @@ const NutritionOptionSelector: React.FC<{
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 mb-5 min-w-0">
         {options.map((opt) => {
           const alt = suggestion.alternatives.find((a) => a.option === opt);
           const isEligible = alt?.eligible ?? true;
@@ -1267,43 +1272,42 @@ const NutritionOptionSelector: React.FC<{
           const label = NUTRITION_OPTION_LABELS[opt];
 
           return (
-            <Button
-              key={opt}
-              type="button"
-              disabled={!isEligible || isConfirming}
-              onClick={() => setSelectedOption(opt)}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                isSelected
-                  ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500/30'
-                  : isEligible
-                    ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
-                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 opacity-50 cursor-not-allowed'
-              }`}
-            >
-              {isSuggested && (
-                <span className="absolute -top-2.5 left-3 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
-                  Recommended
-                </span>
-              )}
-              <div className="text-base font-semibold text-gray-900 dark:text-white mt-1">
-                {label.name}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {label.description}
-              </p>
-              {alt && !isEligible && (
-                <p className="text-xs text-red-500 mt-2">{alt.reason}</p>
-              )}
-              {alt && isEligible && alt.reason && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{alt.reason}</p>
-              )}
-            </Button>
+            <div key={opt} className="min-w-0">
+              <SelectionCard
+                title={label.name}
+                description={label.description}
+                icon={NUTRITION_OPTION_ICONS[opt]}
+                selected={isSelected}
+                onClick={() => {
+                  if (isEligible && !isConfirming) {
+                    setSelectedOption(opt);
+                  }
+                }}
+                disabled={!isEligible || isConfirming}
+                color="blue"
+                badge={isSuggested ? 'Recommended' : undefined}
+                descriptionClassName="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-4 break-words"
+                footer={
+                  alt?.reason ? (
+                    <p
+                      className={
+                        isEligible
+                          ? 'text-xs text-gray-500 dark:text-gray-400'
+                          : 'text-xs text-red-600 dark:text-red-400'
+                      }
+                    >
+                      {alt.reason}
+                    </p>
+                  ) : undefined
+                }
+              />
+            </div>
           );
         })}
       </div>
 
       <div className="flex items-center space-x-3">
-        <Button
+        <Button variant="blue"
           type="button"
           disabled={!effectiveSelection || isConfirming}
           onClick={() => {
@@ -1311,7 +1315,7 @@ const NutritionOptionSelector: React.FC<{
               confirm({ calibrationId, option: effectiveSelection });
             }
           }}
-          className="inline-flex items-center space-x-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 font-medium"
+          className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium"
         >
           <CheckCircle2 className="w-4 h-4" />
           <span>{isConfirming ? 'Confirming...' : 'Confirm Selection'}</span>
@@ -1326,10 +1330,8 @@ const NutritionOptionSelector: React.FC<{
   );
 };
 
-const PlantingYearPrompt: React.FC<{
-  parcelId: string;
-  onSaved: () => void;
-}> = ({ parcelId, onSaved }) => {
+const PlantingYearPrompt = ({ parcelId, onSaved }: { parcelId: string;
+  onSaved: () => void; }) => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<string>('');
   const updateParcel = useUpdateParcel();
@@ -1379,12 +1381,7 @@ const PlantingYearPrompt: React.FC<{
                 className="w-28 px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               />
             </div>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={!isValid || isSaving}
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
-            >
+            <Button variant="amber" type="button" onClick={handleSave} disabled={!isValid || isSaving} className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors text-sm font-medium" >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save & Continue'}</span>
             </Button>
@@ -1412,7 +1409,7 @@ const CALIBRATION_STEPS: Record<string, { icon: React.ReactNode; label: string }
   finalizing: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Finalisation' },
 };
 
-const CalibrationProgressStepper: React.FC<{ progress: CalibrationProgressEvent | null }> = ({ progress }) => {
+const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgressEvent | null }) => {
   const currentStep = progress?.step ?? 0;
   const totalSteps = progress?.total_steps ?? 7;
   const percent = progress?.percent ?? 0;
@@ -1513,6 +1510,8 @@ const AICalibrationPage = () => {
   const { t } = useTranslation();
   const { t: tAi } = useTranslation('ai');
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
 
@@ -1537,11 +1536,12 @@ const AICalibrationPage = () => {
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
+  const calibrationCompletedButPhaseStuck = (phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress';
   const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
-    phase === 'disabled' ||
-    phase === 'pret_calibrage' ||
+    phase === 'awaiting_data' ||
+    phase === 'ready_calibration' ||
     ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
@@ -1587,25 +1587,13 @@ const AICalibrationPage = () => {
         {(calibration || hasV2Report) && (
           <div className="flex items-center gap-2">
             {phase === 'active' && (
-              <Button
-                type="button"
-                onClick={handleOpenPartialRecalibration}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                data-testid="calibration-open-partial-recalibration"
-              >
+              <Button variant="blue" type="button" onClick={handleOpenPartialRecalibration} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" data-testid="calibration-open-partial-recalibration" >
                 <GitCompareArrows className="w-4 h-4" />
                 <span>{tAi('calibration.page.partialUpdate')}</span>
               </Button>
             )}
 
-            <Button
-              type="button"
-              onClick={handleOpenFullRecalibrationWizard}
-              disabled={isBusy || missingPlantingYear}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
-              data-testid="calibration-open-full-recalibration"
-            >
+            <Button variant="green" type="button" onClick={handleOpenFullRecalibrationWizard} disabled={isBusy || missingPlantingYear} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined} data-testid="calibration-open-full-recalibration" >
               {isBusy ? (
                 <BrainCircuit className="w-4 h-4 animate-pulse" />
               ) : (
@@ -1629,6 +1617,10 @@ const AICalibrationPage = () => {
           fullRecalibrationDisabled={isBusy || missingPlantingYear}
           fullRecalibrationTitle={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined}
         />
+      )}
+
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || calibrationCompletedButPhaseStuck) && (
+        <CalibrationReviewSection parcelId={parcelId} />
       )}
 
       <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
@@ -1668,10 +1660,10 @@ const AICalibrationPage = () => {
                 {tAi('calibration.annualBanner.body')}
               </p>
             </div>
-            <Button
+            <Button variant="green"
               type="button"
               onClick={() => setShowAnnualRecalibrationWizard(true)}
-              className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               data-testid="calibration-start-annual-recalibration"
             >
               {tAi('calibration.annualBanner.cta')}
@@ -1713,10 +1705,10 @@ const AICalibrationPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button
+              <Button variant="blue"
                 type="button"
                 onClick={() => navigate({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } })}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
               >
                 <FileText className="h-4 w-4" />
                 {tAi('calibration.nextStep.openCalendar')}
@@ -1770,7 +1762,7 @@ const AICalibrationPage = () => {
       )}
 
       {hasV2Report && !isCalibrating && (
-        <CalibrationV2Report
+        <CalibrationReport
           output={v2Output}
           report={reportData?.report && typeof reportData.report === 'object'
             ? reportData.report as Record<string, unknown>
@@ -1795,7 +1787,7 @@ const AICalibrationPage = () => {
         </CollapsibleSection>
       )}
 
-      {phase === 'awaiting_validation' && hasV2Report && v2Output && reportData?.calibration?.id && (
+      {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && reportData?.calibration?.id && (
         <ValidationPanel
           calibrationId={reportData.calibration.id}
           parcelId={parcelId}
@@ -1805,7 +1797,7 @@ const AICalibrationPage = () => {
         />
       )}
 
-      {phase === 'awaiting_nutrition_option' && reportData?.calibration?.id && (
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) && reportData?.calibration?.id && (
         <NutritionOptionSelector
           parcelId={parcelId}
           calibrationId={reportData.calibration.id}
@@ -1827,12 +1819,7 @@ const AICalibrationPage = () => {
                   <> Reason: <span className="font-medium">{calibration.error_message}</span></>
                 )}
               </p>
-              <Button
-                type="button"
-                onClick={handleOpenFullRecalibrationWizard}
-                disabled={missingPlantingYear}
-                className="mt-4 inline-flex items-center space-x-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
+              <Button variant="red" type="button" onClick={handleOpenFullRecalibrationWizard} disabled={missingPlantingYear} className="mt-4 inline-flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" >
                 <Play className="w-4 h-4" />
                 <span>Retry Calibration</span>
               </Button>

@@ -81,11 +81,10 @@ const AIPlanSummaryPage = () => {
                 <p className="mt-2">{t('plan.summary.technicalDetailsBody')}</p>
               </details>
               <div className="flex flex-wrap gap-2">
-                <Button
+                <Button variant="green"
                   type="button"
                   onClick={() => ensurePlan.mutate()}
                   disabled={ensurePlan.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
                   {ensurePlan.isPending ? t('plan.summary.preparing') : t('plan.summary.prepareCalendar')}
                 </Button>
@@ -114,11 +113,10 @@ const AIPlanSummaryPage = () => {
           </div>
 
           {effectiveStatus === 'draft' && (
-            <Button
+            <Button variant="green"
               type="button"
               onClick={() => validatePlan.mutate()}
               disabled={validatePlan.isPending}
-              className="bg-green-600 hover:bg-green-700 text-white"
             >
               {validatePlan.isPending ? t('plan.summary.confirming') : t('plan.summary.confirmCalendar')}
             </Button>
@@ -132,7 +130,7 @@ const AIPlanSummaryPage = () => {
           </div>
         )}
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-lg">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">{t('plan.summary.statsTotal')}</h4>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">{summary.total_interventions}</p>
@@ -193,7 +191,7 @@ const AIPlanSummaryPage = () => {
                       <Leaf className="h-4 w-4" aria-hidden />
                       <h4 className="font-medium">{t('plan.summary.annualDosesTitle')}</h4>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       {doses.N_kg_ha != null && (
                         <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg text-center">
                           <p className="text-xs text-gray-500 dark:text-gray-400">N</p>

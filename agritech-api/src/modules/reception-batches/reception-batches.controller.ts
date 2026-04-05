@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { ReceptionBatchesService } from './reception-batches.service';
 import { CreateReceptionBatchDto } from './dto/create-reception-batch.dto';
 import { UpdateQualityControlDto } from './dto/update-quality-control.dto';
@@ -22,7 +23,7 @@ import { ReceptionBatchFiltersDto } from './dto/reception-batch-filters.dto';
 @ApiTags('Reception Batches')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/reception-batches')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class ReceptionBatchesController {
   constructor(
     private readonly receptionBatchesService: ReceptionBatchesService,

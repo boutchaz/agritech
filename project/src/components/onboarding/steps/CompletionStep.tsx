@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Rocket, Settings, Bell, Database, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
 import { SelectionCard } from '../ui/SelectionCard';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ const DATE_FORMATS = [
   { id: 'YYYY-MM-DD', name: '2024-12-31', description: 'Format ISO' },
 ];
 
-export const CompletionStep: React.FC<CompletionStepProps> = ({
+export const CompletionStep = ({
   preferences,
   profileName,
   organizationName,
@@ -42,7 +42,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
   onUpdate,
   onComplete,
   isLoading,
-}) => {
+}: CompletionStepProps) => {
   const [showPreferences, setShowPreferences] = useState(false);
 
   if (!showPreferences) {

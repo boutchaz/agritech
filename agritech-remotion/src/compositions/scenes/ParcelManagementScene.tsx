@@ -1,9 +1,9 @@
-import React from "react";
+
 import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig, spring } from "remotion";
 import { AnimatedNumber } from "../components/AnimatedNumber";
 import { moroccanData } from "../../data/mock-data";
 
-export const ParcelManagementScene: React.FC = () => {
+export const ParcelManagementScene = () => {
   const frame = useCurrentFrame();
   const { width, height, fps } = useVideoConfig();
 
@@ -113,17 +113,17 @@ export const ParcelManagementScene: React.FC = () => {
           </svg>
 
           {/* Region markers */}
-          {regions.map((region, i) => {
-            const markerOpacity = interpolate(frame, [40 + i * 12, 70 + i * 12], [0, 1], {
+          {regions.map((region, itemIdx) => {
+            const markerOpacity = interpolate(frame, [40 + itemIdx * 12, 70 + itemIdx * 12], [0, 1], {
               extrapolateRight: "clamp",
             });
-            const markerScale = interpolate(frame, [70 + i * 12, 100 + i * 12], [0, 1], {
+            const markerScale = interpolate(frame, [70 + itemIdx * 12, 100 + itemIdx * 12], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   position: "absolute",
                   left: region.x * width * 0.65,
@@ -221,14 +221,14 @@ export const ParcelManagementScene: React.FC = () => {
             "📊 Historique par parcelle",
             "🌧️ Données météo locales",
             "📱 Mode hors-ligne",
-          ].map((feature, i) => {
-            const featureOpacity = interpolate(frame, [80 + i * 10, 110 + i * 10], [0, 1], {
+          ].map((feature, itemIdx) => {
+            const featureOpacity = interpolate(frame, [80 + itemIdx * 10, 110 + itemIdx * 10], [0, 1], {
               extrapolateRight: "clamp",
             });
 
             return (
               <div
-                key={i}
+                key={"item-" + itemIdx}
                 style={{
                   backgroundColor: "#ffffff",
                   padding: "12px 24px",

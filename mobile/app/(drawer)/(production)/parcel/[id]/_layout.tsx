@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/providers/ThemeProvider';
 import { useParcel, useFarm, useDeleteParcel } from '@/hooks/useFarms';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Toast } from '@/components/ui/Toast';
 
@@ -74,25 +75,6 @@ export default function ParcelDetailLayout() {
     return pathname.endsWith(tab.route);
   })?.key ?? 'index';
 
-  if (isLoading && !parcel) {
-    return (
-      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
-        <View style={[styles.header, { paddingTop: insets.top }]}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color={themeColors.brandPrimary} />
-        </View>
-      </View>
-    );
-  }
-
   const statusColor =
     parcel?.status === 'active'
       ? themeColors.success
@@ -100,10 +82,25 @@ export default function ParcelDetailLayout() {
         ? themeColors.warning
         : themeColors.textTertiary;
 
-  return (
-    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+  const content = isLoading && !parcel ? (
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}> 
+      <View style={[styles.header, { paddingTop: insets.top }]}> 
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="arrow-back" size={24} color={themeColors.textPrimary} />
+        </TouchableOpacity>
+      </View>
+      <View style={styles.loadingBox}>
+        <ActivityIndicator size="large" color={themeColors.brandPrimary} />
+      </View>
+    </View>
+  ) : (
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}> 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: themeColors.background }]}>
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: themeColors.background }]}> 
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
@@ -122,7 +119,7 @@ export default function ParcelDetailLayout() {
               </Text>
             )}
             {parcel && (
-              <View style={[styles.statusPill, { backgroundColor: statusColor + '1A' }]}>
+              <View style={[styles.statusPill, { backgroundColor: statusColor + '1A' }]}> 
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <Text style={[styles.statusText, { color: statusColor }]}>{parcel.status}</Text>
               </View>
@@ -139,7 +136,7 @@ export default function ParcelDetailLayout() {
       </View>
 
       {/* Scrollable tab bar */}
-      <View style={[styles.tabBarContainer, { borderBottomColor: themeColors.outlineVariant }]}>
+      <View style={[styles.tabBarContainer, { borderBottomColor: themeColors.outlineVariant }]}> 
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -211,6 +208,12 @@ export default function ParcelDetailLayout() {
         onHide={() => setToast((prev) => ({ ...prev, visible: false }))}
       />
     </View>
+  );
+
+  return (
+    <ErrorBoundary>
+      {content}
+    </ErrorBoundary>
   );
 }
 

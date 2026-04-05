@@ -20,7 +20,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
   const clockIn = useClockIn();
   const clockOut = useClockOut();
 
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
 
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
@@ -108,12 +108,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
                   time: formatDistance(new Date(activeLog.start_time), new Date(), { locale: getLocale() }),
                 })}
               </p>
-              <Button
-                onClick={handleClockOut}
-                disabled={clockOut.isPending}
-                className="mt-3 bg-red-600 hover:bg-red-700"
-                size="sm"
-              >
+              <Button variant="red" onClick={handleClockOut} disabled={clockOut.isPending} className="mt-3" size="sm" >
                 {clockOut.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -126,11 +121,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
 
           {/* Start Timer Button */}
           {canStartTimer && (
-            <Button
-              onClick={handleClockIn}
-              disabled={clockIn.isPending}
-              className="w-full bg-green-600 hover:bg-green-700"
-            >
+            <Button variant="green" onClick={handleClockIn} disabled={clockIn.isPending} className="w-full" >
               {clockIn.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (

@@ -45,8 +45,11 @@ export function usePaginatedTasks(
   organizationId: string,
   query: PaginatedTaskQuery,
 ) {
+  // Stable queryKey: serialize object to prevent re-render loops (TanStack uses reference equality)
+  const queryKey = JSON.stringify(query);
+
   return useQuery({
-    queryKey: ["tasks", "paginated", organizationId, query],
+    queryKey: ["tasks", "paginated", organizationId, queryKey],
     queryFn: async (): Promise<PaginatedResponse<TaskSummary>> => {
       if (!organizationId) {
         return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };

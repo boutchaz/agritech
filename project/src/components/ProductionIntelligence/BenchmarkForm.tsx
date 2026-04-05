@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,11 +42,11 @@ interface BenchmarkFormProps {
   onSuccess?: () => void;
 }
 
-export const BenchmarkForm: React.FC<BenchmarkFormProps> = ({
+export const BenchmarkForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: BenchmarkFormProps) => {
   const { currentOrganization } = useAuth();
   const createBenchmark = useCreateYieldBenchmark();
 

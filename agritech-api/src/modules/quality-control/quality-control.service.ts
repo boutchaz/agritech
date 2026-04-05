@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateQualityInspectionDto, InspectionStatus } from './dto';
@@ -53,7 +54,8 @@ export class QualityControlService {
       query = query.lte('overall_score', filters.max_overall_score);
     }
     if (filters.search) {
-      query = query.or(`notes.ilike.%${filters.search}%,results.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`notes.ilike.%${s}%,results.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting

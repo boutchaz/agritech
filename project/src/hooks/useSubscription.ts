@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import {
   subscriptionsService,
@@ -15,7 +14,6 @@ export const useSubscription = (
   organizationOverride?: { id: string; name: string } | null,
 ) => {
   const authContext = useAuth();
-  const queryClient = useQueryClient();
 
   const currentOrganization =
     organizationOverride !== undefined
@@ -81,12 +79,6 @@ export const useSubscription = (
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 3000),
   });
-
-  useEffect(() => {
-    if (orgId !== 'none') {
-      queryClient.invalidateQueries({ queryKey: ['subscription', orgId] });
-    }
-  }, [orgId, queryClient]);
 
   return query;
 };

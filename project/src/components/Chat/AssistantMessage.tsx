@@ -1,13 +1,15 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { Bot, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { useZaiTTS } from '@/hooks/useZaiTTS';
 import { marked } from 'marked';
-import { DEEP_LINK_MAP } from './chat-utils';
+import { sanitizeMarkdownHtml } from '@/lib/sanitize';
+import { DEEP_LINK_MAP, formatChatMessageTimestamp } from './chat-utils';
 import { cardRegistry } from './cards';
 import { Button } from '@/components/ui/button';
+import { unwrapStructuredAssistantJson } from '@/lib/chat/unwrapStructuredAssistantJson';
 
 interface AssistantMessageProps {
   content: string;
@@ -92,25 +94,27 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
   const speechLang = language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar-SA' : 'en-US';
   const voice = language === 'ar' ? 'kazi' : 'jam';
 
+  const displayContent = useMemo(() => unwrapStructuredAssistantJson(content), [content]);
+
   const browserTTS = useTextToSpeech({ language: speechLang, rate: 0.95, pitch: 1.0, volume: 1.0 });
   const zaiTTS = useZaiTTS({
     language,
     voice,
     speed: 0.95,
     onError: () => {
-      if (browserTTS.isSupported) browserTTS.speak(content);
+      if (browserTTS.isSupported) browserTTS.speak(displayContent);
     },
   });
 
   const handlePlay = async () => {
     try {
       if (browserTTS.isSupported) {
-        browserTTS.speak(content);
+        browserTTS.speak(displayContent);
       } else {
-        await zaiTTS.play(content);
+        await zaiTTS.play(displayContent);
       }
     } catch {
-      if (browserTTS.isSupported) browserTTS.speak(content);
+      if (browserTTS.isSupported) browserTTS.speak(displayContent);
     }
   };
 
@@ -120,7 +124,7 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
   };
 
   const isSpeaking = zaiTTS.isGenerating || zaiTTS.isPlaying || browserTTS.isSpeaking;
-  const segments = useMemo(() => parseContentSegments(content), [content]);
+  const segments = useMemo(() => parseContentSegments(displayContent), [displayContent]);
 
   return (
     <div className="flex gap-3 justify-start">
@@ -130,17 +134,17 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
       <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            {segments.map((segment, idx) => {
+            {segments.map((segment) => {
               if (segment.type === 'card' && segment.cardType && segment.cardData) {
                 const CardComponent = cardRegistry[segment.cardType];
-                return CardComponent ? <CardComponent key={idx} data={segment.cardData} /> : null;
+                return CardComponent ? <CardComponent key={`${segment.cardType}-${JSON.stringify(segment.cardData)}`} data={segment.cardData} /> : null;
               }
               return (
                 <div
-                  key={idx}
+                  key={segment.text ?? segment.cardType ?? segment.type}
                   className="text-sm chat-markdown"
                   dangerouslySetInnerHTML={{
-                    __html: addDeepLinks(marked.parse(segment.text || '') as string),
+                    __html: sanitizeMarkdownHtml(addDeepLinks(marked.parse(segment.text || '') as string)),
                   }}
                   onClick={(e) => {
                     const target = e.target as HTMLElement;
@@ -154,7 +158,7 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
               );
             })}
             <span className="text-xs opacity-70 mt-1 block">
-              {timestamp.toLocaleTimeString()}
+              {formatChatMessageTimestamp(timestamp, language)}
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">

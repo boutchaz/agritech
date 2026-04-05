@@ -48,7 +48,7 @@ const toTitleCase = (value: string) =>
     .map(token => token.charAt(0).toUpperCase() + token.slice(1))
     .join(' ');
 
-export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t: _t } = useTranslation();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -470,69 +470,30 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     fetchUserRole();
   }, [user?.id, currentOrganization?.id]);
 
-  // Track session start and set user properties when authenticated
-  const { data: subscription } = useSubscription(currentOrganization);
+  // Track session start and set user properties when authenticated (fire once)
+  const analyticsTrackedRef = React.useRef(false);
 
   useEffect(() => {
-    if (user && profile && currentOrganization && userRole && !loading) {
-      // Track session start
-      trackSessionStart();
+    if (analyticsTrackedRef.current) return;
+    if (!user || !currentOrganization || !userRole || loading) return;
 
-      // Determine organization size
-      const orgSize = getOrganizationSize(organizations.length, farms.length);
+    analyticsTrackedRef.current = true;
+    trackSessionStart();
+    setAnalyticsUserProperties({
+      userId: user.id,
+      email: user.email,
+      signUpDate: profile?.created_at || new Date().toISOString(),
+      organizationId: currentOrganization.id,
+      organizationSize: getOrganizationSize(organizations.length, farms.length),
+      subscriptionTier: 'free', // simplified — no extra subscription query needed here
+      trialStatus: 'none',
+      role: userRole.role_name as AnalyticsUserProperties['role'],
+      farmCount: farms.length,
+      totalHectares: farms.reduce((t, f) => t + (f.size || 0), 0),
+      platform: 'web',
+    });
+  }, [user?.id, currentOrganization?.id, userRole?.role_name, loading]);
 
-      const planTypeMap: Record<string, AnalyticsUserProperties['subscriptionTier']> = {
-        starter: 'starter',
-        standard: 'standard',
-        premium: 'premium',
-        essential: 'starter',
-        professional: 'professional',
-        enterprise: 'enterprise',
-      };
-      const subscriptionTier: AnalyticsUserProperties['subscriptionTier'] = subscription
-        ? subscription.status === 'trialing'
-          ? 'trial'
-          : planTypeMap[(subscription.formula || subscription.plan_type) ?? ''] ?? 'free'
-        : 'free';
-
-      const trialStatus: AnalyticsUserProperties['trialStatus'] = !subscription
-        ? 'none'
-        : subscription.status === 'trialing'
-          ? 'active'
-          : subscription.status === 'active' &&
-              (subscription.formula || subscription.plan_type)
-            ? 'converted'
-            : 'expired';
-
-      // Set user properties for analytics segmentation
-      const userProps: AnalyticsUserProperties = {
-        userId: user.id,
-        email: user.email,
-        signUpDate: profile.created_at || new Date().toISOString(),
-        organizationId: currentOrganization.id,
-        organizationSize: orgSize,
-        subscriptionTier: subscriptionTier,
-        trialStatus: trialStatus,
-        role: userRole.role_name as AnalyticsUserProperties['role'],
-        farmCount: farms.length,
-        totalHectares: calculateTotalHectares(farms),
-        platform: 'web',
-      };
-
-      setAnalyticsUserProperties(userProps);
-    }
-  }, [user?.id, profile, currentOrganization?.id, userRole, loading, farms, organizations, subscription]);
-
-/**
- * Calculate total hectares from farms
- */
-function calculateTotalHectares(farms: Farm[]): number {
-  return farms.reduce((total, farm) => total + (farm.size || 0), 0);
-}
-
-/**
- * Determine organization size based on number of organizations and farms
- */
 function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
   if (orgCount === 1 && farmCount <= 1) return 'solo';
   if (orgCount <= 2 && farmCount <= 5) return 'small';
@@ -600,18 +561,24 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
   useEffect(() => {
     // Only check onboarding if all data is loaded
     if (!loading && !orgsLoading && !profileLoading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
-      // IMPORTANT: Validate session is actually valid before redirecting to onboarding
-      // This prevents redirecting users with expired tokens to onboarding
       const isTokenValid = !useAuthStore.getState().isTokenExpired();
       const hasAccessToken = !!useAuthStore.getState().getAccessToken();
 
-      // Only redirect to onboarding if the session is truly valid
       if (isTokenValid && hasAccessToken) {
         window.location.href = '/onboarding';
       } else {
-        // Session is invalid - clear auth and redirect to login
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
+        const hasRefreshToken = !!useAuthStore.getState().tokens?.refresh_token;
+        if (hasRefreshToken) {
+          useAuthStore.getState().refreshAccessToken().then((refreshed) => {
+            if (refreshed) {
+              window.location.href = '/onboarding';
+            } else {
+              window.location.href = '/login';
+            }
+          });
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
   }, [loading, orgsLoading, profileLoading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);

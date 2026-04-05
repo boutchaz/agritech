@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import {  useMemo, useEffect  } from "react";
 import { X, Wheat, Calendar, Star, MapPin, TrendingUp, Warehouse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -36,7 +36,7 @@ const harvestSchema = z.object({
 
 type HarvestFormData = z.infer<typeof harvestSchema>;
 
-const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
+const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { handleFormError } = useFormErrors<HarvestFormData>();
@@ -459,7 +459,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                    }`}
                  >
                    <option value="">{t('harvests.form.placeholders.unspecified')}</option>
-                   {INTENDED_FOR.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                   {INTENDED_FOR.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                  </select>
                  {errors.intended_for && (
                    <p className="text-red-600 text-sm mt-1">{errors.intended_for.message}</p>
@@ -556,11 +556,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
              >
                {t('harvests.form.buttons.cancel')}
              </Button>
-             <Button
-               type="submit"
-               disabled={isSubmitting}
-               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-             >
+             <Button variant="green" type="submit" disabled={isSubmitting} className="px-5 py-2.5 rounded-lg font-medium transition-colors disabled:cursor-not-allowed flex items-center gap-2" >
                {isSubmitting && (
                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                )}

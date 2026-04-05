@@ -1,4 +1,4 @@
-import React from "react";
+
 import { AbsoluteFill, Series } from "remotion";
 import { IntroScene } from "./scenes/IntroScene";
 import { HeroScene } from "./scenes/HeroScene";
@@ -9,7 +9,7 @@ import { SatelliteScene } from "./scenes/SatelliteScene";
 import { MultiOrgScene } from "./scenes/MultiOrgScene";
 import { OutroScene } from "./scenes/OutroScene";
 
-export const PromotionalVideo: React.FC = () => {
+export const PromotionalVideo = () => {
   return (
     <AbsoluteFill>
       <Series>

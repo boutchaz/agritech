@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { calibrationV2Api } from '@/lib/api/calibration-v2';
+import { calibrationApi } from '@/lib/api/calibration-output';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ReadinessCheck {
@@ -76,7 +76,7 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
     setError(null);
 
     try {
-      const response = await calibrationV2Api.checkReadiness(parcelId, currentOrganization.id);
+      const response = await calibrationApi.checkReadiness(parcelId, currentOrganization.id);
       setReadiness(response);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Impossible de verifier le niveau de preparation');
@@ -149,12 +149,12 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
   return (
     <div className="space-y-5" data-testid="calibration-readiness-panel">
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-        <div className="flex items-end justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <p className="text-sm text-gray-500 dark:text-gray-400">Niveau de confiance estime</p>
             <p className="text-3xl font-bold text-gray-900 dark:text-white">{Math.min(Math.round(readiness?.confidence_preview ?? 0), 100)}%</p>
           </div>
-          <Button type="button" variant="outline" onClick={fetchReadiness}>
+          <Button type="button" variant="outline" onClick={fetchReadiness} className="w-full shrink-0 sm:w-auto">
             <RefreshCw className="w-4 h-4" />
             Actualiser
           </Button>
@@ -230,13 +230,14 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
         </div>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-stretch sm:justify-end">
         <Button
+          variant="green"
           type="button"
           onClick={onLaunchCalibration}
           disabled={!canLaunch || isLaunching || !readiness?.ready}
-          className="bg-green-600 hover:bg-green-700 text-white"
           data-testid="calibration-readiness-launch"
+          className="w-full sm:w-auto"
         >
           {isLaunching ? 'Lancement en cours...' : 'Lancer le calibrage'}
         </Button>

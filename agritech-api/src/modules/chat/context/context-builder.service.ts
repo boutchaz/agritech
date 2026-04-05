@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
-import { ContextRouterService, ContextNeeds } from './context-router.service';
+import { MatchedModule } from './context-router.service';
+import { SemanticContextRouterService } from './semantic-context-router.service';
 import { WeatherProvider, WeatherForecast } from '../providers/weather.provider';
 import { AgromindiaContextService, AgromindiaParcelContext } from './agromindia-context.service';
 
@@ -325,6 +326,12 @@ interface SettingsContext {
 
 export { AgromindiaParcelContext } from './agromindia-context.service';
 
+/** Which context modules the router requested for this query (prompt hints). */
+export interface ContextRoutingFlags {
+  weather: boolean;
+  satellite: boolean;
+}
+
 export interface BuiltContext {
   organization: OrganizationContext;
   farms?: FarmContext | null;
@@ -347,6 +354,8 @@ export interface BuiltContext {
   currentDate: string;
   currentSeason: string;
   agromindiaIntel?: AgromindiaParcelContext[] | null;
+  /** Populated so the prompt can distinguish weather vs satellite-only routing. */
+  contextRouting?: ContextRoutingFlags;
 }
 
 interface SatelliteWeatherContext {
@@ -385,6 +394,13 @@ interface SatelliteWeatherContext {
       forecasts: WeatherForecast[];
     }>;
     available: boolean;
+    /** Why forecast rows may be missing — keeps the LLM from blaming "no coordinates" incorrectly. */
+    diagnostics?: {
+      openweather_configured: boolean;
+      parcels_loaded: number;
+      parcels_resolved_location: number;
+      forecasts_returned: number;
+    };
   };
 }
 
@@ -454,10 +470,11 @@ interface ProductionIntelligenceContext {
 export class ContextBuilderService {
   private readonly logger = new Logger(ContextBuilderService.name);
   private readonly SUMMARY_LIMIT = 3;
+  private readonly DEEP_LIMIT = 10;
 
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly contextRouter: ContextRouterService,
+    private readonly contextRouter: SemanticContextRouterService,
     private weatherProvider?: WeatherProvider,
   ) {}
 
@@ -484,9 +501,11 @@ export class ContextBuilderService {
     ): Promise<BuiltContext> {
       const client = this.databaseService.getAdminClient();
 
-      // Analyze query using simple keyword-based routing (no AI call - performance optimization)
-      // Eliminates 1 AI call per message, reducing latency by 1-2 seconds
-      const contextNeeds = this.contextRouter.analyzeQuery(query);
+      const contextNeeds = await this.contextRouter.analyzeQuery(query);
+      const topModules = this.contextRouter
+        .getMatchedModules()
+        .slice(0, 2)
+        .map((module) => module.key);
 
      // Get current date and season
      const now = new Date();
@@ -531,71 +550,71 @@ export class ContextBuilderService {
          this.logger.error(`Failed to load worker context: ${err.message}`, err.stack);
          return null;
        }),
-       contextNeeds.accounting
-         ? this.getAccountingContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load accounting context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.accounting
+          ? this.getAccountingContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load accounting context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.inventory
-         ? this.getInventoryContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load inventory context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.inventory
+          ? this.getInventoryContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load inventory context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.production
-         ? this.getProductionContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load production context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.production
+          ? this.getProductionContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load production context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.supplierCustomer
-         ? this.getSupplierCustomerContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.supplierCustomer
+          ? this.getSupplierCustomerContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load supplier/customer context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.campaigns
-         ? this.getCampaignsContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load campaigns context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.campaigns
+          ? this.getCampaignsContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load campaigns context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.reception
-         ? this.getReceptionBatchesContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load reception batches context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.reception
+          ? this.getReceptionBatchesContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load reception batches context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.compliance
-         ? this.getComplianceContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load compliance context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.compliance
+          ? this.getComplianceContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load compliance context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.utilities
-         ? this.getUtilitiesContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load utilities context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.utilities
+          ? this.getUtilitiesContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load utilities context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.reports
-         ? this.getReportsContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load reports context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.reports
+          ? this.getReportsContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load reports context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.marketplace
-         ? this.getMarketplaceContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load marketplace context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.marketplace
+          ? this.getMarketplaceContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load marketplace context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
-       contextNeeds.orchards
-         ? this.getOrchardContext(client, organizationId).catch(err => {
-             this.logger.warn(`Failed to load orchards context: ${err.message}`);
-             return null;
-           })
+        contextNeeds.orchards
+          ? this.getOrchardContext(client, organizationId, topModules).catch(err => {
+              this.logger.warn(`Failed to load orchards context: ${err.message}`);
+              return null;
+            })
          : Promise.resolve(null),
        (contextNeeds.satellite || contextNeeds.weather)
          ? this.getSatelliteWeatherContext(client, organizationId).catch(err => {
@@ -660,6 +679,10 @@ export class ContextBuilderService {
        currentDate,
        currentSeason,
        agromindiaIntel,
+       contextRouting: {
+         weather: contextNeeds.weather,
+         satellite: contextNeeds.satellite,
+       },
      };
    }
 
@@ -891,6 +914,13 @@ export class ContextBuilderService {
     }
   }
 
+  private getLimitForModule(
+    moduleName: MatchedModule['key'],
+    topModules: MatchedModule['key'][],
+  ): number {
+    return topModules.includes(moduleName) ? this.DEEP_LIMIT : this.SUMMARY_LIMIT;
+  }
+
   private async getWorkerContext(
     client: any,
     organizationId: string,
@@ -1006,15 +1036,17 @@ export class ContextBuilderService {
   private async getAccountingContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<AccountingContext> {
     try {
-       // Get chart of accounts summary
-       const { data: accounts, error: accountsError, count: accountsCount } = await client
+       const limit = this.getLimitForModule('accounting', topModules);
+        // Get chart of accounts summary
+        const { data: accounts, error: accountsError, count: accountsCount } = await client
          .from('accounts')
-         .select('id, name, account_type, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, account_type, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (accountsError) {
         this.logger.error(`Error fetching accounts: ${accountsError.message}`);
@@ -1031,9 +1063,9 @@ export class ContextBuilderService {
          .gte(
            'invoice_date',
            new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('invoice_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          )
+          .order('invoice_date', { ascending: false })
+          .limit(limit);
       
       if (invoicesError) {
         this.logger.error(`Error fetching invoices: ${invoicesError.message}`);
@@ -1047,9 +1079,9 @@ export class ContextBuilderService {
          .gte(
            'payment_date',
            new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-         )
-         .order('payment_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          )
+          .order('payment_date', { ascending: false })
+          .limit(limit);
       
       if (paymentsError) {
         this.logger.error(`Error fetching payments: ${paymentsError.message}`);
@@ -1155,8 +1187,10 @@ export class ContextBuilderService {
   private async getInventoryContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<InventoryContext> {
     try {
+      const limit = this.getLimitForModule('inventory', topModules);
       // Get stock levels from stock_valuation view (actual stock quantities)
       // This is the same approach used by getFarmStockLevels in items.service.ts
       const { data: stockData, error: stockError } = await client
@@ -1295,21 +1329,21 @@ export class ContextBuilderService {
 
       return {
         items_count: items.length,
-        items_recent: items.slice(0, this.SUMMARY_LIMIT),
-        items_has_more: items.length > this.SUMMARY_LIMIT,
+        items_recent: items.slice(0, limit),
+        items_has_more: items.length > limit,
         warehouses_count: warehousesList.length,
         warehouses_recent:
-          warehousesList.slice(0, this.SUMMARY_LIMIT).map((w: any) => ({
+          warehousesList.slice(0, limit).map((w: any) => ({
             id: w.id,
             name: w.name,
             location: w.location || 'N/A',
             farm_name: w.farm?.name,
           })),
-        warehouses_has_more: warehousesList.length > this.SUMMARY_LIMIT,
+        warehouses_has_more: warehousesList.length > limit,
         recent_stock_movements_count: stockEntries?.length || 0,
         low_stock_count: lowStockItems.length,
-        low_stock_items_recent: lowStockItems.slice(0, this.SUMMARY_LIMIT),
-        low_stock_items_has_more: lowStockItems.length > this.SUMMARY_LIMIT,
+        low_stock_items_recent: lowStockItems.slice(0, limit),
+        low_stock_items_has_more: lowStockItems.length > limit,
         total_inventory_value: totalInventoryValue,
       };
     } catch (error) {
@@ -1333,8 +1367,10 @@ export class ContextBuilderService {
   private async getProductionContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ProductionContext> {
     try {
+      const limit = this.getLimitForModule('production', topModules);
       const { data: harvests, error: harvestsError, count: harvestsCount } = await client
         .from('harvest_records')
         .select(`
@@ -1354,7 +1390,7 @@ export class ContextBuilderService {
           new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(),
         )
         .order('harvest_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (harvestsError) {
         this.logger.error(`Error fetching harvests: ${harvestsError.message}`);
@@ -1445,15 +1481,17 @@ export class ContextBuilderService {
   private async getSupplierCustomerContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<SupplierCustomerContext> {
     try {
-       // Get all suppliers, not just active ones (summary)
+       const limit = this.getLimitForModule('supplierCustomer', topModules);
+        // Get all suppliers, not just active ones (summary)
        const { data: suppliers, error: suppliersError, count: suppliersCount } = await client
          .from('suppliers')
-         .select('id, name, supplier_type, is_active, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, supplier_type, is_active, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (suppliersError) {
         this.logger.error(`Error fetching suppliers: ${suppliersError.message}`);
@@ -1462,10 +1500,10 @@ export class ContextBuilderService {
        // Get all customers, not just active ones (summary)
        const { data: customers, error: customersError, count: customersCount } = await client
          .from('customers')
-         .select('id, name, customer_type, is_active, created_at', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .order('created_at', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .select('id, name, customer_type, is_active, created_at', { count: 'exact' })
+          .eq('organization_id', organizationId)
+          .order('created_at', { ascending: false })
+          .limit(limit);
       
       if (customersError) {
         this.logger.error(`Error fetching customers: ${customersError.message}`);
@@ -1474,10 +1512,10 @@ export class ContextBuilderService {
        const { data: salesOrders, error: salesOrdersError, count: salesOrdersCount } = await client
          .from('sales_orders')
          .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .in('status', ['draft', 'confirmed', 'partial'])
-         .order('order_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .eq('organization_id', organizationId)
+          .in('status', ['draft', 'confirmed', 'partial'])
+          .order('order_date', { ascending: false })
+          .limit(limit);
       
       if (salesOrdersError) {
         this.logger.error(`Error fetching sales orders: ${salesOrdersError.message}`);
@@ -1486,10 +1524,10 @@ export class ContextBuilderService {
        const { data: purchaseOrders, error: purchaseOrdersError, count: purchaseOrdersCount } = await client
          .from('purchase_orders')
          .select('id, order_number, order_date, total_amount, status', { count: 'exact' })
-         .eq('organization_id', organizationId)
-         .in('status', ['draft', 'confirmed', 'partial'])
-         .order('order_date', { ascending: false })
-         .limit(this.SUMMARY_LIMIT);
+          .eq('organization_id', organizationId)
+          .in('status', ['draft', 'confirmed', 'partial'])
+          .order('order_date', { ascending: false })
+          .limit(limit);
       
       if (purchaseOrdersError) {
         this.logger.error(`Error fetching purchase orders: ${purchaseOrdersError.message}`);
@@ -1560,8 +1598,10 @@ export class ContextBuilderService {
   private async getCampaignsContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<CampaignsContext> {
     try {
+      const limit = this.getLimitForModule('campaigns', topModules);
       const { count: campaignsCount, error: campaignsCountError } = await client
         .from('campaigns')
         .select('*', { count: 'exact', head: true })
@@ -1596,7 +1636,7 @@ export class ContextBuilderService {
         .select('id, name, type, status, start_date, end_date, priority', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('start_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (campaignsError) {
         this.logger.error(`Error fetching campaigns: ${campaignsError.message}`);
@@ -1633,8 +1673,10 @@ export class ContextBuilderService {
   private async getReceptionBatchesContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ReceptionBatchesContext> {
     try {
+      const limit = this.getLimitForModule('reception', topModules);
       const { count: batchesCount, error: batchesCountError } = await client
         .from('reception_batches')
         .select('*', { count: 'exact', head: true })
@@ -1662,7 +1704,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('reception_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (batchesError) {
         this.logger.error(`Error fetching reception batches: ${batchesError.message}`);
@@ -1697,8 +1739,10 @@ export class ContextBuilderService {
   private async getComplianceContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ComplianceContext> {
     try {
+      const limit = this.getLimitForModule('compliance', topModules);
       const { count: certificationsCount, error: certificationsCountError } = await client
         .from('certifications')
         .select('*', { count: 'exact', head: true })
@@ -1749,7 +1793,7 @@ export class ContextBuilderService {
         .select('id, certification_type, status, expiry_date', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('expiry_date', { ascending: true })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (certificationsError) {
         this.logger.error(`Error fetching certifications: ${certificationsError.message}`);
@@ -1770,7 +1814,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('check_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (checksError) {
         this.logger.error(`Error fetching compliance checks: ${checksError.message}`);
@@ -1820,8 +1864,10 @@ export class ContextBuilderService {
   private async getUtilitiesContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<UtilitiesContext> {
     try {
+      const limit = this.getLimitForModule('utilities', topModules);
       const { count: utilitiesCount, error: utilitiesCountError } = await client
         .from('utilities')
         .select('*', { count: 'exact', head: true })
@@ -1859,7 +1905,7 @@ export class ContextBuilderService {
         )
         .eq('organization_id', organizationId)
         .order('billing_date', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (utilitiesError) {
         this.logger.error(`Error fetching utilities: ${utilitiesError.message}`);
@@ -1896,8 +1942,10 @@ export class ContextBuilderService {
   private async getReportsContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<ReportsContext> {
     try {
+      const limit = this.getLimitForModule('reports', topModules);
       const { count: reportsCount, error: reportsCountError } = await client
         .from('parcel_reports')
         .select('*', { count: 'exact', head: true })
@@ -1934,7 +1982,7 @@ export class ContextBuilderService {
         })
         .eq('organization_id', organizationId)
         .order('generated_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (reportsError) {
         this.logger.error(`Error fetching reports: ${reportsError.message}`);
@@ -1970,8 +2018,10 @@ export class ContextBuilderService {
   private async getMarketplaceContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<MarketplaceContext> {
     try {
+      const limit = this.getLimitForModule('marketplace', topModules);
       const { count: listingsCount, error: listingsCountError } = await client
         .from('marketplace_listings')
         .select('*', { count: 'exact', head: true })
@@ -2026,7 +2076,7 @@ export class ContextBuilderService {
         .select('id, title, status, price, currency, quantity_available', { count: 'exact' })
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (listingsError) {
         this.logger.error(`Error fetching marketplace listings: ${listingsError.message}`);
@@ -2039,7 +2089,7 @@ export class ContextBuilderService {
         })
         .or(ordersFilter)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (ordersError) {
         this.logger.error(`Error fetching marketplace orders: ${ordersError.message}`);
@@ -2052,7 +2102,7 @@ export class ContextBuilderService {
         })
         .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (quoteRequestsError) {
         this.logger.error(`Error fetching marketplace quote requests: ${quoteRequestsError.message}`);
@@ -2115,8 +2165,10 @@ export class ContextBuilderService {
   private async getOrchardContext(
     client: any,
     organizationId: string,
+    topModules: MatchedModule['key'][],
   ): Promise<OrchardContext> {
     try {
+      const limit = this.getLimitForModule('orchards', topModules);
       const orchardAssetTypes = ['bearer_plant', 'consumable_plant'];
 
       const { count: orchardAssetsCount, error: orchardAssetsCountError } = await client
@@ -2163,7 +2215,7 @@ export class ContextBuilderService {
         .eq('organization_id', organizationId)
         .in('asset_type', orchardAssetTypes)
         .order('created_at', { ascending: false })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (orchardAssetsError) {
         this.logger.error(`Error fetching orchard assets: ${orchardAssetsError.message}`);
@@ -2175,7 +2227,7 @@ export class ContextBuilderService {
         .eq('organization_id', organizationId)
         .eq('task_type', 'pruning')
         .order('due_date', { ascending: true })
-        .limit(this.SUMMARY_LIMIT);
+        .limit(limit);
 
       if (pruningTasksListError) {
         this.logger.error(`Error fetching pruning tasks: ${pruningTasksListError.message}`);
@@ -2247,6 +2299,12 @@ export class ContextBuilderService {
         weather_forecast: {
           parcels: [],
           available: false,
+          diagnostics: {
+            openweather_configured: this.weatherProvider?.isConfigured() ?? false,
+            parcels_loaded: 0,
+            parcels_resolved_location: 0,
+            forecasts_returned: 0,
+          },
         },
       };
     }
@@ -2349,22 +2407,86 @@ export class ContextBuilderService {
     let weatherForecast = {
       parcels: [] as Array<{ parcel_id: string; parcel_name: string; forecasts: WeatherForecast[] }>,
       available: false,
+      diagnostics: {
+        openweather_configured: this.weatherProvider?.isConfigured() ?? false,
+        parcels_loaded: parcels.length,
+        parcels_resolved_location: 0,
+        forecasts_returned: 0,
+      },
     };
 
-    if (this.weatherProvider.isConfigured()) {
+    const postgisPoints = await this.fetchPostgisParcelCentroids(organizationId, parcelIds);
+    const { data: aoiRows } = await client
+      .from('satellite_aois')
+      .select('parcel_id, geometry_json, updated_at')
+      .eq('organization_id', organizationId)
+      .in('parcel_id', parcelIds)
+      .eq('is_active', true);
+
+    const aoiGeometryByParcel = new Map<string, unknown>();
+    const sortedAois = [...(aoiRows || [])].sort(
+      (a: { updated_at?: string }, b: { updated_at?: string }) =>
+        new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime(),
+    );
+    for (const row of sortedAois) {
+      const pid = row.parcel_id as string;
+      if (pid && !aoiGeometryByParcel.has(pid)) {
+        aoiGeometryByParcel.set(pid, row.geometry_json);
+      }
+    }
+
+    const resolveForecastPoint = (parcel: any): { latitude: number; longitude: number } | null => {
+      const boundaryRaw =
+        typeof parcel.boundary === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(parcel.boundary);
+              } catch {
+                return null;
+              }
+            })()
+          : parcel.boundary;
+
+      const fromBoundary = this.normalizeParcelBoundaryCoordinates(boundaryRaw);
+      if (fromBoundary?.length) {
+        const wgs84 = WeatherProvider.ensureWGS84(fromBoundary);
+        return WeatherProvider.calculateCentroid(wgs84);
+      }
+
+      const pg = postgisPoints.get(parcel.id);
+      if (pg) {
+        return { latitude: pg.lat, longitude: pg.lng };
+      }
+
+      const aoiGeom = aoiGeometryByParcel.get(parcel.id);
+      const fromAoi = this.normalizeParcelBoundaryCoordinates(aoiGeom);
+      if (fromAoi?.length) {
+        const wgs84 = WeatherProvider.ensureWGS84(fromAoi);
+        return WeatherProvider.calculateCentroid(wgs84);
+      }
+
+      return null;
+    };
+
+    let resolvedCount = 0;
+    for (const p of parcels) {
+      if (resolveForecastPoint(p)) {
+        resolvedCount += 1;
+      }
+    }
+    weatherForecast.diagnostics.parcels_resolved_location = resolvedCount;
+
+    const wp = this.weatherProvider;
+    if (wp?.isConfigured()) {
       try {
         const forecastPromises = parcels.map(async (parcel: any) => {
           try {
-            if (!parcel.boundary || parcel.boundary.length === 0) {
+            const point = resolveForecastPoint(parcel);
+            if (!point) {
               return null;
             }
 
-            // Ensure coordinates are in WGS84
-            const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
-            const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
-
-            // Get 5-day forecast
-            const forecastData = await this.weatherProvider.getForecast(latitude, longitude, 5);
+            const forecastData = await wp.getForecast(point.latitude, point.longitude, 5);
 
             return {
               parcel_id: parcel.id,
@@ -2378,9 +2500,18 @@ export class ContextBuilderService {
         });
 
         const forecastResults = await Promise.all(forecastPromises);
+        const ok = forecastResults.filter(Boolean) as Array<{
+          parcel_id: string;
+          parcel_name: string;
+          forecasts: WeatherForecast[];
+        }>;
         weatherForecast = {
-          parcels: forecastResults.filter(Boolean),
-          available: forecastResults.some(Boolean),
+          parcels: ok,
+          available: ok.length > 0,
+          diagnostics: {
+            ...weatherForecast.diagnostics,
+            forecasts_returned: ok.length,
+          },
         };
 
         this.logger.log(`Fetched weather forecast for ${weatherForecast.parcels.length} parcels`);
@@ -2579,6 +2710,145 @@ export class ContextBuilderService {
         variance_percent: null,
       })),
     };
+  }
+
+  /**
+   * Turn parcel.boundary JSONB, GeoJSON, AOI geometry_json, etc. into [lng, lat][] for centroid/weather.
+   */
+  private normalizeParcelBoundaryCoordinates(raw: unknown): number[][] | null {
+    if (raw == null) {
+      return null;
+    }
+    if (typeof raw === 'string') {
+      try {
+        return this.normalizeParcelBoundaryCoordinates(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      if (o.type === 'Feature' && o.geometry) {
+        return this.normalizeParcelBoundaryCoordinates(o.geometry);
+      }
+      if (o.type === 'Point' && Array.isArray(o.coordinates)) {
+        const c = o.coordinates as number[];
+        if (c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') {
+          return [[c[0], c[1]]];
+        }
+        return null;
+      }
+      if (o.type === 'Polygon' && Array.isArray(o.coordinates)) {
+        const ring = (o.coordinates as number[][][])[0];
+        if (!Array.isArray(ring) || ring.length < 1) {
+          return null;
+        }
+        return ring
+          .filter((pt) => Array.isArray(pt) && pt.length >= 2 && typeof pt[0] === 'number' && typeof pt[1] === 'number')
+          .map((pt) => [pt[0], pt[1]]);
+      }
+      if (o.type === 'MultiPolygon' && Array.isArray(o.coordinates)) {
+        const first = (o.coordinates as number[][][][])[0];
+        if (!first?.[0]) {
+          return null;
+        }
+        return first[0]
+          .filter((pt) => Array.isArray(pt) && pt.length >= 2 && typeof pt[0] === 'number' && typeof pt[1] === 'number')
+          .map((pt) => [pt[0], pt[1]]);
+      }
+    }
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return null;
+    }
+    const first = raw[0] as unknown;
+    if (Array.isArray(first) && typeof (first as number[])[0] === 'number') {
+      const pairs = raw as number[][];
+      if (pairs.every((p) => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')) {
+        return pairs.length >= 1 ? pairs : null;
+      }
+      return null;
+    }
+    if (typeof first === 'object' && first !== null) {
+      const out: number[][] = [];
+      for (const pt of raw as Array<Record<string, unknown>>) {
+        const lat =
+          typeof pt.lat === 'number'
+            ? pt.lat
+            : typeof pt.latitude === 'number'
+              ? pt.latitude
+              : null;
+        const lng =
+          typeof pt.lng === 'number'
+            ? pt.lng
+            : typeof pt.lon === 'number'
+              ? pt.lon
+              : typeof pt.longitude === 'number'
+                ? pt.longitude
+                : null;
+        if (lat != null && lng != null) {
+          out.push([lng, lat]);
+        }
+      }
+      return out.length >= 1 ? out : null;
+    }
+    return null;
+  }
+
+  /**
+   * When JSON boundary is empty but PostGIS has centroid/boundary_geom (e.g. legacy sync), still resolve a point.
+   */
+  private async fetchPostgisParcelCentroids(
+    organizationId: string,
+    parcelIds: string[],
+  ): Promise<Map<string, { lat: number; lng: number }>> {
+    const map = new Map<string, { lat: number; lng: number }>();
+    if (!parcelIds.length) {
+      return map;
+    }
+    let pool;
+    try {
+      pool = this.databaseService.getPgPool();
+    } catch {
+      return map;
+    }
+    const client = await pool.connect();
+    try {
+      const res = await client.query(
+        `SELECT p.id::text AS id,
+          COALESCE(
+            ST_Y(p.centroid::geometry),
+            ST_Y(ST_Centroid(p.boundary_geom::geometry))
+          ) AS lat,
+          COALESCE(
+            ST_X(p.centroid::geometry),
+            ST_X(ST_Centroid(p.boundary_geom::geometry))
+          ) AS lng
+         FROM parcels p
+         WHERE p.organization_id = $1::uuid
+           AND p.id = ANY($2::uuid[])
+           AND (p.centroid IS NOT NULL OR p.boundary_geom IS NOT NULL)`,
+        [organizationId, parcelIds],
+      );
+      for (const row of res.rows) {
+        const lat = parseFloat(row.lat);
+        const lng = parseFloat(row.lng);
+        if (
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180
+        ) {
+          map.set(row.id, { lat, lng });
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `fetchPostgisParcelCentroids failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      client.release();
+    }
+    return map;
   }
 
   summarizeContext(context: BuiltContext) {

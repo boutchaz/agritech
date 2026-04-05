@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import {
   FileText,
   Download,
@@ -27,12 +27,12 @@ interface ParcelReportGeneratorProps {
   searchParams?: any;
 }
 
-const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
+const ParcelReportGenerator = ({
   parcelId,
   parcelName: _parcelName,
   parcelData,
   searchParams
-}) => {
+}: ParcelReportGeneratorProps) => {
   const _queryClient = useQueryClient();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
@@ -229,9 +229,9 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
             Générez et téléchargez des rapports personnalisés
           </p>
         </div>
-        <Button
+        <Button variant="green"
           onClick={() => setShowTemplateSelector(!showTemplateSelector)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>Nouveau Rapport</span>

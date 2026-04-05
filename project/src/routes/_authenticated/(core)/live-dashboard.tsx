@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import {  useEffect  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Home, Building2, Activity, RefreshCw } from 'lucide-react';
@@ -17,7 +17,7 @@ import {
 } from '@/components/LiveDashboard';
 import { Button } from '@/components/ui/button';
 
-const LiveDashboardPage: React.FC = () => {
+const LiveDashboardPage = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 

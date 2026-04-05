@@ -6,9 +6,9 @@ import { useForm, type FieldPath, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { analysesApi } from '@/lib/api/analyses';
-import { useStartCalibrationV2 } from '@/hooks/useCalibrationV2';
+import { useStartCalibration } from '@/hooks/useCalibrationReport';
 import { useAuth } from '@/hooks/useAuth';
-import { useCalibrationDraft, useSaveCalibrationDraft, useDeleteCalibrationDraft } from '@/hooks/useCalibrationDraft';
+import { useCalibrationDraft, useSaveCalibrationDraft } from '@/hooks/useCalibrationDraft';
 import type { Parcel } from '@/hooks/useParcelsQuery';
 import {
   CalibrationWizardSchema,
@@ -69,7 +69,7 @@ function mapWaterSourceForAnalysis(source: CalibrationWizardFormValues['water_so
 export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardProps) {
   const { t } = useTranslation('ai');
   const { currentOrganization } = useAuth();
-  const startCalibration = useStartCalibrationV2(parcelId);
+  const startCalibration = useStartCalibration(parcelId);
 
   const STEPS: WizardStepDefinition[] = useMemo(
     () => [
@@ -108,7 +108,6 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
   // Backend draft persistence
   const { data: backendDraft, isLoading: isDraftLoading } = useCalibrationDraft(parcelId);
   const saveDraftMutation = useSaveCalibrationDraft(parcelId);
-  const deleteDraftMutation = useDeleteCalibrationDraft(parcelId);
 
   // Debounced save to backend (1s delay)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -441,8 +440,8 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
       observations: wizardValues.observations,
     });
 
-    // Clear draft from backend and reset store
-    deleteDraftMutation.mutate();
+    // Keep draft until calibration completes successfully.
+    // If processing fails, the user can retry without re-entering data.
     resetStore();
     toast.success('Calibrage lance.');
   };
@@ -470,61 +469,113 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     return <SectionLoader />;
   }
 
+  const activeStepDef = STEPS[currentStep - 1];
+
   return (
-    <div className="space-y-6" data-testid="calibration-initial-wizard">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6" data-testid="calibration-initial-wizard">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('calibration.wizard.title')}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           {t('calibration.wizard.subtitle')}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300">
-          <span>{t('calibration.wizard.legendRequired')}</span>
-          <span>{t('calibration.wizard.legendRecommended')}</span>
-          <span>{t('calibration.wizard.legendOptional')}</span>
+        <div className="mt-3 flex flex-wrap gap-4 text-[11px]">
+          <span className="flex items-center gap-1.5 text-rose-500 dark:text-rose-400">
+            <span className="w-2 h-2 rounded-full bg-rose-500 dark:bg-rose-400" />
+            {t('calibration.wizard.legendRequired')}
+          </span>
+          <span className="flex items-center gap-1.5 text-amber-500 dark:text-amber-400">
+            <span className="w-2 h-2 rounded-full bg-amber-400" />
+            {t('calibration.wizard.legendRecommended')}
+          </span>
+          <span className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+            <span className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+            {t('calibration.wizard.legendOptional')}
+          </span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-          {STEPS.map((step) => {
-            const isActive = currentStep === step.number;
-            const isCompleted = isStepCompleted(step.number);
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4 sm:px-4 sm:py-5">
+        <div className="mb-3 min-w-0 md:hidden">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t('calibration.wizard.stepProgress', { current: currentStep, total: STEPS.length })}
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white break-words">
+            {activeStepDef?.title}
+          </p>
+        </div>
+        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-gutter:stable] snap-x snap-mandatory touch-pan-x md:snap-none">
+          <div className="flex min-w-max items-start md:min-w-0 md:flex-wrap md:justify-center md:gap-y-3 lg:flex-nowrap lg:justify-start">
+            {STEPS.map((step, index) => {
+              const isActive = currentStep === step.number;
+              const isCompleted = isStepCompleted(step.number);
+              const statusColor = step.status === 'required'
+                ? 'text-rose-500 dark:text-rose-400'
+                : step.status === 'recommended'
+                  ? 'text-amber-500 dark:text-amber-400'
+                  : 'text-gray-400 dark:text-gray-500';
+              const statusDot = step.status === 'required'
+                ? 'bg-rose-500'
+                : step.status === 'recommended'
+                  ? 'bg-amber-400'
+                  : 'bg-gray-300 dark:bg-gray-600';
 
-            return (
-              <Button
-                key={step.number}
-                type="button"
-                data-testid={`calibration-wizard-step-${step.number}`}
-                onClick={() => setStep(step.number)}
-                className={`flex flex-col items-center gap-1.5 rounded-lg p-2 transition-colors ${
-                  isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/30'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                }`}
-              >
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium ${
-                  isCompleted
-                    ? 'bg-green-600 border-green-600 text-white'
-                    : isActive
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
-                }`}>
-                  {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.number}
+              return (
+                <div key={step.number} className="flex items-start">
+                  {/* Step */}
+                  <button
+                    type="button"
+                    data-testid={`calibration-wizard-step-${step.number}`}
+                    onClick={() => setStep(step.number)}
+                    className={`flex min-w-[5.25rem] shrink-0 snap-center flex-col items-center gap-2 px-2 pt-1 pb-2 rounded-xl transition-all duration-150 cursor-pointer group sm:min-w-[5.5rem] sm:px-3 md:min-w-[5.5rem] ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-200 dark:ring-blue-800'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                    }`}
+                  >
+                    {/* Circle */}
+                    <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 text-sm font-semibold shadow-sm transition-all ${
+                      isCompleted
+                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-emerald-200 dark:shadow-emerald-900'
+                        : isActive
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-blue-200 dark:shadow-blue-900'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400 group-hover:border-gray-400'
+                    }`}>
+                      {isCompleted ? <Check className="w-4 h-4 stroke-[2.5]" /> : <span>{step.number}</span>}
+                    </div>
+
+                    {/* Label */}
+                    <span className={`max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-[6.5rem] sm:text-[11px] ${
+                      isActive
+                        ? 'text-blue-700 dark:text-blue-300'
+                        : isCompleted
+                          ? 'text-emerald-700 dark:text-emerald-400'
+                          : 'text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {step.title}
+                    </span>
+
+                    {/* Status badge */}
+                    <span className={`flex items-center gap-1 text-[10px] font-medium ${statusColor}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot}`} />
+                      {STATUS_LABELS[step.status]}
+                    </span>
+                  </button>
+
+                  {/* Connector line */}
+                  {index < STEPS.length - 1 && (
+                    <div className="flex items-center self-start mt-5 flex-shrink-0">
+                      <div className={`h-0.5 w-5 transition-colors ${
+                        isStepCompleted(step.number)
+                          ? 'bg-emerald-400 dark:bg-emerald-600'
+                          : 'bg-gray-200 dark:bg-gray-700'
+                      }`} />
+                    </div>
+                  )}
                 </div>
-                <span className={`text-[11px] leading-tight text-center ${
-                  isActive ? 'font-semibold text-blue-700 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'
-                }`}>
-                  {step.title}
-                </span>
-                <span className={`text-[10px] ${
-                  isActive ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
-                }`}>
-                  {STATUS_LABELS[step.status]}
-                </span>
-              </Button>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -535,21 +586,32 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
             void handleNext();
           }
         }}
-        className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-6"
+        className="min-w-0 space-y-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5"
       >
-        {renderStepContent()}
+        <div className="min-w-0">{renderStepContent()}</div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-          <Button type="button" variant="outline" onClick={handleSaveAndCompleteLater}>
+        <div className="flex flex-col gap-3 border-t border-gray-200 pt-2 dark:border-gray-700 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSaveAndCompleteLater}
+            className="order-3 w-full sm:order-1 sm:w-auto"
+          >
             {t('calibration.wizard.saveLater')}
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
+          <div className="flex w-full gap-2 sm:order-2 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="min-w-0 flex-1 sm:flex-initial"
+            >
               {t('calibration.wizard.previous')}
             </Button>
             {currentStep < 8 && (
-              <Button type="submit" >
+              <Button type="submit" className="min-w-0 flex-1 sm:flex-initial">
                 {t('calibration.wizard.next')}
               </Button>
             )}

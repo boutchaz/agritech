@@ -37,9 +37,9 @@ export const DEEP_LINK_MAP: Record<string, string> = {
   'invoices': '/accounting',
   'factures': '/accounting',
   'الفواتير': '/accounting',
-  'settings': '/settings',
-  'paramètres': '/settings',
-  'الإعدادات': '/settings',
+  'settings': '/settings/account',
+  'paramètres': '/settings/account',
+  'الإعدادات': '/settings/account',
   'dashboard': '/dashboard',
   'tableau de bord': '/dashboard',
   'لوحة القيادة': '/dashboard',
@@ -56,3 +56,17 @@ export const DEEP_LINK_MAP: Record<string, string> = {
   'cycles de culture': '/crop-cycles',
   'دورات المحاصيل': '/crop-cycles',
 };
+
+/** Chat bubbles: show calendar date + time (not time-only). */
+export function formatChatMessageTimestamp(date: Date, localeHint?: string): string {
+  const locale =
+    localeHint === 'fr' ? 'fr' : localeHint === 'ar' ? 'ar' : localeHint === 'en' ? 'en' : undefined;
+  return date.toLocaleString(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}

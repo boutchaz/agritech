@@ -1,8 +1,9 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Platform, View, Text, StyleSheet } from 'react-native';
+import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, type UserRole } from '@/stores/authStore';
 import { useTheme } from '@/providers/ThemeProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -106,48 +107,69 @@ export default function TabsLayout() {
   const visibleTabs = new Set(tabs.map((t) => t.name));
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: themeColors.brandPrimary,
-        tabBarInactiveTintColor: themeColors.iconSubtle,
-        tabBarStyle: {
-          backgroundColor: isDark ? themeColors.surface : themeColors.surfaceLowest,
-          borderTopWidth: 0,
-          paddingBottom: Platform.OS === 'ios' ? 4 : 8,
-          paddingTop: 6,
-          height: Platform.OS === 'ios' ? 80 : 64,
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          letterSpacing: 0.3,
-        },
-        headerShown: false,
-      }}
-    >
-      {ALL_SCREENS.map((screenName) => {
-        const tabCfg = tabs.find((t) => t.name === screenName);
-        const isVisible = visibleTabs.has(screenName);
+    <ErrorBoundary>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: themeColors.brandPrimary,
+          tabBarInactiveTintColor: themeColors.iconSubtle,
+          tabBarStyle: {
+            backgroundColor: isDark ? themeColors.surface : themeColors.surfaceLowest,
+            borderTopWidth: 0,
+            paddingBottom: Platform.OS === 'ios' ? 4 : 8,
+            paddingTop: 6,
+            height: Platform.OS === 'ios' ? 80 : 64,
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+            letterSpacing: 0.3,
+          },
+          headerShown: false,
+        }}
+      >
+        {ALL_SCREENS.map((screenName) => {
+          const tabCfg = tabs.find((t) => t.name === screenName);
+          const isVisible = visibleTabs.has(screenName);
 
-        return (
-          <Tabs.Screen
-            key={screenName}
-            name={screenName}
-            options={{
-              title: tabCfg?.title ?? screenName,
-              href: isVisible ? undefined : null,
-              tabBarIcon: tabCfg
-                ? ({ color }) => (
-                    <TabIcon
-                      name={tabCfg.icon}
-                      color={color}
-                    />
-                  )
-                : undefined,
-            }}
-          />
-        );
-      })}
-    </Tabs>
+          const title = tabCfg?.title ?? screenName;
+          const a11yLabel = `Switch to ${title.toLowerCase()} tab`;
+
+          return (
+            <Tabs.Screen
+              key={screenName}
+              name={screenName}
+              options={{
+                title,
+                // Expo Router: `href` and `tabBarButton` cannot be used on the same screen.
+                ...(isVisible
+                  ? {
+                      tabBarIcon: tabCfg
+                        ? ({ color }) => (
+                            <TabIcon name={tabCfg.icon} color={color} />
+                          )
+                        : undefined,
+                      tabBarAccessibilityLabel: a11yLabel,
+                      tabBarButton: (props) => {
+                        const { accessibilityState, ref: _ignoredRef, ...buttonProps } = props as any;
+                        return (
+                          <Pressable
+                            {...buttonProps}
+                            accessibilityRole="tab"
+                            accessibilityLabel={a11yLabel}
+                            accessibilityState={{
+                              ...accessibilityState,
+                              selected: Boolean(accessibilityState?.selected),
+                            }}
+                          />
+                        );
+                      },
+                    }
+                  : { href: null }),
+              }}
+            />
+          );
+        })}
+      </Tabs>
+    </ErrorBoundary>
   );
 }

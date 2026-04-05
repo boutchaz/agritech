@@ -47,7 +47,7 @@ const PRICING_TIERS = {
   enterprise: 150,
 } as const;
 
-const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
+const ROICalculator = ({ className }: ROICalculatorProps) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<'calculator' | 'email'>('calculator');
   const [email, setEmail] = useState('');
@@ -131,7 +131,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
             {t('common.roiCalculator.thankYouTitle')}
           </CardTitle>
           <CardDescription className="text-green-700 dark:text-green-300 max-w-md">
-            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email }) }} />
+            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email: email.replace(/[<>&"']/g, (c: string) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#x27;'}[c] || c)) }) }} />
           </CardDescription>
           <Button
             variant="outline"
@@ -229,11 +229,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
               </div>
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-            >
+            <Button variant="green" type="submit" size="lg" className="w-full font-semibold" >
               {t('common.roiCalculator.receiveFreeReport')}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -486,10 +482,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
         </div>
 
         {/* CTA Button */}
-        <Button
-          size="lg"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-lg"
-          onClick={() => setStep('email')}
+        <Button variant="green" size="lg" className="w-full font-semibold text-lg" onClick={() => setStep('email')}
         >
           {t('common.roiCalculator.receiveReport')}
           <ArrowRight className="ml-2 h-5 w-5" />

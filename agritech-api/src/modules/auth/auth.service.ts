@@ -83,6 +83,21 @@ export class AuthService {
     return parsedUrl.toString();
   }
 
+  /**
+   * Create a short-lived Supabase client for one-off auth operations.
+   * These clients have no persistent session and no auto-refresh to avoid leaking resources.
+   */
+  private createTransientClient(): ReturnType<typeof createClient> {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
+    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+  }
+
   private getExchangeCodeSecret(): string {
     const secret =
       this.configService.get<string>('EXCHANGE_CODE_SECRET') ||
@@ -104,15 +119,7 @@ export class AuthService {
     // 1. It's a singleton with persistSession: false
     // 2. Concurrent logins can interfere with each other
     // 3. The session state is shared across requests
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-
-    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const freshClient = this.createTransientClient();
 
     this.logger.log(`Login attempt for email: ${email}`);
 
@@ -160,7 +167,8 @@ export class AuthService {
   }
 
   async exchangeOAuthCode(code: string) {
-    const supabase = this.databaseService.getAdminClient();
+    // Use a fresh client to avoid session state interference from concurrent requests
+    const supabase = this.createTransientClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error || !data.session) {
@@ -187,46 +195,16 @@ export class AuthService {
    */
   async validateToken(token: string): Promise<any> {
     try {
-      // Create a fresh client to validate the token
-      // Using admin client's getUser works but may have issues in some cases
-      const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-      const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
+      // Use admin client getUser directly — single round-trip, verifies RS256 signature server-side
+      const adminClient = this.databaseService.getAdminClient();
+      const { data: { user }, error } = await adminClient.auth.getUser(token);
 
-      const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      });
-
-      // Set the session using the token
-      const { data: sessionData, error: sessionError } = await freshClient.auth.setSession({
-        access_token: token,
-        refresh_token: '', // We don't have refresh token, but that's ok for validation
-      });
-
-      if (sessionError) {
-        this.logger.error(`Token session error: ${sessionError.message}`);
-        // Try admin client as fallback
-        const adminClient = this.databaseService.getAdminClient();
-        const { data: { user }, error } = await adminClient.auth.getUser(token);
-
-        if (error || !user) {
-          this.logger.error(`Admin token validation also failed: ${error?.message}`);
-          throw new UnauthorizedException('Invalid token');
-        }
-
-        this.logger.log(`Token validated via admin client for user: ${user.id}`);
-        return user;
-      }
-
-      const user = sessionData?.user;
-      if (!user) {
-        this.logger.error('Token validation: no user in session data');
+      if (error || !user) {
+        this.logger.debug(`Token validation failed: ${error?.message}`);
         throw new UnauthorizedException('Invalid token');
       }
 
-      this.logger.debug(`Token validated successfully for user: ${user.id}`);
+      this.logger.debug(`Token validated for user: ${user.id}`);
       return user;
     } catch (error) {
       if (error instanceof UnauthorizedException) {
@@ -355,12 +333,47 @@ export class AuthService {
    /**
     * Change current user password and mark password_set
     */
-   async changePassword(userId: string, newPassword: string) {
+   async changePassword(userId: string, currentPassword: string | undefined, newPassword: string) {
      if (!newPassword || newPassword.length < 8) {
        throw new BadRequestException('Password must be at least 8 characters long');
      }
+     // Enforce basic complexity: at least one letter and one number
+     if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+       throw new BadRequestException('Password must contain at least one letter and one number');
+     }
 
      const client = this.databaseService.getAdminClient();
+
+     // Verify the current password if provided (skip for first-time password set)
+     if (currentPassword) {
+       const { data: userData } = await client.auth.admin.getUserById(userId);
+       if (!userData?.user?.email) {
+         throw new BadRequestException('Failed to verify current password');
+       }
+
+       const verifyClient = this.createTransientClient();
+
+       const { error: verifyError } = await verifyClient.auth.signInWithPassword({
+         email: userData.user.email,
+         password: currentPassword,
+       });
+
+       if (verifyError) {
+         throw new BadRequestException('Current password is incorrect');
+       }
+     } else {
+       // If no current password provided, check if this is a first-time password set
+       // (e.g., worker with temp password)
+       const { data: profile } = await client
+         .from('user_profiles')
+         .select('password_set')
+         .eq('id', userId)
+         .maybeSingle();
+
+       if (profile?.password_set) {
+         throw new BadRequestException('Current password is required');
+       }
+     }
 
      const { error: updateError } = await client.auth.admin.updateUserById(userId, {
        password: newPassword,
@@ -551,6 +564,8 @@ export class AuthService {
 
     const userId = authData.user.id;
     const email = authData.user.email;
+    let organizationId: string | undefined;
+    let createdNewOrg = false;
 
     try {
       // 2. Create user profile using UsersService (migrated from RPC)
@@ -567,7 +582,6 @@ export class AuthService {
         passwordSet: true,
       });
 
-      let organizationId: string;
       let organizationName: string;
       let organizationSlug: string;
 
@@ -598,46 +612,38 @@ export class AuthService {
           signupDto.invitedWithRole ||
           (await this.getOrgAdminRoleId(adminClient));
 
-        const { data: sub } = await adminClient
-          .from('subscriptions')
-          .select('max_users')
-          .eq('organization_id', organizationId)
-          .maybeSingle();
-
-        if (sub?.max_users != null) {
-          const { count: userCount } = await adminClient
-            .from('organization_users')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', organizationId)
-            .eq('is_active', true);
-
-          if ((userCount ?? 0) >= sub.max_users) {
-            throw new ForbiddenException(
-              `Subscription limit reached: maximum ${sub.max_users} users for your plan`,
-            );
-          }
-        }
-
-        // Add user to organization
-        this.logger.log(`Creating organization_users record (invited): user_id=${userId}, organization_id=${organizationId}, role_id=${roleId}`);
-        const { data: orgUserData, error: orgUserError } = await adminClient
-          .from('organization_users')
-          .insert({
-            user_id: userId,
-            organization_id: organizationId,
-            role_id: roleId,
-            is_active: true,
-          })
-          .select()
-          .single();
-
-        if (orgUserError) {
-          this.logger.error(
-            `Failed to add user to organization: ${orgUserError.message}, code: ${orgUserError.code}, details: ${JSON.stringify(orgUserError.details)}`,
+        // Use a pg transaction with row-level lock to prevent race condition
+        // on concurrent signups exceeding max_users
+        await this.databaseService.executeInPgTransaction(async (pgClient) => {
+          // Lock the subscription row to serialize concurrent signups
+          const subResult = await pgClient.query(
+            `SELECT max_users FROM subscriptions WHERE organization_id = $1 FOR UPDATE`,
+            [organizationId],
           );
-          throw new BadRequestException('Failed to join organization');
-        }
-        this.logger.log(`Successfully created organization_users record (invited): ${JSON.stringify(orgUserData)}`);
+          const maxUsers = subResult.rows[0]?.max_users;
+
+          if (maxUsers != null) {
+            const countResult = await pgClient.query(
+              `SELECT COUNT(*) as cnt FROM organization_users WHERE organization_id = $1 AND is_active = true`,
+              [organizationId],
+            );
+            const currentCount = parseInt(countResult.rows[0]?.cnt || '0', 10);
+
+            if (currentCount >= maxUsers) {
+              throw new ForbiddenException(
+                `Subscription limit reached: maximum ${maxUsers} users for your plan`,
+              );
+            }
+          }
+
+          // Insert within the same transaction — serialized with the count check
+          this.logger.log(`Creating organization_users record (invited): user_id=${userId}, organization_id=${organizationId}, role_id=${roleId}`);
+          await pgClient.query(
+            `INSERT INTO organization_users (user_id, organization_id, role_id, is_active) VALUES ($1, $2, $3, true)`,
+            [userId, organizationId, roleId],
+          );
+        });
+        this.logger.log(`Successfully created organization_users record (invited)`);
       } else {
         // 4. No invitation - Create new organization using OrganizationsService
         // For marketplace users: use organizationName or derive from displayName/firstName
@@ -656,6 +662,7 @@ export class AuthService {
 
         organizationId = newOrg.id;
         organizationSlug = newOrg.slug;
+        createdNewOrg = true;
 
         // Get organization_admin role
         const orgAdminRoleId = await this.getOrgAdminRoleId(adminClient);
@@ -755,9 +762,24 @@ export class AuthService {
         requiresLogin: true,
       };
     } catch (error) {
-      // Rollback: Delete the auth user if anything fails
+      // Rollback: Delete the auth user and any newly-created org if anything fails
       this.logger.error(`Signup failed, rolling back user: ${error.message}`);
-      await adminClient.auth.admin.deleteUser(userId);
+      try {
+        await adminClient.auth.admin.deleteUser(userId);
+      } catch (deleteErr) {
+        this.logger.error(`Failed to rollback auth user: ${deleteErr.message}`);
+      }
+      if (createdNewOrg && organizationId) {
+        try {
+          // Cascade: delete org_users, subscriptions, then org
+          await adminClient.from('organization_users').delete().eq('organization_id', organizationId);
+          await adminClient.from('subscriptions').delete().eq('organization_id', organizationId);
+          await adminClient.from('organizations').delete().eq('id', organizationId);
+          this.logger.log(`Rolled back organization ${organizationId}`);
+        } catch (orgDeleteErr) {
+          this.logger.error(`Failed to rollback organization: ${orgDeleteErr.message}`);
+        }
+      }
       throw error;
     }
   }
@@ -887,28 +909,11 @@ export class AuthService {
    * Send password reset email
    */
   async forgotPassword(email: string, redirectTo: string) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
     const safeRedirectTo = this.validateRedirectTo(redirectTo);
 
     this.logger.log(`Password reset requested for email: ${email}, redirectTo: ${safeRedirectTo}`);
-    this.logger.debug(`Using Supabase URL: ${supabaseUrl}`);
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-      this.logger.error('Supabase configuration missing - SUPABASE_URL or SUPABASE_ANON_KEY not set');
-      // Still return success to prevent information leakage
-      return {
-        success: true,
-        message: 'If an account exists with this email, a password reset link will be sent.',
-      };
-    }
-
-    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const freshClient = this.createTransientClient();
 
     try {
       const { data, error } = await freshClient.auth.resetPasswordForEmail(email, {
@@ -942,6 +947,9 @@ export class AuthService {
     if (!newPassword || newPassword.length < 8) {
       throw new BadRequestException('Password must be at least 8 characters long');
     }
+    if (!/[a-zA-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      throw new BadRequestException('Password must contain at least one letter and one number');
+    }
 
     const client = this.databaseService.getAdminClient();
 
@@ -974,15 +982,7 @@ export class AuthService {
    * Refresh access token using refresh token
    */
   async refreshToken(refreshToken: string) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-
-    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const freshClient = this.createTransientClient();
 
     const { data, error } = await freshClient.auth.refreshSession({
       refresh_token: refreshToken,
@@ -1140,14 +1140,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired exchange code');
     }
 
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseAnonKey = this.configService.get<string>('SUPABASE_ANON_KEY');
-    const freshClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    const freshClient = this.createTransientClient();
 
     const { data: sessionData, error: sessionError } = await freshClient.auth.verifyOtp({
       token_hash: payload.token_hash,

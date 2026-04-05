@@ -1,5 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 export interface SellerProfile {
     id: string;
@@ -63,12 +64,13 @@ export class SellersService {
 
         // Apply city filter
         if (city) {
-            query = query.ilike('city', `%${city}%`);
+            const safeCity = sanitizeSearch(city);
+            if (safeCity) query = query.ilike('city', `%${safeCity}%`);
         }
 
         // Apply search filter
         if (search) {
-            query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+            const safeSearch = sanitizeSearch(search); if (safeSearch) query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
         }
 
         const { data: organizations, error, count } = await query

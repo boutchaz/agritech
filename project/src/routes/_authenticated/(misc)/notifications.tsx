@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
@@ -8,7 +8,7 @@ import { NotificationCenter } from '@/components/notifications/NotificationCente
 import { SectionLoader } from '@/components/ui/loader';
 
 
-const NotificationsPage: React.FC = () => {
+const NotificationsPage = () => {
   const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {

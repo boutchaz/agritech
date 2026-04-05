@@ -26,7 +26,7 @@ interface PasswordChangeData {
   confirmPassword: string;
 }
 
-const ProfileSettings: React.FC = () => {
+const ProfileSettings = () => {
   const { user, currentOrganization, userRole } = useAuth();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -259,11 +259,7 @@ const ProfileSettings: React.FC = () => {
             {t('profile.title')}
           </h2>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-        >
+        <Button variant="green" onClick={handleSave} disabled={saving} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg disabled:cursor-not-allowed transition-colors font-medium" >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -430,12 +426,7 @@ const ProfileSettings: React.FC = () => {
                         alt="Profile"
                         className="w-20 h-20 rounded-full object-cover"
                       />
-                      <Button
-                        onClick={handleRemoveAvatar}
-                        disabled={uploadingAvatar}
-                        className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={t('profile.removePhoto')}
-                      >
+                      <Button variant="red" onClick={handleRemoveAvatar} disabled={uploadingAvatar} className="absolute -top-1 -right-1 p-1 rounded-full hover:bg-red-600 disabled:cursor-not-allowed" title={t('profile.removePhoto')} >
                         <X className="h-3 w-3" />
                       </Button>
                     </>
@@ -617,11 +608,7 @@ const ProfileSettings: React.FC = () => {
                 >
                   {t('profile.cancel')}
                 </Button>
-                <Button
-                  onClick={handlePasswordChange}
-                  disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-                >
+                <Button variant="green" onClick={handlePasswordChange} disabled={changingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword} className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg disabled:cursor-not-allowed order-1 sm:order-2" >
                   {changingPassword ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

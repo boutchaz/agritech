@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -148,7 +148,7 @@ const plantAnalysisSchema = z.object({
 
 type PlantAnalysisFormData = z.infer<typeof plantAnalysisSchema>;
 
-const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<PlantAnalysisFormData>();
   const [selectedParams, setSelectedParams] = useState<PlantParamKey[]>(DEFAULT_PLANT_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
@@ -379,11 +379,7 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
           >
             Annuler
           </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
-          >
+          <Button variant="green" type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
             <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
           </Button>

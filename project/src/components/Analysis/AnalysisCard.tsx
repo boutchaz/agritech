@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Trash2, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import type { Analysis, SoilAnalysis, PlantAnalysis, WaterAnalysis } from '../../types/analysis';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ interface AnalysisCardProps {
   onDelete: (id: string) => void;
 }
 
-const AnalysisCard: React.FC<AnalysisCardProps> = ({ analysis, viewMode, parcelName, onDelete }) => {
+const AnalysisCard = ({ analysis, viewMode, parcelName, onDelete }: AnalysisCardProps) => {
   const formatDate = (date: string) => new Date(date).toLocaleDateString('fr-FR');
 
   const getAnalysisIcon = () => {

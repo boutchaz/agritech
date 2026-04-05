@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import {  useState, useRef, useEffect, useLayoutEffect  } from "react";
 import { ChevronDown, Plus, Check } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ interface FarmSwitcherProps {
   onFarmChange?: (farmId: string) => void;
 }
 
-const FarmSwitcher: React.FC<FarmSwitcherProps> = ({ currentFarmId, onFarmChange }) => {
+const FarmSwitcher = ({ currentFarmId, onFarmChange }: FarmSwitcherProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const { farms, currentFarm, setCurrentFarm, loading, currentOrganization } = useAuth();

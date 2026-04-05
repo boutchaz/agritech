@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Calculator, Info, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,11 +16,11 @@ interface MetayageCalculatorProps {
   onSuccess?: () => void;
 }
 
-const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
+const MetayageCalculator = ({
   organizationId,
   farmId,
   onSuccess,
-}) => {
+}: MetayageCalculatorProps) => {
   const { t } = useTranslation();
   const { data: workers = [] } = useWorkers(organizationId, farmId);
   const createSettlement = useCreateMetayageSettlement();
@@ -39,11 +39,13 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
   const selectedWorker = metayageWorkers.find(w => w.id === selectedWorkerId);
 
   // Auto-set calculation basis from worker
+  /* eslint-disable react-hooks/set-state-in-effect -- sync state from worker prop */
   useEffect(() => {
     if (selectedWorker?.calculation_basis) {
       setCalculationBasis(selectedWorker.calculation_basis);
     }
   }, [selectedWorker]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Calculate share
   const grossRevenueNum = parseFloat(grossRevenue) || 0;
@@ -337,11 +339,7 @@ const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
 
               {/* Save Button */}
               <div className="flex justify-end">
-                <Button
-                  onClick={handleSaveSettlement}
-                  disabled={createSettlement.isPending || !grossRevenue || !periodStart || !periodEnd}
-                  className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <Button variant="purple" onClick={handleSaveSettlement} disabled={createSettlement.isPending || !grossRevenue || !periodStart || !periodEnd} className="flex items-center gap-2 px-6 py-3 rounded-lg disabled:cursor-not-allowed" >
                   {createSettlement.isPending ? (
                     <>
                       <ButtonLoader />

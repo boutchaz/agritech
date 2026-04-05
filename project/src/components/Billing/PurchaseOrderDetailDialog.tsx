@@ -143,13 +143,13 @@ const toInputDate = (value: string | null | undefined) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps> = ({
+export const PurchaseOrderDetailDialog = ({
   purchaseOrder,
   open,
   onOpenChange,
   onEdit,
   onDownloadPDF,
-}) => {
+}: PurchaseOrderDetailDialogProps) => {
   const { currentOrganization } = useAuth();
   const purchaseOrderId = purchaseOrder?.id ?? null;
   const {
@@ -372,11 +372,12 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         return;
       }
 
-      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${po.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/purchase-orders/${po.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'X-Organization-Id': po.organization_id || '',
         },
       });
 
@@ -956,7 +957,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                   <TableBody>
                     {po.items && po.items.length > 0 ? (
                       po.items.map((item: PurchaseOrderItem, index: number) => (
-                        <TableRow key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                        <TableRow key={item.id} className="border-b border-gray-100 dark:border-gray-800">
                           <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}
                           </TableCell>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
@@ -32,7 +32,7 @@ interface FarmCardProps {
   onDelete?: () => void;
 }
 
-const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }) => {
+const FarmCard = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }: FarmCardProps) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -158,10 +158,7 @@ const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditMan
             <span>{t('farmHierarchy.farm.parcels')}</span>
           </Button>
 
-          <Button
-            onClick={onSelect}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-          >
+          <Button variant="green" onClick={onSelect} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors" >
             <span>{t('farmHierarchy.farm.viewDetails')}</span>
             <ChevronRight className="w-4 h-4" />
           </Button>

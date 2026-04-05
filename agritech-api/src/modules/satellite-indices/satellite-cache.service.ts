@@ -10,6 +10,15 @@ interface CacheEntry {
 interface TimeSeriesPoint {
   date: string;
   value: number;
+  min_value?: number | null;
+  max_value?: number | null;
+  std_value?: number | null;
+  median_value?: number | null;
+  percentile_25?: number | null;
+  percentile_75?: number | null;
+  percentile_90?: number | null;
+  pixel_count?: number | null;
+  cloud_coverage?: number | null;
 }
 
 export interface ParcelSyncProgress {
@@ -230,7 +239,13 @@ export class SatelliteCacheService {
     parcelId: string,
     organizationId: string,
     farmId?: string,
-    options?: { startDate?: string; endDate?: string; indices?: string[] },
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      indices?: string[];
+      /** User JWT for satellite service auth when INTERNAL_SERVICE_TOKEN is unset */
+      authToken?: string;
+    },
   ): Promise<{ totalPoints: number }> {
     const resolvedAoi = await this.resolveAoiFromParcel(
       parcelId,
@@ -269,6 +284,7 @@ export class SatelliteCacheService {
           organizationId,
           undefined,
           300_000,
+          options?.authToken,
         )) as Record<string, unknown>;
 
         const points = (result.data as TimeSeriesPoint[]) || [];
@@ -302,6 +318,8 @@ export class SatelliteCacheService {
   startParcelSync(
     body: Record<string, unknown>,
     organizationId?: string,
+    /** User JWT for satellite when INTERNAL_SERVICE_TOKEN is unset on the API */
+    authToken?: string,
   ): ParcelSyncProgress {
     const parcelId = body.parcel_id as string;
     const farmId = body.farm_id as string | undefined;
@@ -351,6 +369,7 @@ export class SatelliteCacheService {
       indices,
       body,
       organizationId,
+      authToken,
     );
 
     return progress;
@@ -365,6 +384,7 @@ export class SatelliteCacheService {
     indices: string[],
     originalBody: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<void> {
     const progress = this.parcelSyncProgress.get(parcelId)!;
 
@@ -395,6 +415,7 @@ export class SatelliteCacheService {
             organizationId,
             undefined,
             300_000,
+            authToken,
           )) as Record<string, unknown>;
 
           const points = (result.data as TimeSeriesPoint[]) || [];
@@ -465,16 +486,27 @@ export class SatelliteCacheService {
 
     for (const point of points) {
       if (point.value == null) continue;
+      const row: Record<string, unknown> = {
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        farm_id: farmId || null,
+        index_name: indexName,
+        date: point.date,
+        mean_value: point.value,
+        image_source: "sentinel-2",
+      };
+      if (point.min_value != null) row.min_value = point.min_value;
+      if (point.max_value != null) row.max_value = point.max_value;
+      if (point.std_value != null) row.std_value = point.std_value;
+      if (point.median_value != null) row.median_value = point.median_value;
+      if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
+      if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
+      if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
+      if (point.pixel_count != null) row.pixel_count = point.pixel_count;
+      if (point.cloud_coverage != null) row.cloud_coverage_percentage = point.cloud_coverage;
+
       const { error } = await client.from("satellite_indices_data").upsert(
-        {
-          parcel_id: parcelId,
-          organization_id: organizationId,
-          farm_id: farmId || null,
-          index_name: indexName,
-          date: point.date,
-          mean_value: point.value,
-          image_source: "sentinel-2",
-        },
+        row,
         { onConflict: "parcel_id,index_name,date" },
       );
 
@@ -496,6 +528,7 @@ export class SatelliteCacheService {
   async getTimeSeries(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -510,6 +543,9 @@ export class SatelliteCacheService {
         "/indices/timeseries",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -568,6 +604,9 @@ export class SatelliteCacheService {
       "/indices/timeseries",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     )) as Record<string, unknown>;
     this.logger.log(`[Proxy] timeseries response in ${Date.now() - start}ms`);
 
@@ -641,16 +680,27 @@ export class SatelliteCacheService {
 
         for (const point of points) {
           if (point.value == null) continue;
+          const row: Record<string, unknown> = {
+            parcel_id: parcelId,
+            organization_id: organizationId,
+            farm_id: farmId || null,
+            index_name: indexName,
+            date: point.date,
+            mean_value: point.value,
+            image_source: "sentinel-2",
+          };
+          if (point.min_value != null) row.min_value = point.min_value;
+          if (point.max_value != null) row.max_value = point.max_value;
+          if (point.std_value != null) row.std_value = point.std_value;
+          if (point.median_value != null) row.median_value = point.median_value;
+          if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
+          if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
+          if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
+          if (point.pixel_count != null) row.pixel_count = point.pixel_count;
+          if (point.cloud_coverage != null) row.cloud_coverage_percentage = point.cloud_coverage;
+
           const { error } = await client.from("satellite_indices_data").upsert(
-            {
-              parcel_id: parcelId,
-              organization_id: organizationId,
-              farm_id: farmId || null,
-              index_name: indexName,
-              date: point.date,
-              mean_value: point.value,
-              image_source: "sentinel-2",
-            },
+            row,
             { onConflict: "parcel_id,index_name,date" },
           );
 
@@ -677,6 +727,7 @@ export class SatelliteCacheService {
   async getHeatmap(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -727,6 +778,9 @@ export class SatelliteCacheService {
       "/indices/heatmap",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     );
 
     // Store in L1
@@ -838,6 +892,7 @@ export class SatelliteCacheService {
   async getAvailableDates(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
@@ -850,6 +905,9 @@ export class SatelliteCacheService {
         "/indices/available-dates",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -858,6 +916,9 @@ export class SatelliteCacheService {
         "/indices/available-dates",
         enrichedBody,
         organizationId,
+        undefined,
+        undefined,
+        authToken,
       );
     }
 
@@ -901,6 +962,9 @@ export class SatelliteCacheService {
       "/indices/available-dates",
       enrichedBody,
       organizationId,
+      undefined,
+      undefined,
+      authToken,
     );
     this.logger.log(
       `[Proxy] available-dates response in ${Date.now() - start}ms`,

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Plus, Satellite } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,14 +56,14 @@ interface CalibrationStatusPanelProps {
   isLoading?: boolean;
 }
 
-export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
+export const CalibrationStatusPanel = ({
   status,
   parcelId,
   onRecalibrate,
   onFetchData,
   onAddAnalysis,
   isLoading = false,
-}) => {
+}: CalibrationStatusPanelProps) => {
   const { t } = useTranslation();
 
   const getStatusIcon = (isValid: boolean, statusType: string) => {
@@ -361,8 +361,8 @@ export const CalibrationStatusPanel: React.FC<CalibrationStatusPanelProps> = ({
                 {t('calibration.recommendations', 'Recommendations')}:
               </p>
               <ul className="text-xs text-yellow-700 dark:text-yellow-400 space-y-1">
-                {status.recommendations.map((rec, idx) => (
-                  <li key={idx}>• {rec}</li>
+                {status.recommendations.map((rec) => (
+                  <li key={rec}>• {rec}</li>
                 ))}
               </ul>
             </div>

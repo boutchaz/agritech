@@ -902,9 +902,9 @@ function TaskDetailPage() {
                   Annuler
                 </Button>
                 <Button
+                  variant={completionType === 'partial' ? 'amber' : 'green'}
                   onClick={handleCompleteWithHarvest}
                   disabled={isActionLoading}
-                  className={completionType === 'partial' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
                 >
                   {completionType === 'partial' ? <PackageCheck className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                   {isActionLoading ? 'Enregistrement...' : completionType === 'partial' ? 'Enregistrer récolte partielle' : 'Terminer et enregistrer'}

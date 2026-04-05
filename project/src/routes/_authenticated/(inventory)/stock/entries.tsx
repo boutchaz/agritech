@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import StockEntryList from '@/components/Stock/StockEntryList';
 import StockEntryForm from '@/components/Stock/StockEntryForm';
 import StockEntryDetail from '@/components/Stock/StockEntryDetail';
 import type { StockEntry } from '@/types/stock-entries';
 
-const StockEntriesPage: React.FC = () => {
+const StockEntriesPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 

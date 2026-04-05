@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
@@ -9,10 +9,10 @@ interface SubscriptionRequiredProps {
   message?: string;
 }
 
-const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
+const SubscriptionRequired = ({
   reason = 'no_subscription',
   message,
-}) => {
+}: SubscriptionRequiredProps) => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
 
@@ -70,9 +70,9 @@ const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
 
           {/* Actions */}
           <div className="space-y-3">
-            <Button
+            <Button variant="blue"
               onClick={() => navigate({ to: '/settings/subscription' })}
-              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium"
             >
               <CreditCard className="h-5 w-5" />
               <span>View Subscription Plans</span>

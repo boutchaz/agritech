@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, ADMIN_ONLY_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 
@@ -101,9 +102,12 @@ export class JournalEntriesService {
       }
 
       if (search) {
-        const searchPattern = `%${search}%`;
-        query = query.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
-        countQuery = countQuery.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+        const safeSearch = sanitizeSearch(search);
+        if (safeSearch) {
+          const searchPattern = `%${safeSearch}%`;
+          query = query.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+          countQuery = countQuery.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+        }
       }
 
       if (filters?.account_id) {

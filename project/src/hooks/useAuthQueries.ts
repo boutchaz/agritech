@@ -131,7 +131,7 @@ export const useUserOrganizations = (userId: string | undefined) => {
 // Organization farms query
 export const useOrganizationFarms = (organizationId: string | undefined) => {
   return useQuery({
-    queryKey: authKeys.farms(organizationId || ''),
+    queryKey: ['farms', 'organization', organizationId || ''],
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
 

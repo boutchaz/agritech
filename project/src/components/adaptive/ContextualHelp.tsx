@@ -30,7 +30,7 @@ const CATEGORY_COLORS = {
  * Only shown to users in basic/medium modes
  * Can be permanently dismissed per hint ID
  */
-export const ContextualHelp: React.FC<ContextualHelpProps> = ({ hint, className = '' }) => {
+export const ContextualHelp = ({ hint, className = '' }: ContextualHelpProps) => {
   const { level, config, isHintDismissed, dismissHint } = useExperienceLevel();
 
   // Don't show if contextual help is disabled for this level
@@ -84,7 +84,7 @@ interface HelpTriggerProps {
   className?: string;
 }
 
-export const HelpTrigger: React.FC<HelpTriggerProps> = ({ content, className = '' }) => {
+export const HelpTrigger = ({ content, className = '' }: HelpTriggerProps) => {
   const { config } = useExperienceLevel();
   const [isOpen, setIsOpen] = React.useState(false);
 

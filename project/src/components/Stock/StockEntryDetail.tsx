@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useStockEntry } from '@/hooks/useStockEntries';
 import { useCurrency } from '@/hooks/useCurrency';

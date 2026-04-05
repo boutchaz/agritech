@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,13 +60,13 @@ const createFarmSchema = z.object({
 
 type CreateFarmFormValues = z.infer<typeof createFarmSchema>;
 
-const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
+const FarmHierarchyTree = ({
   organizationId,
   onAddParcel,
   onEditParcel,
   onDeleteParcel,
   onManageRoles
-}) => {
+}: FarmHierarchyTreeProps) => {
   const queryClient = useQueryClient();
 
   // React Hook Form
@@ -209,9 +209,9 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 {farm.farm_name}
               </h3>
             </div>
-            <Button
+            <Button variant="blue"
               onClick={() => onManageRoles?.(farm.farm_id)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm rounded-lg transition-colors"
             >
               Gérer Rôles
             </Button>
@@ -265,9 +265,9 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </div>
               }
             >
-              <Button
+              <Button variant="green"
                 onClick={() => onAddParcel?.(farm.farm_id)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Ajouter une parcelle</span>
@@ -344,11 +344,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </p>
               )}
             </div>
-            <Button
-              type="submit"
-              disabled={createFarmMutation.isPending}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="green" type="submit" disabled={createFarmMutation.isPending} className="px-6 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" >
               {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
             </Button>
             <Button

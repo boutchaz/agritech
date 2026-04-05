@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -33,12 +33,12 @@ const taxSchema = z.object({
 
 type TaxFormData = z.infer<typeof taxSchema>;
 
-export const QuickCreateTax: React.FC<QuickCreateTaxProps> = ({
+export const QuickCreateTax = ({
   open,
   onOpenChange,
   onSuccess,
   taxType = 'sales',
-}) => {
+}: QuickCreateTaxProps) => {
   const createTax = useCreateTax();
 
   const {

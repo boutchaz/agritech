@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { 
-  ArrowLeft, 
   Calendar, 
   Award, 
   Building, 
+  Building2,
   FileText, 
   Trash2,
   ExternalLink,
@@ -27,6 +27,8 @@ import { ScheduleAuditDialog } from '@/components/compliance/ScheduleAuditDialog
 import { CorrectiveActionsList } from '@/components/compliance/CorrectiveActionsList';
 import { CreateCorrectiveActionDialog } from '@/components/compliance/CreateCorrectiveActionDialog';
 import { UpdateActionStatusDialog } from '@/components/compliance/UpdateActionStatusDialog';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import {
   useCertification,
@@ -68,108 +70,6 @@ function CertificationDetailPage() {
 
   const certificationChecks = checks?.filter(check => check.certification_id === certId) || [];
   const certCorrectiveActions = correctiveActions || [];
-
-  if (isLoadingCert) {
-    return (
-      <div className="container mx-auto px-4 py-6 space-y-8">
-        {/* Header skeleton */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-md" />
-            <div>
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-6 w-20 rounded-full" />
-              </div>
-              <Skeleton className="h-4 w-32 mt-2" />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-28 rounded-md" />
-            <Skeleton className="h-10 w-24 rounded-md" />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main content skeleton */}
-          <div className="md:col-span-2 space-y-6">
-            {/* Details card */}
-            <div className="rounded-lg border bg-card p-6 space-y-4">
-              <Skeleton className="h-6 w-48" />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-5 w-5 rounded" />
-                  <div>
-                    <Skeleton className="h-4 w-32 mb-1" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Skeleton className="h-5 w-5 rounded" />
-                  <div>
-                    <Skeleton className="h-4 w-28 mb-1" />
-                    <Skeleton className="h-4 w-40" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            {/* Checks table skeleton */}
-            <div className="space-y-4">
-              <Skeleton className="h-6 w-44" />
-              <div className="rounded-md border">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-4 p-4 border-b last:border-b-0">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-10" />
-                    <Skeleton className="h-6 w-20 rounded-full" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar skeleton */}
-          <div className="space-y-6">
-            <div className="rounded-lg border bg-card p-6 space-y-4">
-              <Skeleton className="h-6 w-36" />
-              <div className="space-y-2">
-                {[1, 2].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-2 border rounded-md">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                    <Skeleton className="h-8 w-8 rounded" />
-                  </div>
-                ))}
-              </div>
-              <Skeleton className="h-9 w-full rounded-md" />
-            </div>
-            <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 p-6 space-y-3">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-9 w-full rounded-md mt-2" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!certification) {
-    return (
-      <div className="container mx-auto px-4 py-6 text-center">
-        <h2 className="text-xl font-bold">{t('certifications.certificationNotFound')}</h2>
-        <Button asChild className="mt-4">
-          <Link to="/compliance/certifications">{t('certifications.backToList')}</Link>
-        </Button>
-      </div>
-    );
-  }
 
   const handleDelete = () => {
     if (confirm(t('certifications.deleteCertificationConfirm'))) {
@@ -219,45 +119,116 @@ function CertificationDetailPage() {
     }
   };
 
+  const breadcrumbs = [
+    { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+    { icon: Award, label: t('breadcrumb.compliance'), path: '/compliance' },
+    { icon: Award, label: t('breadcrumb.certifications'), path: '/compliance/certifications' },
+    { icon: Award, label: certification?.certification_type || t('certifications.title'), isActive: true },
+  ];
+
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/compliance/certifications">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                {certification.certification_type}
-              </h1>
-              <Badge variant={getStatusVariant(certification.status)}>
-                {getStatusLabel(certification.status)}
-              </Badge>
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={breadcrumbs}
+          title={certification?.certification_type}
+          subtitle={certification?.certification_number}
+          actions={
+            certification && (
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusVariant(certification.status)}>
+                  {getStatusLabel(certification.status)}
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDelete} 
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={deleteCertification.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('certifications.delete')}
+                </Button>
+                <EditCertificationDialog certification={certification} />
+              </div>
+            )
+          }
+        />
+      }
+    >
+      {isLoadingCert ? (
+        <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+              <div className="rounded-lg border bg-card p-6 space-y-4">
+                <Skeleton className="h-6 w-48" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <div>
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <div>
+                      <Skeleton className="h-4 w-28 mb-1" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-44" />
+                <div className="rounded-md border">
+                  {[1, 2, 3].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-10" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-muted-foreground mt-1">
-              {certification.certification_number}
-            </p>
+            <div className="space-y-6">
+              <div className="rounded-lg border bg-card p-6 space-y-4">
+                <Skeleton className="h-6 w-36" />
+                <div className="space-y-2">
+                  {[1, 2].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center justify-between p-2 border rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-9 w-full rounded-md" />
+              </div>
+              <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 p-6 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-9 w-full rounded-md mt-2" />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleDelete} 
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            disabled={deleteCertification.isPending}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {t('certifications.delete')}
+      ) : !certification ? (
+        <div className="container mx-auto px-4 py-6 text-center">
+          <h2 className="text-xl font-bold">{t('certifications.certificationNotFound')}</h2>
+          <Button asChild className="mt-4">
+            <Link to="/compliance/certifications">{t('certifications.backToList')}</Link>
           </Button>
-          <EditCertificationDialog certification={certification} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      ) : (
+        <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main Info */}
         <div className="md:col-span-2 space-y-6">
           <Card>
@@ -368,8 +339,8 @@ function CertificationDetailPage() {
             <CardContent>
               {certification.documents && certification.documents.length > 0 ? (
                 <div className="space-y-2">
-                  {certification.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
+                  {certification.documents.map((doc) => (
+                    <div key={doc.url} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         <span className="text-sm truncate">{doc.type}</span>
@@ -430,14 +401,16 @@ function CertificationDetailPage() {
           </Card>
         </div>
       </div>
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={confirmAction.title}
-        description={confirmAction.description}
-        variant={confirmAction.variant}
-        onConfirm={confirmAction.onConfirm}
-      />
-    </div>
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title={confirmAction.title}
+            description={confirmAction.description}
+            variant={confirmAction.variant}
+            onConfirm={confirmAction.onConfirm}
+          />
+        </div>
+      )}
+    </PageLayout>
   );
 }

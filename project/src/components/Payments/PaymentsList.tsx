@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import {
   DollarSign,
   CheckCircle,
@@ -25,10 +25,10 @@ interface PaymentsListProps {
   onSelectPayment?: (paymentId: string) => void;
 }
 
-const PaymentsList: React.FC<PaymentsListProps> = ({
+const PaymentsList = ({
   organizationId,
   onSelectPayment,
-}) => {
+}: PaymentsListProps) => {
   const [filters, setFilters] = useState<PaymentFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -87,7 +87,7 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
           <p className="text-sm text-green-600 dark:text-green-400 mb-1">Total payé</p>
           <p className="text-2xl font-bold text-green-900 dark:text-green-100">
@@ -132,25 +132,17 @@ const PaymentsList: React.FC<PaymentsListProps> = ({
 
         {/* Status filters */}
         <div className="flex flex-wrap gap-2">
-          <Button
+          <Button variant="blue"
             onClick={() => handleStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              !filters.status
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-            }`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ !filters.status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
           >
             Tous
           </Button>
           {(['pending', 'approved', 'paid'] as PaymentStatus[]).map(status => (
-            <Button
+            <Button variant="blue"
               key={status}
               onClick={() => handleStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-                filters.status === status
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-              }`}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ filters.status === status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
             >
               {getPaymentStatusLabel(status, 'fr')}
             </Button>

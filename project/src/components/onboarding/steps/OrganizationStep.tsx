@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import {  useEffect, useRef, useState  } from "react";
 import { Building2, User, Briefcase, CheckCircle, ArrowRight, Mail } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
@@ -64,14 +64,14 @@ const COUNTRIES = [
   { id: 'TN', name: 'Tunisie', flag: '🇹🇳' },
 ];
 
-export const OrganizationStep: React.FC<OrganizationStepProps> = ({
+export const OrganizationStep = ({
   organizationData,
   existingOrgId,
   onUpdate,
   onCheckSlug,
   onNext,
   isLoading = false,
-}) => {
+}: OrganizationStepProps) => {
   const [subStep, setSubStep] = useState(0);
   const [slugCheck, setSlugCheck] = useState<SlugCheckResult | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);

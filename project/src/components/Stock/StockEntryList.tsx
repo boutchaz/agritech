@@ -171,7 +171,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
 
       {/* Filters */}
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Search */}
           <div className="md:col-span-2">
             <div className="relative">
@@ -237,7 +237,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {Object.values(STOCK_ENTRY_TYPES).map((type) => {
           const count = entries.filter((e) => e.entry_type === type.type).length;
           return (

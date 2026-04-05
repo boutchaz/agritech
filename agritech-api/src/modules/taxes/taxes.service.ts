@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { CreateTaxDto } from './dto/create-tax.dto';
 import { UpdateTaxDto } from './dto/update-tax.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class TaxesService {
@@ -29,7 +30,7 @@ export class TaxesService {
       .order('name', { ascending: true });
 
     // Filter by tax_type if specified (sales, purchase, or both)
-    if (filters?.tax_type) {
+    if (filters?.tax_type && ['sales', 'purchase', 'both'].includes(filters.tax_type)) {
       query = query.or(`tax_type.eq.${filters.tax_type},tax_type.eq.both`);
     }
 
@@ -40,7 +41,7 @@ export class TaxesService {
 
     // Search by name
     if (filters?.search) {
-      query = query.ilike('name', `%${filters.search}%`);
+      { const s = sanitizeSearch(filters.search); if (s) query = query.ilike('name', `%${s}%`); }
     }
 
     const { data, error } = await query;

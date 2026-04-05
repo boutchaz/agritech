@@ -17,7 +17,7 @@ interface OrganizationSwitcherProps {
   compact?: boolean;
 }
 
-const OrganizationSwitcher: React.FC<OrganizationSwitcherProps> = ({ compact = false }) => {
+const OrganizationSwitcher = ({ compact = false }: OrganizationSwitcherProps) => {
   const { t } = useTranslation();
   const {
     organizations,

@@ -43,12 +43,12 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
 }
 
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+const CollapsibleSection = ({
   title,
   icon,
   defaultOpen = true,
   children,
-}) => {
+}: CollapsibleSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -100,7 +100,7 @@ const priorityStyles = {
   low: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
-export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
+export const AIReportPreview = ({
   sections,
   generatedAt,
   satelliteTimeSeries,
@@ -109,7 +109,7 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
   sourceDataMetadata,
   onRefreshSourceData,
   isRefreshingSourceData = false,
-}) => {
+}: AIReportPreviewProps) => {
   const { t } = useTranslation();
   const [showDataTransparencyModal, setShowDataTransparencyModal] = useState(false);
   const healthScore = sections.healthAssessment?.overallScore ?? 0;
@@ -260,11 +260,11 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
           defaultOpen={true}
         >
           <div className="space-y-3">
-            {sections.riskAlerts.map((alert, index) => {
+            {sections.riskAlerts.map((alert) => {
               const style = severityStyles[alert.severity] || severityStyles.info;
               return (
                 <div
-                  key={index}
+                  key={`${alert.type}-${alert.severity}-${alert.description}`}
                   className={`p-4 ${style.bg} ${style.border} border rounded-lg`}
                 >
                   <div className="flex items-start space-x-3">
@@ -280,9 +280,9 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
                       </p>
                       {alert.mitigationSteps && alert.mitigationSteps.length > 0 && (
                         <ul className="mt-2 space-y-1">
-                          {alert.mitigationSteps.map((step, stepIndex) => (
+                          {alert.mitigationSteps.map((step) => (
                             <li
-                              key={stepIndex}
+                              key={step}
                               className="text-sm text-gray-600 dark:text-gray-400 flex items-start"
                             >
                               <span className="mr-2">•</span>
@@ -308,9 +308,9 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
           defaultOpen={true}
         >
           <div className="space-y-3">
-            {sections.recommendations.map((rec, index) => (
+            {sections.recommendations.map((rec) => (
               <div
-                key={index}
+                key={`${rec.title}-${rec.category}`}
                 className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600"
               >
                 <div className="flex items-start justify-between">
@@ -361,9 +361,9 @@ export const AIReportPreview: React.FC<AIReportPreviewProps> = ({
           <div className="space-y-2">
             {sections.actionItems
               .sort((a, b) => a.priority - b.priority)
-              .map((item, index) => (
+              .map((item) => (
                 <div
-                  key={index}
+                  key={`${item.action}-${item.priority}-${item.deadline ?? 'no-deadline'}`}
                   className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                 >
                   <div className="flex-shrink-0 w-6 h-6 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center text-sm font-medium">

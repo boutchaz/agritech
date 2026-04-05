@@ -1,4 +1,4 @@
-import type { AnnualCampaignBilanResponse } from '@/lib/api/calibration-v2';
+import type { AnnualCampaignBilanResponse } from '@/lib/api/calibration-output';
 
 function formatNumber(value: number | null | undefined, digits = 1): string {
   if (value == null || Number.isNaN(value)) {

@@ -1,0 +1,2 @@
+2026-04-02: Mobile `pnpm --dir mobile type-check` still fails because of pre-existing unrelated errors in `clock.tsx`, `analyses/new.tsx`, `harvest/new.tsx`, `ItemVariantSelector.tsx`, and `authStore.ts`.
+2026-04-02: `npx jest --passWithNoTests` passes, but existing non-blocking console warnings from `expo-local-authentication` native module mocks still appear in unrelated suites (`src/lib/__tests__/api.test.ts`).

@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, lazy, Suspense } from 'react';
+import {  useMemo, useCallback, useState, lazy, Suspense  } from "react";
 import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
@@ -45,7 +45,7 @@ interface ParcelCardProps {
   disableInnerScroll?: boolean;
 }
 
-const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
+const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }: ParcelCardProps) => {
   const navigate = useNavigate();
 
   // Fetch latest satellite indices for this parcel
@@ -353,9 +353,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               {/* Add Analysis Button */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900">
-                <Button
+                <Button variant="green"
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nouvelle analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'}</span>
@@ -384,9 +384,9 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
-                <Button
+                <Button variant="green"
                   onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Ajouter une première analyse</span>
@@ -862,7 +862,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             <span className={`font-medium ${data.healthColor}`}>
               {data.health}
             </span>
-            {parcel.ai_phase && parcel.ai_phase !== 'disabled' && (
+            {parcel.ai_phase && parcel.ai_phase !== 'awaiting_data' && (
               <AIStatusBadge status={parcel.ai_phase as Parameters<typeof AIStatusBadge>[0]['status']} />
             )}
           </div>

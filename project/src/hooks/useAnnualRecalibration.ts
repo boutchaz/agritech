@@ -1,14 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import {
-  calibrationV2Api,
-  type CalibrationStatusRecord,
-  type AnnualCampaignBilanResponse,
-  type AnnualEligibilityResponse,
-  type AnnualMissingTask,
-  type AnnualMissingTaskResolution,
-  type AnnualNewAnalysesResponse,
-} from '@/lib/api/calibration-v2';
+import { calibrationApi,
+type CalibrationStatusRecord,
+type AnnualCampaignBilanResponse,
+type AnnualEligibilityResponse,
+type AnnualMissingTask,
+type AnnualMissingTaskResolution,
+type AnnualNewAnalysesResponse, } from '@/lib/api/calibration-output';
 import { queryKeys } from '@/lib/query-keys';
 import { useAuth } from './useAuth';
 
@@ -23,7 +21,7 @@ export function useAnnualEligibility(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.checkAnnualEligibility(parcelId, currentOrganization.id);
+      return calibrationApi.checkAnnualEligibility(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
@@ -39,7 +37,7 @@ export function useAnnualMissingTasks(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.getAnnualMissingTasks(parcelId, currentOrganization.id);
+      return calibrationApi.getAnnualMissingTasks(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
@@ -55,7 +53,7 @@ export function useAnnualNewAnalyses(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.checkAnnualNewAnalyses(parcelId, currentOrganization.id);
+      return calibrationApi.checkAnnualNewAnalyses(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
@@ -71,7 +69,7 @@ export function useAnnualCampaignBilan(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.getAnnualCampaignBilan(parcelId, currentOrganization.id);
+      return calibrationApi.getAnnualCampaignBilan(parcelId, currentOrganization.id);
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: STALE_TIME_MS,
@@ -89,7 +87,7 @@ export function useStartAnnualRecalibration(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return calibrationV2Api.startAnnualRecalibration(
+      return calibrationApi.startAnnualRecalibration(
         parcelId,
         dto,
         currentOrganization.id,
@@ -109,16 +107,16 @@ export function useStartAnnualRecalibration(parcelId: string) {
         queryKey: queryKeys.annual.campaignBilan(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.calibration.status(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.calibration.report(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.calibration.phase(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.history(parcelId, currentOrganization?.id),
+        queryKey: queryKeys.calibration.history(parcelId, currentOrganization?.id),
       });
       queryClient.invalidateQueries({ queryKey: ['ai-calibration', parcelId] });
       toast.success('Recalibrage annuel lance.');
@@ -143,7 +141,7 @@ export function useResolveAnnualMissingTasks(parcelId: string) {
         throw new Error('No organization selected');
       }
 
-      return calibrationV2Api.resolveAnnualMissingTasks(
+      return calibrationApi.resolveAnnualMissingTasks(
         parcelId,
         resolutions,
         currentOrganization.id,
@@ -174,7 +172,7 @@ export function useSnoozeAnnualReminder(parcelId: string) {
         throw new Error('No organization selected');
       }
 
-      return calibrationV2Api.snoozeAnnualReminder(
+      return calibrationApi.snoozeAnnualReminder(
         parcelId,
         days,
         currentOrganization.id,

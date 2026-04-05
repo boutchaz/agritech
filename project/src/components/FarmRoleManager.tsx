@@ -27,11 +27,11 @@ interface FarmRoleManagerProps {
   onClose: () => void;
 }
 
-const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({ 
+const FarmRoleManager = ({ 
   farmId, 
   farmName, 
   onClose 
-}) => {
+}: FarmRoleManagerProps) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
@@ -165,9 +165,9 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-gray-900">Current Role Assignments</h4>
-          <Button
+          <Button variant="blue"
             onClick={() => setShowAssignRole(true)}
-            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+            className="flex items-center px-3 py-2 rounded-md text-sm"
           >
             <UserPlus className="w-4 h-4 mr-1" />
             Assign Role
@@ -293,11 +293,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={loading || availableUsers.length === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
+                <Button variant="blue" type="submit" disabled={loading || availableUsers.length === 0} className="px-4 py-2 rounded-md" >
                   {loading ? 'Assigning...' : 'Assign Role'}
                 </Button>
               </div>

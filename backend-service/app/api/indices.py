@@ -1,6 +1,6 @@
 import asyncio
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
-from typing import List, Dict, Optional, Tuple
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query, Depends
+from typing import List, Dict, Optional, Tuple, Any
 import uuid
 import hashlib
 import json
@@ -18,6 +18,7 @@ from app.models.schemas import (
     InteractiveDataResponse,
     HeatmapRequest,
     HeatmapDataResponse,
+    AvailableDatesRequest,
     IndexValue,
     ErrorResponse,
 )
@@ -27,8 +28,75 @@ import logging
 import ee
 import httpx
 
-router = APIRouter()
+from app.middleware.auth import get_current_user_or_service
+
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
+
+
+def _interfaces_ts_point_to_api_dict(p: Any) -> Dict[str, Any]:
+    """Serialize provider dataclass TimeSeriesPoint for TimeSeriesResponse.data."""
+    d: Dict[str, Any] = {"date": p.date, "value": p.value}
+    for key in (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+        "pixel_count",
+        "cloud_coverage",
+    ):
+        v = getattr(p, key, None)
+        if v is not None:
+            d[key] = v
+    return d
+
+
+def _log_timeseries_points_shape(
+    req_id: str,
+    provider_label: str,
+    points: List[Dict[str, Any]],
+) -> None:
+    """Log keys and optional-field population for debugging DB / API mismatches."""
+    if not points:
+        return
+    first = points[0]
+    if not isinstance(first, dict):
+        return
+    optional = (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+        "pixel_count",
+        "cloud_coverage",
+    )
+    counts = {
+        k: sum(1 for p in points if isinstance(p, dict) and p.get(k) is not None)
+        for k in optional
+    }
+    logger.info(
+        "[timeseries][%s] %s first_point_keys=%s optional_nonnull_counts=%s n=%s",
+        req_id,
+        provider_label,
+        sorted(first.keys()),
+        counts,
+        len(points),
+    )
+    try:
+        logger.debug(
+            "[timeseries][%s] %s first_point_json=%s",
+            req_id,
+            provider_label,
+            json.dumps(first, default=str)[:4000],
+        )
+    except (TypeError, ValueError):
+        pass
 
 
 def _geometry_fingerprint(geometry: Dict) -> str:
@@ -91,7 +159,9 @@ def _get_utm_info(lons: List[float], lats: List[float]) -> Dict:
     dist_to_west = abs(min(lons) - zone_west_boundary)
     dist_to_east = abs(max(lons) - zone_east_boundary)
     nearest_boundary_dist = min(dist_to_west, dist_to_east)
-    nearest_boundary_lon = zone_west_boundary if dist_to_west < dist_to_east else zone_east_boundary
+    nearest_boundary_lon = (
+        zone_west_boundary if dist_to_west < dist_to_east else zone_east_boundary
+    )
 
     if nearest_boundary_dist < 0.5:  # within ~55 km of a zone boundary
         info["near_zone_boundary"] = True
@@ -163,6 +233,7 @@ def _coords_depth(coords) -> int:
     if isinstance(first, (int, float)):
         return 1
     return 1 + _coords_depth(first)
+
 
 async def _to_thread(fn, *args, **kwargs):
     """Run a blocking function in a thread pool so it doesn't block the async event loop.
@@ -369,7 +440,11 @@ async def calculate_indices(
 
     utm_info = geo_summary.get("utm", {})
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[calculate][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -612,7 +687,7 @@ async def calculate_indices(
             f"dates={request.date_range.start_date} -> {request.date_range.end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/timeseries", response_model=TimeSeriesResponse)
@@ -641,7 +716,11 @@ async def get_time_series(
 
     utm_info = geo_summary.get("utm", {})
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[timeseries][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -673,7 +752,6 @@ async def get_time_series(
                 f"[timeseries][{req_id}] GEE: Calling get_time_series for index={base_index}..."
             )
             t_gee = time.monotonic()
-            # Force tile-level only: SCL reserved for available-dates. B2,B3,B4,B8 at 10m.
             time_series_data = await _to_thread(
                 earth_engine_service.get_time_series,
                 request.aoi.geometry.model_dump(),
@@ -682,7 +760,7 @@ async def get_time_series(
                 base_index,
                 request.interval.value,
                 max_cloud_coverage=request.cloud_coverage,
-                use_aoi_cloud_filter=False,
+                use_aoi_cloud_filter=True,
             )
             gee_elapsed = time.monotonic() - t_gee
 
@@ -692,6 +770,11 @@ async def get_time_series(
                 f"(null_values={null_count}), elapsed={gee_elapsed:.2f}s"
             )
             if time_series_data:
+                _log_timeseries_points_shape(
+                    req_id,
+                    "GEE",
+                    [p for p in time_series_data if isinstance(p, dict)],
+                )
                 logger.debug(
                     f"[timeseries][{req_id}] GEE: First 3 points: {time_series_data[:3]}"
                 )
@@ -721,12 +804,18 @@ async def get_time_series(
             )
             cdse_elapsed = time.monotonic() - t_cdse
             time_series_data = [
-                {"date": p.date, "value": p.value} for p in ts_result.data
+                _interfaces_ts_point_to_api_dict(p) for p in ts_result.data
             ]
             logger.info(
                 f"[timeseries][{req_id}] CDSE: Returned {len(time_series_data)} data points, "
                 f"elapsed={cdse_elapsed:.2f}s"
             )
+            if time_series_data:
+                _log_timeseries_points_shape(
+                    req_id,
+                    "CDSE",
+                    [p for p in time_series_data if isinstance(p, dict)],
+                )
 
         # Build NIRvP = NIRv * PAR for time-series use cases
         if requested_index == "NIRvP":
@@ -922,7 +1011,7 @@ async def get_time_series(
             f"dates={request.date_range.start_date} -> {request.date_range.end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/export")
@@ -950,7 +1039,11 @@ async def export_index_map(
 
     utm_info = geo_summary.get("utm", {})
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[export][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -1058,7 +1151,7 @@ async def export_index_map(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/interactive", response_model=InteractiveDataResponse)
@@ -1085,7 +1178,11 @@ async def get_interactive_data(
 
     utm_info = geo_summary.get("utm", {})
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[interactive][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -1161,7 +1258,7 @@ async def get_interactive_data(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.post("/heatmap", response_model=HeatmapDataResponse)
@@ -1187,7 +1284,11 @@ async def get_heatmap_data(
 
     utm_info = geo_summary.get("utm", {})
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[heatmap][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -1266,7 +1367,9 @@ async def get_heatmap_data(
             f"error={e}, elapsed={total_elapsed:.2f}s, "
             f"geometry={geo_summary}, date={request.date}"
         )
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=404, detail="No data found for the specified parameters"
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -1277,7 +1380,7 @@ async def get_heatmap_data(
             f"geometry={geo_summary}, date={request.date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @router.get("/available", response_model=List[str])
@@ -1298,7 +1401,7 @@ async def get_provider_info():
 
 @router.post("/available-dates")
 async def get_available_dates(
-    request: Dict,
+    request: AvailableDatesRequest,
     provider: Optional[str] = Query(
         None, description="Satellite provider (gee, cdse, or auto)"
     ),
@@ -1306,11 +1409,11 @@ async def get_available_dates(
     """Get dates with available satellite imagery for a given AOI and date range"""
     req_id = str(uuid.uuid4())[:8]
 
-    # Parse request parameters
-    aoi_geometry = request.get("aoi", {}).get("geometry")
-    start_date = request.get("start_date")
-    end_date = request.get("end_date")
-    max_cloud_coverage = request.get("cloud_coverage", 30)
+    # Parse request parameters from validated Pydantic model
+    aoi_geometry = request.aoi.geometry.model_dump()
+    start_date = request.start_date
+    end_date = request.end_date
+    max_cloud_coverage = request.cloud_coverage or 30
 
     geo_summary = (
         _geometry_summary(aoi_geometry) if aoi_geometry else {"error": "no_geometry"}
@@ -1321,13 +1424,16 @@ async def get_available_dates(
         f"geometry={geo_summary}, "
         f"dates={start_date} -> {end_date}, "
         f"max_cloud_coverage={max_cloud_coverage}, "
-        f"provider_param={provider!r}, "
-        f"raw_request_keys={list(request.keys())}"
+        f"provider_param={provider!r}"
     )
 
     utm_info = geo_summary.get("utm", {}) if isinstance(geo_summary, dict) else {}
     if utm_info:
-        log_fn = logger.warning if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary") else logger.info
+        log_fn = (
+            logger.warning
+            if utm_info.get("spans_zones") or utm_info.get("near_zone_boundary")
+            else logger.info
+        )
         log_fn(
             f"[available-dates][{req_id}] UTM zone: {utm_info.get('zone')} {utm_info.get('hemisphere', '')} "
             f"(EPSG={utm_info.get('epsg')}), "
@@ -1345,24 +1451,13 @@ async def get_available_dates(
                 f"[available-dates][{req_id}] Raw geometry (truncated): {raw_geo_str[:2000]}..."
             )
         else:
-            logger.debug(
-                f"[available-dates][{req_id}] Raw geometry: {raw_geo_str}"
-            )
+            logger.debug(f"[available-dates][{req_id}] Raw geometry: {raw_geo_str}")
 
     t_start = time.monotonic()
 
     try:
-        # --- Validate inputs ---
-        if not all([aoi_geometry, start_date, end_date]):
-            logger.warning(
-                f"[available-dates][{req_id}] Missing required parameters: "
-                f"has_aoi={aoi_geometry is not None}, "
-                f"has_start_date={start_date is not None}, "
-                f"has_end_date={end_date is not None}"
-            )
-            raise HTTPException(status_code=400, detail="Missing required parameters")
-
-        # Validate date format and range
+        # Date format and range already validated by Pydantic model.
+        # Additional runtime checks below for logging purposes.
         try:
             parsed_start = datetime.strptime(start_date, "%Y-%m-%d")
             parsed_end = datetime.strptime(end_date, "%Y-%m-%d")
@@ -1391,8 +1486,16 @@ async def get_available_dates(
             )
 
         # Validate geometry structure
-        geo_type = aoi_geometry.get("type", "MISSING") if isinstance(aoi_geometry, dict) else type(aoi_geometry).__name__
-        geo_coords = aoi_geometry.get("coordinates", []) if isinstance(aoi_geometry, dict) else []
+        geo_type = (
+            aoi_geometry.get("type", "MISSING")
+            if isinstance(aoi_geometry, dict)
+            else type(aoi_geometry).__name__
+        )
+        geo_coords = (
+            aoi_geometry.get("coordinates", [])
+            if isinstance(aoi_geometry, dict)
+            else []
+        )
         logger.info(
             f"[available-dates][{req_id}] Geometry validation: "
             f"type={geo_type}, "
@@ -1412,7 +1515,9 @@ async def get_available_dates(
             from app.services import earth_engine_service
 
             # Initialize Earth Engine
-            logger.debug(f"[available-dates][{req_id}] GEE: Initializing Earth Engine...")
+            logger.debug(
+                f"[available-dates][{req_id}] GEE: Initializing Earth Engine..."
+            )
             t_init = time.monotonic()
             earth_engine_service.initialize()
             init_elapsed = time.monotonic() - t_init
@@ -1528,7 +1633,7 @@ async def get_available_dates(
                 date = ee.Date(image.get("system:time_start"))
 
                 # Get SCL band for cloud detection within AOI
-                scl = image.select('SCL')
+                scl = image.select("SCL")
 
                 # Cloud mask: pixels that are clouds (3, 8, 9, 10)
                 cloud_mask = scl.eq(3).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
@@ -1541,30 +1646,43 @@ async def get_available_dates(
                     maxPixels=1e13,
                     bestEffort=True,
                     tileScale=4,
-                ).get('SCL')
+                ).get("SCL")
 
-                total_pixels = scl.mask().reduceRegion(
-                    reducer=ee.Reducer.count(),
-                    geometry=aoi,
-                    scale=20,
-                    maxPixels=1e13,
-                    bestEffort=True,
-                    tileScale=4,
-                ).get('SCL')
+                total_pixels = (
+                    scl.mask()
+                    .reduceRegion(
+                        reducer=ee.Reducer.count(),
+                        geometry=aoi,
+                        scale=20,
+                        maxPixels=1e13,
+                        bestEffort=True,
+                        tileScale=4,
+                    )
+                    .get("SCL")
+                )
 
                 # Calculate percentage
-                aoi_cloud_pct = ee.Number(cloud_pixels).divide(ee.Number(total_pixels)).multiply(100)
+                aoi_cloud_pct = (
+                    ee.Number(cloud_pixels)
+                    .divide(ee.Number(total_pixels))
+                    .multiply(100)
+                )
 
-                return ee.Feature(None, {
-                    'date': date.format('YYYY-MM-dd'),
-                    'aoi_cloud_coverage': aoi_cloud_pct,
-                    'tile_cloud_coverage': image.get('CLOUDY_PIXEL_PERCENTAGE'),
-                    'timestamp': date.millis(),
-                })
+                return ee.Feature(
+                    None,
+                    {
+                        "date": date.format("YYYY-MM-dd"),
+                        "aoi_cloud_coverage": aoi_cloud_pct,
+                        "tile_cloud_coverage": image.get("CLOUDY_PIXEL_PERCENTAGE"),
+                        "timestamp": date.millis(),
+                    },
+                )
 
             def _gee_get_dates_with_aoi_cloud():
                 """Get all dates with AOI-level cloud coverage."""
-                collection_list = unfiltered_collection.toList(unfiltered_collection.size())
+                collection_list = unfiltered_collection.toList(
+                    unfiltered_collection.size()
+                )
                 num_images = unfiltered_collection.size().getInfo()
 
                 results = []
@@ -1573,15 +1691,19 @@ async def get_available_dates(
                         image = ee.Image(collection_list.get(i))
                         feature = extract_date_with_aoi_cloud(image)
                         info = feature.getInfo()
-                        props = info.get('properties', {})
-                        results.append([
-                            props.get('date'),
-                            props.get('aoi_cloud_coverage'),
-                            props.get('tile_cloud_coverage'),
-                            props.get('timestamp')
-                        ])
+                        props = info.get("properties", {})
+                        results.append(
+                            [
+                                props.get("date"),
+                                props.get("aoi_cloud_coverage"),
+                                props.get("tile_cloud_coverage"),
+                                props.get("timestamp"),
+                            ]
+                        )
                     except Exception as e:
-                        logger.warning(f"[available-dates][{req_id}] Error processing image {i}: {e}")
+                        logger.warning(
+                            f"[available-dates][{req_id}] Error processing image {i}: {e}"
+                        )
                         continue
 
                 return results
@@ -1608,7 +1730,11 @@ async def get_available_dates(
                     timestamp = item[3]
 
                     # Check if passes AOI cloud filter
-                    passes = aoi_cloud <= max_cloud_coverage if aoi_cloud is not None else False
+                    passes = (
+                        aoi_cloud <= max_cloud_coverage
+                        if aoi_cloud is not None
+                        else False
+                    )
 
                     logger.debug(
                         f"[available-dates][{req_id}] GEE: {date_str} - "
@@ -1631,11 +1757,13 @@ async def get_available_dates(
                 all_cloud_data = []
                 for item in all_date_info:
                     if item and len(item) >= 4 and item[1] is not None:
-                        all_cloud_data.append({
-                            "date": item[0],
-                            "aoi_cloud": item[1],
-                            "tile_cloud": item[2]
-                        })
+                        all_cloud_data.append(
+                            {
+                                "date": item[0],
+                                "aoi_cloud": item[1],
+                                "tile_cloud": item[2],
+                            }
+                        )
                         if min_aoi_cloud is None or item[1] < min_aoi_cloud:
                             min_aoi_cloud = item[1]
 
@@ -1658,12 +1786,19 @@ async def get_available_dates(
                     "available_dates": [],
                     "total_images": 0,
                     "date_range": {"start": start_date, "end": end_date},
-                    "filters": {"max_cloud_coverage": max_cloud_coverage, "filter_type": "aoi_level"},
+                    "filters": {
+                        "max_cloud_coverage": max_cloud_coverage,
+                        "filter_type": "aoi_level",
+                    },
                     "debug_info": {
                         "message": f"All {unfiltered_count} images exceed {max_cloud_coverage}% AOI cloud coverage",
-                        "min_aoi_cloud_found": round(min_aoi_cloud, 2) if min_aoi_cloud is not None else None,
+                        "min_aoi_cloud_found": round(min_aoi_cloud, 2)
+                        if min_aoi_cloud is not None
+                        else None,
                         "suggestion": f"Increase cloud_coverage threshold to at least {int(min_aoi_cloud) + 5 if min_aoi_cloud else 20}%",
-                        "all_images_cloud_data": all_cloud_data[:10],  # Show top 10 least cloudy
+                        "all_images_cloud_data": all_cloud_data[
+                            :10
+                        ],  # Show top 10 least cloudy
                     },
                     "provider": satellite_provider.provider_name,
                 }
@@ -1679,6 +1814,7 @@ async def get_available_dates(
 
             if cloud_values_all:
                 import numpy as np
+
                 cloud_arr = np.array(cloud_values_all)
                 logger.info(
                     f"[available-dates][{req_id}] GEE: Cloud coverage distribution across {raw_count} images: "
@@ -1755,7 +1891,9 @@ async def get_available_dates(
                     curr = datetime.strptime(sorted_date_strs[i], "%Y-%m-%d")
                     gap_days = (curr - prev).days
                     if gap_days > 15:  # S2 revisit is ~5 days, so >15 is notable
-                        gaps.append(f"{sorted_date_strs[i-1]}->{sorted_date_strs[i]} ({gap_days}d)")
+                        gaps.append(
+                            f"{sorted_date_strs[i - 1]}->{sorted_date_strs[i]} ({gap_days}d)"
+                        )
                 if gaps:
                     logger.info(
                         f"[available-dates][{req_id}] GEE: Notable date gaps (>15 days): "
@@ -1772,7 +1910,8 @@ async def get_available_dates(
                 )
                 if len(available_dates) > 20:
                     cloud_summary_tail = ", ".join(
-                        f"{d['date']}:{d['cloud_coverage']}%" for d in available_dates[-5:]
+                        f"{d['date']}:{d['cloud_coverage']}%"
+                        for d in available_dates[-5:]
                     )
                     logger.debug(
                         f"[available-dates][{req_id}] GEE: Per-date cloud (last 5): [{cloud_summary_tail}]"
@@ -1795,7 +1934,10 @@ async def get_available_dates(
                 "available_dates": available_dates,
                 "total_images": len(available_dates),
                 "date_range": {"start": start_date, "end": end_date},
-                "filters": {"max_cloud_coverage": max_cloud_coverage, "filter_type": "aoi_level"},
+                "filters": {
+                    "max_cloud_coverage": max_cloud_coverage,
+                    "filter_type": "aoi_level",
+                },
                 "provider": satellite_provider.provider_name,
             }
         else:
@@ -1841,4 +1983,4 @@ async def get_available_dates(
             f"dates={start_date} -> {end_date}\n"
             f"{traceback.format_exc()}"
         )
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")

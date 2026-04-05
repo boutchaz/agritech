@@ -1,15 +1,12 @@
-import React from 'react';
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MonthlyWeatherData } from '../../services/weatherClimateService';
-
-interface PrecipitationChartProps {
-  data: MonthlyWeatherData[];
-}
 
 interface TooltipPayload {
   name: string;
   value: number;
   color: string;
+  label?: string;
 }
 
 interface CustomTooltipProps {
@@ -18,7 +15,27 @@ interface CustomTooltipProps {
   label?: string;
 }
 
-const PrecipitationChart: React.FC<PrecipitationChartProps> = ({ data }) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
+        <p className="font-medium mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={entry.label} style={{ color: entry.color }} className="text-sm">
+            {entry.name}: {entry.value} mm
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+interface PrecipitationChartProps {
+  data: MonthlyWeatherData[];
+}
+
+const PrecipitationChart = ({ data }: PrecipitationChartProps) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500 dark:text-gray-400">
@@ -34,22 +51,6 @@ const PrecipitationChart: React.FC<PrecipitationChartProps> = ({ data }) => {
     actual: Math.round(d.precipitation_total * 10) / 10,
     ltn: Math.round(d.precipitation_ltn * 10) / 10,
   }));
-
-  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: {entry.value} mm
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">

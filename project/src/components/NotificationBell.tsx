@@ -14,6 +14,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { headerToolbarIconTriggerClass } from '@/lib/header-toolbar';
+import { getNotificationRedirect } from '@/lib/notification-routes';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
@@ -164,7 +165,15 @@ function EnhancedNotificationItem({
           : 'hover:bg-muted/50',
         isNew && 'notification-slide-in'
       )}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <span className="text-lg" role="img" aria-label={notification.type}>
         {getTypeIcon(notification.type)}
@@ -281,19 +290,13 @@ export function NotificationBell() {
   const importantCount = importantNotifications.size;
 
   const handleNotificationClick = useCallback((notification: NotificationData) => {
-    // Mark as read
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
-    const { data } = notification;
-    if (data?.taskId) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
-    } else if (data?.orderId) {
-      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
-    } else if (data?.quoteRequestId) {
-      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
+    const redirect = getNotificationRedirect(notification);
+    if (redirect) {
+      navigate(redirect);
     }
 
     setOpen(false);
@@ -312,7 +315,7 @@ export function NotificationBell() {
 
       toast.info(notification.title, {
         description: notification.message || undefined,
-        action: notification.data?.taskId || notification.data?.orderId ? {
+        action: getNotificationRedirect(notification) ? {
           label: 'View',
           onClick: () => handleNotificationClick(notification),
         } : undefined,

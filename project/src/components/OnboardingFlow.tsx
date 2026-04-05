@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { usersApi } from '@/lib/api/users';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { farmsApi } from '@/lib/api/farms';
@@ -45,7 +45,7 @@ interface FarmData {
   description: string;
 }
 
-const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
+const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -625,22 +625,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
             </Button>
 
             {currentStep < 3 ? (
-              <Button
-                type="button"
-                onClick={handleNext}
-                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                data-testid="onboarding-next-button"
-              >
+              <Button variant="blue" type="button" onClick={handleNext} className="px-6 py-2 text-sm font-medium rounded-md" data-testid="onboarding-next-button" >
                 {canSkipStep(currentStep) ? 'Continuer' : 'Suivant'}
               </Button>
             ) : (
-              <Button
-                type="button"
-                onClick={handleComplete}
-                disabled={loading || seedingData}
-                className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                data-testid="onboarding-complete-button"
-              >
+              <Button variant="green" type="button" onClick={handleComplete} disabled={loading || seedingData} className="px-6 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed flex items-center gap-2" data-testid="onboarding-complete-button" >
                 {seedingData ? (
                   <>
                     <Database className="w-4 h-4 animate-pulse" />

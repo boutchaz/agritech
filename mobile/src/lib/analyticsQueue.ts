@@ -5,7 +5,7 @@
  */
 
 import * as SQLite from 'expo-sqlite';
-import * as Network from 'expo-network';
+import NetInfo from '@react-native-community/netinfo';
 import { trackEvent as baseTrackEvent } from './analytics';
 
 const DB_NAME = 'analytics_queue.db';
@@ -14,7 +14,7 @@ const MAX_QUEUE_SIZE = 100; // Maximum events to queue
 const SYNC_INTERVAL = 30000; // Sync every 30 seconds
 
 let db: SQLite.SQLiteDatabase | null = null;
-let syncInterval: NodeJS.Timeout | null = null;
+let syncInterval: ReturnType<typeof setInterval> | null = null;
 
 interface QueuedEvent {
   id?: number;
@@ -154,8 +154,8 @@ export const removeQueuedEvent = async (id: number): Promise<void> => {
  */
 export const isOnline = async (): Promise<boolean> => {
   try {
-    const networkState = await Network.getNetworkStateAsync();
-    return networkState.isConnected && networkState.type !== Network.NetworkStateType.NONE;
+    const networkState = await NetInfo.fetch();
+    return !!networkState.isConnected;
   } catch (error) {
     // Assume online if we can't check
     return true;
@@ -196,6 +196,9 @@ export const syncQueuedEvents = async (): Promise<void> => {
         syncedCount++;
       } catch (error) {
         // Increment retry count
+        if (event.id == null) {
+          continue;
+        }
         await db.runAsync(
           `UPDATE ${TABLE_NAME} SET retryCount = retryCount + 1 WHERE id = ?`,
           [event.id]
@@ -210,9 +213,6 @@ export const syncQueuedEvents = async (): Promise<void> => {
       }
     }
 
-    if (syncedCount > 0) {
-      console.log(`Synced ${syncedCount} analytics events`);
-    }
   } catch (error) {
     console.error('Failed to sync analytics events:', error);
   }
@@ -318,7 +318,7 @@ export const setupAnalyticsQueue = async (): Promise<void> => {
   await initAnalyticsQueue();
 
   // Listen for network state changes
-  Network.addNetworkStateListener?.((networkState) => {
+  NetInfo.addEventListener((networkState) => {
     if (networkState.isConnected) {
       // Sync when coming back online
       syncQueuedEvents();

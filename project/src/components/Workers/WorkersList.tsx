@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,7 +35,7 @@ interface WorkersListProps {
   farms: Array<{ id: string; name: string }>;
 }
 
-const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
+const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -154,13 +154,13 @@ const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
             </div>
           }
         >
-          <Button
+          <Button variant="blue"
             data-tour="worker-add"
             onClick={() => {
               setSelectedWorker(null);
               setShowForm(true);
             }}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base w-full sm:w-auto justify-center"
+            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{t('workers.list.addWorker')}</span>

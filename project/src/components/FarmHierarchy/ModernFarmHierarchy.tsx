@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {  useState, useMemo, useRef, useEffect  } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { apiClient } from '../../lib/api-client';
 import { farmsService } from '../../services/farmsService';
+import { farmHierarchyApi } from '@/lib/api/farm-hierarchy';
 import { parcelsService } from '../../services/parcelsService';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
@@ -60,12 +60,12 @@ type FarmFormValues = {
   name: string;
 };
 
-const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
+const ModernFarmHierarchy = ({
   organizationId,
   onFarmSelect: _onFarmSelect,
   onAddParcel: _onAddParcel,
   onManageFarm
-}) => {
+}: ModernFarmHierarchyProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -131,19 +131,13 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
   const { data: farms = [], isLoading } = useQuery({
     queryKey: ['farm-hierarchy', organizationId],
     queryFn: async () => {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
+      // Use shared mapper: handles paginated `{ data }`, raw arrays, and `id` vs `farm_id`.
+      const flatFarms = await farmHierarchyApi.getOrganizationFarms(organizationId);
 
-      const result = await apiClient.get<{ data: unknown[]; farms: unknown[] }>(url, {}, organizationId);
-
-      const data = result?.data || result?.farms || [];
-
-      // Build tree structure
       const farmMap = new Map<string, FarmNode>();
       const rootFarms: FarmNode[] = [];
 
-      // First pass: create all nodes
-      (data || []).forEach((farm: any) => {
+      flatFarms.forEach((farm) => {
         farmMap.set(farm.farm_id, {
           farm_id: farm.farm_id,
           farm_name: farm.farm_name,
@@ -159,14 +153,15 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         });
       });
 
-      // Second pass: build tree structure
-      (data || []).forEach((farm: any) => {
-        const node = farmMap.get(farm.farm_id)!;
+      flatFarms.forEach((farm) => {
+        const node = farmMap.get(farm.farm_id);
+        if (!node) return;
 
         if (farm.parent_farm_id) {
           const parent = farmMap.get(farm.parent_farm_id);
           if (parent) {
-            parent.children!.push(node);
+            if (!parent.children) parent.children = [];
+            parent.children.push(node);
           }
         } else {
           rootFarms.push(node);
@@ -630,12 +625,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
             </div>
 
             <div className="flex items-center gap-3 pt-2">
-              <Button
-                type="submit"
-                data-testid="farm-submit-button"
-                disabled={createFarmMutation.isPending}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-              >
+              <Button variant="green" type="submit" data-testid="farm-submit-button" disabled={createFarmMutation.isPending} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
                 {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
               </Button>
               <Button
@@ -672,10 +662,7 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
               >
                 Tout sélectionner
               </Button>
-              <Button
-                onClick={handleBatchDeleteClick}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-              >
+              <Button variant="red" onClick={handleBatchDeleteClick} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors" >
                 <Trash2 className="w-4 h-4" />
                 Supprimer
               </Button>
@@ -684,35 +671,35 @@ const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
         </div>
       )}
 
-      {/* Farms Grid/List */}
-      {filteredFarms.length === 0 ? (
-        <EmptyState
-          data-testid="farms-empty-state"
-          variant="card"
-          icon={Building2}
-          title={searchTerm ? t('farmHierarchy.farm.noFarmsFound') : t('farmHierarchy.farm.noFarms')}
-          description={
-            searchTerm
-              ? t('farmHierarchy.farm.noSearchResults')
-              : t('farmHierarchy.farm.noFarmsMessage')
-          }
-          action={
-            !searchTerm
-              ? {
-                  label: t('farmHierarchy.farm.create'),
-                  onClick: () => setShowAddForm(true),
-                }
-              : undefined
-          }
-        />
-      ) : (
-        <div data-testid="farms-list" data-tour="farm-list" className="space-y-3">
-          {viewMode === 'grid' ? renderFarmTree(filteredFarms) : renderFarmList(allFarms.filter(farm =>
+      {/* Farms Grid/List — data-tour on wrapper so guided tour works with 0 farms (empty state) */}
+      <div data-testid="farms-list" data-tour="farm-list" className="space-y-3">
+        {filteredFarms.length === 0 ? (
+          <EmptyState
+            data-testid="farms-empty-state"
+            variant="card"
+            icon={Building2}
+            title={searchTerm ? t('farmHierarchy.farm.noFarmsFound') : t('farmHierarchy.farm.noFarms')}
+            description={
+              searchTerm
+                ? t('farmHierarchy.farm.noSearchResults')
+                : t('farmHierarchy.farm.noFarmsMessage')
+            }
+            action={
+              !searchTerm
+                ? {
+                    label: t('farmHierarchy.farm.create'),
+                    onClick: () => setShowAddForm(true),
+                  }
+                : undefined
+            }
+          />
+        ) : (
+          viewMode === 'grid' ? renderFarmTree(filteredFarms) : renderFarmList(allFarms.filter(farm =>
             filteredFarms.some(f => f.farm_id === farm.farm_id ||
               (f.children && f.children.some(c => c.farm_id === farm.farm_id)))
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {/* Parcel Management Modal */}
       {selectedFarmForParcels && (
