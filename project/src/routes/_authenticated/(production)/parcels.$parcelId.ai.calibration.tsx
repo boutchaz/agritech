@@ -1074,11 +1074,11 @@ const CalibrationV2Report: React.FC<{
       </CollapsibleSection>
 
       <CollapsibleSection
-        title={`Detected Anomalies (${output.step5.anomalies.length})`}
+        title={`Detected Anomalies (${output.step5?.anomalies?.length ?? 0})`}
         icon={<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
         defaultOpen={false}
       >
-        <AnomalyList anomalies={output.step5.anomalies} extremeEvents={output.step2.extreme_events} />
+        <AnomalyList anomalies={output.step5?.anomalies ?? []} extremeEvents={output.step2?.extreme_events ?? []} />
       </CollapsibleSection>
 
       {phase === 'active' && (output.recommendations ?? []).length > 0 && (
