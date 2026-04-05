@@ -21,6 +21,9 @@ import type {
   ItemSelectionFilters,
   FarmStockLevelFilters,
   StockLevelFilters,
+  ItemGroupListResponse,
+  MessageResponse,
+  SeedResultResponse,
 } from '../../types/items';
 
 const BASE_URL = '/api/v1/items';
@@ -65,7 +68,7 @@ export const itemsApi = {
     if (filters?.search) params.append('search', filters.search);
 
     const url = `${BASE_URL}/groups${params.toString() ? `?${params.toString()}` : ''}`;
-    const res = await apiClient.get<{ data: ItemGroup[] }>(url, {}, organizationId);
+    const res = await apiClient.get<ItemGroupListResponse>(url, {}, organizationId);
     return res?.data || [];
   },
 
@@ -93,15 +96,15 @@ export const itemsApi = {
   /**
    * Delete an item group
    */
-  async deleteGroup(id: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/groups/${id}`, {}, organizationId);
+  async deleteGroup(id: string, organizationId?: string): Promise<MessageResponse> {
+    return apiClient.delete<MessageResponse>(`${BASE_URL}/groups/${id}`, {}, organizationId);
   },
 
   /**
    * Seed predefined item groups and subcategories (idempotent)
    */
-  async seedPredefinedGroups(organizationId?: string): Promise<{ created: number; skipped: number }> {
-    return apiClient.post<{ created: number; skipped: number }>(
+  async seedPredefinedGroups(organizationId?: string): Promise<SeedResultResponse> {
+    return apiClient.post<SeedResultResponse>(
       `${BASE_URL}/groups/seed-predefined`,
       {},
       {},
@@ -200,8 +203,8 @@ export const itemsApi = {
     return apiClient.patch<ProductVariant>(`${BASE_URL}/variants/${variantId}`, data, {}, organizationId);
   },
 
-  async deleteVariant(variantId: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/variants/${variantId}`, {}, organizationId);
+  async deleteVariant(variantId: string, organizationId?: string): Promise<MessageResponse> {
+    return apiClient.delete<MessageResponse>(`${BASE_URL}/variants/${variantId}`, {}, organizationId);
   },
 
   // =====================================================

@@ -59,6 +59,19 @@ export interface ItemGroupWithChildren extends ItemGroup {
   items_count: number;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
+export interface SeedResultResponse {
+  created: number;
+  skipped: number;
+}
+
+export interface ItemGroupListResponse {
+  data: ItemGroup[];
+}
+
 // =====================================================
 // Item
 // =====================================================

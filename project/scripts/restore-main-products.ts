@@ -22,6 +22,26 @@ const polar = new Polar({
   server: POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production',
 });
 
+function getErrorDetails(error: unknown): { message: string; body?: unknown } {
+  if (error instanceof Error) {
+    const errorWithBody = error as Error & { body?: unknown };
+    return {
+      message: error.message,
+      body: errorWithBody.body,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const errorRecord = error as Record<string, unknown>;
+    return {
+      message: typeof errorRecord.message === 'string' ? errorRecord.message : 'Unknown error',
+      body: errorRecord.body,
+    };
+  }
+
+  return { message: 'Unknown error' };
+}
+
 // The IDs of the products we want to keep active
 const PRODUCTS_TO_KEEP = [
   'd53c78fb-5833-43da-a4f0-2a0bd2ff32c9', // Agri-Business Plan
@@ -51,8 +71,9 @@ async function restoreProducts() {
             },
           });
           console.log(`✅ Restored: ${product.name} (${product.metadata?.plan_type})`);
-        } catch (error: any) {
-          console.error(`❌ Failed to restore ${product.name}: ${error.message}`);
+        } catch (error: unknown) {
+          const { message } = getErrorDetails(error);
+          console.error(`❌ Failed to restore ${product.name}: ${message}`);
         }
       }
     }
@@ -62,10 +83,11 @@ async function restoreProducts() {
     console.log('  • Essential Plan ($25/month)');
     console.log('  • Professional Plan ($75/month)');
     console.log('  • Agri-Business Plan (Custom pricing)');
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    if (error.body) {
-      console.error('Body:', error.body);
+  } catch (error: unknown) {
+    const { message, body } = getErrorDetails(error);
+    console.error('❌ Error:', message);
+    if (body) {
+      console.error('Body:', body);
     }
   }
 }

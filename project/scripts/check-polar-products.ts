@@ -22,6 +22,36 @@ const polar = new Polar({
   server: POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production',
 });
 
+type PolarProduct = NonNullable<Awaited<ReturnType<typeof polar.products.list>>['result']>['items'][number];
+type PolarPrice = NonNullable<PolarProduct['prices']>[number];
+
+function getErrorDetails(error: unknown): { message: string; body?: unknown } {
+  if (error instanceof Error) {
+    const errorWithBody = error as Error & { body?: unknown };
+    return {
+      message: error.message,
+      body: errorWithBody.body,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const errorRecord = error as Record<string, unknown>;
+    return {
+      message: typeof errorRecord.message === 'string' ? errorRecord.message : 'Unknown error',
+      body: errorRecord.body,
+    };
+  }
+
+  return { message: 'Unknown error' };
+}
+
+function formatPrice(price: PolarPrice): string {
+  const priceType = 'type' in price ? price.type : 'custom';
+  const priceAmount = 'priceAmount' in price ? price.priceAmount : null;
+
+  return `${priceType}: ${priceAmount ? `$${priceAmount / 100}` : 'custom'}`;
+}
+
 async function checkProducts() {
   console.log('🔍 Checking Polar products...\n');
   console.log(`Organization ID: ${POLAR_ORGANIZATION_ID}`);
@@ -36,7 +66,7 @@ async function checkProducts() {
 
     if (response.result?.items) {
       // Filter only active products
-      const activeProducts = response.result.items.filter((p: any) => !p.isArchived);
+        const activeProducts = response.result.items.filter((product: PolarProduct) => !product.isArchived);
 
       console.log(`Active products: ${activeProducts.length}\n`);
 
@@ -52,17 +82,18 @@ async function checkProducts() {
         console.log(`   Max Users: ${product.metadata?.max_users || 'N/A'}`);
         console.log(`   Prices: ${product.prices?.length || 0}`);
         if (product.prices && product.prices.length > 0) {
-          product.prices.forEach((price: any) => {
-            console.log(`     - ${price.type}: ${price.priceAmount ? `$${price.priceAmount / 100}` : 'custom'}`);
+          product.prices.forEach((price: PolarPrice) => {
+            console.log(`     - ${formatPrice(price)}`);
           });
         }
         console.log('');
       }
     }
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    if (error.body) {
-      console.error('Body:', error.body);
+  } catch (error: unknown) {
+    const { message, body } = getErrorDetails(error);
+    console.error('❌ Error:', message);
+    if (body) {
+      console.error('Body:', body);
     }
   }
 }
