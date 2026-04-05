@@ -105,13 +105,13 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
 }
 
-const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
+const CollapsibleSection = ({
   title,
   icon,
   defaultOpen = true,
   badge,
   children,
-}) => {
+}: CollapsibleSectionProps) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -212,7 +212,7 @@ function toSeverityLevel(value: string): SeverityLevel {
   return 'low';
 }
 
-const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
+const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
   if (phase === 'calibrated') {
     return (
       <div
@@ -287,7 +287,7 @@ function normalizeConfidenceScore(score: number): number {
   return score;
 }
 
-const ExecutiveSummary: React.FC<{ output: CalibrationOutput; t: (key: string) => string }> = ({ output, t }) => {
+const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
   const health = output.step8?.health_score;
   const confidence = output.confidence;
   const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
@@ -413,7 +413,7 @@ interface IndexChartProps {
   percentiles?: SpectralPercentiles;
 }
 
-const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, percentiles }) => {
+const IndexTimeSeriesChart = ({ title, data, color, percentiles }: IndexChartProps) => {
   const chartData = data.map((pt) => ({
     date: new Date(pt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     value: Number(pt.value.toFixed(3)),
@@ -463,7 +463,7 @@ const IndexTimeSeriesChart: React.FC<IndexChartProps> = ({ title, data, color, p
   );
 };
 
-const ZonePieChart: React.FC<{ zones: ZoneSummary[]; t: (key: string) => string }> = ({ zones, t }) => {
+const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => string }) => {
   const data = zones.map((z) => ({
     name: t(`calibrationZones.${z.class_name}`),
     value: z.surface_percent,
@@ -494,7 +494,7 @@ const ZonePieChart: React.FC<{ zones: ZoneSummary[]; t: (key: string) => string 
   );
 };
 
-const PhenologyTimeline: React.FC<{ dates: Record<string, string> }> = ({ dates }) => {
+const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
   const stages = [
     { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
     { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
@@ -532,7 +532,7 @@ const PhenologyTimeline: React.FC<{ dates: Record<string, string> }> = ({ dates 
   );
 };
 
-const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> = ({ aggregates }) => {
+const MonthlyWeatherChart = ({ aggregates }: { aggregates: MonthlyWeatherAggregate[] }) => {
   const data = aggregates.map((m) => ({
     month: m.month,
     precipitation: Number(m.precipitation_total.toFixed(1)),
@@ -558,7 +558,7 @@ const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> =
   );
 };
 
-const DetailedAnalysis: React.FC<{ output: CalibrationOutput; t: (key: string) => string }> = ({ output, t }) => {
+const DetailedAnalysis = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
   const step1 = output.step1;
   const step2 = output.step2;
   const step3 = output.step3;
@@ -635,10 +635,10 @@ const DetailedAnalysis: React.FC<{ output: CalibrationOutput; t: (key: string) =
   );
 };
 
-const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }> = ({
+const AnomalyList = ({
   anomalies,
   extremeEvents,
-}) => {
+}: { anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }) => {
   if (anomalies.length === 0 && extremeEvents.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -738,7 +738,7 @@ const AnomalyList: React.FC<{ anomalies: AnomalyRecord[]; extremeEvents: Extreme
   );
 };
 
-const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ recommendations }) => {
+const RecommendationsList = ({ recommendations }: { recommendations: Recommendation[] }) => {
   if (recommendations.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -780,7 +780,7 @@ const RecommendationsList: React.FC<{ recommendations: Recommendation[] }> = ({ 
   );
 };
 
-const ConfidenceBreakdown: React.FC<{ components: Record<string, ConfidenceComponent> }> = ({ components }) => {
+const ConfidenceBreakdown = ({ components }: { components: Record<string, ConfidenceComponent> }) => {
   return (
     <div className="space-y-2">
       {Object.entries(components ?? {}).map(([name, comp]) => {
@@ -835,10 +835,8 @@ function getRunSatelliteImages(report: Record<string, unknown> | null | undefine
   return satelliteImages.filter(isRecord);
 }
 
-const CalibrationImprovement: React.FC<{
-  output: CalibrationOutput;
-  report?: Record<string, unknown> | null;
-}> = ({ output, report }) => {
+const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
+  report?: Record<string, unknown> | null; }) => {
   const flags = output?.metadata?.data_quality_flags;
   const conf = output.confidence;
   const step1 = output.step1;
@@ -957,7 +955,7 @@ const CalibrationImprovement: React.FC<{
   );
 };
 
-const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> = ({ records }) => {
+const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord[] }) => {
   if (records.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
@@ -1042,12 +1040,10 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationReport: React.FC<{
-  output: CalibrationOutput;
+const CalibrationReport = ({ output, report, t, phase }: { output: CalibrationOutput;
   report?: Record<string, unknown> | null;
   t: (key: string) => string;
-  phase?: string;
-}> = ({ output, report, t, phase }) => {
+  phase?: string; }) => {
   const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
 
   return (
@@ -1132,13 +1128,11 @@ const NUTRITION_OPTION_LABELS: Record<NutritionOption, { name: string; descripti
   },
 };
 
-const ValidationPanel: React.FC<{
-  calibrationId: string;
+const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }: { calibrationId: string;
   parcelId: string;
   healthScore: number;
   confidence: number;
-  onReCalibrate: () => void;
-}> = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }) => {
+  onReCalibrate: () => void; }) => {
   const { mutate: validate, isPending: isValidating } = useValidateCalibration(parcelId);
 
   return (
@@ -1209,10 +1203,10 @@ const ValidationPanel: React.FC<{
   );
 };
 
-const NutritionOptionSelector: React.FC<{
+const NutritionOptionSelector = ({ parcelId, calibrationId }: {
   parcelId: string;
   calibrationId: string;
-}> = ({ parcelId, calibrationId }) => {
+}) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
   const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
@@ -1326,10 +1320,8 @@ const NutritionOptionSelector: React.FC<{
   );
 };
 
-const PlantingYearPrompt: React.FC<{
-  parcelId: string;
-  onSaved: () => void;
-}> = ({ parcelId, onSaved }) => {
+const PlantingYearPrompt = ({ parcelId, onSaved }: { parcelId: string;
+  onSaved: () => void; }) => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<string>('');
   const updateParcel = useUpdateParcel();
@@ -1407,7 +1399,7 @@ const CALIBRATION_STEPS: Record<string, { icon: React.ReactNode; label: string }
   finalizing: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Finalisation' },
 };
 
-const CalibrationProgressStepper: React.FC<{ progress: CalibrationProgressEvent | null }> = ({ progress }) => {
+const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgressEvent | null }) => {
   const currentStep = progress?.step ?? 0;
   const totalSteps = progress?.total_steps ?? 7;
   const percent = progress?.percent ?? 0;
@@ -1794,7 +1786,7 @@ const AICalibrationPage = () => {
         />
       )}
 
-      {phase === 'awaiting_nutrition_option' && reportData?.calibration?.id && (
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option') && reportData?.calibration?.id && (
         <NutritionOptionSelector
           parcelId={parcelId}
           calibrationId={reportData.calibration.id}
