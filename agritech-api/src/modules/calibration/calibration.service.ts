@@ -2051,7 +2051,11 @@ export class CalibrationService {
     }
 
     const record = data as CalibrationRecord;
+    const profileOutput = this.toJsonObject(
+      (this.toJsonObject(record.profile_snapshot) as Record<string, unknown>)?.output,
+    );
     const output = {
+      ...profileOutput,
       ...this.toJsonObject(record.baseline_data),
       ...this.toJsonObject(record.diagnostic_data),
       anomalies: record.anomalies_data,
