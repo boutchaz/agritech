@@ -2376,17 +2376,19 @@ export class CalibrationService {
         `Calibration ${calibrationId} confidence ${confidenceScoreAtValidation} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
       );
 
-      await this.ensureCalibratedPhase(
+      const ensuredPhase = await this.ensureCalibratedPhase(
         existingCalibration.parcel_id,
         parcel.aiPhase as AiPhase,
         organizationId,
       );
-      await this.stateMachine.transitionPhase(
-        existingCalibration.parcel_id,
-        "calibrated",
-        "active",
-        organizationId,
-      );
+      if (ensuredPhase !== "active") {
+        await this.stateMachine.transitionPhase(
+          existingCalibration.parcel_id,
+          "calibrated",
+          "active",
+          organizationId,
+        );
+      }
 
       await supabase
         .from("parcels")
@@ -2422,17 +2424,19 @@ export class CalibrationService {
       } as CalibrationRecord;
     }
 
-    await this.ensureCalibratedPhase(
+    const ensuredPhase = await this.ensureCalibratedPhase(
       existingCalibration.parcel_id,
       parcel.aiPhase as AiPhase,
       organizationId,
     );
-    await this.stateMachine.transitionPhase(
-      existingCalibration.parcel_id,
-      "calibrated",
-      "awaiting_nutrition_option",
-      organizationId,
-    );
+    if (ensuredPhase === "calibrated") {
+      await this.stateMachine.transitionPhase(
+        existingCalibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    }
 
     return updatedCalibration as CalibrationRecord;
   }
@@ -2735,12 +2739,14 @@ export class CalibrationService {
     parcelId: string,
     currentPhase: AiPhase,
     organizationId: string,
-  ): Promise<void> {
-    if (currentPhase === "calibrated") return;
-    if (currentPhase === "awaiting_nutrition_option" || currentPhase === "active") return;
+  ): Promise<AiPhase> {
+    if (currentPhase === "calibrated") return "calibrated";
+    if (currentPhase === "awaiting_nutrition_option") return currentPhase;
+    if (currentPhase === "active") return currentPhase;
 
     await this.transitionToCalibrating(parcelId, currentPhase, organizationId);
     await this.stateMachine.transitionPhase(parcelId, "calibrating", "calibrated", organizationId);
+    return "calibrated";
   }
 
   private buildObservationModeContext(confidenceScore: number | null): {
