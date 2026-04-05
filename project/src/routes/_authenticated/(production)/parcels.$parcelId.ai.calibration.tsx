@@ -1214,15 +1214,17 @@ const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onR
   );
 };
 
-const NutritionOptionSelector = ({ parcelId, calibrationId }: {
+const NutritionOptionSelector = ({ parcelId, calibrationId, phase }: {
   parcelId: string;
   calibrationId: string;
+  phase: CalibrationPhase;
 }) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
   const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
+  const canConfirmNutrition = phase === 'awaiting_nutrition_option';
 
   if (isSuggestionLoading) {
     return (
@@ -1284,7 +1286,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
                   }
                 }}
                 disabled={!isEligible || isConfirming}
-                color="blue"
+                color="indigo"
                 badge={isSuggested ? 'Recommended' : undefined}
                 descriptionClassName="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-4 break-words"
                 footer={
@@ -1306,12 +1308,19 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
         })}
       </div>
 
-      <div className="flex items-center space-x-3">
+      {!canConfirmNutrition && (
+        <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 rounded-lg bg-white/60 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/50 px-3 py-2">
+          Choose an option above (highlight updates when you tap a card). After you validate the baseline in the next section,
+          you can confirm here to finish activation.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="blue"
           type="button"
-          disabled={!effectiveSelection || isConfirming}
+          disabled={!effectiveSelection || isConfirming || !canConfirmNutrition}
           onClick={() => {
-            if (effectiveSelection) {
+            if (effectiveSelection && canConfirmNutrition) {
               confirm({ calibrationId, option: effectiveSelection });
             }
           }}
@@ -1609,6 +1618,27 @@ const AICalibrationPage = () => {
 
       {phase && <PhaseBanner phase={phase} />}
 
+      {!isCalibrating &&
+        (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) &&
+        reportData?.calibration?.id && (
+        <div className="space-y-4" data-testid="calibration-action-panels">
+          <NutritionOptionSelector
+            parcelId={parcelId}
+            calibrationId={reportData.calibration.id}
+            phase={phase ?? 'unknown'}
+          />
+          {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && (
+            <ValidationPanel
+              calibrationId={reportData.calibration.id}
+              parcelId={parcelId}
+              healthScore={v2Output.step8.health_score.total}
+              confidence={normalizeConfidenceScore(v2Output.confidence.normalized_score)}
+              onReCalibrate={handleOpenFullRecalibrationWizard}
+            />
+          )}
+        </div>
+      )}
+
       {hasV2Report && reportData?.report && typeof reportData.report === 'object' && (
         <CalibrationRunInputsPanel
           report={reportData.report as Record<string, unknown>}
@@ -1785,23 +1815,6 @@ const AICalibrationPage = () => {
         >
           <CalibrationHistoryList records={historyRecords} />
         </CollapsibleSection>
-      )}
-
-      {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && reportData?.calibration?.id && (
-        <ValidationPanel
-          calibrationId={reportData.calibration.id}
-          parcelId={parcelId}
-          healthScore={v2Output.step8.health_score.total}
-          confidence={normalizeConfidenceScore(v2Output.confidence.normalized_score)}
-          onReCalibrate={handleOpenFullRecalibrationWizard}
-        />
-      )}
-
-      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) && reportData?.calibration?.id && (
-        <NutritionOptionSelector
-          parcelId={parcelId}
-          calibrationId={reportData.calibration.id}
-        />
       )}
 
       {isFailed && !isCalibrating && (
