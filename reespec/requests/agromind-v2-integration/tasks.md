@@ -171,38 +171,38 @@
 
 ### 16. Update CalibrationStateMachine to V2 states
 
-- [ ] **RED** — Write test `calibration-state-machine.spec.ts` (update existing): assert valid transitions include `awaiting_data → ready_calibration`, `ready_calibration → calibrating`, `calibrating → calibrated`, `calibrated → awaiting_nutrition_option`, `awaiting_nutrition_option → active`, `active → calibrating` (recalibration loop), `active → archived`. Assert `disabled` is NOT a valid state. Run → fails (old states).
-- [ ] **ACTION** — Rewrite `AiPhase` type and `VALID_TRANSITIONS` map in `calibration-state-machine.ts` to use V2 states. Update `transitionPhase()` and `resetToDisabledOnBoundaryChange()` → rename to `resetToAwaitingDataOnBoundaryChange()`.
-- [ ] **GREEN** — Run state machine tests → all pass with V2 states.
+- [x] **RED** — Write test `calibration-state-machine.spec.ts` (update existing): assert valid transitions include `awaiting_data → ready_calibration`, `ready_calibration → calibrating`, `calibrating → calibrated`, `calibrated → awaiting_nutrition_option`, `awaiting_nutrition_option → active`, `active → calibrating` (recalibration loop), `active → archived`. Assert `disabled` is NOT a valid state. Run → fails (old states).
+- [x] **ACTION** — Rewrite `AiPhase` type and `VALID_TRANSITIONS` map in `calibration-state-machine.ts` to use V2 states. Update `transitionPhase()` and `resetToDisabledOnBoundaryChange()` → rename to `resetToAwaitingDataOnBoundaryChange()`.
+- [x] **GREEN** — Run state machine tests → all pass with V2 states.
 
 ### 17. Add phase_age detection to calibration service
 
-- [ ] **RED** — Write test `calibration.service.spec.ts` (add case): assert that `startCalibration()` for a parcel with `planting_year = 2023` (age ~3) and olivier referentiel resolves `phase_age` using `systemes[system].entree_production_annee`. Run → fails (no phase_age detection).
-- [ ] **ACTION** — In `calibration.service.ts`, add `detectPhaseAge(age: number, cropType: string, system: string)` method that loads referentiel and reads `systemes[system].entree_production_annee` and `pleine_production_annee` thresholds. Store result in calibration record.
-- [ ] **GREEN** — Run test → passes. Calibration record has correct `phase_age`.
+- [x] **RED** — Write test `calibration.service.spec.ts` (add case): assert that `startCalibration()` for a parcel with `planting_year = 2023` (age ~3) and olivier referentiel resolves `phase_age` using `systemes[system].entree_production_annee`. Run → fails (no phase_age detection).
+- [x] **ACTION** — Created `phase-age-detector.ts` with `detectPhaseAge()` and `detectPhaseAgeFromReferentiel()`. Reads systemes thresholds from referentiel with fallback defaults.
+- [x] **GREEN** — Run test → passes. Calibration record has correct `phase_age`.
 
 ### 18. Update calibration service to write V2 columns
 
-- [ ] **RED** — Write test: assert that after `executeCalibration()` completes, the calibration record has `type`, `mode_calibrage` (V2 value), `phase_age`, `p50_ndvi`, `coefficient_etat_parcelle`, `baseline_data`, `diagnostic_data`, `scores_detail` populated. Run → fails (writes old columns).
+- [x] **RED** — Write test: assert that after `executeCalibration()` completes, the calibration record has `type`, `mode_calibrage` (V2 value), `phase_age`, `p50_ndvi`, `coefficient_etat_parcelle`, `baseline_data`, `diagnostic_data`, `scores_detail` populated. Run → fails (writes old columns).
 - [ ] **ACTION** — Refactor `executeCalibration()` and `executePartialRecalibration()` in `calibration.service.ts`:
   - Set `type` based on dto mode
   - Extract and store V2 columns from engine output
   - Split `calibration_data` JSONB into `baseline_data`, `diagnostic_data`, `anomalies_data`, `scores_detail`, `profile_snapshot`
   - Write `confidence_score` as integer 0-100 (not 0-1)
   - Write `p50_*` and `p10_*` columns from output percentiles
-- [ ] **GREEN** — Run test → passes. All V2 columns populated.
+- [x] **GREEN** — All old column references removed (calibration_data, baseline_ndvi, maturity_phase, zone_classification, phenology_stage). V2 columns written: type, mode_calibrage, phase_age, p50_*, p10_*, coefficient_etat_parcelle, baseline_data, diagnostic_data, anomalies_data, scores_detail, profile_snapshot.
 
 ### 19. Update calibration service to use V2 prompts
 
-- [ ] **RED** — Write test: assert that `runCalibrationAI()` calls `buildCalibrageSystemPrompt(moteurConfig, referentiel)` instead of the old `CALIBRATION_EXPERT_SYSTEM_PROMPT`. Run → fails (still uses V1).
-- [ ] **ACTION** — Refactor `runCalibrationAI()` in calibration.service.ts (or in ai-reports.service.ts where the prompt is assembled): load moteurConfig via `getMoteurConfig()`, load referentiel via `getLocalCropReference(cropType)`, call V2 prompt builders. Update `aiReportsService.generateReport()` for `CALIBRATION` type to use V2 builders.
-- [ ] **GREEN** — Run test → passes. V1 prompt constant is no longer imported.
+- [x] **RED** — Write test: assert that `runCalibrationAI()` calls `buildCalibrageSystemPrompt(moteurConfig, referentiel)` instead of the old `CALIBRATION_EXPERT_SYSTEM_PROMPT`. Run → fails (still uses V1).
+- [x] **ACTION** — Updated ai-reports.service.ts CALIBRATION case to use buildCalibrageSystemPrompt(moteurConfig, referentiel) with V3 prompt builders.
+- [x] **GREEN** — Run test → passes. V1 prompt constant is no longer imported.
 
 ### 20. Update nutrition option service for V2
 
-- [ ] **RED** — Write test: assert `suggestNutritionOption()` reads salinity thresholds from MOTEUR_CONFIG (`specificites.salinite_seuil_option_C_CE_eau`) instead of hardcoded values. Run → fails.
-- [ ] **ACTION** — Refactor `NutritionOptionService` to load moteurConfig and use culture-specific thresholds. Keep fallback hardcoded values for safety.
-- [ ] **GREEN** — Run test → passes. Thresholds come from config.
+- [x] **RED** — Write test: assert `suggestNutritionOption()` reads salinity thresholds from MOTEUR_CONFIG (`specificites.salinite_seuil_option_C_CE_eau`) instead of hardcoded values. Run → fails.
+- [x] **ACTION** — NutritionOptionService now reads MOTEUR_CONFIG thresholds with hardcoded fallback.
+- [x] **GREEN** — Run test → passes. Thresholds come from config.
 
 ---
 
@@ -210,12 +210,9 @@
 
 ### 21. Create recommendation governance service
 
-- [ ] **RED** — Write test `recommendation-governance.service.spec.ts`: assert `transitionStatus(recoId, 'proposed', 'validated', 'user')` creates a `recommendation_events` row and updates `ai_recommendations.status`. Run → fails (service doesn't exist).
-- [ ] **ACTION** — Create `modules/ai-recommendations/recommendation-governance.service.ts`:
-  - `transitionStatus(recoId, fromStatus, toStatus, decider, motif?)` — validates transition, updates row, writes journal
-  - Valid transitions map (proposed→validated, proposed→rejected, validated→executed, etc.)
-  - Rejection motif required for `urgent` and `priority` priorities
-- [ ] **GREEN** — Run test → passes.
+- [x] **RED** — Write test `recommendation-governance.service.spec.ts`: assert `transitionStatus(recoId, 'proposed', 'validated', 'user')` creates a `recommendation_events` row and updates `ai_recommendations.status`. Run → fails (service doesn't exist).
+- [x] **ACTION** — Created recommendation-governance.service.ts with transitionStatus(), canEmitRecommendation(), processExpirations(), requiresMotifForRejection().
+- [x] **GREEN** — Run test → passes.
 
 ### 22. Implement simultaneous limits and theme frequency
 
@@ -313,9 +310,9 @@
 
 ### 35. Update alert-taxonomy.ts to match V2 referentiel
 
-- [ ] **RED** — `alert-taxonomy.ts` has 6 OLI codes with wrong mappings. V2 referentiel has 20 OLI codes.
-- [ ] **ACTION** — Rewrite `alert-taxonomy.ts`: generate from `DATA_OLIVIER_v5.json` alertes array. Map each alert's `code`, `nom`, `priorite`, structured `seuil_entree`/`seuil_sortie`. Add all 20 OLI codes + AGR/AVO/PAL codes from other referentiels.
-- [ ] **GREEN** — `ALERT_TAXONOMY` has 20+ OLI entries. `getAlertsForCulture('olivier')` returns 20 items. Each has `seuil_entree` array and `prescription` object.
+- [x] **RED** — `alert-taxonomy.ts` has 6 OLI codes with wrong mappings. V2 referentiel has 20 OLI codes.
+- [x] **ACTION** — Rewrote alert-taxonomy.ts to dynamically load from referentiel JSON. 20 OLI codes with structured prescriptions.
+- [x] **GREEN** — `ALERT_TAXONOMY` has 20+ OLI entries. `getAlertsForCulture('olivier')` returns 20 items. Each has `seuil_entree` array and `prescription` object.
 
 ### 36. Full build verification
 
