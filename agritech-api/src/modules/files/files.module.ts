@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MulterModule } from '@nestjs/platform-express';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
@@ -6,6 +7,7 @@ import { DatabaseModule } from '../database/database.module';
 
 @Module({
   imports: [
+    ConfigModule,
     DatabaseModule,
     MulterModule.register({
       dest: './uploads',

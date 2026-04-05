@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { FilesService } from '../files/files.service';
 
 export interface CreateUserProfileDto {
     userId: string;
@@ -18,7 +19,42 @@ export interface CreateUserProfileDto {
 export class UsersService {
     private readonly logger = new Logger(UsersService.name);
 
-    constructor(private databaseService: DatabaseService) { }
+    constructor(
+        private databaseService: DatabaseService,
+        private filesService: FilesService,
+    ) { }
+
+    private isLikelyUuid(value: string): boolean {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+            value,
+        );
+    }
+
+    /**
+     * file_registry is org-scoped; use header org when present, else first active membership.
+     */
+    private async resolveOrganizationIdForFileRegistry(
+        userId: string,
+        headerOrganizationId?: string,
+    ): Promise<string | null> {
+        if (headerOrganizationId && this.isLikelyUuid(headerOrganizationId)) {
+            return headerOrganizationId;
+        }
+        const client = this.databaseService.getAdminClient();
+        const { data, error } = await client
+            .from('organization_users')
+            .select('organization_id')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+        if (error || !data?.organization_id) {
+            return null;
+        }
+        return data.organization_id as string;
+    }
 
     /**
      * Create or update user profile using direct table operations
@@ -690,7 +726,11 @@ export class UsersService {
     /**
      * Upload user avatar to Supabase storage and update profile
      */
-    async uploadAvatar(userId: string, file: Express.Multer.File): Promise<{ avatar_url: string }> {
+    async uploadAvatar(
+        userId: string,
+        file: Express.Multer.File,
+        organizationIdFromHeader?: string,
+    ): Promise<{ avatar_url: string }> {
         const client = this.databaseService.getAdminClient();
 
         try {
@@ -741,6 +781,42 @@ export class UsersService {
             }
 
             this.logger.log(`Avatar uploaded for user ${userId}`);
+
+            const orgId = await this.resolveOrganizationIdForFileRegistry(
+                userId,
+                organizationIdFromHeader,
+            );
+            if (orgId) {
+                try {
+                    await this.filesService.upsertFileRegistryEntry(
+                        orgId,
+                        {
+                            bucket_name: 'avatars',
+                            file_path: filePath,
+                            file_name: file.originalname || fileName,
+                            file_size: file.size,
+                            mime_type: file.mimetype,
+                            entity_type: 'user_profiles',
+                            entity_id: userId,
+                            field_name: 'avatar_url',
+                        },
+                        userId,
+                    );
+                } catch (registryError) {
+                    const msg =
+                        registryError instanceof Error
+                            ? registryError.message
+                            : String(registryError);
+                    this.logger.warn(
+                        `Avatar stored but file_registry upsert failed (user ${userId}): ${msg}`,
+                    );
+                }
+            } else {
+                this.logger.warn(
+                    `Avatar uploaded for ${userId} but no organization resolved for file_registry`,
+                );
+            }
+
             return { avatar_url: publicUrl };
         } catch (error) {
             if (error instanceof BadRequestException || error instanceof InternalServerErrorException) {
@@ -754,7 +830,10 @@ export class UsersService {
     /**
      * Remove user avatar from Supabase storage and clear profile URL
      */
-    async removeAvatar(userId: string): Promise<{ success: boolean }> {
+    async removeAvatar(
+        userId: string,
+        organizationIdFromHeader?: string,
+    ): Promise<{ success: boolean }> {
         const client = this.databaseService.getAdminClient();
 
         try {
@@ -770,11 +849,14 @@ export class UsersService {
                 throw new NotFoundException('User profile not found');
             }
 
+            let avatarStoragePath: string | null = null;
+
             if (profile?.avatar_url) {
                 // Extract file path from URL
                 const urlParts = profile.avatar_url.split('/');
                 const fileName = urlParts[urlParts.length - 1];
                 const filePath = `${userId}/${fileName}`;
+                avatarStoragePath = filePath;
 
                 const { error: removeError } = await client.storage
                     .from('avatars')
@@ -784,6 +866,18 @@ export class UsersService {
                     this.logger.warn(`Failed to remove avatar file from storage: ${removeError.message}`);
                     // Continue to clear URL even if storage removal fails
                 }
+            }
+
+            const orgId = await this.resolveOrganizationIdForFileRegistry(
+                userId,
+                organizationIdFromHeader,
+            );
+            if (orgId && avatarStoragePath) {
+                await this.filesService.deleteRegistryEntryByBucketPath(
+                    orgId,
+                    'avatars',
+                    avatarStoragePath,
+                );
             }
 
             const { error: updateError } = await client

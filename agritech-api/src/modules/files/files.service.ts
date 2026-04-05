@@ -1,4 +1,5 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 
@@ -6,7 +7,85 @@ import { RegisterFileDto, UpdateFileDto } from './dto/file-registry.dto';
 export class FilesService {
   private readonly logger = new Logger(FilesService.name);
 
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private configService: ConfigService,
+  ) {}
+
+  /**
+   * Insert or update a file_registry row (unique on bucket_name + file_path).
+   */
+  async upsertFileRegistryEntry(
+    organizationId: string,
+    dto: RegisterFileDto,
+    userId?: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const row = {
+      organization_id: organizationId,
+      bucket_name: dto.bucket_name,
+      file_path: dto.file_path,
+      file_name: dto.file_name,
+      file_size: dto.file_size ?? null,
+      mime_type: dto.mime_type ?? null,
+      entity_type: dto.entity_type ?? null,
+      entity_id: dto.entity_id ?? null,
+      field_name: dto.field_name ?? null,
+      uploaded_by: userId ?? null,
+      is_orphan: false,
+      marked_for_deletion: false,
+      deleted_at: null as string | null,
+    };
+
+    const { data, error } = await client
+      .from('file_registry')
+      .upsert(row, { onConflict: 'bucket_name,file_path' })
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to upsert file registry: ${error.message}`);
+      throw new Error(`Failed to upsert file registry: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Remove registry row for a storage object (e.g. when avatar is deleted).
+   */
+  async deleteRegistryEntryByBucketPath(
+    organizationId: string,
+    bucketName: string,
+    filePath: string,
+  ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('file_registry')
+      .delete()
+      .eq('organization_id', organizationId)
+      .eq('bucket_name', bucketName)
+      .eq('file_path', filePath);
+
+    if (error) {
+      this.logger.warn(
+        `deleteRegistryEntryByBucketPath: ${error.message} (${bucketName}/${filePath})`,
+      );
+    }
+  }
+
+  private buildStoragePublicUrl(bucketName: string, filePath: string): string | null {
+    const supabaseUrl = this.configService.get<string>('SUPABASE_URL')?.replace(/\/$/, '');
+    if (!supabaseUrl || !bucketName || !filePath) {
+      return null;
+    }
+    const encodedPath = filePath
+      .split('/')
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${encodedPath}`;
+  }
 
   /**
    * Register a new file in the tracking system
@@ -208,7 +287,19 @@ export class FilesService {
       throw new Error(`Failed to fetch files: ${error.message}`);
     }
 
-    return data;
+    type RegistryRow = {
+      id: string;
+      file_name: string;
+      bucket_name: string;
+      file_path: string;
+      [key: string]: unknown;
+    };
+
+    const rows = (data ?? []) as RegistryRow[];
+    return rows.map((row) => ({
+      ...row,
+      public_url: this.buildStoragePublicUrl(row.bucket_name, row.file_path),
+    }));
   }
 
   /**
