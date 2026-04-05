@@ -84,7 +84,9 @@ import {
   ArrowRight,
   Lightbulb,
   FileText,
+  Sparkles,
 } from 'lucide-react';
+import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
@@ -1128,6 +1130,15 @@ const NUTRITION_OPTION_LABELS: Record<NutritionOption, { name: string; descripti
   },
 };
 
+const NUTRITION_OPTION_ICONS: Record<
+  NutritionOption,
+  React.ReactNode
+> = {
+  A: <Leaf className="w-5 h-5" aria-hidden />,
+  B: <Sparkles className="w-5 h-5" aria-hidden />,
+  C: <TreePine className="w-5 h-5" aria-hidden />,
+};
+
 const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }: { calibrationId: string;
   parcelId: string;
   healthScore: number;
@@ -1252,7 +1263,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 mb-5 min-w-0">
         {options.map((opt) => {
           const alt = suggestion.alternatives.find((a) => a.option === opt);
           const isEligible = alt?.eligible ?? true;
@@ -1261,37 +1272,36 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
           const label = NUTRITION_OPTION_LABELS[opt];
 
           return (
-            <Button
-              key={opt}
-              type="button"
-              disabled={!isEligible || isConfirming}
-              onClick={() => setSelectedOption(opt)}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all ${
-                isSelected
-                  ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/40 ring-2 ring-blue-500/30'
-                  : isEligible
-                    ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 dark:hover:border-blue-600'
-                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 opacity-50 cursor-not-allowed'
-              }`}
-            >
-              {isSuggested && (
-                <span className="absolute -top-2.5 left-3 px-2 py-0.5 text-xs font-semibold bg-blue-600 text-white rounded-full">
-                  Recommended
-                </span>
-              )}
-              <div className="text-base font-semibold text-gray-900 dark:text-white mt-1">
-                {label.name}
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {label.description}
-              </p>
-              {alt && !isEligible && (
-                <p className="text-xs text-red-500 mt-2">{alt.reason}</p>
-              )}
-              {alt && isEligible && alt.reason && (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">{alt.reason}</p>
-              )}
-            </Button>
+            <div key={opt} className="min-w-0">
+              <SelectionCard
+                title={label.name}
+                description={label.description}
+                icon={NUTRITION_OPTION_ICONS[opt]}
+                selected={isSelected}
+                onClick={() => {
+                  if (isEligible && !isConfirming) {
+                    setSelectedOption(opt);
+                  }
+                }}
+                disabled={!isEligible || isConfirming}
+                color="blue"
+                badge={isSuggested ? 'Recommended' : undefined}
+                descriptionClassName="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-4 break-words"
+                footer={
+                  alt?.reason ? (
+                    <p
+                      className={
+                        isEligible
+                          ? 'text-xs text-gray-500 dark:text-gray-400'
+                          : 'text-xs text-red-600 dark:text-red-400'
+                      }
+                    >
+                      {alt.reason}
+                    </p>
+                  ) : undefined
+                }
+              />
+            </div>
           );
         })}
       </div>

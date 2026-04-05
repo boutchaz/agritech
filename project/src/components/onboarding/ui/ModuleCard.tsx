@@ -49,12 +49,12 @@ export const ModuleCard = ({
         onToggle();
       }}
       className={`
-        relative group p-4 rounded-2xl border-2 text-left
+        relative group h-auto min-w-0 w-full whitespace-normal p-4 rounded-2xl border-2 text-left
         transition-all duration-300 ease-out
         ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
         ${selected 
           ? `${colors.bg} ${colors.border} shadow-lg` 
-          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
+          : 'bg-white dark:bg-gray-900/40 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md'
         }
         ${locked ? '' : selected ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
       `}

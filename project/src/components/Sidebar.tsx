@@ -96,7 +96,7 @@ function CollapsedSectionPopover({
         <Button
           variant="ghost"
           className={cn(
-            "mx-auto flex h-10 w-10 shrink-0 rounded-xl text-slate-900 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+            "inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl p-0 text-slate-900 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100",
           )}
         >
           <Icon className="h-5 w-5" />
@@ -337,7 +337,7 @@ const Sidebar = ({
       "w-full text-slate-900 dark:text-slate-100 h-11 min-h-[44px]",
       isCollapsed
         ? [
-            "md:h-10 md:min-h-0 md:w-10 md:max-w-[2.5rem] md:shrink-0 md:mx-auto md:rounded-xl md:px-0 md:justify-center",
+            "md:h-10 md:min-h-0 md:w-10 md:max-w-[2.5rem] md:shrink-0 md:rounded-xl md:px-0 md:justify-center",
             "md:text-slate-900 dark:md:text-slate-100 md:hover:bg-slate-50 dark:md:hover:bg-slate-800 md:hover:text-slate-900 dark:md:hover:text-slate-100",
           ]
         : isRTL
@@ -356,7 +356,7 @@ const Sidebar = ({
     return cn(
       "w-full text-slate-900 dark:text-slate-100 h-10 min-h-[40px] text-sm",
       isCollapsed
-        ? "md:justify-center md:px-2 md:pl-2"
+        ? "md:justify-center md:px-0"
         : isRTL
           ? "flex-row-reverse justify-end text-right pr-8"
           : "justify-start pl-8",
@@ -381,7 +381,7 @@ const Sidebar = ({
       <IconComponent
         className={cn(
           "h-4 w-4 flex-shrink-0",
-          isCollapsed ? "md:mx-auto md:h-5 md:w-5" : isRTL ? "ml-3" : "mr-3",
+          isCollapsed ? "md:h-5 md:w-5" : isRTL ? "ml-3" : "mr-3",
           className,
         )}
       />
@@ -523,7 +523,7 @@ const Sidebar = ({
           <nav
             className={cn(
               "space-y-1 py-4",
-              isCollapsed && "md:space-y-2",
+              isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
               isRTL && "text-right",
             )}
             ref={(node) => {
@@ -542,7 +542,12 @@ const Sidebar = ({
             }}
           >
             {/* ========== MAIN NAVIGATION ========== */}
-            <div className={cn("space-y-1", isCollapsed && "md:space-y-2")}>
+            <div
+              className={cn(
+                "space-y-1",
+                isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+              )}
+            >
               {/* Dashboard */}
               <ProtectedNavItem action="read" subject="Dashboard">
                 <Button
@@ -589,11 +594,14 @@ const Sidebar = ({
 
               {/* Stock Management */}
               <div
-                className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
                 data-tour="nav-stock"
               >
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
                       isRTL={isRTL}
                       icon={Package}
@@ -769,13 +777,21 @@ const Sidebar = ({
             </div>
 
             {/* ========== PERSONNEL SECTION ========== */}
-            <Separator className="my-3 opacity-50" />
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
             <div
-              className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
               data-tour="nav-personnel"
             >
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
                     isRTL={isRTL}
                     icon={Users}
@@ -846,13 +862,21 @@ const Sidebar = ({
             </div>
 
             {/* ========== PRODUCTION SECTION ========== */}
-            <Separator className="my-3 opacity-50" />
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
             <div
-              className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
               data-tour="nav-production"
             >
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
                     isRTL={isRTL}
                     icon={Wheat}
@@ -1001,13 +1025,21 @@ const Sidebar = ({
             </div>
 
             {/* ========== COMPLIANCE SECTION ========== */}
-            <Separator className="my-3 opacity-50" />
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
             <div
-              className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+              className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
               data-tour="nav-compliance"
             >
               {isCollapsed ? (
-                <div className="hidden md:block">
+                <div className="hidden md:flex md:justify-center">
                   <CollapsedSectionPopover
                     isRTL={isRTL}
                     icon={ShieldCheck}
@@ -1111,13 +1143,21 @@ const Sidebar = ({
 
             {/* ========== SALES & PURCHASING SECTION ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
-              <Separator className="my-3 opacity-50" />
+              <Separator
+                className={cn(
+                  "my-3 opacity-50",
+                  isCollapsed && "md:self-stretch",
+                )}
+              />
               <div
-                className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
                 data-tour="nav-billing"
               >
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
                       isRTL={isRTL}
                       icon={ShoppingCart}
@@ -1203,14 +1243,22 @@ const Sidebar = ({
             </ProtectedNavItem>
 
             {/* ========== ACCOUNTING SECTION ========== */}
-            <Separator className="my-3 opacity-50" />
+            <Separator
+              className={cn(
+                "my-3 opacity-50",
+                isCollapsed && "md:self-stretch",
+              )}
+            />
             <ProtectedNavItem action="read" subject="Invoice">
               <div
-                className={cn("space-y-1", isCollapsed && "md:space-y-2")}
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
                 data-tour="nav-accounting"
               >
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
                       isRTL={isRTL}
                       icon={BookOpen}
@@ -1343,10 +1391,20 @@ const Sidebar = ({
 
             {/* ========== MARKETPLACE ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
-              <Separator className="my-3 opacity-50" />
-              <div className={cn("space-y-1", isCollapsed && "md:space-y-2")}>
+              <Separator
+                className={cn(
+                  "my-3 opacity-50",
+                  isCollapsed && "md:self-stretch",
+                )}
+              />
+              <div
+                className={cn(
+                  "space-y-1",
+                  isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
+                )}
+              >
                 {isCollapsed ? (
-                  <div className="hidden md:block">
+                  <div className="hidden md:flex md:justify-center">
                     <CollapsedSectionPopover
                       isRTL={isRTL}
                       icon={ShoppingBag}
@@ -1473,7 +1531,7 @@ const Sidebar = ({
         <div
           className={cn(
             "flex-shrink-0 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1",
-            isCollapsed && "md:space-y-2",
+            isCollapsed && "md:flex md:flex-col md:items-center md:space-y-2",
             isCollapsed ? "md:p-2 p-3" : "p-3",
           )}
         >
@@ -1493,7 +1551,12 @@ const Sidebar = ({
             </Button>
           </ProtectedNavItem>
 
-          <Separator className="my-2 opacity-50" />
+          <Separator
+            className={cn(
+              "my-2 opacity-50",
+              isCollapsed && "md:self-stretch",
+            )}
+          />
 
           <Button
             variant="ghost"
@@ -1520,7 +1583,7 @@ const Sidebar = ({
             className={cn(
               "hidden md:flex text-slate-900 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100",
               isCollapsed
-                ? "h-10 w-10 shrink-0 rounded-xl justify-center hover:bg-slate-50 dark:hover:bg-slate-800"
+                ? "h-10 w-10 shrink-0 rounded-xl justify-center hover:bg-slate-50 dark:hover:bg-slate-800 md:mx-auto"
                 : "h-9 w-full justify-start",
             )}
             onClick={toggleCollapse}
