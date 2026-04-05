@@ -2374,6 +2374,11 @@ export class CalibrationService {
         `Calibration ${calibrationId} confidence ${confidenceScoreAtValidation} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
       );
 
+      await this.ensureCalibratedPhase(
+        existingCalibration.parcel_id,
+        parcel.aiPhase,
+        organizationId,
+      );
       await this.stateMachine.transitionPhase(
         existingCalibration.parcel_id,
         "calibrated",
@@ -2415,6 +2420,11 @@ export class CalibrationService {
       } as CalibrationRecord;
     }
 
+    await this.ensureCalibratedPhase(
+      existingCalibration.parcel_id,
+      parcel.aiPhase,
+      organizationId,
+    );
     await this.stateMachine.transitionPhase(
       existingCalibration.parcel_id,
       "calibrated",
@@ -2717,6 +2727,18 @@ export class CalibrationService {
       phase = "ready_calibration" as AiPhase;
     }
     await this.stateMachine.transitionPhase(parcelId, phase, "calibrating", organizationId);
+  }
+
+  private async ensureCalibratedPhase(
+    parcelId: string,
+    currentPhase: AiPhase,
+    organizationId: string,
+  ): Promise<void> {
+    if (currentPhase === "calibrated") return;
+    if (currentPhase === "awaiting_nutrition_option" || currentPhase === "active") return;
+
+    await this.transitionToCalibrating(parcelId, currentPhase, organizationId);
+    await this.stateMachine.transitionPhase(parcelId, "calibrating", "calibrated", organizationId);
   }
 
   private buildObservationModeContext(confidenceScore: number | null): {
