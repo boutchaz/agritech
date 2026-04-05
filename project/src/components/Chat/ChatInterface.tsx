@@ -340,7 +340,8 @@ export function ChatInterface() {
   }, [messages, streamSuggestions]);
 
   return (
-    <Card className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+    /* overflow-y visible: overflow-hidden clips the composer when the flex chain is loose on tablet */
+    <Card className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-visible">
       <CardHeader className="flex flex-row items-center justify-between py-3 flex-shrink-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <Bot className="w-5 h-5" />
@@ -459,7 +460,7 @@ export function ChatInterface() {
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-4 border-t border-border/40 bg-card pt-3">
+        <div className="sticky bottom-0 z-20 flex shrink-0 flex-col gap-4 border-t border-border/40 bg-card pt-3 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] shadow-[0_-6px_20px_-6px_rgba(15,23,42,0.12)] dark:shadow-[0_-6px_20px_-6px_rgba(0,0,0,0.35)]">
         {/* Follow-up suggestions */}
         {!isStreaming && lastSuggestions.length > 0 && (
           <FollowUpSuggestions suggestions={lastSuggestions} onSend={proceedWithSend} disabled={isSending} />

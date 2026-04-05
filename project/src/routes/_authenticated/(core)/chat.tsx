@@ -24,7 +24,7 @@ const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 flex-col">
+    <div className="flex h-full min-h-0 w-full max-h-full flex-1 flex-col overflow-hidden">
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },

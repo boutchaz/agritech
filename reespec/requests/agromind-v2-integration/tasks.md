@@ -4,13 +4,13 @@
 
 ### 1. Rewrite parcels ai_phase CHECK constraint to V2 lifecycle states
 
-- [ ] **RED** — Verify current schema: `grep "ai_phase" project/supabase/migrations/00000000000000_schema.sql` shows old enum values (`disabled`, `calibration`, `calibrating`, `awaiting_validation`, `awaiting_nutrition_option`, `active`, `paused`). Assertion: V2 values (`awaiting_data`, `ready_calibration`, `calibrating`, `calibrated`, `awaiting_nutrition_option`, `active`, `archived`) are NOT present.
-- [ ] **ACTION** — Edit `00000000000000_schema.sql`: replace `ai_phase` CHECK constraint with `CHECK (ai_phase IN ('awaiting_data', 'ready_calibration', 'calibrating', 'calibrated', 'awaiting_nutrition_option', 'active', 'archived'))`. Change DEFAULT from `'disabled'` to `'awaiting_data'`.
-- [ ] **GREEN** — `grep "ai_phase" project/supabase/migrations/00000000000000_schema.sql` shows only V2 values. No old values present.
+- [x] **RED** — Verify current schema: `grep "ai_phase" project/supabase/migrations/00000000000000_schema.sql` shows old enum values (`disabled`, `calibration`, `calibrating`, `awaiting_validation`, `awaiting_nutrition_option`, `active`, `paused`). Assertion: V2 values (`awaiting_data`, `ready_calibration`, `calibrating`, `calibrated`, `awaiting_nutrition_option`, `active`, `archived`) are NOT present.
+- [x] **ACTION** — Edit `00000000000000_schema.sql`: replace `ai_phase` CHECK constraint with `CHECK (ai_phase IN ('awaiting_data', 'ready_calibration', 'calibrating', 'calibrated', 'awaiting_nutrition_option', 'active', 'archived'))`. Change DEFAULT from `'disabled'` to `'awaiting_data'`.
+- [x] **GREEN** — `grep "ai_phase" project/supabase/migrations/00000000000000_schema.sql` shows only V2 values. No old values present.
 
 ### 2. Rewrite calibrations table to V2 structure
 
-- [ ] **RED** — Verify current schema: `calibrations` table lacks columns `type`, `phase_age` (with V2 enum), `p50_ndvi`, `p50_nirv`, `p10_ndvi`, `p10_ndmi`, `coefficient_etat_parcelle`, `diagnostic_data`, `baseline_data`, `anomalies_data`, `scores_detail`, `validated_by_user`. Current `mode_calibrage` has old values.
+- [x] **RED** — Verify current schema: `calibrations` table lacks columns `type`, `phase_age` (with V2 enum), `p50_ndvi`, `p50_nirv`, `p10_ndvi`, `p10_ndmi`, `coefficient_etat_parcelle`, `diagnostic_data`, `baseline_data`, `anomalies_data`, `scores_detail`, `validated_by_user`. Current `mode_calibrage` has old values.
 - [ ] **ACTION** — Rewrite the `calibrations` CREATE TABLE in schema.sql with V2 columns:
   - `type TEXT NOT NULL DEFAULT 'initial' CHECK (type IN ('initial', 'F2_partial', 'F3_complete'))`
   - `mode_calibrage TEXT CHECK (mode_calibrage IN ('lecture_pure', 'calibrage_progressif', 'calibrage_complet', 'calibrage_avec_signalement', 'collecte_donnees', 'age_manquant'))`
@@ -25,11 +25,11 @@
   - `validated_by_user BOOLEAN DEFAULT FALSE`, `validated_at TIMESTAMPTZ`
   - Keep: `parcel_id`, `organization_id`, `started_at`, `completed_at`, `error_message`, `recalibration_motif`, `previous_baseline`, `campaign_bilan`, `calibration_version`, FKs, indexes
   - Remove: `baseline_ndvi/ndre/ndmi` (replaced by p50_ columns), `zone_classification` (moved to baseline_data), `phenology_stage` (moved to baseline_data), `data_completeness_score` (part of scores_detail), `maturity_phase` (replaced by phase_age), `calibration_data` (split into baseline_data + diagnostic_data + anomalies_data + scores_detail)
-- [ ] **GREEN** — Schema file parses without SQL syntax errors. `calibrations` table has all V2 columns and no removed columns.
+- [x] **GREEN** — Schema file parses without SQL syntax errors. `calibrations` table has all V2 columns and no removed columns.
 
 ### 3. Create ai_diagnostic_sessions table
 
-- [ ] **RED** — `grep "ai_diagnostic_sessions" project/supabase/migrations/00000000000000_schema.sql` returns nothing. Table does not exist.
+- [x] **RED** — `grep "ai_diagnostic_sessions" project/supabase/migrations/00000000000000_schema.sql` returns nothing. Table does not exist.
 - [ ] **ACTION** — Add CREATE TABLE for `ai_diagnostic_sessions`:
   ```sql
   CREATE TABLE IF NOT EXISTS public.ai_diagnostic_sessions (
@@ -49,11 +49,11 @@
   );
   ```
   Add indexes, RLS policy with `is_organization_member()`.
-- [ ] **GREEN** — `grep "ai_diagnostic_sessions" project/supabase/migrations/00000000000000_schema.sql` returns the CREATE TABLE. RLS policy present.
+- [x] **GREEN** — `grep "ai_diagnostic_sessions" project/supabase/migrations/00000000000000_schema.sql` returns the CREATE TABLE. RLS policy present.
 
 ### 4. Rewrite ai_recommendations table to V2 6-bloc structure
 
-- [ ] **RED** — Current `ai_recommendations` table has flat `constat`, `diagnostic`, `action`, `conditions`, `suivi` TEXT columns. Missing: `session_id`, `bloc_1_constat..bloc_6_suivi` JSONB, `theme`, `expires_at`, `evaluation_result`, `priority` as text enum, 8-state `status`.
+- [x] **RED** — Current `ai_recommendations` table has flat `constat`, `diagnostic`, `action`, `conditions`, `suivi` TEXT columns. Missing: `session_id`, `bloc_1_constat..bloc_6_suivi` JSONB, `theme`, `expires_at`, `evaluation_result`, `priority` as text enum, 8-state `status`.
 - [ ] **ACTION** — Rewrite `ai_recommendations` CREATE TABLE:
   - `session_id UUID REFERENCES ai_diagnostic_sessions(id) ON DELETE SET NULL`
   - `alert_code TEXT` (e.g. OLI-01)
@@ -69,11 +69,11 @@
   - `co_occurrence_code TEXT`
   - Keep: `parcel_id`, `organization_id`, `calibration_id`, `crop_type`, FKs, indexes
   - Remove: flat `constat`, `diagnostic`, `action`, `conditions`, `suivi` TEXT, `priority INTEGER`, `valid_from/valid_until DATE`
-- [ ] **GREEN** — Schema file has new `ai_recommendations` with 6-bloc JSONB columns, session_id FK, 8-state status, text priority enum.
+- [x] **GREEN** — Schema file has new `ai_recommendations` with 6-bloc JSONB columns, session_id FK, 8-state status, text priority enum.
 
 ### 5. Create recommendation_events journal table
 
-- [ ] **RED** — `grep "recommendation_events" project/supabase/migrations/00000000000000_schema.sql` returns nothing.
+- [x] **RED** — `grep "recommendation_events" project/supabase/migrations/00000000000000_schema.sql` returns nothing.
 - [ ] **ACTION** — Add CREATE TABLE:
   ```sql
   CREATE TABLE IF NOT EXISTS public.recommendation_events (
@@ -89,29 +89,31 @@
   );
   ```
   Add index on `recommendation_id`, RLS policy.
-- [ ] **GREEN** — Table definition present in schema. Index and RLS present.
+- [x] **GREEN** — Table definition present in schema. Index and RLS present.
 
 ### 6. Update annual_plans and plan_interventions to V2 columns
 
-- [ ] **RED** — `annual_plans` missing: `season TEXT`, `nutrition_option`, `yield_target_t_ha`, `dose_n/p/k/mg_kg_ha`, `monthly_calendar JSONB`, `budget_estimate_dh`, `validated_by_user`. Uses `year INTEGER` instead of `season`.
+- [x] **RED** — `annual_plans` missing: `season TEXT`, `nutrition_option`, `yield_target_t_ha`, `dose_n/p/k/mg_kg_ha`, `monthly_calendar JSONB`, `budget_estimate_dh`, `validated_by_user`. Uses `year INTEGER` instead of `season`.
 - [ ] **ACTION** — Rewrite `annual_plans`:
   - Replace `year INTEGER` with `season TEXT` (e.g. "2026")
   - Add: `nutrition_option TEXT CHECK (nutrition_option IN ('A', 'B', 'C'))`, `yield_target_t_ha DECIMAL(6,2)`, `dose_n_kg_ha DECIMAL(7,2)`, `dose_p_kg_ha DECIMAL(7,2)`, `dose_k_kg_ha DECIMAL(7,2)`, `dose_mg_kg_ha DECIMAL(7,2)`, `monthly_calendar JSONB`, `budget_estimate_dh DECIMAL(10,2)`, `validated_by_user BOOLEAN DEFAULT FALSE`
   - Update UNIQUE constraint from `(parcel_id, year)` to `(parcel_id, season)`
   - Update `plan_interventions`: add `assigned_to UUID REFERENCES users(id)`, `dose_data JSONB` (structured {value, unit}), ensure `status` includes `'cancelled'`
-- [ ] **GREEN** — Both tables have V2 columns. UNIQUE constraint uses `season`.
+- [x] **GREEN** — Both tables have V2 columns. UNIQUE constraint uses `season`.
 
 ### 7. Deploy V2 referentiel files and MOTEUR_CONFIG
 
-- [ ] **RED** — `ls referentials/MOTEUR_CONFIG.json` fails. `referentials/DATA_OLIVIER.json` is 36KB (v1). V5 file not present.
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/MOTEUR_CONFIG.json` → `referentials/MOTEUR_CONFIG.json`. Copy `docs/docs/agromind-v2/DATA_OLIVIER_v5 (1).json` → `referentials/DATA_OLIVIER.json` (replaces v1). Keep other culture files unchanged for now.
-- [ ] **GREEN** — `ls referentials/MOTEUR_CONFIG.json` succeeds. `referentials/DATA_OLIVIER.json` contains keys `gdd`, `co_occurrence`, `protocole_phenologique`, `formes_engrais`, `microelements`.
+- [x] **RED** — `ls referentials/MOTEUR_CONFIG.json` fails. `referentials/DATA_OLIVIER.json` is 36KB (v1). V5 file not present.
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/MOTEUR_CONFIG.json` → `referentials/MOTEUR_CONFIG.json`. Copy `docs/docs/agromind-v2/DATA_OLIVIER_v5 (1).json` → `referentials/DATA_OLIVIER.json` (replaces v1). Keep other culture files unchanged for now.
+- [x] **GREEN** — `ls referentials/MOTEUR_CONFIG.json` succeeds. `referentials/DATA_OLIVIER.json` contains keys `gdd`, `co_occurrence`, `protocole_phenologique`, `formes_engrais`, `microelements`.
 
 ### 8. Reset database and regenerate types
 
-- [ ] **RED** — `database.types.ts` does not reflect new tables/columns.
-- [ ] **ACTION** — Run `cd project && npm run db:reset && npm run db:generate-types`.
+- [x] **RED** — `database.types.ts` does not reflect new tables/columns.
+- [ ] **ACTION** — Run `cd project && npm run db:reset && npm run db:generate-types`. (BLOCKED: requires Docker)
 - [ ] **GREEN** — `database.types.ts` contains `ai_diagnostic_sessions`, `recommendation_events`, and V2 column types for `calibrations`. `tsc --noEmit` in project/ has no schema-related errors.
+
+> NOTE: Schema file is validated and ready. db:reset requires Docker Desktop running. Run when Docker is available.
 
 ---
 

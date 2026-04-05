@@ -560,7 +560,7 @@ CREATE TABLE IF NOT EXISTS parcels (
   boundary_geom GEOMETRY(Polygon, 4326),
   -- AI calibration columns
   ai_enabled BOOLEAN DEFAULT false,
-  ai_phase TEXT DEFAULT 'disabled' CHECK (ai_phase IN ('disabled', 'calibration', 'calibrating', 'awaiting_validation', 'awaiting_nutrition_option', 'active', 'paused')),
+  ai_phase TEXT DEFAULT 'awaiting_data' CHECK (ai_phase IN ('awaiting_data', 'ready_calibration', 'calibrating', 'calibrated', 'awaiting_nutrition_option', 'active', 'archived')),
   ai_calibration_id UUID,
   ai_nutrition_option TEXT DEFAULT 'A',
   ai_production_target TEXT,
@@ -5871,34 +5871,65 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
-  -- Status validated in application code (no CHECK constraint)
-  status TEXT NOT NULL DEFAULT 'pending',
+
+  -- Trigger type: what initiated the calibration
+  type TEXT NOT NULL DEFAULT 'initial' CHECK (type IN ('initial', 'F2_partial', 'F3_complete')),
+
+  -- Engine run status
+  status TEXT NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'awaiting_validation', 'validated', 'insufficient', 'failed', 'archived')),
   started_at TIMESTAMPTZ,
   completed_at TIMESTAMPTZ,
-  baseline_ndvi NUMERIC,
-  baseline_ndre NUMERIC,
-  baseline_ndmi NUMERIC,
-  confidence_score NUMERIC CHECK (confidence_score >= 0 AND confidence_score <= 1),
-  zone_classification JSONB,
-  phenology_stage TEXT,
-  calibration_data JSONB,
   error_message TEXT,
-  -- Calibration v2 columns
-  health_score NUMERIC CHECK (health_score >= 0 AND health_score <= 100),
-  yield_potential_min NUMERIC,
-  yield_potential_max NUMERIC,
-  data_completeness_score NUMERIC CHECK (data_completeness_score >= 0 AND data_completeness_score <= 100),
-  maturity_phase TEXT CHECK (maturity_phase IN ('juvenile', 'entree_production', 'pleine_production', 'maturite_avancee', 'senescence', 'unknown')),
+
+  -- V2 engine mode: how the engine behaved based on parcel maturity
+  mode_calibrage TEXT CHECK (mode_calibrage IN ('lecture_pure', 'calibrage_progressif', 'calibrage_complet', 'calibrage_avec_signalement', 'collecte_donnees', 'age_manquant')),
+
+  -- Phase age: parcel maturity at calibration time
+  phase_age TEXT CHECK (phase_age IN ('juvenile', 'entree_production', 'pleine_production', 'senescence')),
+
+  -- Extracted percentiles for fast DB access (avoid JSONB parsing)
+  p50_ndvi DECIMAL(6,4),
+  p50_nirv DECIMAL(6,4),
+  p50_ndmi DECIMAL(6,4),
+  p50_ndre DECIMAL(6,4),
+  p10_ndvi DECIMAL(6,4),
+  p10_ndmi DECIMAL(6,4),
+
+  -- Scores
+  confidence_score INTEGER CHECK (confidence_score BETWEEN 0 AND 100),
+  health_score INTEGER CHECK (health_score BETWEEN 0 AND 100),
+
+  -- Yield potential
+  yield_potential_min DECIMAL(6,2),
+  yield_potential_max DECIMAL(6,2),
+  coefficient_etat_parcelle DECIMAL(4,2),
+
+  -- Anomaly count
   anomaly_count INTEGER DEFAULT 0,
-  calibration_version TEXT DEFAULT 'v2',
-  -- Calibration mode and recalibration support
-  mode_calibrage TEXT DEFAULT 'full',
+
+  -- Structured JSONB data (split from monolithic calibration_data)
+  baseline_data JSONB,          -- percentiles, phenology, intra-parcel zones
+  diagnostic_data JSONB,        -- ecarts, causes, resume_pourquoi
+  anomalies_data JSONB,         -- detected anomalies with triple confirmation
+  scores_detail JSONB,          -- health + confidence score component breakdown
+  profile_snapshot JSONB,       -- parcel profile at calibration time
+
+  -- Recalibration support
   recalibration_motif TEXT,
   previous_baseline JSONB,
   campaign_bilan JSONB,
+
   -- Localized reports
   rapport_fr TEXT,
   rapport_ar TEXT,
+
+  -- User validation
+  validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
+  validated_at TIMESTAMPTZ,
+
+  -- Versioning
+  calibration_version TEXT DEFAULT 'v3',
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (id, organization_id),
@@ -5907,14 +5938,50 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
-COMMENT ON COLUMN calibrations.mode_calibrage IS 'Calibration mode: full (initial), partial (block-update recalibration), annual (post-campaign recalibration)';
-COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for partial recalibrations';
+COMMENT ON COLUMN calibrations.type IS 'Trigger type: initial (first calibration), F2_partial (event-driven recalibration), F3_complete (post-campaign annual recalibration)';
+COMMENT ON COLUMN calibrations.mode_calibrage IS 'V2 engine mode: how the calibration engine behaved based on parcel maturity and data availability';
+COMMENT ON COLUMN calibrations.phase_age IS 'Parcel maturity phase at calibration time, derived from referentiel age thresholds';
+COMMENT ON COLUMN calibrations.baseline_data IS 'Calibrated baseline: percentiles, phenology historique, zones intra-parcellaires';
+COMMENT ON COLUMN calibrations.diagnostic_data IS 'Diagnostic explicatif: ecarts, causes probables, resume_pourquoi';
+COMMENT ON COLUMN calibrations.anomalies_data IS 'Detected anomalies with triple confirmation (meteo + satellite + user)';
+COMMENT ON COLUMN calibrations.scores_detail IS 'Score breakdown: sante components (vigueur, homogeneite, stabilite, hydrique, nutritionnel) + confiance Bloc A/B';
+COMMENT ON COLUMN calibrations.profile_snapshot IS 'Snapshot of parcel agronomic profile at calibration time';
+COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for F2_partial recalibrations';
 COMMENT ON COLUMN calibrations.previous_baseline IS 'Snapshot of validated baseline prior to recalibration';
-COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by annual recalibration flow';
+COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by F3_complete recalibration flow';
 
 CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_status ON public.calibrations(status);
+
+-- AI Diagnostic Sessions (one row per operational AI analysis run)
+CREATE TABLE IF NOT EXISTS public.ai_diagnostic_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
+  chemin TEXT NOT NULL CHECK (chemin IN ('A_plan_standard', 'B_recommendations', 'C_observation')),
+  phase_age TEXT,
+  engine_output JSONB,
+  date_analyse DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT fk_diagnostic_sessions_parcel_org
+    FOREIGN KEY (parcel_id, organization_id)
+    REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
+);
+
+COMMENT ON TABLE ai_diagnostic_sessions IS 'One row per operational AI analysis run — stores full engine output and routing chemin';
+COMMENT ON COLUMN ai_diagnostic_sessions.chemin IS 'Routing path: A_plan_standard (juvenile), B_recommendations (operational), C_observation (low confidence)';
+COMMENT ON COLUMN ai_diagnostic_sessions.engine_output IS 'Full JSON response from the operational AI engine';
+
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_parcel ON public.ai_diagnostic_sessions(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_org ON public.ai_diagnostic_sessions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_sessions_date ON public.ai_diagnostic_sessions(parcel_id, date_analyse DESC);
+
+ALTER TABLE ai_diagnostic_sessions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_diagnostic_sessions" ON ai_diagnostic_sessions
+  FOR ALL USING (is_organization_member(organization_id));
 
 -- AI Recommendations
 CREATE TABLE IF NOT EXISTS public.ai_recommendations (
@@ -5922,25 +5989,46 @@ CREATE TABLE IF NOT EXISTS public.ai_recommendations (
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'validated', 'rejected', 'executed', 'expired')),
-  constat TEXT NOT NULL,
-  diagnostic TEXT NOT NULL,
-  action TEXT NOT NULL,
-  conditions JSONB,
-  suivi TEXT,
+  session_id UUID REFERENCES public.ai_diagnostic_sessions(id) ON DELETE SET NULL,
+
+  -- Alert and classification
+  alert_code TEXT,                   -- e.g. OLI-01, OLI-16, AGR-03
   crop_type TEXT NOT NULL,
-  alert_code TEXT,
-  priority INTEGER DEFAULT 3,
-  valid_from DATE,
-  valid_until DATE,
+  type TEXT NOT NULL DEFAULT 'other' CHECK (type IN ('irrigation', 'fertilisation', 'phytosanitary', 'pruning', 'harvest', 'information', 'other')),
+  recommendation_type TEXT NOT NULL DEFAULT 'reactive' CHECK (recommendation_type IN ('reactive', 'planned')),
+  theme TEXT,                        -- for frequency limit tracking: irrigation, fertigation_n, phytosanitary, soil_amendment, biostimulants, pruning
+
+  -- Priority and status (V2 governance)
+  priority TEXT NOT NULL DEFAULT 'info' CHECK (priority IN ('urgent', 'priority', 'vigilance', 'info')),
+  status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'validated', 'waiting', 'executed', 'evaluated', 'closed', 'rejected', 'expired')),
+
+  -- 6-bloc structure (V2 governance — mandatory for every recommendation)
+  bloc_1_constat JSONB,              -- spectral values, baseline position, trend, inter-index coherence
+  bloc_2_diagnostic JSONB,           -- hypotheses, alternatives, confidence level, missing data
+  bloc_3_action JSONB,               -- description, product, dose, method, blocking condition
+  bloc_4_fenetre JSONB,              -- urgency level, optimal period, deadline, expiration rules
+  bloc_5_conditions JSONB,           -- meteo requirements, J+7 compatibility
+  bloc_6_suivi JSONB,                -- evaluation delay, indicator, expected response
+
+  -- Co-occurrence
+  co_occurrence_code TEXT,           -- linked alert code if co-occurrence detected
+
+  -- Lifecycle dates
+  expires_at TIMESTAMPTZ,
   executed_at TIMESTAMPTZ,
+  evaluated_at TIMESTAMPTZ,
   execution_notes TEXT,
-  -- Monitoring operational columns
-  evaluation_window_days INTEGER,
-  evaluation_indicator TEXT,
-  expected_response TEXT,
-  actual_response_pct REAL,
-  efficacy TEXT,
+
+  -- Evaluation result
+  evaluation_result TEXT CHECK (evaluation_result IN ('effective', 'partially_effective', 'not_effective')),
+  evaluation_notes TEXT,
+
+  -- Rejection
+  rejection_motif TEXT,
+
+  -- Responsibility disclaimer
+  mention_responsabilite TEXT DEFAULT 'Cette recommandation est basée sur l''analyse des données disponibles. La décision et la responsabilité de l''application reviennent à l''exploitant.',
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (id, organization_id),
@@ -5949,11 +6037,39 @@ CREATE TABLE IF NOT EXISTS public.ai_recommendations (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE ai_recommendations IS 'Individual actionable recommendations with V2 6-bloc governance structure';
+COMMENT ON COLUMN ai_recommendations.session_id IS 'FK to ai_diagnostic_sessions — links recommendation to the AI analysis run that generated it';
+COMMENT ON COLUMN ai_recommendations.theme IS 'Theme for frequency limit tracking per gouvernance rules';
+COMMENT ON COLUMN ai_recommendations.recommendation_type IS 'reactive (triggered by alert) or planned (from annual plan)';
+
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_parcel_id ON public.ai_recommendations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_organization_id ON public.ai_recommendations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_ai_recommendations_status ON public.ai_recommendations(status);
-CREATE INDEX IF NOT EXISTS idx_ai_recommendations_executed_efficacy
-  ON public.ai_recommendations(status, executed_at, efficacy);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_session ON public.ai_recommendations(session_id);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_expiry ON public.ai_recommendations(status, expires_at) WHERE status IN ('proposed', 'validated', 'waiting');
+
+-- Recommendation Events (lifecycle journal — every state transition logged)
+CREATE TABLE IF NOT EXISTS public.recommendation_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recommendation_id UUID NOT NULL REFERENCES public.ai_recommendations(id) ON DELETE CASCADE,
+  parcel_id UUID NOT NULL,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  decider TEXT NOT NULL CHECK (decider IN ('ia', 'user')),
+  motif TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+COMMENT ON TABLE recommendation_events IS 'Lifecycle journal: every recommendation status transition with timestamp, decider, and motif';
+
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_reco ON public.recommendation_events(recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_parcel ON public.recommendation_events(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_recommendation_events_org ON public.recommendation_events(organization_id);
+
+ALTER TABLE recommendation_events ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_access_recommendation_events" ON recommendation_events
+  FOR ALL USING (is_organization_member(organization_id));
 
 -- Annual Plans
 CREATE TABLE IF NOT EXISTS public.annual_plans (
@@ -5961,25 +6077,53 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
   parcel_id UUID NOT NULL,
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   calibration_id UUID REFERENCES public.calibrations(id) ON DELETE SET NULL,
-  year INTEGER NOT NULL,
+  season TEXT NOT NULL,              -- e.g. "2026", "2025-2026"
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'validated', 'active', 'archived')),
   crop_type TEXT NOT NULL,
   variety TEXT,
-  plan_data JSONB,
+
+  -- V2 extracted parameters
+  nutrition_option TEXT CHECK (nutrition_option IN ('A', 'B', 'C')),
+  nutrition_option_reason TEXT,
+  yield_target_t_ha DECIMAL(6,2),
+  alternance_status TEXT,            -- ON / OFF / indefini / NA
+  production_target TEXT,            -- huile_qualite / olive_table / mixte
+
+  -- V2 extracted annual doses (kg/ha)
+  dose_n_kg_ha DECIMAL(7,2),
+  dose_p_kg_ha DECIMAL(7,2),
+  dose_k_kg_ha DECIMAL(7,2),
+  dose_mg_kg_ha DECIMAL(7,2),
+
+  -- Full plan data
+  monthly_calendar JSONB,            -- structured monthly interventions
+  irrigation_plan JSONB,             -- monthly Kc, ETo, volume reference
+  harvest_forecast JSONB,            -- window, IM target, yield forecast
+  budget_estimate_dh DECIMAL(10,2),
+  verifications JSONB,               -- fractionnement_ok, doses_plausibles, etc.
+  plan_summary TEXT,
+
+  -- Validation
+  validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
   validated_at TIMESTAMPTZ,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (parcel_id, year),
+  UNIQUE (parcel_id, season),
   UNIQUE (id, organization_id),
   CONSTRAINT fk_annual_plans_parcel_org
     FOREIGN KEY (parcel_id, organization_id)
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE annual_plans IS 'V2 annual plan: deterministic 10-step assembly from calibration + referentiel';
+COMMENT ON COLUMN annual_plans.monthly_calendar IS 'Structured monthly breakdown: NPK, formes_engrais, microelements, biostimulants, phyto, irrigation, travaux';
+COMMENT ON COLUMN annual_plans.nutrition_option IS 'Auto-determined nutrition option: A (full data), B (incomplete data), C (salinity)';
+
 CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
 
--- Plan Interventions
+-- Plan Interventions (calendar tasks derived from annual plan)
 CREATE TABLE IF NOT EXISTS public.plan_interventions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   annual_plan_id UUID NOT NULL,
@@ -5987,13 +6131,17 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   month INTEGER NOT NULL CHECK (month >= 1 AND month <= 12),
   week INTEGER CHECK (week >= 1 AND week <= 5),
-  intervention_type TEXT NOT NULL,
+  intervention_type TEXT NOT NULL CHECK (intervention_type IN ('fertilisation', 'irrigation', 'phytosanitary', 'biostimulant', 'pruning', 'harvest', 'other')),
   description TEXT NOT NULL,
   product TEXT,
-  dose TEXT,
-  unit TEXT,
-  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'executed', 'skipped', 'delayed')),
+  dose_data JSONB,                   -- structured: {valeur, unite}
+  stage_bbch TEXT,                   -- target BBCH stage
+  application_method TEXT,           -- fertigation, foliaire, epandage_sol, injection
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('normal', 'high', 'critical')),
+  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'reminded', 'executed', 'skipped', 'delayed', 'cancelled')),
+  scheduled_date DATE,
   executed_at TIMESTAMPTZ,
+  assigned_to UUID,                  -- FK to users/workers handled at app level
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -6005,9 +6153,14 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
     REFERENCES public.parcels(id, organization_id) ON DELETE CASCADE
 );
 
+COMMENT ON TABLE plan_interventions IS 'Calendar tasks derived from annual plan — each becomes a planned recommendation with 5-state lifecycle';
+COMMENT ON COLUMN plan_interventions.dose_data IS 'Structured dose: {valeur: number|[min,max], unite: string}';
+COMMENT ON COLUMN plan_interventions.status IS 'Lifecycle: planned → reminded → executed | skipped | delayed | cancelled';
+
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_annual_plan_id ON public.plan_interventions(annual_plan_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_parcel_id ON public.plan_interventions(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_organization_id ON public.plan_interventions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_status_date ON public.plan_interventions(parcel_id, status, scheduled_date);
 
 -- Crop AI References
 CREATE TABLE IF NOT EXISTS public.crop_ai_references (
