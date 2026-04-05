@@ -182,16 +182,19 @@ export class AgromindiaContextService {
   ): Promise<AgromindiaParcelContext['recommendations']> {
     try {
       const recs = await this.recommendationsService.getRecommendations(parcelId, organizationId);
-      return recs.map((r: AiRecommendationRecord) => ({
-        id: r.id,
-        status: r.status,
-        priority: r.priority || 'medium',
-        constat: r.constat,
-        diagnostic: r.diagnostic,
-        action: r.action,
-        valid_from: r.valid_from,
-        valid_until: r.valid_until,
-      }));
+      // Chat: only user-validated Agromind recommendations — not pending AI drafts.
+      return recs
+        .filter((r: AiRecommendationRecord) => r.status === 'validated')
+        .map((r: AiRecommendationRecord) => ({
+          id: r.id,
+          status: r.status,
+          priority: r.priority || 'medium',
+          constat: r.constat,
+          diagnostic: r.diagnostic,
+          action: r.action,
+          valid_from: r.valid_from,
+          valid_until: r.valid_until,
+        }));
     } catch (error) {
       this.logger.debug(`No recommendations for parcel ${parcelId}: ${error.message}`);
       return [];
@@ -203,7 +206,10 @@ export class AgromindiaContextService {
     organizationId: string,
   ): Promise<AgromindiaParcelContext['annual_plan']> {
     try {
-      const plan = await this.annualPlanService.getPlanOrNull(parcelId, organizationId);
+      const plan = await this.annualPlanService.getValidatedPlanOrNull(
+        parcelId,
+        organizationId,
+      );
       if (!plan) return null;
 
       const now = new Date();

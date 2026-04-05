@@ -35,7 +35,7 @@ describe('ContextSummarizerService', () => {
         crop_type: 'olivier',
         diagnostics: { scenario_code: 'B', scenario: 'Stress hydrique modéré', confidence: 0.85 },
         recommendations: [
-          { priority: 'high', constat: 'Manque eau', action: 'Irriguer 30mm', status: 'pending' },
+          { priority: 'high', constat: 'Manque eau', action: 'Irriguer 30mm', status: 'validated' },
         ],
         annual_plan: null,
         calibration: null,

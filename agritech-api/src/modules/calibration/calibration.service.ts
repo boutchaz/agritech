@@ -1956,9 +1956,51 @@ export class CalibrationService {
       return null;
     }
 
+    // Reconstruct V2 output from split JSONB columns for frontend compatibility
+    const baselineData = this.toJsonObject(calibration.baseline_data);
+    const diagnosticData = this.toJsonObject(calibration.diagnostic_data);
+    const scoresDetail = this.toJsonObject(calibration.scores_detail);
+    const profileSnapshot = this.toJsonObject(calibration.profile_snapshot);
+
+    const output = {
+      parcel_id: calibration.parcel_id,
+      phase_age: calibration.phase_age,
+      mode_calibrage: calibration.mode_calibrage,
+      step3: {
+        global_percentiles: baselineData.percentiles ?? null,
+      },
+      step4: baselineData.phenology ?? null,
+      step5: {
+        anomalies: calibration.anomalies_data ?? [],
+      },
+      step6: {
+        yield_potential: {
+          minimum: this.toNumber(calibration.yield_potential_min),
+          maximum: this.toNumber(calibration.yield_potential_max),
+        },
+      },
+      step7: baselineData.zones ?? null,
+      step8: {
+        health_score: {
+          total: this.toNumber(calibration.health_score),
+          ...(this.toJsonObject(scoresDetail.health)),
+        },
+      },
+      confidence: {
+        total_score: this.toNumber(calibration.confidence_score),
+        normalized_score: this.toNumber(calibration.confidence_score),
+        ...(this.toJsonObject(scoresDetail.confidence)),
+      },
+      diagnostic_explicatif: diagnosticData,
+      coefficient_etat_parcelle: this.toNumber(calibration.coefficient_etat_parcelle),
+    };
+
     return {
       calibration,
-      report: this.toJsonObject(calibration.profile_snapshot),
+      report: {
+        ...profileSnapshot,
+        output,
+      },
     };
   }
 

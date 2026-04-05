@@ -43,7 +43,7 @@ export class ContextSummarizerService {
   }
 
   /**
-   * Summarize AgromindIA intelligence into concise, actionable text.
+   * Summarize AgromindIA intelligence for routing (validated recommendations / plan only).
    */
   summarizeAgromindiaIntel(intel: any[]): string {
     if (!intel || intel.length === 0) return '';
@@ -58,11 +58,13 @@ export class ContextSummarizerService {
         }
 
         if (p.recommendations?.length) {
-          const pending = p.recommendations.filter((r: any) => r.status === 'pending' || !r.status);
-          for (const rec of pending.slice(0, 3)) {
+          const validated = p.recommendations.filter((r: any) => r.status === 'validated');
+          for (const rec of validated.slice(0, 3)) {
             lines.push(`  [${rec.priority}] ${rec.constat}: ${rec.action}`);
           }
-          if (pending.length > 3) lines.push(`  ...and ${pending.length - 3} more recommendations`);
+          if (validated.length > 3) {
+            lines.push(`  ...and ${validated.length - 3} more validated recommendations`);
+          }
         }
 
         if (p.annual_plan?.upcoming_interventions?.length) {

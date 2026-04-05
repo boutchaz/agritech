@@ -342,6 +342,45 @@ export class AnnualPlanService {
     };
   }
 
+  /**
+   * Latest Agromind-approved annual plan (validated or active). Draft plans are excluded —
+   * they are not an official calendar until the user validates them in the app.
+   */
+  async getValidatedPlanOrNull(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<AnnualPlanWithInterventions | null> {
+    const { data, error } = await this.databaseService
+      .getAdminClient()
+      .from('annual_plans')
+      .select('*')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .in('status', ['validated', 'active'])
+      .order('season', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new BadRequestException(
+        `Failed to fetch validated annual plan: ${error.message}`,
+      );
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    const plan = data as AnnualPlanRecord;
+    const interventions = await this.findPlanInterventions(plan.id, organizationId);
+
+    return {
+      ...plan,
+      interventions,
+    };
+  }
+
   async getCalendar(
     parcelId: string,
     organizationId: string,

@@ -119,7 +119,7 @@ describe('PromptBuilderService', () => {
             recommendations: [
               {
                 id: 'r-1',
-                status: 'pending',
+                status: 'validated',
                 priority: 'high',
                 constat: 'NDVI dropped 15%',
                 diagnostic: 'Water stress confirmed',
@@ -161,7 +161,9 @@ describe('PromptBuilderService', () => {
       expect(prompt).toContain('AGROMINDIA INTELLIGENCE');
       expect(prompt).toContain('Parcelle Azef');
       expect(prompt).toContain('Scenario B');
+      expect(prompt).toContain('Validated Agromind recommendations');
       expect(prompt).toContain('Increase irrigation frequency');
+      expect(prompt).toContain('Validated / active Agromind annual plan only');
       expect(prompt).toContain('Spring NPK application');
       expect(prompt).toContain('baseline NDVI: 0.55');
     });
