@@ -5,6 +5,7 @@ import { Logger } from '@nestjs/common';
 const logger = new Logger('CropReferenceLoader');
 
 let cache: Map<string, Record<string, unknown>> | null = null;
+let moteurConfigCache: Record<string, unknown> | null = null;
 
 const REFERENTIALS_SEARCH_PATHS = [
   // Production Docker image: copied next to dist/
@@ -68,6 +69,42 @@ export function getLocalCropReference(
 
 export function reloadCropReferences(): void {
   cache = null;
+}
+
+/**
+ * Load and cache MOTEUR_CONFIG.json — culture-agnostic engine configuration.
+ * Contains: gouvernance rules, phases_age, scoring formulas, index interpretation per culture.
+ */
+export function getMoteurConfig(): Record<string, unknown> | null {
+  if (moteurConfigCache) {
+    return moteurConfigCache;
+  }
+
+  const dir = discoverReferentialsDir();
+  if (!dir) {
+    logger.warn('No referentials/ directory found for MOTEUR_CONFIG.json');
+    return null;
+  }
+
+  const configPath = path.join(dir, 'MOTEUR_CONFIG.json');
+  if (!fs.existsSync(configPath)) {
+    logger.warn(`MOTEUR_CONFIG.json not found at ${configPath}`);
+    return null;
+  }
+
+  try {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    moteurConfigCache = JSON.parse(raw) as Record<string, unknown>;
+    logger.log('Loaded MOTEUR_CONFIG.json');
+    return moteurConfigCache;
+  } catch (err) {
+    logger.error(`Failed to parse MOTEUR_CONFIG.json: ${(err as Error).message}`);
+    return null;
+  }
+}
+
+export function reloadMoteurConfig(): void {
+  moteurConfigCache = null;
 }
 
 export async function getMineralExportsFromDb(
