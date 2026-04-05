@@ -55,3 +55,23 @@ Both the response cache (Map<query, AI response>) and module cache (Map<orgId:mo
 ### Pre-existing seed data bugs fixed for cash/tax accounts — 2026-03-26 (Request: generic-accounting-mappings)
 
 Multiple countries had cash mapping account codes that didn't match their actual chart of accounts: MA (514→5141, 511→5161), TN (53→52/511), GB (1200→232, 1220→231), DE (1100→1000). Tunisia and Germany also lacked separate input VAT accounts in their charts — used closest equivalents with notes to configure manually.
+
+### AgromindIA V2: English table names, V2 column semantics — 2026-04-04 (Request: agromind-v2-integration)
+
+All DB tables keep English names (calibrations, parcels, ai_recommendations, annual_plans, plan_interventions). The V2 spec proposed French names (calibrages, recommandations, taches_calendrier) but renaming would touch 143+ from() calls across the backend plus frontend types/hooks. Column structures and enums adopt V2 semantics. Multi-tenant organization_id kept on all tables per CLAUDE.md CRITICAL rule — V2 spec used utilisateur_id which was rejected.
+
+### AgromindIA V2: Hybrid recommendation architecture — 2026-04-04 (Request: agromind-v2-integration)
+
+Recommendations use a hybrid model: ai_diagnostic_sessions stores full AI engine output per analysis run (one row per satellite pass), ai_recommendations stores individual actionable items as separate rows (for governance lifecycle), recommendation_events journals every state transition. The V2 spec proposed embedding recommendations as JSONB inside a session row, but the governance spec requires per-recommendation state tracking (8 states, expiration timers, evaluation windows, frequency limits per theme) which is fundamentally relational — not JSONB-friendly.
+
+### AgromindIA V2: Parcel lifecycle replaces ai_phase — 2026-04-04 (Request: agromind-v2-integration)
+
+Parcel ai_phase values replaced with V2 lifecycle: awaiting_data → ready_calibration → calibrating → calibrated → awaiting_nutrition_option → active → archived. Old values (disabled, calibration, pret_calibrage, paused) removed. awaiting_validation removed as a parcel state — it lives on the calibration record instead. awaiting_nutrition_option kept as a parcel-level gate before activation.
+
+### AgromindIA V2: Config-driven prompts replace hardcoded prompts — 2026-04-04 (Request: agromind-v2-integration)
+
+V1 prompts embedded all agronomic rules in prompt text. V2 prompts are meta-programs: they take (moteurConfig, referentiel) as arguments and JSON.stringify them into the system prompt. MOTEUR_CONFIG.json (54KB, culture-agnostic) and DATA_{CULTURE}_v*.json (per-culture referentiel) are loaded from disk via crop-reference-loader.ts. This makes agronomic rules editable without code changes and keeps prompts consistent across cultures.
+
+### AgromindIA V2: mode_calibrage gets V2 engine semantics — 2026-04-04 (Request: agromind-v2-integration)
+
+The calibrations.mode_calibrage column changes meaning: old values (full/partial/annual) described what triggered the calibration; V2 values (lecture_pure/calibrage_progressif/calibrage_complet/calibrage_avec_signalement/collecte_donnees/age_manquant) describe how the engine behaved based on parcel maturity. A new `type` column (initial/F2_partial/F3_complete) takes over the trigger-type responsibility.
