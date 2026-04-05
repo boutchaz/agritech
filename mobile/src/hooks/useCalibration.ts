@@ -1,5 +1,5 @@
 // Calibration Hooks for Mobile App
-// Adapted from web: project/src/hooks/useCalibrationV2.ts
+// Adapted from web: project/src/hooks/useCalibrationReport.ts
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calibrationApi } from '@/lib/api';

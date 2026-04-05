@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Download, FileJson, FileSpreadsheet, Archive, Loader2 } from 'lucide-react';
-import { calibrationV2Api } from '@/lib/api/calibration-v2';
+import { calibrationApi } from '@/lib/api/calibration-output';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -26,7 +26,7 @@ export function CalibrationExportButton({ calibrationId }: CalibrationExportButt
     
     try {
       setIsExporting(true);
-      const blob = await calibrationV2Api.exportCalibration(calibrationId, format, currentOrganization.id);
+      const blob = await calibrationApi.exportCalibration(calibrationId, format, currentOrganization.id);
       
       // Create download link
       const url = window.URL.createObjectURL(blob);

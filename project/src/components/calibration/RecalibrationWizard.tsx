@@ -6,7 +6,7 @@ import {
   calibrationWizardDefaultValues,
   type CalibrationWizardFormValues as FullCalibrationWizardFormValues,
 } from '@/schemas/calibrationWizardSchema';
-import { useStartPartialRecalibration } from '@/hooks/useCalibrationV2';
+import { useStartPartialRecalibration } from '@/hooks/useCalibrationReport';
 import {
   MotifSelectionStep,
   RECALIBRATION_MOTIFS,

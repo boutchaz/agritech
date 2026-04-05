@@ -138,21 +138,21 @@ export const queryKeys = {
     },
   },
 
-  calibrationV2: {
+  calibration: {
     status: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'status'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'status'] as const,
     report: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'report'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'report'] as const,
     nutritionSuggestion: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'nutrition-suggestion'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'nutrition-suggestion'] as const,
     phase: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'phase'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'phase'] as const,
     history: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'history'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'history'] as const,
     draft: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'draft'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'draft'] as const,
     review: (parcelId: string, organizationId?: string) =>
-      ['calibration-v2', organizationId ?? 'none', parcelId, 'review'] as const,
+      ['calibration', organizationId ?? 'none', parcelId, 'review'] as const,
   },
 
   annual: {

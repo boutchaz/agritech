@@ -38,19 +38,19 @@ export function useCalibrationSocket(parcelId: string): void {
       if (eventParcelId !== parcelId) return;
 
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(parcelId, organizationId),
+        queryKey: queryKeys.calibration.status(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(parcelId, organizationId),
+        queryKey: queryKeys.calibration.report(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(parcelId, organizationId),
+        queryKey: queryKeys.calibration.phase(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.nutritionSuggestion(parcelId, organizationId),
+        queryKey: queryKeys.calibration.nutritionSuggestion(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.history(parcelId, organizationId),
+        queryKey: queryKeys.calibration.history(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
         queryKey: ['ai-calibration', parcelId],

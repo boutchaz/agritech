@@ -50,7 +50,7 @@ const mockNotificationsGateway = {
 
 const organizationId = 'org-001';
 const parcelId = agromindCalibrationFixture.parcel.id;
-const calibrationId = 'calibration-v2-001';
+const calibrationId = 'calibration-001';
 const parcelBoundary = [
   [-7.1, 31.7],
   [-7.1, 31.8],

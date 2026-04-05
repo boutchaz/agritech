@@ -2,18 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import i18n from "@/i18n/config";
 import { useAuth } from "./useAuth";
-import {
-  calibrationV2Api,
-  type CalibrationHistoryRecord,
-  type CalibrationPhase,
-  type CalibrationReportResponse,
-  type CalibrationStatusRecord,
-  type NutritionConfirmationResponse,
-  type NutritionSuggestionResponse,
-  type PartialRecalibrationDto,
-} from "@/lib/api/calibration-v2";
+import { calibrationApi,
+type CalibrationHistoryRecord,
+type CalibrationPhase,
+type CalibrationReportResponse,
+type CalibrationStatusRecord,
+type NutritionConfirmationResponse,
+type NutritionSuggestionResponse,
+type PartialRecalibrationDto, } from "@/lib/api/calibration-output";
 import { queryKeys } from "@/lib/query-keys";
-import type { NutritionOption } from "@/types/calibration-v2";
+import type { NutritionOption } from "@/types/calibration-output";
 import { useCalibrationSocket } from "./useCalibrationSocket";
 
 export function useStartCalibration(parcelId: string) {
@@ -27,7 +25,7 @@ export function useStartCalibration(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.startCalibration(
+      return calibrationApi.startCalibration(
         parcelId,
         dto,
         currentOrganization.id,
@@ -35,28 +33,20 @@ export function useStartCalibration(parcelId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.status(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.report(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.phase(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.nutritionSuggestion(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({ queryKey: ["ai-calibration", parcelId] });
       toast.success("Calcul de suivi démarré");
@@ -71,7 +61,6 @@ export function useStartCalibration(parcelId: string) {
   });
 }
 
-export { useStartCalibration as useStartCalibrationV2 };
 
 export function useStartPartialRecalibration(parcelId: string) {
   const { currentOrganization } = useAuth();
@@ -84,7 +73,7 @@ export function useStartPartialRecalibration(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.startPartialRecalibration(
+      return calibrationApi.startPartialRecalibration(
         parcelId,
         dto,
         currentOrganization.id,
@@ -92,28 +81,20 @@ export function useStartPartialRecalibration(parcelId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.status(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.report(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.phase(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.history(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.history(parcelId,
+        currentOrganization?.id,),
       });
       toast.success(i18n.t("toasts.partialRecalibrationStarted", { ns: "ai" }));
     },
@@ -131,12 +112,12 @@ export function useCalibrationReport(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.calibrationV2.report(parcelId, currentOrganization?.id),
+    queryKey: queryKeys.calibration.report(parcelId, currentOrganization?.id),
     queryFn: async (): Promise<CalibrationReportResponse | null> => {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.getCalibrationReport(
+      return calibrationApi.getCalibrationReport(
         parcelId,
         currentOrganization.id,
       );
@@ -150,12 +131,12 @@ export function useCalibrationStatus(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.calibrationV2.status(parcelId, currentOrganization?.id),
+    queryKey: queryKeys.calibration.status(parcelId, currentOrganization?.id),
     queryFn: async (): Promise<CalibrationStatusRecord | null> => {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.getCalibrationStatus(
+      return calibrationApi.getCalibrationStatus(
         parcelId,
         currentOrganization.id,
       );
@@ -176,7 +157,7 @@ export function useValidateCalibration(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.validateCalibration(
+      return calibrationApi.validateCalibration(
         parcelId,
         calibrationId,
         currentOrganization.id,
@@ -184,28 +165,20 @@ export function useValidateCalibration(parcelId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.status(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.report(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.phase(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.nutritionSuggestion(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
+        currentOrganization?.id,),
       });
       toast.success(i18n.t("toasts.calibrationValidated", { ns: "ai" }));
     },
@@ -223,15 +196,13 @@ export function useNutritionSuggestion(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.calibrationV2.nutritionSuggestion(
-      parcelId,
-      currentOrganization?.id,
-    ),
+    queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
+    currentOrganization?.id,),
     queryFn: async (): Promise<NutritionSuggestionResponse> => {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.getNutritionSuggestion(
+      return calibrationApi.getNutritionSuggestion(
         parcelId,
         currentOrganization.id,
       );
@@ -256,7 +227,7 @@ export function useConfirmNutritionOption(parcelId: string) {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.confirmNutritionOption(
+      return calibrationApi.confirmNutritionOption(
         parcelId,
         calibrationId,
         option,
@@ -265,28 +236,20 @@ export function useConfirmNutritionOption(parcelId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.status(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.status(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.report(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.report(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.phase(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.phase(parcelId,
+        currentOrganization?.id,),
       });
       queryClient.invalidateQueries({
-        queryKey: queryKeys.calibrationV2.nutritionSuggestion(
-          parcelId,
-          currentOrganization?.id,
-        ),
+        queryKey: queryKeys.calibration.nutritionSuggestion(parcelId,
+        currentOrganization?.id,),
       });
       toast.success(i18n.t("toasts.nutritionConfirmed", { ns: "ai" }));
     },
@@ -304,15 +267,13 @@ export function useCalibrationHistory(parcelId: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.calibrationV2.history(
-      parcelId,
-      currentOrganization?.id,
-    ),
+    queryKey: queryKeys.calibration.history(parcelId,
+    currentOrganization?.id,),
     queryFn: async (): Promise<CalibrationHistoryRecord[]> => {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.getCalibrationHistory(
+      return calibrationApi.getCalibrationHistory(
         parcelId,
         currentOrganization.id,
       );
@@ -327,12 +288,12 @@ export function useCalibrationPhase(parcelId: string) {
   useCalibrationSocket(parcelId);
 
   return useQuery({
-    queryKey: queryKeys.calibrationV2.phase(parcelId, currentOrganization?.id),
+    queryKey: queryKeys.calibration.phase(parcelId, currentOrganization?.id),
     queryFn: async (): Promise<CalibrationPhase> => {
       if (!currentOrganization?.id) {
         throw new Error("No organization selected");
       }
-      return calibrationV2Api.getCalibrationPhase(
+      return calibrationApi.getCalibrationPhase(
         parcelId,
         currentOrganization.id,
       );

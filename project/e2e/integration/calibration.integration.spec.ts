@@ -34,7 +34,7 @@ function calibrationLoadedLocator(page: Page) {
     .or(page.locator('[data-testid="calibration-phase-banner"][data-phase="awaiting_nutrition_option"]'))
     .or(page.getByTestId('calibration-failed-panel'))
     .or(page.getByTestId('calibration-in-progress'))
-    .or(page.getByTestId('calibration-v2-report'));
+    .or(page.getByTestId('calibration-report'));
 }
 
 test.describe('Calibration integration', () => {

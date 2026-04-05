@@ -1,4 +1,4 @@
-import type { IndexTimePoint, SeverityLevel } from './calibration-v2';
+import type { IndexTimePoint, SeverityLevel } from './calibration-output';
 
 export type OperationalAlertCategory =
   | 'hydrique'

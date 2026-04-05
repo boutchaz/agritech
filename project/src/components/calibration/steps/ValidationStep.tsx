@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { calibrationV2Api } from '@/lib/api/calibration-v2';
+import { calibrationApi } from '@/lib/api/calibration-output';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ReadinessCheck {
@@ -76,7 +76,7 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
     setError(null);
 
     try {
-      const response = await calibrationV2Api.checkReadiness(parcelId, currentOrganization.id);
+      const response = await calibrationApi.checkReadiness(parcelId, currentOrganization.id);
       setReadiness(response);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Impossible de verifier le niveau de preparation');

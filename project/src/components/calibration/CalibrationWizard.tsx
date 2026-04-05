@@ -6,7 +6,7 @@ import { useForm, type FieldPath, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { analysesApi } from '@/lib/api/analyses';
-import { useStartCalibrationV2 } from '@/hooks/useCalibrationV2';
+import { useStartCalibration } from '@/hooks/useCalibrationReport';
 import { useAuth } from '@/hooks/useAuth';
 import { useCalibrationDraft, useSaveCalibrationDraft } from '@/hooks/useCalibrationDraft';
 import type { Parcel } from '@/hooks/useParcelsQuery';
@@ -69,7 +69,7 @@ function mapWaterSourceForAnalysis(source: CalibrationWizardFormValues['water_so
 export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardProps) {
   const { t } = useTranslation('ai');
   const { currentOrganization } = useAuth();
-  const startCalibration = useStartCalibrationV2(parcelId);
+  const startCalibration = useStartCalibration(parcelId);
 
   const STEPS: WizardStepDefinition[] = useMemo(
     () => [

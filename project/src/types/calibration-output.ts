@@ -187,7 +187,7 @@ export interface CalibrationMetadata {
   data_quality_flags: string[];
 }
 
-export interface CalibrationV2Output {
+export interface CalibrationOutput {
   parcel_id: string;
   phase_age: CalibrationMaturityPhase;
   nutrition_option_suggestion?: NutritionOption | null;
@@ -304,7 +304,7 @@ const typeContractExample = {
     generated_at: '2026-03-13T00:00:00Z',
     data_quality_flags: [],
   },
-} satisfies CalibrationV2Output;
+} satisfies CalibrationOutput;
 
 void typeContractExample;
 import type { FeatureCollection } from 'geojson';

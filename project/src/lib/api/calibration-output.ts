@@ -1,8 +1,6 @@
 import { apiClient } from "../api-client";
-import type {
-  CalibrationV2Output,
-  NutritionOption,
-} from "@/types/calibration-v2";
+import type { CalibrationOutput,
+NutritionOption, } from "@/types/calibration-output";
 import type { CalibrationReviewView } from "@/types/calibration-review";
 
 const BASE_URL = "/api/v1/parcels";
@@ -103,7 +101,7 @@ export interface AnnualCampaignBilanResponse {
 export interface CalibrationReportResponse {
   calibration: CalibrationStatusRecord;
   report: {
-    output?: CalibrationV2Output;
+    output?: CalibrationOutput;
     [key: string]: unknown;
   } | null;
 }
@@ -132,7 +130,7 @@ interface ParcelPhaseResponse {
   } | null;
 }
 
-export const calibrationV2Api = {
+export const calibrationApi = {
   async startCalibration(
     parcelId: string,
     dto: Record<string, unknown> = {},

@@ -444,7 +444,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    // V2 lifecycle: transition through intermediate states if needed
+    // Lifecycle: transition through intermediate states if needed
     await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
@@ -607,7 +607,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
-    // V2 lifecycle: transition through intermediate states if needed
+    // Lifecycle: transition through intermediate states if needed
     await this.transitionToCalibrating(parcelId, previousPhase, organizationId);
 
     const { data: calibration, error: insertError } = await supabase
@@ -1795,7 +1795,7 @@ export class CalibrationService {
     calibrationId: string,
     parcelId: string,
     organizationId: string,
-    v2Output: CalibrationResponse,
+    calibrationOutput: CalibrationResponse,
     language: string = "fr",
     dataStartDate?: string,
   ): Promise<Record<string, unknown> | null> {
@@ -1956,7 +1956,7 @@ export class CalibrationService {
       return null;
     }
 
-    // Reconstruct V2 output from split JSONB columns for frontend compatibility
+    // Reconstruct output from split JSONB columns for frontend compatibility
     const baselineData = this.toJsonObject(calibration.baseline_data);
     const diagnosticData = this.toJsonObject(calibration.diagnostic_data);
     const scoresDetail = this.toJsonObject(calibration.scores_detail);
@@ -2674,7 +2674,7 @@ export class CalibrationService {
   }
 
   /**
-   * V2 lifecycle: transitions a parcel to 'calibrating', going through
+    * Lifecycle: transitions a parcel to 'calibrating', going through
    * intermediate states if needed (awaiting_data → ready_calibration → calibrating).
    */
   private async transitionToCalibrating(
@@ -3448,7 +3448,7 @@ export class CalibrationService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // V2 EXTRACTION HELPERS
+  // EXTRACTION HELPERS
   // ═══════════════════════════════════════════════════════════════
 
   private extractIndexPercentile(

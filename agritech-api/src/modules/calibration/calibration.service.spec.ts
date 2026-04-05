@@ -356,7 +356,7 @@ describe('CalibrationService', () => {
       }
       return mockQueryResult({ status: 'in_progress' });
     });
-    setupThenableMock(calibrationUpdateQuery, [{ id: 'calibration-v2-001' }]);
+    setupThenableMock(calibrationUpdateQuery, [{ id: 'calibration-001' }]);
 
     const parcelUpdateQuery = createMockQueryBuilder();
     parcelUpdateQuery.update.mockReturnValue(parcelUpdateQuery);
@@ -415,7 +415,7 @@ describe('CalibrationService', () => {
       });
 
     await (service as unknown as { runCalibrationInBackground: (...args: unknown[]) => Promise<void> }).runCalibrationInBackground(
-      'calibration-v2-001',
+      'calibration-001',
       parcelId,
       organizationId,
       {
@@ -472,7 +472,7 @@ describe('CalibrationService', () => {
 
     expect(parcelUpdateQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        ai_calibration_id: 'calibration-v2-001',
+        ai_calibration_id: 'calibration-001',
       }),
     );
 

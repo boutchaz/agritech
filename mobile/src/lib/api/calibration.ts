@@ -1,5 +1,5 @@
 // Calibration API Client for Mobile App
-// Adapted from web: project/src/lib/api/calibration-v2.ts
+// Adapted from web: project/src/lib/api/calibration-output.ts
 
 import { api } from '../api';
 import type {

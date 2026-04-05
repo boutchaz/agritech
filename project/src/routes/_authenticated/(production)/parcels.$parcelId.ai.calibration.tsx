@@ -4,20 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
 import { useAIDiagnostics } from '@/hooks/useAIDiagnostics';
 import { useUpdateParcel, useParcelById } from '@/hooks/useParcelsQuery';
-import {
-  useCalibrationReport,
-  useCalibrationPhase,
-  useCalibrationHistory,
-  useValidateCalibration,
-  useNutritionSuggestion,
-  useConfirmNutritionOption,
-} from '@/hooks/useCalibrationV2';
+import { useCalibrationReport,
+useCalibrationPhase,
+useCalibrationHistory,
+useValidateCalibration,
+useNutritionSuggestion,
+useConfirmNutritionOption, } from '@/hooks/useCalibrationReport';
 import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
 import { useAIPlan } from '@/hooks/useAIPlan';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
-import type { CalibrationHistoryRecord } from '@/lib/api/calibration-v2';
+import type { CalibrationHistoryRecord } from '@/lib/api/calibration-output';
 import type {
-  CalibrationV2Output,
+  CalibrationOutput,
   AnomalyRecord,
   Recommendation,
   SeverityLevel,
@@ -29,8 +27,8 @@ import type {
   MonthlyWeatherAggregate,
   ExtremeEvent,
   ConfidenceComponent,
-} from '@/types/calibration-v2';
-import type { CalibrationPhase } from '@/lib/api/calibration-v2';
+} from '@/types/calibration-output';
+import type { CalibrationPhase } from '@/lib/api/calibration-output';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -289,7 +287,7 @@ function normalizeConfidenceScore(score: number): number {
   return score;
 }
 
-const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
+const ExecutiveSummary: React.FC<{ output: CalibrationOutput; t: (key: string) => string }> = ({ output, t }) => {
   const health = output.step8?.health_score;
   const confidence = output.confidence;
   const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
@@ -560,7 +558,7 @@ const MonthlyWeatherChart: React.FC<{ aggregates: MonthlyWeatherAggregate[] }> =
   );
 };
 
-const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string) => string }> = ({ output, t }) => {
+const DetailedAnalysis: React.FC<{ output: CalibrationOutput; t: (key: string) => string }> = ({ output, t }) => {
   const step1 = output.step1;
   const step2 = output.step2;
   const step3 = output.step3;
@@ -838,7 +836,7 @@ function getRunSatelliteImages(report: Record<string, unknown> | null | undefine
 }
 
 const CalibrationImprovement: React.FC<{
-  output: CalibrationV2Output;
+  output: CalibrationOutput;
   report?: Record<string, unknown> | null;
 }> = ({ output, report }) => {
   const flags = output?.metadata?.data_quality_flags;
@@ -1044,8 +1042,8 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
   );
 };
 
-const CalibrationV2Report: React.FC<{
-  output: CalibrationV2Output;
+const CalibrationReport: React.FC<{
+  output: CalibrationOutput;
   report?: Record<string, unknown> | null;
   t: (key: string) => string;
   phase?: string;
@@ -1053,7 +1051,7 @@ const CalibrationV2Report: React.FC<{
   const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
 
   return (
-    <div className="space-y-4" data-testid="calibration-v2-report">
+      <div className="space-y-4" data-testid="calibration-report">
       {hasInsufficientData && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
           <div className="flex items-start space-x-3">
@@ -1761,7 +1759,7 @@ const AICalibrationPage = () => {
       )}
 
       {hasV2Report && !isCalibrating && (
-        <CalibrationV2Report
+        <CalibrationReport
           output={v2Output}
           report={reportData?.report && typeof reportData.report === 'object'
             ? reportData.report as Record<string, unknown>
