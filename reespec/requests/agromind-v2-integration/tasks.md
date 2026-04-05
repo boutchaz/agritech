@@ -121,15 +121,15 @@
 
 ### 9. Extend crop-reference-loader to load MOTEUR_CONFIG
 
-- [ ] **RED** — Write test `agritech-api/src/modules/calibration/crop-reference-loader.spec.ts`: assert `getMoteurConfig()` returns an object with keys `cultures`, `regles_moteur`, `gouvernance_recommandations`, `phases_age`. Run → fails (function doesn't exist).
-- [ ] **ACTION** — In `crop-reference-loader.ts`: add `getMoteurConfig()` function that reads and caches `referentials/MOTEUR_CONFIG.json`. Add `reloadMoteurConfig()` for test reset.
-- [ ] **GREEN** — Run test → passes. `getMoteurConfig()` returns config with expected keys.
+- [x] **RED** — Write test `agritech-api/src/modules/calibration/crop-reference-loader.spec.ts`: assert `getMoteurConfig()` returns an object with keys `cultures`, `regles_moteur`, `gouvernance_recommandations`, `phases_age`. Run → fails (function doesn't exist).
+- [x] **ACTION** — In `crop-reference-loader.ts`: add `getMoteurConfig()` function that reads and caches `referentials/MOTEUR_CONFIG.json`. Add `reloadMoteurConfig()` for test reset.
+- [x] **GREEN** — Run test → passes. `getMoteurConfig()` returns config with expected keys.
 
 ### 10. Install V2 agromind types
 
-- [ ] **RED** — `import { CalibrageInput, CalibrageOutput } from '../libs/agromind-ia/types'` fails — file doesn't exist.
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/agromind.types.ts` → `agritech-api/src/libs/agromind-ia/types.ts`. Adjust imports if needed (remove `ReferentielLoader` interface if not applicable). Export all types.
-- [ ] **GREEN** — `import { CalibrageInput, CalibrageOutput, OperationnelInput, OperationnelOutput, PlanAnnuelInput, PlanAnnuelOutput, RecalibrageInput, RecalibrageOutput, RecommandationComplete } from './types'` compiles without errors.
+- [x] **RED** — `import { CalibrageInput, CalibrageOutput } from '../libs/agromind-ia/types'` fails — file doesn't exist.
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/agromind.types.ts` → `agritech-api/src/libs/agromind-ia/types.ts`. Adjust imports if needed (remove `ReferentielLoader` interface if not applicable). Export all types.
+- [x] **GREEN** — `import { CalibrageInput, CalibrageOutput, OperationnelInput, OperationnelOutput, PlanAnnuelInput, PlanAnnuelOutput, RecalibrageInput, RecalibrageOutput, RecommandationComplete } from './types'` compiles without errors.
 
 ---
 
@@ -137,33 +137,33 @@
 
 ### 11. Replace calibration prompt with V2 builder
 
-- [ ] **RED** — Write test `agritech-api/src/libs/agromind-ia/prompts/calibrage.prompt.v3.spec.ts`: assert `buildCalibrageSystemPrompt(mockConfig, mockRef)` returns string containing "MODE OBSERVATION PURE", culture name, and JSON-stringified config sections. Assert `buildCalibrageUserPrompt(mockInput)` returns string containing parcel profil and satellite history. Run → fails (module doesn't exist).
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/calibrage.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/calibrage.prompt.v3.ts`. Fix import paths to point to local `../types`. Remove old `calibration_prompt.ts`.
-- [ ] **GREEN** — Run test → passes. Old `calibration_prompt.ts` no longer exists.
+- [x] **RED** — Write test `agritech-api/src/libs/agromind-ia/prompts/calibrage.prompt.v3.spec.ts`: assert `buildCalibrageSystemPrompt(mockConfig, mockRef)` returns string containing "MODE OBSERVATION PURE", culture name, and JSON-stringified config sections. Assert `buildCalibrageUserPrompt(mockInput)` returns string containing parcel profil and satellite history. Run → fails (module doesn't exist).
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/calibrage.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/calibrage.prompt.v3.ts`. Fix import paths to point to local `../types`. Remove old `calibration_prompt.ts`.
+- [x] **GREEN** — Run test → passes. Old `calibration_prompt.ts` no longer exists.
 
 ### 12. Replace annual plan prompt with V2 builder
 
-- [ ] **RED** — Write test `plan_annuel.prompt.v3.spec.ts`: assert `buildPlanAnnuelSystemPrompt(mockConfig, mockRef)` returns string containing "10 ÉTAPES DÉTERMINISTES". Run → fails.
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/plan_annuel.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/plan_annuel.prompt.v3.ts`. Fix imports. Remove old `annual_plan_prompt.ts`.
-- [ ] **GREEN** — Run test → passes. Old file removed.
+- [x] **RED** — Write test `plan_annuel.prompt.v3.spec.ts`: assert `buildPlanAnnuelSystemPrompt(mockConfig, mockRef)` returns string containing "10 ÉTAPES DÉTERMINISTES". Run → fails.
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/plan_annuel.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/plan_annuel.prompt.v3.ts`. Fix imports. Remove old `annual_plan_prompt.ts`.
+- [x] **GREEN** — Run test → passes. Old file removed.
 
 ### 13. Replace recommendations prompt with V2 operational builder
 
-- [ ] **RED** — Write test `operationnel.prompt.v3.spec.ts`: assert `buildOperationnelSystemPrompt(mockConfig, mockRef)` returns string containing "GOUVERNANCE", "6 BLOCS", "CHEMIN A", "CHEMIN B", "CHEMIN C". Run → fails.
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/operationnel.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/operationnel.prompt.v3.ts`. Fix imports. Remove old `recommendations_prompt.ts`.
-- [ ] **GREEN** — Run test → passes. Old file removed.
+- [x] **RED** — Write test `operationnel.prompt.v3.spec.ts`: assert `buildOperationnelSystemPrompt(mockConfig, mockRef)` returns string containing "GOUVERNANCE", "6 BLOCS", "CHEMIN A", "CHEMIN B", "CHEMIN C". Run → fails.
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/operationnel.prompt.v3.ts` → `agritech-api/src/libs/agromind-ia/prompts/operationnel.prompt.v3.ts`. Fix imports. Remove old `recommendations_prompt.ts`.
+- [x] **GREEN** — Run test → passes. Old file removed.
 
 ### 14. Add recalibration prompt builder
 
-- [ ] **RED** — Write test `recalibrage.prompt.spec.ts`: assert `buildRecalibrageSystemPrompt(mockRef)` returns string containing "F2" and "F3". Assert `buildRecalibragePartielUserPrompt(mockInput)` returns string with "CHANGEMENT DÉCLARÉ". Run → fails.
-- [ ] **ACTION** — Copy `docs/docs/agromind-v2/recalibrage.prompt.ts` → `agritech-api/src/libs/agromind-ia/prompts/recalibrage.prompt.ts`. Fix imports.
-- [ ] **GREEN** — Run test → passes.
+- [x] **RED** — Write test `recalibrage.prompt.spec.ts`: assert `buildRecalibrageSystemPrompt(mockRef)` returns string containing "F2" and "F3". Assert `buildRecalibragePartielUserPrompt(mockInput)` returns string with "CHANGEMENT DÉCLARÉ". Run → fails.
+- [x] **ACTION** — Copy `docs/docs/agromind-v2/recalibrage.prompt.ts` → `agritech-api/src/libs/agromind-ia/prompts/recalibrage.prompt.ts`. Fix imports.
+- [x] **GREEN** — Run test → passes.
 
 ### 15. Update agromind-ia index exports
 
-- [ ] **RED** — Current `libs/agromind-ia/index.ts` exports old prompt functions and interfaces. V2 functions are not exported.
-- [ ] **ACTION** — Rewrite `index.ts` to export V2 prompt builders, V2 types, and remove V1 exports. Update `interfaces.ts` to re-export from `types.ts` or keep backward-compatible aliases where needed by non-AI modules.
-- [ ] **GREEN** — `import { buildCalibrageSystemPrompt, buildOperationnelSystemPrompt, buildPlanAnnuelSystemPrompt } from '../libs/agromind-ia'` compiles.
+- [x] **RED** — Current `libs/agromind-ia/index.ts` exports old prompt functions and interfaces. V2 functions are not exported.
+- [x] **ACTION** — Rewrite `index.ts` to export V2 prompt builders, V2 types, and remove V1 exports. Update `interfaces.ts` to re-export from `types.ts` or keep backward-compatible aliases where needed by non-AI modules.
+- [x] **GREEN** — `import { buildCalibrageSystemPrompt, buildOperationnelSystemPrompt, buildPlanAnnuelSystemPrompt } from '../libs/agromind-ia'` compiles.
 
 ---
 
