@@ -122,9 +122,9 @@ function TimeSeriesChart({
         </View>
       )}
 
-      {indices.map((idx) => {
+      {indices.map((vegIdx) => {
         const values = data
-          .map((row) => ({ date: row.date as string, value: row[idx] as number | undefined }))
+          .map((row) => ({ date: row.date as string, value: row[vegIdx] as number | undefined }))
           .filter((d): d is { date: string; value: number } => typeof d.value === 'number' && !isNaN(d.value));
 
         if (values.length === 0) return null;
@@ -135,9 +135,9 @@ function TimeSeriesChart({
         const barW = Math.max(2, chartW / values.length - 1);
 
         return (
-          <View key={idx} style={{ marginBottom: fullscreen ? 24 : 16 }}>
+          <View key={String(vegIdx)} style={{ marginBottom: fullscreen ? 24 : 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: INDEX_COLORS[idx] }}>{idx}</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: INDEX_COLORS[vegIdx] }}>{vegIdx}</Text>
               <Text style={{ fontSize: 11, color: themeColors.textTertiary }}>{values[values.length - 1].value.toFixed(3)}</Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
@@ -146,18 +146,18 @@ function TimeSeriesChart({
             </View>
             {/* Interactive bar chart */}
             <View style={{ height: barHeight, flexDirection: 'row', alignItems: 'flex-end', gap: 1, backgroundColor: themeColors.surfaceContainer, borderRadius: 8, padding: 4 }}>
-              {values.map((v, i) => {
+              {values.map((v, barIdx) => {
                 const h = Math.max(2, ((v.value - vMin) / range) * (barHeight - 12));
-                const isSelected = tappedBar?.idx === idx && tappedBar?.date === v.date;
+                const isSelected = tappedBar?.idx === vegIdx && tappedBar?.date === v.date;
                 return (
                   <TouchableOpacity
-                    key={i}
+                    key={"bar-" + barIdx}
                     activeOpacity={0.7}
                     onPress={() => setTappedBar({ idx, date: v.date, value: v.value })}
                     style={{
                       width: barW,
                       height: h,
-                      backgroundColor: isSelected ? INDEX_COLORS[idx] : INDEX_COLORS[idx] + '80',
+                      backgroundColor: isSelected ? INDEX_COLORS[vegIdx] : INDEX_COLORS[vegIdx] + '80',
                       borderRadius: 1,
                       borderWidth: isSelected ? 1 : 0,
                       borderColor: '#fff',
@@ -341,9 +341,9 @@ function MapContent({
             {mapType === 'none' && (
               <UrlTile urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maximumZ={19} tileSize={256} />
             )}
-            {pixelCells.map((cell, i) => (
+            {pixelCells.map((cell, pxIdx) => (
               <Polygon
-                key={`px-${i}`}
+                key={`px-${pxIdx}`}
                 coordinates={cell.coords}
                 fillColor={cell.color}
                 strokeColor={cell.color.replace('0.55)', '0.15)')}
@@ -477,16 +477,16 @@ function MonthDatePicker({
 
       {/* Weekday headers */}
       <View style={dpStyles.weekRow}>
-        {weekDays.map((d, i) => (
-          <Text key={i} style={[dpStyles.weekDay, { width: cellSize, color: themeColors.textTertiary }]}>{d}</Text>
+        {weekDays.map((d, dayIdx) => (
+          <Text key={"day-" + dayIdx} style={[dpStyles.weekDay, { width: cellSize, color: themeColors.textTertiary }]}>{d}</Text>
         ))}
       </View>
 
       {/* Calendar grid */}
       <View style={dpStyles.grid}>
-        {calendarDays.map((cell, i) => {
+        {calendarDays.map((cell, emptyIdx) => {
           if (!cell) {
-            return <View key={`empty-${i}`} style={{ width: cellSize, height: cellSize }} />;
+            return <View key={`empty-${emptyIdx}`} style={{ width: cellSize, height: cellSize }} />;
           }
           const isSelected = selectedDate === cell.dateStr;
           const isAvailable = cell.available;
@@ -615,8 +615,8 @@ export default function SatelliteTab() {
     setRefreshing(false);
   }, [refetchData, refetchLatest]);
 
-  const toggleIndex = (idx: VegetationIndex) => {
-    setSelectedIndices((prev) => prev.includes(idx) ? (prev.length > 1 ? prev.filter((i) => i !== idx) : prev) : [...prev, idx]);
+  const toggleIndex = (vegIdx: VegetationIndex) => {
+    setSelectedIndices((prev) => prev.includes(vegIdx) ? (prev.length > 1 ? prev.filter((i) => i !== vegIdx) : prev) : [...prev, vegIdx]);
   };
 
   return (
@@ -625,8 +625,8 @@ export default function SatelliteTab() {
       <FullscreenModal visible={chartFullscreen} onClose={() => setChartFullscreen(false)} title="Time Series" themeColors={themeColors}>
         <ScrollView contentContainerStyle={{ padding: 16 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {DEFAULT_INDICES.map((idx) => (
-              <IndexChip key={idx} name={idx} active={selectedIndices.includes(idx)} color={INDEX_COLORS[idx]} onToggle={() => toggleIndex(idx)} themeColors={themeColors} />
+            {DEFAULT_INDICES.map((vegIdx) => (
+              <IndexChip key={String(vegIdx)} name={vegIdx} active={selectedIndices.includes(vegIdx)} color={INDEX_COLORS[vegIdx]} onToggle={() => toggleIndex(vegIdx)} themeColors={themeColors} />
             ))}
           </ScrollView>
           <TimeSeriesChart data={chartData} indices={selectedIndices} themeColors={themeColors} fullscreen />
@@ -637,8 +637,8 @@ export default function SatelliteTab() {
       <FullscreenModal visible={mapFullscreen} onClose={() => setMapFullscreen(false)} title="Heatmap" themeColors={themeColors}>
         <View style={{ flex: 1, padding: 16 }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {DEFAULT_INDICES.map((idx) => (
-              <IndexChip key={idx} name={idx} active={heatmapIndex === idx} color={INDEX_COLORS[idx]} onToggle={() => { setHeatmapIndex(idx); setSelectedDate(null); }} themeColors={themeColors} />
+            {DEFAULT_INDICES.map((vegIdx) => (
+              <IndexChip key={String(vegIdx)} name={vegIdx} active={heatmapIndex === vegIdx} color={INDEX_COLORS[vegIdx]} onToggle={() => { setHeatmapIndex(vegIdx); setSelectedDate(null); }} themeColors={themeColors} />
             ))}
           </ScrollView>
           <MonthDatePicker
@@ -683,15 +683,15 @@ export default function SatelliteTab() {
         {/* Latest values */}
         {latestByIndex.size > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.latestRow}>
-            {DEFAULT_INDICES.map((idx) => {
-              const d = latestByIndex.get(idx);
+            {DEFAULT_INDICES.map((vegIdx) => {
+              const d = latestByIndex.get(vegIdx);
               if (!d) return null;
               const trendIcon: IconName = d.trend === 'up' ? 'trending-up' : d.trend === 'down' ? 'trending-down' : 'remove-outline';
               const trendColor = d.trend === 'up' ? themeColors.success : d.trend === 'down' ? themeColors.error : themeColors.textTertiary;
               return (
-                <View key={idx} style={[styles.latestCard, { backgroundColor: themeColors.surfaceLowest }]}>
-                  <View style={[styles.latestDot, { backgroundColor: INDEX_COLORS[idx] }]} />
-                  <Text style={[styles.latestIndex, { color: themeColors.textSecondary }]}>{idx}</Text>
+                <View key={String(vegIdx)} style={[styles.latestCard, { backgroundColor: themeColors.surfaceLowest }]}>
+                  <View style={[styles.latestDot, { backgroundColor: INDEX_COLORS[vegIdx] }]} />
+                  <Text style={[styles.latestIndex, { color: themeColors.textSecondary }]}>{vegIdx}</Text>
                   <Text style={[styles.latestValue, { color: themeColors.textPrimary }]}>{d.value.toFixed(3)}</Text>
                   <View style={styles.latestTrendRow}>
                     <Ionicons name={trendIcon} size={12} color={trendColor} />
@@ -707,8 +707,8 @@ export default function SatelliteTab() {
         <View style={[styles.section, { backgroundColor: themeColors.surfaceLowest }]}>
           <SectionHeader icon="analytics" title="Time Series" themeColors={themeColors} onExpand={() => setChartFullscreen(true)} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {DEFAULT_INDICES.map((idx) => (
-              <IndexChip key={idx} name={idx} active={selectedIndices.includes(idx)} color={INDEX_COLORS[idx]} onToggle={() => toggleIndex(idx)} themeColors={themeColors} />
+            {DEFAULT_INDICES.map((vegIdx) => (
+              <IndexChip key={String(vegIdx)} name={vegIdx} active={selectedIndices.includes(vegIdx)} color={INDEX_COLORS[vegIdx]} onToggle={() => toggleIndex(vegIdx)} themeColors={themeColors} />
             ))}
           </ScrollView>
           {isLoading && chartData.length === 0 ? (
@@ -723,10 +723,10 @@ export default function SatelliteTab() {
           )}
           {chartData.length > 0 && (
             <View style={styles.chartLegend}>
-              {selectedIndices.map((idx) => (
-                <View key={idx} style={styles.legendItem}>
-                  <View style={[styles.legendLine, { backgroundColor: INDEX_COLORS[idx] }]} />
-                  <Text style={[styles.legendItemText, { color: themeColors.textSecondary }]}>{idx}</Text>
+              {selectedIndices.map((vegIdx) => (
+                <View key={String(vegIdx)} style={styles.legendItem}>
+                  <View style={[styles.legendLine, { backgroundColor: INDEX_COLORS[vegIdx] }]} />
+                  <Text style={[styles.legendItemText, { color: themeColors.textSecondary }]}>{vegIdx}</Text>
                 </View>
               ))}
             </View>
@@ -737,8 +737,8 @@ export default function SatelliteTab() {
         <View style={[styles.section, { backgroundColor: themeColors.surfaceLowest }]}>
           <SectionHeader icon="map" title="Heatmap" themeColors={themeColors} onExpand={() => setMapFullscreen(true)} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {DEFAULT_INDICES.map((idx) => (
-              <IndexChip key={idx} name={idx} active={heatmapIndex === idx} color={INDEX_COLORS[idx]} onToggle={() => { setHeatmapIndex(idx); setSelectedDate(null); }} themeColors={themeColors} />
+            {DEFAULT_INDICES.map((vegIdx) => (
+              <IndexChip key={String(vegIdx)} name={vegIdx} active={heatmapIndex === vegIdx} color={INDEX_COLORS[vegIdx]} onToggle={() => { setHeatmapIndex(vegIdx); setSelectedDate(null); }} themeColors={themeColors} />
             ))}
           </ScrollView>
           <MonthDatePicker
@@ -757,15 +757,15 @@ export default function SatelliteTab() {
               <Ionicons name="stats-chart" size={20} color={themeColors.brandPrimary} />
               <Text style={[styles.sectionTitle, { color: themeColors.textPrimary }]}>Statistics</Text>
             </View>
-            {selectedIndices.map((idx) => {
-              const values = rawData.filter((p) => p.index_name === idx && p.mean_value != null).map((p) => p.mean_value);
+            {selectedIndices.map((vegIdx) => {
+              const values = rawData.filter((p) => p.index_name === vegIdx && p.mean_value != null).map((p) => p.mean_value);
               if (values.length === 0) return null;
               const mean = values.reduce((s, v) => s + v, 0) / values.length;
               return (
-                <View key={idx} style={[styles.statsRow, { borderBottomColor: themeColors.outlineVariant }]}>
+                <View key={String(vegIdx)} style={[styles.statsRow, { borderBottomColor: themeColors.outlineVariant }]}>
                   <View style={styles.statsLabel}>
-                    <View style={[styles.statsDot, { backgroundColor: INDEX_COLORS[idx] }]} />
-                    <Text style={[styles.statsIndex, { color: themeColors.textPrimary }]}>{idx}</Text>
+                    <View style={[styles.statsDot, { backgroundColor: INDEX_COLORS[vegIdx] }]} />
+                    <Text style={[styles.statsIndex, { color: themeColors.textPrimary }]}>{vegIdx}</Text>
                   </View>
                   <View style={styles.statsValues}>
                     {[{ l: 'Min', v: Math.min(...values) }, { l: 'Mean', v: mean }, { l: 'Max', v: Math.max(...values) }, { l: 'Pts', v: values.length }].map((s) => (
