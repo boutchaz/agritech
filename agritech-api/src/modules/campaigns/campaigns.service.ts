@@ -242,6 +242,73 @@ export class CampaignsService {
     return data;
   }
 
+  async getSummary(organizationId: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Get all campaigns
+    const { data: campaigns, error: campError } = await client
+      .from(TABLE)
+      .select('id, organization_id, name, code, status, start_date, end_date')
+      .eq('organization_id', organizationId)
+      .order('start_date', { ascending: false });
+
+    if (campError) {
+      this.logger.error(`Failed to fetch campaign summaries: ${campError.message}`);
+      throw campError;
+    }
+
+    if (!campaigns || campaigns.length === 0) return [];
+
+    // Get crop cycle aggregates per campaign
+    const campaignIds = campaigns.map(c => c.id);
+    const { data: cycles, error: cycleError } = await client
+      .from('crop_cycles')
+      .select('campaign_id, planted_area_ha, total_costs, total_revenue, net_profit')
+      .eq('organization_id', organizationId)
+      .in('campaign_id', campaignIds);
+
+    if (cycleError) {
+      this.logger.error(`Failed to fetch cycle data for summaries: ${cycleError.message}`);
+      throw cycleError;
+    }
+
+    // Aggregate per campaign
+    const cycleMap: Record<string, { count: number; area: number; costs: number; revenue: number; profit: number }> = {};
+    for (const cycle of cycles || []) {
+      if (!cycle.campaign_id) continue;
+      if (!cycleMap[cycle.campaign_id]) {
+        cycleMap[cycle.campaign_id] = { count: 0, area: 0, costs: 0, revenue: 0, profit: 0 };
+      }
+      const agg = cycleMap[cycle.campaign_id];
+      agg.count++;
+      agg.area += Number(cycle.planted_area_ha) || 0;
+      agg.costs += Number(cycle.total_costs) || 0;
+      agg.revenue += Number(cycle.total_revenue) || 0;
+      agg.profit += Number(cycle.net_profit) || 0;
+    }
+
+    return campaigns.map(c => {
+      const agg = cycleMap[c.id] || { count: 0, area: 0, costs: 0, revenue: 0, profit: 0 };
+      return {
+        id: c.id,
+        organization_id: c.organization_id,
+        name: c.name,
+        code: c.code,
+        status: c.status,
+        start_date: c.start_date,
+        end_date: c.end_date,
+        total_cycles: agg.count,
+        total_planted_area: Math.round(agg.area * 100) / 100,
+        total_costs: Math.round(agg.costs * 100) / 100,
+        total_revenue: Math.round(agg.revenue * 100) / 100,
+        net_profit: Math.round(agg.profit * 100) / 100,
+        profit_margin: agg.revenue > 0
+          ? Math.round((agg.profit / agg.revenue) * 10000) / 100
+          : null,
+      };
+    });
+  }
+
   async getStatistics(organizationId: string) {
     const client = this.databaseService.getAdminClient();
 
