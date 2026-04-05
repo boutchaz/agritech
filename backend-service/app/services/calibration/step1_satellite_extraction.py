@@ -22,6 +22,21 @@ def _to_number(value: object) -> float:
     return 0.0
 
 
+def _to_number_or_none(value: object) -> float | None:
+    """Like _to_number but returns None for missing data instead of 0.0."""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, list):
+        numeric_values = [
+            float(item) for item in value if isinstance(item, (int, float))
+        ]
+        if numeric_values:
+            return mean(numeric_values)
+    return None
+
+
 def _mark_outliers(values: list[IndexTimePoint]) -> int:
     if len(values) < 5:
         return 0
@@ -95,7 +110,9 @@ def extract_satellite_history(
         indices = raw_indices if isinstance(raw_indices, dict) else {}
 
         for index in SUPPORTED_INDICES:
-            index_value = _to_number(indices.get(index))
+            index_value = _to_number_or_none(indices.get(index))
+            if index_value is None:
+                continue
             index_points[index].append(
                 IndexTimePoint(
                     date=image_date,
