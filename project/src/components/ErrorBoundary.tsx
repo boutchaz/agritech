@@ -76,6 +76,16 @@ export class ErrorBoundary extends Component<Props, State> {
                       <code className="text-xs font-mono text-amber-800 dark:text-amber-400 break-all whitespace-pre-wrap block">
                         {this.state.error.message}
                       </code>
+                      {this.state.error.stack && (
+                        <details className="mt-3 text-left">
+                          <summary className="text-xs font-medium text-amber-900 dark:text-amber-200 cursor-pointer select-none">
+                            Stack trace
+                          </summary>
+                          <pre className="mt-2 max-h-48 overflow-auto text-[10px] font-mono text-amber-800/90 dark:text-amber-300/90 whitespace-pre-wrap break-all">
+                            {this.state.error.stack}
+                          </pre>
+                        </details>
+                      )}
                     </div>
                   </div>
                 </div>
