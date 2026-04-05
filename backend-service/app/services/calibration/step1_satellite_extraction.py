@@ -4,6 +4,9 @@ from datetime import date, timedelta
 from statistics import mean, pstdev
 from typing import Iterable
 
+import numpy as np
+from scipy.signal import savgol_filter
+
 from .types import IndexTimePoint, Step1Output
 
 
@@ -53,6 +56,39 @@ def _mark_outliers(values: list[IndexTimePoint]) -> int:
             point.outlier = True
             count += 1
     return count
+
+
+def _smooth_series(
+    points: list[IndexTimePoint],
+    window: int = 7,
+    polyorder: int = 2,
+) -> None:
+    """Apply Savitzky-Golay smoothing in-place, skipping outlier-flagged points.
+
+    Parameters
+    ----------
+    window : int
+        Number of points in the smoothing window (default 7 ≈ 35 days at
+        5-day Sentinel-2 revisit).  Must be odd; adjusted automatically.
+    polyorder : int
+        Polynomial order for the local fit (2 = quadratic, preserves
+        phenological curvature).
+    """
+    valid_indices = [i for i, p in enumerate(points) if not p.outlier]
+    if len(valid_indices) < window:
+        return
+
+    values = np.array([points[i].value for i in valid_indices], dtype=np.float64)
+
+    effective_window = min(window, len(values))
+    if effective_window % 2 == 0:
+        effective_window -= 1
+    if effective_window < polyorder + 2:
+        return
+
+    smoothed = savgol_filter(values, effective_window, polyorder)
+    for j, idx in enumerate(valid_indices):
+        points[idx].value = round(float(smoothed[j]), 6)
 
 
 def _interpolate_between(
@@ -171,6 +207,7 @@ def extract_satellite_history(
 
         enriched_points = sorted(enriched_points, key=lambda item: item.date)
         total_outliers += _mark_outliers(enriched_points)
+        _smooth_series(enriched_points)
         index_points[index] = enriched_points
 
     cloud_coverage_mean = round(mean(cloud_values), 3) if cloud_values else 100.0
