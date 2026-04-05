@@ -13,7 +13,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogFooter } from './ui/dialog';
+import { DialogFooter } from './ui/dialog';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';

@@ -98,6 +98,11 @@ import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  confidenceToFraction,
+  confidenceValueToPercent,
+  formatConfidencePercent,
+} from '@/lib/calibration-confidence';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -278,21 +283,12 @@ const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
   return null;
 };
 
-/**
- * Normalize confidence score to 0-1 range.
- * Handles both decimal (0.4) and percentage (40) formats from the API.
- */
-function normalizeConfidenceScore(score: number): number {
-  if (score > 1) {
-    return score / 100;
-  }
-  return score;
-}
-
 const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
   const health = output.step8?.health_score;
   const confidence = output.confidence;
-  const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
+  const confidencePct = confidence
+    ? (confidenceValueToPercent(confidence.normalized_score) ?? 0)
+    : 0;
   const yieldPotential = output.step6?.yield_potential;
   const alternance = output.step6?.alternance;
   const zones = output.step7?.zone_summary;
@@ -338,13 +334,13 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {(normalizedConfidence * 100).toFixed(0)}%
+                {confidencePct}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all"
-                style={{ width: `${normalizedConfidence * 100}%` }}
+                style={{ width: `${confidencePct}%` }}
               />
             </div>
           </div>
@@ -1033,7 +1029,7 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
                 <div className="text-right">
                   <div className="text-xs text-gray-400 dark:text-gray-500">Confidence</div>
                   <div className="text-sm font-bold text-gray-900 dark:text-white">
-                    {(normalizeConfidenceScore(record.confidence_score) * 100).toFixed(0)}%
+                    {formatConfidencePercent(record.confidence_score)}
                   </div>
                 </div>
               )}
@@ -1228,9 +1224,10 @@ const NutritionOptionSelector = ({ parcelId, calibrationId, phase, disabled }: {
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
-  const canConfirmNutrition = !disabled && (
-    phase === 'awaiting_nutrition_option' || phase === 'calibrated' || phase === 'calibrating'
-  );
+  // The backend handles all phase transitions in confirmNutritionOption —
+  // don't gate on specific phases here. If the selector is rendered, the
+  // user should be able to confirm.
+  const canConfirmNutrition = !disabled;
 
   if (isSuggestionLoading) {
     return (
@@ -1635,7 +1632,9 @@ const AICalibrationPage = () => {
               calibrationId={reportData.calibration.id}
               parcelId={parcelId}
               healthScore={v2Output.step8.health_score.total}
-              confidence={normalizeConfidenceScore(v2Output.confidence.normalized_score)}
+              confidence={
+                confidenceToFraction(v2Output.confidence.normalized_score) ?? 0
+              }
               onReCalibrate={handleOpenFullRecalibrationWizard}
             />
           )}
@@ -1678,7 +1677,12 @@ const AICalibrationPage = () => {
             <RecalibrationWizard
               parcelId={parcelId}
               baselineData={reportData}
-              confidenceScore={v2Output?.confidence.normalized_score ? normalizeConfidenceScore(v2Output.confidence.normalized_score) : undefined}
+              confidenceScore={
+                v2Output?.confidence.normalized_score != null
+                  ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
+                    undefined)
+                  : undefined
+              }
               onClose={handleCancelPartialRecalibration}
               onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
             />

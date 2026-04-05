@@ -135,12 +135,13 @@ const FarmImportDialog = ({
         <div className="space-y-6 py-4">
           {/* File Selection */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="farm-import-file" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Fichier JSON d'export
             </label>
             <div className="flex items-center gap-4">
               <label className="flex-1 cursor-pointer">
                 <input
+                  id="farm-import-file"
                   type="file"
                   accept=".json,application/json"
                   onChange={handleFileSelect}

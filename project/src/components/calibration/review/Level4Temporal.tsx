@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { confidenceToFraction, confidenceValueToPercent, formatConfidencePercent } from '@/lib/calibration-confidence';
 import { useTranslation } from 'react-i18next';
 import type { Level4Temporal as Level4TemporalType } from '@/types/calibration-review';
 
@@ -21,11 +22,17 @@ export function Level4Temporal({ data }: Level4TemporalProps) {
     { key: 'dormancy_entry', label: t('calibrationReview.level4.dormancyEntry'), date: data.phenology_timeline.dormancy_entry },
   ];
 
-  const getConfidenceColor = (score: number) => {
-    if (score >= 0.8) return 'bg-green-500';
-    if (score >= 0.5) return 'bg-yellow-500';
+  const getConfidenceColor = (fraction: number) => {
+    if (fraction >= 0.8) return 'bg-green-500';
+    if (fraction >= 0.5) return 'bg-yellow-500';
     return 'bg-red-500';
   };
+
+  const currentConfidenceFrac =
+    confidenceToFraction(data.confidence.normalized_score) ?? 0;
+  const currentConfidencePct = confidenceValueToPercent(
+    data.confidence.normalized_score,
+  ) ?? 0;
 
   return (
     <Card className="border-l-4 border-l-purple-500">
@@ -65,13 +72,13 @@ export function Level4Temporal({ data }: Level4TemporalProps) {
           </h3>
           <div className="p-4 bg-muted/30 rounded-lg border space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">{Math.round(data.confidence.normalized_score * 100)}%</span>
+              <span className="text-2xl font-bold">{currentConfidencePct}%</span>
               <span className="text-sm text-muted-foreground">{t('calibrationReview.level4.totalScore')}: {data.confidence.total_score} pts</span>
             </div>
             <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
               <div 
-                className={cn("h-full rounded-full", getConfidenceColor(data.confidence.normalized_score))} 
-                style={{ width: `${data.confidence.normalized_score * 100}%` }}
+                className={cn("h-full rounded-full", getConfidenceColor(currentConfidenceFrac))} 
+                style={{ width: `${currentConfidencePct}%` }}
               />
             </div>
             
@@ -110,7 +117,11 @@ export function Level4Temporal({ data }: Level4TemporalProps) {
                       <TableCell className="text-xs">{new Date(history.date).toLocaleDateString()}</TableCell>
                       <TableCell className="text-xs capitalize">{history.phase_age.replace(/_/g, ' ')}</TableCell>
                       <TableCell className="text-xs">{history.health_score != null ? `${history.health_score}%` : '-'}</TableCell>
-                      <TableCell className="text-xs">{history.confidence_score != null ? `${Math.round(history.confidence_score * 100)}%` : '-'}</TableCell>
+                      <TableCell className="text-xs">
+                        {history.confidence_score != null
+                          ? formatConfidencePercent(history.confidence_score)
+                          : '-'}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px]">
                           {history.status}

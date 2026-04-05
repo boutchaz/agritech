@@ -11,8 +11,6 @@ import type { Structure as ApiStructure, CreateStructureInput } from '../lib/api
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
 } from './ui/dialog';
 import { Button } from '@/components/ui/button';

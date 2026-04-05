@@ -24,6 +24,10 @@ def _drought_threshold(month: int, crop_type: str) -> int:
     normal.  Using a fixed 30-day threshold produces ~10 false positives per
     parcel.  Season-aware thresholds eliminate most false alarms while still
     catching genuinely anomalous dry spells.
+
+    TODO: Read these thresholds from referentiel seuils_meteo.secheresse
+    instead of hardcoding. Each crop's referentiel (DATA_OLIVIER, DATA_AGRUMES,
+    etc.) should define its own climate thresholds via a ``seuils_meteo`` section.
     """
     if crop_type == "palmier_dattier":
         # Saharan / Errachidia climate — much drier baseline
