@@ -80,7 +80,7 @@ function ConfirmationContent() {
                         {/* Order Items */}
                         <div className="space-y-3 mb-6">
                             {order.items?.map((item, index) => (
-                                <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
+                                <div key={item.title} className="flex justify-between items-center py-2 border-b last:border-0">
                                     <div>
                                         <p className="font-medium text-gray-900">{item.title}</p>
                                         <p className="text-sm text-gray-500">

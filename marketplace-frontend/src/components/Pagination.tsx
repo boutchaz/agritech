@@ -78,7 +78,7 @@ export function Pagination({
 
         <div className="flex items-center gap-1">
           {getPageNumbers().map((page, index) => (
-            <div key={index}>
+            <div key={String(page)}>
               {page === '...' ? (
                 <span className="px-3 py-2 text-gray-400">...</span>
               ) : (
