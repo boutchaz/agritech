@@ -101,12 +101,11 @@
     <meta name="apple-mobile-web-app-title" content="AgroGina" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Favicons — SVG first (AgroGina mark); PNGs for legacy / PWA tooling -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Favicons — same asset as sidebar logo (SVG leaf was listed first and won over PNG in most browsers) -->
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/logo.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/logo.png" />
+    <link rel="apple-touch-icon" href="/assets/logo.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Leaflet CSS — loaded async to avoid blocking render -->
