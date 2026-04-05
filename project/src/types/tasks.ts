@@ -80,6 +80,10 @@ export interface Task {
   cost_estimate?: number;
   actual_cost?: number;
 
+  // Production traceability
+  crop_cycle_id?: string; // Link to crop cycle
+  campaign_id?: string; // Link to agricultural campaign
+
   // Work Unit Payment (NEW - for piece-work tracking)
   work_unit_id?: string; // Reference to work_units table
   units_required?: number; // How many units to complete
@@ -332,6 +336,8 @@ export interface TaskFilters {
   assigned_to?: string;
   farm_id?: string;
   parcel_id?: string;
+  crop_cycle_id?: string;
+  campaign_id?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
@@ -363,6 +369,9 @@ export interface CreateTaskRequest {
   repeat_pattern?: RepeatPattern;
   cost_estimate?: number;
   notes?: string;
+  // Production traceability
+  crop_cycle_id?: string;
+  campaign_id?: string;
   // Work Unit Payment fields (for piece-work tracking)
   payment_type?: 'daily' | 'per_unit' | 'monthly' | 'metayage';
   work_unit_id?: string;

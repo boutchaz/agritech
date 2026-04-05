@@ -25,6 +25,7 @@ import type {
   UpdateHarvestEventInput,
   CropCycleStage,
   CropCycleStatus,
+  CampaignStatus,
   BiologicalAsset,
 } from '@/types/agricultural-accounting';
 import { toast } from 'sonner';
@@ -176,6 +177,39 @@ export function useUpdateCampaign() {
     },
     onError: (error: Error) => {
       toast.error(`Failed to update campaign: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateCampaignStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: CampaignStatus }) =>
+      campaignsApi.updateStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-summary'] });
+      toast.success('Campaign status updated');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update status: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteCampaign() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => campaignsApi.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-summary'] });
+      toast.success('Campaign deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete campaign: ${error.message}`);
     },
   });
 }

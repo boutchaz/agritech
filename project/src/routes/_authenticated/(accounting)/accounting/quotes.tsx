@@ -22,7 +22,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { useQuotes, usePaginatedQuotes, type Quote } from '@/hooks/useQuotes';
+import { useQuotes, usePaginatedQuotes } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote } from '@/types/quotes';
 import { QuoteForm } from '@/components/Billing/QuoteForm';
 import { QuoteDetailDialog } from '@/components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';

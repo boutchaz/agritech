@@ -5,7 +5,8 @@ import { extractApiResponse } from '../lib/api/types';
 import type {
   QuoteResponse,
   QuoteWithItems,
-  QuoteFormItemInput,
+  CreateQuoteFormInput,
+  UpdateQuoteFormInput,
   PaginatedQuoteQuery,
   PaginatedResponse,
 } from '../types/quotes';
@@ -15,6 +16,8 @@ export type {
   QuoteItemResponse as QuoteItem,
   QuoteWithItems,
   QuoteFormItemInput as QuoteItemInput,
+  CreateQuoteFormInput,
+  UpdateQuoteFormInput,
 } from '../types/quotes';
 
 export function useQuotes(status?: QuoteResponse['status']) {
@@ -86,17 +89,7 @@ export function useCreateQuote() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (quoteData: {
-      customer_id: string;
-      quote_date: string;
-      valid_until: string;
-       items: QuoteFormItemInput[];
-      payment_terms?: string;
-      delivery_terms?: string;
-      terms_and_conditions?: string;
-      notes?: string;
-      reference_number?: string;
-    }) => {
+    mutationFn: async (quoteData: CreateQuoteFormInput) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
@@ -146,20 +139,7 @@ export function useUpdateQuote() {
     mutationFn: async ({
       quoteId,
       quoteData,
-    }: {
-      quoteId: string;
-        quoteData: {
-          customer_id?: string;
-          quote_date?: string;
-          valid_until?: string;
-           items?: QuoteFormItemInput[];
-          payment_terms?: string;
-          delivery_terms?: string;
-          terms_and_conditions?: string;
-        notes?: string;
-        reference_number?: string;
-      };
-    }) => {
+    }: { quoteId: string; quoteData: UpdateQuoteFormInput }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }

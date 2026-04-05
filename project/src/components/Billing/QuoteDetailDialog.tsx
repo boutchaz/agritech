@@ -31,7 +31,7 @@ import {
   AlertCircle,
   Pencil,
 } from 'lucide-react';
-import type { Quote, QuoteWithItems } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote, QuoteWithItems } from '@/types/quotes';
 import { useConvertQuoteToOrder, useQuote } from '@/hooks/useQuotes';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';

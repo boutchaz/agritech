@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { useCreateQuote, useUpdateQuote, useQuote } from '@/hooks/useQuotes';
-import type { Quote } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote } from '@/types/quotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';

@@ -84,6 +84,14 @@ export interface CreateQuoteInput {
 
 export type UpdateQuoteInput = Partial<CreateQuoteInput>;
 
+export type CreateQuoteFormInput = Omit<CreateQuoteInput, 'items'> & {
+  items: QuoteFormItemInput[];
+};
+
+export type UpdateQuoteFormInput = Omit<UpdateQuoteInput, 'items'> & {
+  items?: QuoteFormItemInput[];
+};
+
 export interface QuoteFormItemInput extends InvoiceItemInput {
   item_id?: string;
   unit_price?: number;

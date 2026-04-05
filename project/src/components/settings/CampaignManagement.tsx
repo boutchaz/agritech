@@ -11,6 +11,10 @@ import {
   Pause,
   AlertCircle,
   Leaf,
+  Trash2,
+  XCircle,
+  MoreHorizontal,
+  ExternalLink,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -36,8 +40,19 @@ import {
   useCampaignSummary,
   useCreateCampaign,
   useUpdateCampaign,
+  useUpdateCampaignStatus,
+  useDeleteCampaign,
   useFiscalYears,
 } from '@/hooks/useAgriculturalAccounting';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useNavigate } from '@tanstack/react-router';
 import type { AgriculturalCampaign, CampaignStatus, CampaignType } from '@/types/agricultural-accounting';
 
 const campaignSchema = z.object({
@@ -68,6 +83,12 @@ export function CampaignManagement() {
   const { data: fiscalYears = [] } = useFiscalYears();
   const createMutation = useCreateCampaign();
   const updateMutation = useUpdateCampaign();
+  const statusMutation = useUpdateCampaignStatus();
+  const deleteMutation = useDeleteCampaign();
+  const navigate = useNavigate();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ title: string; description?: string; variant?: 'destructive' | 'default'; onConfirm: () => void }>({ title: '', onConfirm: () => {} });
 
   const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
