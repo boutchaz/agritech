@@ -7,6 +7,8 @@ import { PromptBuilderService } from './prompt/prompt-builder.service';
 import { ConversationService } from './conversation/conversation.service';
 import { AgromindiaContextService } from './context/agromindia-context.service';
 import { FollowUpService } from './prompt/follow-up.service';
+import { StructuredResponseService } from './prompt/structured-response.service';
+import { ChatToolsService } from './tools/chat-tools.service';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
 
 /**
@@ -82,6 +84,8 @@ describe('ChatService — Orchestration', () => {
         { provide: ConversationService, useValue: mockConversation },
         { provide: AgromindiaContextService, useValue: { getParcelIntelligence: jest.fn(), getOrgIntelligence: jest.fn() } },
         { provide: FollowUpService, useValue: mockFollowUp },
+        StructuredResponseService,
+        { provide: ChatToolsService, useValue: { getToolDefinitions: jest.fn(() => []), executeTool: jest.fn() } },
         { provide: AiQuotaService, useValue: {
           checkAndConsume: jest.fn().mockResolvedValue({ allowed: true, provider: 'zai', isByok: false }),
           logUsage: jest.fn().mockResolvedValue(undefined),
@@ -145,7 +149,12 @@ describe('ChatService — Orchestration', () => {
     it('should verify access then return history', async () => {
       await service.getConversationHistory(TEST_USER_ID, TEST_ORG_ID);
       expect(mockConversation.verifyOrganizationAccess).toHaveBeenCalled();
-      expect(mockConversation.getConversationHistory).toHaveBeenCalledWith(TEST_USER_ID, TEST_ORG_ID, undefined);
+      expect(mockConversation.getConversationHistory).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        TEST_ORG_ID,
+        undefined,
+        undefined,
+      );
     });
   });
 

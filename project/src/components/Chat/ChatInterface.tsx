@@ -255,8 +255,24 @@ export function ChatInterface() {
     streamMessage(
       { query: messageText, language: currentLanguage, save_history: true, image },
       (metadata) => {
-        const typedMetadata = metadata as { timestamp: string; suggestions?: string[] };
-        setMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: '__STREAM_COMPLETE__', timestamp: new Date(typedMetadata.timestamp), suggestions: typedMetadata.suggestions }]);
+        const typedMetadata = metadata as {
+          timestamp: string;
+          suggestions?: string[];
+          /** Server-normalized markdown + card blocks (avoids showing raw model JSON in the bubble) */
+          cleanText?: string;
+        };
+        const assistantContent =
+          typeof typedMetadata.cleanText === 'string' ? typedMetadata.cleanText : '__STREAM_COMPLETE__';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: assistantContent,
+            timestamp: new Date(typedMetadata.timestamp),
+            suggestions: typedMetadata.suggestions,
+          },
+        ]);
         if (voiceMode && !isListening) {
           setTimeout(() => { resetTranscript(); lastSentTranscriptRef.current = ''; startListening(); }, browserTTS.isSpeaking || zaiTTS.isPlaying ? 2000 : 1000);
         }

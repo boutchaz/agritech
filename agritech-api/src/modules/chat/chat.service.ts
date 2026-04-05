@@ -82,6 +82,20 @@ export class ChatService implements OnModuleInit {
     return dto.enableTools === true && !isVisionRequest;
   }
 
+  /** Normalize model output: JSON { text, suggestions, data_cards } or legacy ---SUGGESTIONS--- block */
+  private finalizeAssistantContent(fullResponse: string): { cleanText: string; suggestions: string[] } {
+    const structuredResponse = this.structuredResponseService.parseStructuredResponse(fullResponse);
+    const fallbackResponse =
+      structuredResponse.text === fullResponse && structuredResponse.suggestions.length === 0
+        ? this.followUpService.parseSuggestions(fullResponse)
+        : null;
+
+    return {
+      cleanText: fallbackResponse?.cleanText ?? structuredResponse.text,
+      suggestions: fallbackResponse?.suggestions ?? structuredResponse.suggestions,
+    };
+  }
+
   private buildToolMessages(systemPrompt: string, userPrompt: string): ZaiChatMessage[] {
     return [
       { role: 'system', content: systemPrompt },
@@ -264,14 +278,7 @@ export class ChatService implements OnModuleInit {
       // Log AI usage (fire-and-forget)
       this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', response.model, response.tokensUsed, false).catch(() => {});
 
-      const structuredResponse = this.structuredResponseService.parseStructuredResponse(response.content);
-      const fallbackResponse =
-        structuredResponse.text === response.content && structuredResponse.suggestions.length === 0
-          ? this.followUpService.parseSuggestions(response.content)
-          : null;
-
-      const cleanText = fallbackResponse?.cleanText ?? structuredResponse.text;
-      const suggestions = fallbackResponse?.suggestions ?? structuredResponse.suggestions;
+      const { cleanText, suggestions } = this.finalizeAssistantContent(response.content);
 
       if (shouldSaveHistory) {
         await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
@@ -382,7 +389,7 @@ export class ChatService implements OnModuleInit {
         callbacks.onToken(token);
       },
       onComplete: async () => {
-        const { cleanText, suggestions } = this.followUpService.parseSuggestions(fullResponse);
+        const { cleanText, suggestions } = this.finalizeAssistantContent(fullResponse);
 
         this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', model, null, false).catch(() => {});
 
@@ -398,6 +405,7 @@ export class ChatService implements OnModuleInit {
           model,
           timestamp: new Date(),
           suggestions,
+          cleanText,
         });
       },
       onError: (error: Error) => {

@@ -9,6 +9,7 @@ import { sanitizeMarkdownHtml } from '@/lib/sanitize';
 import { DEEP_LINK_MAP } from './chat-utils';
 import { cardRegistry } from './cards';
 import { Button } from '@/components/ui/button';
+import { unwrapStructuredAssistantJson } from '@/lib/chat/unwrapStructuredAssistantJson';
 
 interface AssistantMessageProps {
   content: string;
@@ -93,25 +94,27 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
   const speechLang = language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar-SA' : 'en-US';
   const voice = language === 'ar' ? 'kazi' : 'jam';
 
+  const displayContent = useMemo(() => unwrapStructuredAssistantJson(content), [content]);
+
   const browserTTS = useTextToSpeech({ language: speechLang, rate: 0.95, pitch: 1.0, volume: 1.0 });
   const zaiTTS = useZaiTTS({
     language,
     voice,
     speed: 0.95,
     onError: () => {
-      if (browserTTS.isSupported) browserTTS.speak(content);
+      if (browserTTS.isSupported) browserTTS.speak(displayContent);
     },
   });
 
   const handlePlay = async () => {
     try {
       if (browserTTS.isSupported) {
-        browserTTS.speak(content);
+        browserTTS.speak(displayContent);
       } else {
-        await zaiTTS.play(content);
+        await zaiTTS.play(displayContent);
       }
     } catch {
-      if (browserTTS.isSupported) browserTTS.speak(content);
+      if (browserTTS.isSupported) browserTTS.speak(displayContent);
     }
   };
 
@@ -121,7 +124,7 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
   };
 
   const isSpeaking = zaiTTS.isGenerating || zaiTTS.isPlaying || browserTTS.isSpeaking;
-  const segments = useMemo(() => parseContentSegments(content), [content]);
+  const segments = useMemo(() => parseContentSegments(displayContent), [displayContent]);
 
   return (
     <div className="flex gap-3 justify-start">
