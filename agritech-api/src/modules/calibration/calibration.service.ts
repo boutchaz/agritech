@@ -2463,7 +2463,9 @@ export class CalibrationService {
       calibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase === "calibrated") {
+    if (parcel.aiPhase === "active") {
+      // Already active — just update the nutrition option, skip phase transitions
+    } else if (parcel.aiPhase === "calibrated") {
       await this.stateMachine.transitionPhase(
         calibration.parcel_id,
         "calibrated",
@@ -2506,12 +2508,14 @@ export class CalibrationService {
       );
     }
 
-    await this.stateMachine.transitionPhase(
-      calibration.parcel_id,
-      "awaiting_nutrition_option",
-      "active",
-      organizationId,
-    );
+    if (parcel.aiPhase !== "active") {
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "awaiting_nutrition_option",
+        "active",
+        organizationId,
+      );
+    }
 
     setImmediate(() => {
       this.generateAnnualPlan(
