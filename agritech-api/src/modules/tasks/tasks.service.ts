@@ -158,6 +158,8 @@ export class TasksService {
       if (filters?.assigned_to) q = q.eq("assigned_to", filters.assigned_to);
       if (filters?.farm_id) q = q.eq("farm_id", filters.farm_id);
       if (filters?.parcel_id) q = q.eq("parcel_id", filters.parcel_id);
+      if (filters?.crop_cycle_id) q = q.eq("crop_cycle_id", filters.crop_cycle_id);
+      if (filters?.campaign_id) q = q.eq("campaign_id", filters.campaign_id);
       if (filters?.date_from) q = q.gte("scheduled_start", filters.date_from);
       if (filters?.date_to) q = q.lte("scheduled_start", filters.date_to);
       if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`title.ilike.%${s}%,description.ilike.%${s}%`); }

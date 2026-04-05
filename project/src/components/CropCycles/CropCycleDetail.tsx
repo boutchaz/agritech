@@ -54,6 +54,28 @@ import {
 } from '@/hooks/useAgriculturalAccounting';
 import { useCropTemplates } from '@/hooks/useCropTemplates';
 import { CropCycleStatus, HarvestEvent } from '@/types/agricultural-accounting';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface CycleTask {
+  id: string;
+  title: string;
+  status: string;
+  task_type: string;
+  due_date?: string;
+  worker?: { first_name: string; last_name: string } | null;
+}
+
+interface CycleIntervention {
+  id: string;
+  description: string;
+  intervention_type: string;
+  status: string;
+  priority: string;
+  scheduled_date?: string;
+  product?: string;
+}
 
 // Schema for Harvest Event
 const harvestEventSchema = z.object({
@@ -88,6 +110,40 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
   const { data: harvestEvents = [], isLoading: isHarvestsLoading } = useHarvestEvents(cycleId);
   const { data: harvestStats, isLoading: isStatsLoading } = useHarvestEventStats(cycleId);
   const { data: templates = [] } = useCropTemplates();
+  const { currentOrganization } = useAuth();
+
+  // Tasks linked to this cycle
+  const { data: cycleTasksData } = useQuery({
+    queryKey: ['tasks', 'cycle', cycleId],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return { data: [] };
+      return apiClient.get<{ data: CycleTask[] }>(
+        `/api/v1/tasks?crop_cycle_id=${cycleId}&pageSize=50`,
+        {},
+        currentOrganization.id
+      );
+    },
+    enabled: !!cycleId && !!currentOrganization?.id && activeTab === 'tasks',
+    staleTime: 60_000,
+  });
+  const cycleTasks: CycleTask[] = cycleTasksData?.data || [];
+
+  // Interventions linked to this cycle (by crop_cycle_id or parcel overlap)
+  const { data: cycleInterventionsData } = useQuery({
+    queryKey: ['interventions', 'cycle', cycleId, cycle?.parcel_id],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !cycle?.parcel_id) return [];
+      // Query plan_interventions for this parcel
+      return apiClient.get<CycleIntervention[]>(
+        `/api/v1/plan-interventions?parcel_id=${cycle.parcel_id}&pageSize=50`,
+        {},
+        currentOrganization.id
+      ).catch(() => []);
+    },
+    enabled: !!cycleId && !!currentOrganization?.id && !!cycle?.parcel_id && activeTab === 'interventions',
+    staleTime: 60_000,
+  });
+  const cycleInterventions: CycleIntervention[] = Array.isArray(cycleInterventionsData) ? cycleInterventionsData : (cycleInterventionsData as { data?: CycleIntervention[] })?.data || [];
 
   // Mutations
   const updateCycleMutation = useUpdateCropCycle();
@@ -330,6 +386,8 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
           <TabsTrigger value="overview">{t('cropCycles.tabs.overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="stages">{t('cropCycles.tabs.stages', 'Stages')}</TabsTrigger>
           <TabsTrigger value="harvests">{t('cropCycles.tabs.harvests', 'Harvests')}</TabsTrigger>
+          <TabsTrigger value="tasks">{t('cropCycles.tabs.tasks', 'Tasks')}</TabsTrigger>
+          <TabsTrigger value="interventions">{t('cropCycles.tabs.interventions', 'Interventions')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -632,6 +690,88 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                        </div>
                      ))}
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tasks linked to this cycle */}
+        <TabsContent value="tasks" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{t('cropCycles.tabs.tasks', 'Tasks')}</CardTitle>
+              <CardDescription>{t('cropCycles.tasks.description', 'Tasks linked to this crop cycle')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cycleTasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('cropCycles.tasks.empty', 'No tasks linked to this cycle yet.')}</p>
+                  <p className="text-sm mt-1">{t('cropCycles.tasks.emptyHint', 'Create tasks and link them to this cycle from the task form.')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cycleTasks.map((task: CycleTask) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate({ to: `/tasks/${task.id}` })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant={task.status === 'completed' ? 'default' : task.status === 'in_progress' ? 'secondary' : 'outline'} className="text-xs">
+                          {task.status}
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">{task.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {task.task_type} {task.due_date ? `• ${t('common.due', 'Due')}: ${new Date(task.due_date).toLocaleDateString()}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      {task.worker && (
+                        <span className="text-xs text-muted-foreground">{task.worker.first_name} {task.worker.last_name}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Interventions (plan_interventions) */}
+        <TabsContent value="interventions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{t('cropCycles.tabs.interventions', 'Interventions')}</CardTitle>
+              <CardDescription>{t('cropCycles.interventions.description', 'Planned interventions from annual plans')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cycleInterventions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('cropCycles.interventions.empty', 'No interventions linked to this cycle.')}</p>
+                  <p className="text-sm mt-1">{t('cropCycles.interventions.emptyHint', 'Interventions from annual plans will appear here when linked.')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cycleInterventions.map((intervention: CycleIntervention) => (
+                    <div key={intervention.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge variant={intervention.status === 'executed' ? 'default' : intervention.status === 'planned' ? 'outline' : 'secondary'} className="text-xs">
+                          {intervention.status}
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">{intervention.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {intervention.intervention_type}
+                            {intervention.scheduled_date ? ` • ${new Date(intervention.scheduled_date).toLocaleDateString()}` : ''}
+                            {intervention.product ? ` • ${intervention.product}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{intervention.priority}</Badge>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>

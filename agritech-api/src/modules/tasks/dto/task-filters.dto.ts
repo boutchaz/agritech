@@ -37,6 +37,16 @@ export class TaskFiltersDto {
   @IsUUID()
   parcel_id?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by crop cycle ID' })
+  @IsOptional()
+  @IsUUID()
+  crop_cycle_id?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by campaign ID' })
+  @IsOptional()
+  @IsUUID()
+  campaign_id?: string;
+
   @ApiPropertyOptional({ description: 'Filter by start date (ISO format)' })
   @IsOptional()
   @IsDateString()

@@ -186,6 +186,18 @@ export class CreateTaskDto {
   @EmptyStringToNull()
   work_unit_id?: string;
 
+  @ApiPropertyOptional({ description: "Crop cycle ID for production traceability" })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  crop_cycle_id?: string;
+
+  @ApiPropertyOptional({ description: "Campaign ID for production traceability" })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  campaign_id?: string;
+
   @ApiPropertyOptional({ description: "Estimated units required" })
   @IsOptional()
   @IsNumber()

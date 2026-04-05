@@ -55,6 +55,8 @@ const createTaskFormSchema = (t: (key: string) => string) => z.object({
   rate_per_unit: z.number().optional(),
   forfait_amount: z.number().optional(),
   crop_id: z.string(),
+  crop_cycle_id: z.string(),
+  campaign_id: z.string(),
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
@@ -131,6 +133,8 @@ const TaskForm = ({
       rate_per_unit: task?.rate_per_unit,
       forfait_amount: taskForfaitAmount,
       crop_id: '',
+      crop_cycle_id: task?.crop_cycle_id || '',
+      campaign_id: task?.campaign_id || '',
     },
   });
 
@@ -165,6 +169,8 @@ const TaskForm = ({
         rate_per_unit: task.rate_per_unit,
         forfait_amount: taskForfaitAmount,
         crop_id: '',
+        crop_cycle_id: task?.crop_cycle_id || '',
+        campaign_id: task?.campaign_id || '',
       });
       setSelectedWorkerIds(task.assigned_to ? [task.assigned_to] : []);
     }
@@ -218,6 +224,44 @@ const TaskForm = ({
     return parcels.find((p: Parcel) => p.id === formData.parcel_id);
   }, [parcels, formData.parcel_id]);
 
+  // Fetch active crop cycles for selected parcel (auto-suggest)
+  const { data: parcelCropCycles = [] } = useQuery({
+    queryKey: ['crop-cycles-for-parcel', organizationId, formData.parcel_id],
+    queryFn: async () => {
+      if (!organizationId || !formData.parcel_id) return [];
+      const { cropCyclesApi } = await import('@/lib/api/agricultural-accounting');
+      const cycles = await cropCyclesApi.getAll(organizationId, {
+        parcel_id: formData.parcel_id,
+        status: 'planned', // will also get growing etc. via backend filter
+      });
+      // Filter active statuses client-side for safety
+      return cycles.filter((c: { status: string }) =>
+        ['planned', 'land_prep', 'growing', 'harvesting'].includes(c.status)
+      );
+    },
+    enabled: !!organizationId && !!formData.parcel_id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Auto-suggest crop cycle when parcel changes
+  useEffect(() => {
+    if (!formData.parcel_id) {
+      setValue('crop_cycle_id', '');
+      setValue('campaign_id', '');
+      return;
+    }
+    if (parcelCropCycles.length === 1 && !task) {
+      // Auto-fill if exactly one active cycle and creating new task
+      const cycle = parcelCropCycles[0];
+      setValue('crop_cycle_id', cycle.id);
+      setValue('campaign_id', cycle.campaign_id || '');
+    } else if (parcelCropCycles.length === 0) {
+      setValue('crop_cycle_id', '');
+      setValue('campaign_id', '');
+    }
+    // If multiple, don't auto-fill — let user choose
+  }, [formData.parcel_id, parcelCropCycles, task, setValue]);
+
   useEffect(() => {
     if (!task && selectedParcel && formData.parcel_id) {
       if (selectedParcel.crop_type && formData.task_type) {
@@ -266,7 +310,7 @@ const TaskForm = ({
             }
             return [key, value];
           }
-          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id', 'crop_id', 'category_id'].includes(key)) {
+          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id', 'crop_id', 'category_id', 'crop_cycle_id', 'campaign_id'].includes(key)) {
             return [key, undefined];
           }
           return [key, value];
@@ -522,6 +566,41 @@ const TaskForm = ({
                 <p className="text-red-600 text-sm mt-1">{errors.parcel_id.message}</p>
               )}
             </div>
+
+            {/* Crop Cycle (optional, auto-suggested) */}
+            {formData.parcel_id && parcelCropCycles.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="crop_cycle_id" className="flex items-center gap-2">
+                  🌱 {t('tasks.form.cropCycleLabel', 'Crop Cycle')}
+                  <span className="text-xs text-muted-foreground">({t('common.optional', 'optional')})</span>
+                </Label>
+                <Select
+                  value={formData.crop_cycle_id || '__none__'}
+                  onValueChange={(value) => {
+                    const cycleId = value === '__none__' ? '' : value;
+                    setValue('crop_cycle_id', cycleId);
+                    // Auto-set campaign from cycle
+                    const cycle = parcelCropCycles.find((c: { id: string }) => c.id === cycleId);
+                    setValue('campaign_id', cycle?.campaign_id || '');
+                  }}
+                >
+                  <SelectTrigger id="crop_cycle_id">
+                    <SelectValue placeholder={t('tasks.form.cropCyclePlaceholder', 'Select crop cycle...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('tasks.form.cropCycleNone', 'No cycle')}</SelectItem>
+                    {parcelCropCycles.map((cycle: { id: string; cycle_name?: string; cycle_code: string; crop_type: string; status: string }) => (
+                      <SelectItem key={cycle.id} value={cycle.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{cycle.cycle_name || cycle.cycle_code}</span>
+                          <span className="text-xs text-muted-foreground">{cycle.crop_type}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Assigned To - Multiple Workers */}

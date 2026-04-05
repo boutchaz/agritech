@@ -358,6 +358,8 @@ export interface CreateTaskRequest {
   category_id?: string;
   parcel_id?: string;
   crop_id?: string;
+  crop_cycle_id?: string;
+  campaign_id?: string;
   assigned_to?: string;
   scheduled_start?: string;
   scheduled_end?: string;

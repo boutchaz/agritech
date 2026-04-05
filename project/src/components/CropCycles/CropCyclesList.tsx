@@ -109,7 +109,11 @@ const cropCycleSchema = z.object({
 
 type CropCycleFormData = z.infer<typeof cropCycleSchema>;
 
-export function CropCyclesList() {
+interface CropCyclesListProps {
+  initialCampaignId?: string;
+}
+
+export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) {
   const { hasRole, currentOrganization } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -118,7 +122,7 @@ export function CropCyclesList() {
   const [editingCycle, setEditingCycle] = useState<CropCycle | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
 
-  const [filterCampaignId, setFilterCampaignId] = useState<string>("");
+  const [filterCampaignId, setFilterCampaignId] = useState<string>(initialCampaignId || "");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterCycleType, setFilterCycleType] = useState<string>("");
   const [filterSeason, setFilterSeason] = useState<string>("");
