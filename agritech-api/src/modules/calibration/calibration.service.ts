@@ -2019,6 +2019,7 @@ export class CalibrationService {
     const ALLOWED_STATUSES = [
       "completed",
       "calibrated",
+      "awaiting_validation",
       "awaiting_nutrition_option",
       "active",
     ];
