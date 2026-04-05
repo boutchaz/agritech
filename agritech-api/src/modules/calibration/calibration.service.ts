@@ -45,31 +45,44 @@ import {
  * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
  * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
  */
+/**
+ * Max lookback days — must stay within FastAPI weather endpoint limit (365*3 = 1095 days).
+ * We use 1090 to leave a small buffer.
+ */
+const MAX_LOOKBACK_DAYS = 1090;
+
 function getCalibrationLookbackDate(plantingYear: number | null): string {
   const now = new Date();
+
+  let start: Date;
 
   if (plantingYear != null) {
     const parcelAge = now.getFullYear() - plantingYear;
 
     if (parcelAge >= 3) {
-      const start = new Date();
+      // 36 months, clamped to MAX_LOOKBACK_DAYS
+      start = new Date();
       start.setMonth(start.getMonth() - 36);
-      return start.toISOString().split("T")[0];
+    } else if (parcelAge < 2) {
+      start = new Date(`${plantingYear}-01-01`);
+    } else {
+      // 2–3 years: 24 months
+      start = new Date();
+      start.setMonth(start.getMonth() - 24);
     }
-
-    if (parcelAge < 2) {
-      return `${plantingYear}-01-01`;
-    }
-
-    // 2–3 years: 24 months
-    const start = new Date();
+  } else {
+    // No planting year: default 24 months
+    start = new Date();
     start.setMonth(start.getMonth() - 24);
-    return start.toISOString().split("T")[0];
   }
 
-  // No planting year: default 24 months
-  const start = new Date();
-  start.setMonth(start.getMonth() - 24);
+  // Clamp: never exceed MAX_LOOKBACK_DAYS from today
+  const maxStart = new Date();
+  maxStart.setDate(maxStart.getDate() - MAX_LOOKBACK_DAYS);
+  if (start < maxStart) {
+    start = maxStart;
+  }
+
   return start.toISOString().split("T")[0];
 }
 
