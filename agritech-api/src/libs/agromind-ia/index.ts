@@ -15,8 +15,5 @@ export {
 // that import ParcelCalibrationInput etc. from here
 export * from './interfaces';
 
-// Legacy V1 prompts — kept temporarily during migration, will be removed in task 34
-export * from './prompts/calibration_prompt';
-export * from './prompts/recommendations_prompt';
-export * from './prompts/annual_plan_prompt';
+// Follow-up prompt (kept — may adapt to V2 later)
 export * from './prompts/followup_prompt';

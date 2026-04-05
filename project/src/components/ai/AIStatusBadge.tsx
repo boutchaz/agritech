@@ -1,19 +1,23 @@
 import React from 'react';
-import { BrainCircuit, CheckCircle2, AlertTriangle, Clock, XCircle } from 'lucide-react';
+import { BrainCircuit, CheckCircle2, AlertTriangle, Clock, XCircle, Archive } from 'lucide-react';
 
 type AIStatusBadgeStatus =
-  | 'disabled'
-  | 'calibration'
+  | 'awaiting_data'
+  | 'ready_calibration'
   | 'calibrating'
-  | 'active'
-  | 'paused'
-  | 'pending'
-  | 'provisioning'
-  | 'in_progress'
-  | 'completed'
-  | 'failed'
-  | 'awaiting_validation'
+  | 'calibrated'
   | 'awaiting_nutrition_option'
+  | 'active'
+  | 'archived'
+  // Calibration record statuses
+  | 'in_progress'
+  | 'awaiting_validation'
+  | 'validated'
+  | 'insufficient'
+  | 'failed'
+  | 'completed'
+  // Legacy / fallback
+  | 'pending'
   | 'unknown';
 
 interface AIStatusBadgeProps {
@@ -26,18 +30,18 @@ export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className 
     switch (status) {
       case 'active':
       case 'completed':
+      case 'validated':
         return {
           color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800',
           icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />,
-          label: status === 'active' ? 'AI Active' : 'Completed',
+          label: status === 'active' ? 'AI Active' : status === 'validated' ? 'Validated' : 'Completed',
         };
-      case 'provisioning':
+      case 'ready_calibration':
         return {
           color: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800',
-          icon: <BrainCircuit className="w-4 h-4 mr-1.5 animate-pulse" />,
-          label: 'Provisioning Data',
+          icon: <BrainCircuit className="w-4 h-4 mr-1.5" />,
+          label: 'Ready to Calibrate',
         };
-      case 'calibration':
       case 'calibrating':
       case 'in_progress':
         return {
@@ -45,6 +49,7 @@ export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className 
           icon: <BrainCircuit className="w-4 h-4 mr-1.5 animate-pulse" />,
           label: 'Calibrating',
         };
+      case 'calibrated':
       case 'awaiting_validation':
         return {
           color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800',
@@ -56,6 +61,12 @@ export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className 
           color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800',
           icon: <Clock className="w-4 h-4 mr-1.5" />,
           label: 'Nutrition Required',
+        };
+      case 'insufficient':
+        return {
+          color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800',
+          icon: <AlertTriangle className="w-4 h-4 mr-1.5" />,
+          label: 'Insufficient Data',
         };
       case 'pending':
         return {
@@ -69,19 +80,19 @@ export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className 
           icon: <XCircle className="w-4 h-4 mr-1.5" />,
           label: 'Failed',
         };
-      case 'paused':
+      case 'archived':
         return {
-          color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400 border-orange-200 dark:border-orange-800',
-          icon: <AlertTriangle className="w-4 h-4 mr-1.5" />,
-          label: 'Paused',
+          color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700',
+          icon: <Archive className="w-4 h-4 mr-1.5" />,
+          label: 'Archived',
         };
-      case 'disabled':
+      case 'awaiting_data':
       case 'unknown':
       default:
         return {
           color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700',
           icon: <BrainCircuit className="w-4 h-4 mr-1.5" />,
-          label: 'Disabled',
+          label: 'Awaiting Data',
         };
     }
   };

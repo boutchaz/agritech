@@ -350,7 +350,7 @@ const ExecutiveSummary: React.FC<{ output: CalibrationV2Output; t: (key: string)
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Maturity Phase</div>
             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-              {MATURITY_LABELS[output.maturity_phase]}
+              {MATURITY_LABELS[output.phase_age]}
             </span>
           </div>
 
@@ -994,9 +994,9 @@ const CalibrationHistoryList: React.FC<{ records: CalibrationHistoryRecord[] }> 
                     {record.status}
                   </span>
                 </div>
-                {record.maturity_phase && (
+                {record.phase_age && (
                   <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {MATURITY_LABELS[record.maturity_phase as CalibrationMaturityPhase] ?? record.maturity_phase}
+                    {MATURITY_LABELS[record.phase_age as CalibrationMaturityPhase] ?? record.phase_age}
                   </span>
                 )}
                 {record.status === 'failed' && record.error_message && (
@@ -1527,8 +1527,8 @@ const AICalibrationPage = () => {
   const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
-    phase === 'disabled' ||
-    phase === 'pret_calibrage' ||
+    phase === 'awaiting_data' ||
+    phase === 'ready_calibration' ||
     ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;

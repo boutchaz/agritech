@@ -8,19 +8,19 @@ import type { CalibrationReviewView } from "@/types/calibration-review";
 const BASE_URL = "/api/v1/parcels";
 
 export type CalibrationPhase =
-  | "disabled"
-  | "pret_calibrage"
+  | "awaiting_data"
+  | "ready_calibration"
   | "calibrating"
-  | "awaiting_validation"
+  | "calibrated"
   | "awaiting_nutrition_option"
   | "active"
-  | "paused"
+  | "archived"
   | "unknown";
 
 export interface CalibrationStatusRecord {
   id: string;
   parcel_id: string;
-  status: "pending" | "provisioning" | "in_progress" | "completed" | "failed";
+  status: "in_progress" | "awaiting_validation" | "validated" | "insufficient" | "failed" | "archived";
   calibration_version?: string | null;
   confidence_score?: number | null;
 }
@@ -47,7 +47,9 @@ export interface CalibrationHistoryRecord {
   status: string;
   health_score: number | null;
   confidence_score: number | null;
-  maturity_phase: string | null;
+  phase_age: string | null;
+  type: string;
+  mode_calibrage: string | null;
   error_message: string | null;
   created_at: string;
   completed_at: string | null;

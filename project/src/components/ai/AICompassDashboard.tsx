@@ -26,22 +26,24 @@ import { SectionLoader } from '@/components/ui/loader';
 
 type AIStatusBadgeStatus = ComponentProps<typeof AIStatusBadge>['status'];
 
-type CompassPhaseKey = 'active' | 'awaiting_validation' | 'awaiting_nutrition_option' | 'in_progress' | 'paused' | 'default';
+type CompassPhaseKey = 'active' | 'calibrated' | 'awaiting_nutrition_option' | 'calibrating' | 'ready_calibration' | 'awaiting_data' | 'archived' | 'default';
 
 function compassPhaseKey(phase: string | null | undefined): CompassPhaseKey {
   switch (phase) {
     case 'active':
       return 'active';
-    case 'awaiting_validation':
-      return 'awaiting_validation';
+    case 'calibrated':
+      return 'calibrated';
     case 'awaiting_nutrition_option':
       return 'awaiting_nutrition_option';
     case 'calibrating':
-    case 'downloading':
-    case 'pret_calibrage':
-      return 'in_progress';
-    case 'paused':
-      return 'paused';
+      return 'calibrating';
+    case 'ready_calibration':
+      return 'ready_calibration';
+    case 'archived':
+      return 'archived';
+    case 'awaiting_data':
+      return 'awaiting_data';
     default:
       return 'default';
   }
@@ -116,7 +118,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
     if (calibration?.status === 'failed') {
       return 'failed';
     }
-    return 'disabled';
+    return 'awaiting_data';
   })();
 
   const phaseKey = compassPhaseKey(aiPhase ?? undefined);
@@ -242,7 +244,7 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                   {diagnostics.indicators.current_ndvi.toFixed(3)}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {t('compass.refShort')} {diagnostics.indicators.baseline_ndvi.toFixed(3)} ·{' '}
+                  {t('compass.refShort')} {diagnostics.indicators.p50_ndvi.toFixed(3)} ·{' '}
                   {t(`compass.bands.${diagnostics.indicators.ndvi_band}`, {
                     defaultValue: diagnostics.indicators.ndvi_band,
                   })}

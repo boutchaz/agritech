@@ -108,7 +108,7 @@ export function Level4Temporal({ data }: Level4TemporalProps) {
                   {data.calibration_history.slice(0, 5).map((history) => (
                     <TableRow key={history.id}>
                       <TableCell className="text-xs">{new Date(history.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-xs capitalize">{history.maturity_phase.replace(/_/g, ' ')}</TableCell>
+                      <TableCell className="text-xs capitalize">{history.phase_age.replace(/_/g, ' ')}</TableCell>
                       <TableCell className="text-xs">{history.health_score != null ? `${history.health_score}%` : '-'}</TableCell>
                       <TableCell className="text-xs">{history.confidence_score != null ? `${Math.round(history.confidence_score * 100)}%` : '-'}</TableCell>
                       <TableCell>

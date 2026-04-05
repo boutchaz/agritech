@@ -189,7 +189,7 @@ export interface CalibrationMetadata {
 
 export interface CalibrationV2Output {
   parcel_id: string;
-  maturity_phase: CalibrationMaturityPhase;
+  phase_age: CalibrationMaturityPhase;
   nutrition_option_suggestion?: NutritionOption | null;
   step1: Step1Output;
   step2: Step2Output;
@@ -206,7 +206,7 @@ export interface CalibrationV2Output {
 
 const typeContractExample = {
   parcel_id: 'parcel-id',
-  maturity_phase: 'pleine_production',
+  phase_age: 'pleine_production',
   nutrition_option_suggestion: 'A',
   step1: {
     index_time_series: { NDVI: [{ date: '2025-01-01', value: 0.61 }] },

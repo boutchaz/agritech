@@ -29,7 +29,7 @@ export interface AnnualPlanRecord {
   parcel_id: string;
   organization_id: string;
   calibration_id: string | null;
-  year: number;
+  season: string;
   status: AnnualPlanStatus;
   crop_type: string;
   variety: string | null;
@@ -65,7 +65,7 @@ export interface AnnualPlanWithInterventions extends AnnualPlanRecord {
 export interface AnnualPlanSummary {
   plan_id: string;
   parcel_id: string;
-  year: number;
+  season: string;
   status: AnnualPlanStatus;
   total_interventions: number;
   executed: number;
@@ -82,7 +82,7 @@ export interface AnnualPlanCalendarMonth {
 export interface AnnualPlanCalendar {
   plan_id: string;
   parcel_id: string;
-  year: number;
+  season: string;
   status: AnnualPlanStatus;
   months: AnnualPlanCalendarMonth[];
 }
@@ -197,16 +197,17 @@ export class AnnualPlanService {
   async ensurePlan(
     parcelId: string,
     organizationId: string,
-    year = new Date().getUTCFullYear(),
+    season?: string,
   ): Promise<AnnualPlanWithInterventions> {
+    const effectiveSeason = season ?? String(new Date().getUTCFullYear());
     const existingPlan = await this.findPlanByParcelAndYear(
       parcelId,
       organizationId,
-      year,
+      effectiveSeason,
     );
 
     if (!existingPlan) {
-      return this.generatePlan(parcelId, organizationId, year);
+      return this.generatePlan(parcelId, organizationId, effectiveSeason);
     }
 
     const interventions = await this.findPlanInterventions(
@@ -249,8 +250,9 @@ export class AnnualPlanService {
   async generatePlan(
     parcelId: string,
     organizationId: string,
-    year = new Date().getUTCFullYear(),
+    season?: string,
   ): Promise<AnnualPlanWithInterventions> {
+    const effectiveSeason = season ?? String(new Date().getUTCFullYear());
     const parcel = await this.findParcelOrThrow(parcelId, organizationId);
     const referenceData = await this.findCropReferenceOrThrow(parcel.crop_type);
     const monthlyDefinitions = this.extractMonthlyDefinitions(referenceData);
@@ -262,7 +264,7 @@ export class AnnualPlanService {
         parcel_id: parcelId,
         organization_id: organizationId,
         calibration_id: parcel.ai_calibration_id,
-        year,
+        season: effectiveSeason,
         status: 'draft',
         crop_type: parcel.crop_type,
         variety: parcel.variety,
@@ -356,7 +358,7 @@ export class AnnualPlanService {
     return {
       plan_id: plan.id,
       parcel_id: plan.parcel_id,
-      year: plan.year,
+      season: plan.season,
       status: plan.status,
       months: Array.from({ length: 12 }, (_, index) => {
         const month = index + 1;
@@ -381,7 +383,7 @@ export class AnnualPlanService {
     return {
       plan_id: plan.id,
       parcel_id: plan.parcel_id,
-      year: plan.year,
+      season: plan.season,
       status: plan.status,
       total_interventions: interventions.length,
       executed: interventions.filter((item) => item.status === 'executed').length,
@@ -502,7 +504,7 @@ export class AnnualPlanService {
           priority: this.mapAnnualPlanInterventionPriority(intervention),
           status: 'pending',
           due_date: this.buildAnnualPlanTaskDueDate(
-            annualPlan.year,
+            annualPlan.season,
             intervention.month,
             intervention.week,
           ),
@@ -510,7 +512,7 @@ export class AnnualPlanService {
             source: 'annual_plan',
             annual_plan_id: annualPlan.id,
             annual_plan_intervention_id: intervention.id,
-            plan_year: annualPlan.year,
+            plan_season: annualPlan.season,
             month: intervention.month,
             week: intervention.week,
             intervention_type: intervention.intervention_type,
@@ -734,7 +736,7 @@ export class AnnualPlanService {
       this.logger.warn(
         `No valid AI interventions parsed for plan ${annualPlanId}, regenerating template`,
       );
-      const templatePlan = await this.generatePlan(parcelId, organizationId, plan.year);
+      const templatePlan = await this.generatePlan(parcelId, organizationId, plan.season);
       return templatePlan;
     }
 
@@ -966,7 +968,7 @@ export class AnnualPlanService {
   private async findPlanByParcelAndYear(
     parcelId: string,
     organizationId: string,
-    year: number,
+    season: string,
   ): Promise<AnnualPlanRecord | null> {
     const { data, error } = await this.databaseService
       .getAdminClient()
@@ -974,7 +976,7 @@ export class AnnualPlanService {
       .select('*')
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('year', year)
+      .eq('season', season)
       .maybeSingle();
 
     if (error) {

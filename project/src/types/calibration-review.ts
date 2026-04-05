@@ -126,7 +126,7 @@ export interface Level4Temporal {
     date: string;
     health_score: number | null;
     confidence_score: number | null;
-    maturity_phase: string;
+    phase_age: string;
     status: string;
   }>;
   confidence: {
@@ -215,7 +215,7 @@ export interface CalibrationSnapshotInput {
     date: string;
     health_score: number | null;
     confidence_score: number | null;
-    maturity_phase: string;
+    phase_age: string;
     status: string;
   }>;
 }

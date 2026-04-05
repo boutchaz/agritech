@@ -862,7 +862,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             <span className={`font-medium ${data.healthColor}`}>
               {data.health}
             </span>
-            {parcel.ai_phase && parcel.ai_phase !== 'disabled' && (
+            {parcel.ai_phase && parcel.ai_phase !== 'awaiting_data' && (
               <AIStatusBadge status={parcel.ai_phase as Parameters<typeof AIStatusBadge>[0]['status']} />
             )}
           </div>
