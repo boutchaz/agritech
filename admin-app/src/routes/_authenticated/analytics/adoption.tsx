@@ -28,8 +28,8 @@ function AdoptionAnalyticsPage() {
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            {[1, 2, 3, 4].map((skIdx) => (
+              <div key={"sk-" + skIdx} className="h-24 bg-gray-200 rounded"></div>
             ))}
           </div>
           <div className="h-64 bg-gray-200 rounded"></div>
@@ -436,11 +436,11 @@ function AdoptionAnalyticsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {conversionRates.map((stage: any, index: number) => {
+              {conversionRates.map((stage: any, rowIdx: number) => {
                 const dropoff = dropoffAnalysis.find((d: any) => d.stage_name === stage.stage_name);
                 const time = timeToMilestone.find((t: any) => t.stage_name === stage.stage_name);
                 return (
-                  <tr key={stage.milestone_type} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={stage.milestone_type} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">

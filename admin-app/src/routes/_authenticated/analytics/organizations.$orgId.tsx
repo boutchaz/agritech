@@ -36,8 +36,8 @@ function OrgDetailPage() {
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-32 bg-gray-200 rounded"></div>
           <div className="grid grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+            {[1, 2, 3].map((skIdx) => (
+              <div key={"sk-" + skIdx} className="h-24 bg-gray-200 rounded"></div>
             ))}
           </div>
         </div>
