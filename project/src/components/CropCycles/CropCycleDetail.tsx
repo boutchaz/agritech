@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Calendar,
-  MapPin,
   Sprout,
   CheckCircle,
   Play,
@@ -97,7 +96,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -108,7 +107,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
   const { data: cycle, isLoading: isCycleLoading } = useCropCycle(cycleId);
   const { data: stages = [], isLoading: isStagesLoading } = useCropCycleStages(cycleId);
   const { data: harvestEvents = [], isLoading: isHarvestsLoading } = useHarvestEvents(cycleId);
-  const { data: harvestStats, isLoading: isStatsLoading } = useHarvestEventStats(cycleId);
+  const { data: harvestStats, isLoading: _isStatsLoading } = useHarvestEventStats(cycleId);
   const { data: templates = [] } = useCropTemplates();
   const { currentOrganization } = useAuth();
 
