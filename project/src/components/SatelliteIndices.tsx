@@ -33,6 +33,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 type DataExportFormat = "JSON" | "CSV" | "PDF";
 type ImageExportFormat = ExportFormat;
+type TimeRange = "30d" | "90d" | "6m" | "1y" | "2y";
 
 interface Parcel {
   id: string;
@@ -66,9 +67,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
 
   const [selectedIndex, setSelectedIndex] = useState<string>("NDVI");
   const [selectedIndices, setSelectedIndices] = useState<string[]>(["NDVI"]);
-  const [timeRange, setTimeRange] = useState<
-    "30d" | "90d" | "6m" | "1y" | "2y"
-  >("2y");
+  const [timeRange, setTimeRange] = useState<TimeRange>("2y");
   const [indicesData, setIndicesData] =
     useState<IndexCalculationResponse | null>(null);
   const [timeSeriesData, setTimeSeriesData] =
@@ -140,7 +139,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
   }, [activeTab, availableIndices, selectedIndex]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  const getDateRange = (range: string) => {
+  const getDateRange = (range: TimeRange) => {
     const endDate = new Date();
     const startDate = new Date();
 
@@ -647,7 +646,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
                 </label>
                 <select
                   value={timeRange}
-                  onChange={(e) => setTimeRange(e.target.value as any)}
+                  onChange={(e) => setTimeRange(e.target.value as TimeRange)}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="30d">30 derniers jours</option>

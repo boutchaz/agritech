@@ -2,6 +2,7 @@ import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { ApiError } from "@/lib/api-client-axios";
 import { Save, UserPlus, AlertCircle, AlertTriangle, X, Shield } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -195,7 +196,7 @@ const WorkerForm = ({
         specialties: worker.specialties || [],
         certifications: worker.certifications || [],
         payment_frequency: worker.payment_frequency ?? undefined,
-        payment_frequencies: (worker as any).payment_frequencies || [],
+        payment_frequencies: worker.payment_frequencies || [],
         bank_account: worker.bank_account || "",
         payment_method: worker.payment_method || "",
         notes: worker.notes || "",
@@ -414,8 +415,8 @@ const WorkerForm = ({
       onClose();
     } catch (error: unknown) {
       console.error('[WorkerForm] Submit error:', error);
-      if (error && typeof error === 'object' && 'responseData' in error) {
-        console.error('[WorkerForm] Backend response:', (error as any).responseData);
+      if (error instanceof ApiError) {
+        console.error('[WorkerForm] Backend response:', error.responseData);
       }
       // Use generic error handler for worker create/update errors
       handleFormError(error, setError);

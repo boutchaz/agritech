@@ -133,7 +133,7 @@ export function CropCyclesList() {
     "farm_manager",
     "farm_worker",
   ]);
-  const currencySymbol = (currentOrganization as any)?.currency_symbol || DEFAULT_CURRENCY;
+  const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
   const { data: cropCycles = [], isLoading } = useCropCycles({
     campaign_id: filterCampaignId || undefined,

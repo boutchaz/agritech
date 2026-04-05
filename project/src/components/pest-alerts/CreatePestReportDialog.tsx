@@ -46,8 +46,8 @@ export function CreatePestReportDialog() {
   const { data: farms } = useFarmHierarchy(currentOrganization?.id);
   const { data: library } = usePestDiseaseLibrary(currentOrganization?.id);
   
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as any,
+  const form = useForm<z.input<typeof formSchema>, unknown, FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       severity: 'low',
       detection_method: 'visual_inspection',

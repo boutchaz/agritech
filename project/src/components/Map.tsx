@@ -1367,7 +1367,11 @@ const MapComponent = ({
     <>
       {isFullScreen && <div className="fixed inset-0 z-40 bg-white" />}
       <div className={isFullScreen ? "fixed inset-0 z-50" : "space-y-4"}>
-        <div className={`relative w-full ${isFullScreen ? "h-full" : "h-96"}`}>
+        <div
+          className={`relative w-full ${
+            isFullScreen ? 'h-full' : 'h-[min(24rem,52dvh)] lg:h-96'
+          }`}
+        >
           <div
             ref={mapRef}
             className="w-full h-full"

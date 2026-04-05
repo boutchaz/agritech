@@ -10,7 +10,7 @@ import { useFarms, useParcelsByFarm } from '../../hooks/useParcelsQuery';
 import { useCreateHarvest, useUpdateHarvest } from '../../hooks/useHarvests';
 import { useWarehouses } from '../../hooks/useWarehouses';
 import { useFormErrors } from '../../hooks/useFormErrors';
-import type { HarvestSummary, HarvestUnit, QualityGrade, HarvestStatus, IntendedFor } from '../../types/harvests';
+import type { CreateHarvestRequest, HarvestRecord, HarvestSummary, HarvestUnit, QualityGrade, HarvestStatus, IntendedFor } from '../../types/harvests';
 import { Button } from '@/components/ui/button';
 
 interface HarvestFormProps {
@@ -117,7 +117,7 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
         unit: harvest.unit || 'kg',
         quality_grade: harvest.quality_grade || '',
         quality_score: harvest.quality_score || undefined,
-        warehouse_id: (harvest as any)?.warehouse_id || '',
+        warehouse_id: harvest.warehouse_id || '',
         storage_location: harvest.storage_location || '',
         intended_for: harvest.intended_for || '',
         expected_price_per_unit: harvest.expected_price_per_unit || undefined,
@@ -163,7 +163,7 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
       };
 
       if (harvest) {
-        const updateData = {
+        const updateData: Partial<HarvestRecord> = {
           farm_id: formData.farm_id,
           parcel_id: formData.parcel_id,
           harvest_date: formData.harvest_date,
@@ -177,24 +177,25 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
           warehouse_id: submitData.warehouse_id,
           notes: formData.notes || undefined,
         };
-        await updateMutation.mutateAsync({ harvestId: harvest.id, organizationId: currentOrganization.id, updates: updateData as any });
+        await updateMutation.mutateAsync({ harvestId: harvest.id, organizationId: currentOrganization.id, updates: updateData });
       } else {
+        const createData: CreateHarvestRequest = {
+          farm_id: formData.farm_id,
+          parcel_id: formData.parcel_id,
+          harvest_date: formData.harvest_date,
+          quantity: formData.quantity,
+          unit: formData.unit,
+          quality_grade: submitData.quality_grade,
+          quality_score: submitData.quality_score,
+          storage_location: submitData.storage_location,
+          intended_for: submitData.intended_for,
+          expected_price_per_unit: submitData.expected_price_per_unit,
+          notes: formData.notes || undefined,
+          workers: [],
+        };
         await createMutation.mutateAsync({
           organizationId: currentOrganization.id,
-          data: {
-            farm_id: formData.farm_id,
-            parcel_id: formData.parcel_id,
-            harvest_date: formData.harvest_date,
-            quantity: formData.quantity,
-            unit: formData.unit as any,
-            quality_grade: submitData.quality_grade,
-            quality_score: submitData.quality_score,
-            storage_location: submitData.storage_location,
-            intended_for: submitData.intended_for,
-            expected_price_per_unit: submitData.expected_price_per_unit,
-            notes: formData.notes || undefined,
-            workers: [],
-          }
+          data: createData,
         });
       }
       toast.success(harvest ? t('harvests.form.validation.updateSuccess') : t('harvests.form.validation.saveSuccess'));
@@ -246,11 +247,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.farm')} <span className="text-red-500">*</span>
-                 </label>
-                 <select
-                   {...register('farm_id')}
+                  <label htmlFor="farm_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.farm')} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="farm_id"
+                    {...register('farm_id')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.farm_id ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -264,11 +266,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  )}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.parcel')} <span className="text-red-500">*</span>
-                 </label>
-                 <select
-                   {...register('parcel_id')}
+                  <label htmlFor="parcel_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.parcel')} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="parcel_id"
+                    {...register('parcel_id')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:bg-gray-100 dark:disabled:bg-gray-800 ${
                      errors.parcel_id ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -310,11 +313,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.harvestDate')} <span className="text-red-500">*</span>
-                 </label>
-                 <input
-                   type="date"
+                  <label htmlFor="harvest_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.harvestDate')} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="harvest_date"
+                    type="date"
                    {...register('harvest_date')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.harvest_date ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
@@ -325,11 +329,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  )}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.quantity')} <span className="text-red-500">*</span>
-                 </label>
-                 <input
-                   type="number"
+                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.quantity')} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="quantity"
+                    type="number"
                    min="0"
                    step="0.01"
                    placeholder={t('harvests.form.placeholders.quantity')}
@@ -343,11 +348,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  )}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.unit')} <span className="text-red-500">*</span>
-                 </label>
-                 <select
-                   {...register('unit')}
+                  <label htmlFor="unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.unit')} <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="unit"
+                    {...register('unit')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.unit ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -369,11 +375,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.qualityGrade')}
-                 </label>
-                 <select
-                   {...register('quality_grade')}
+                  <label htmlFor="quality_grade" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.qualityGrade')}
+                  </label>
+                  <select
+                    id="quality_grade"
+                    {...register('quality_grade')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.quality_grade ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -386,11 +393,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  )}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.qualityScore')}
-                 </label>
-                 <input
-                   type="number"
+                  <label htmlFor="quality_score" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.qualityScore')}
+                  </label>
+                  <input
+                    id="quality_score"
+                    type="number"
                    min="1"
                    max="10"
                    placeholder={t('harvests.form.placeholders.qualityScore')}
@@ -414,11 +422,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
              </h3>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.warehouse')}
-                 </label>
-                 <select
-                   {...register('warehouse_id')}
+                  <label htmlFor="warehouse_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.warehouse')}
+                  </label>
+                  <select
+                    id="warehouse_id"
+                    {...register('warehouse_id')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.warehouse_id ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -449,11 +458,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  })()}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.intendedFor')}
-                 </label>
-                 <select
-                   {...register('intended_for')}
+                  <label htmlFor="intended_for" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.intendedFor')}
+                  </label>
+                  <select
+                    id="intended_for"
+                    {...register('intended_for')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.intended_for ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -467,11 +477,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                </div>
              </div>
              <div>
-               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                 {t('harvests.form.fields.storageLocation')}
-               </label>
-               <input
-                 type="text"
+                <label htmlFor="storage_location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('harvests.form.fields.storageLocation')}
+                </label>
+                <input
+                  id="storage_location"
+                  type="text"
                  placeholder={t('harvests.form.placeholders.storageLocation')}
                  {...register('storage_location')}
                  className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
@@ -484,11 +495,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.status')}
-                 </label>
-                 <select
-                   {...register('status')}
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.status')}
+                  </label>
+                  <select
+                    id="status"
+                    {...register('status')}
                    className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                      errors.status ? 'border-red-400' : 'border-gray-300 dark:border-gray-600'
                    }`}
@@ -500,11 +512,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
                  )}
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                   {t('harvests.form.fields.expectedPricePerUnit')}
-                 </label>
-                 <input
-                   type="number"
+                  <label htmlFor="expected_price_per_unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('harvests.form.fields.expectedPricePerUnit')}
+                  </label>
+                  <input
+                    id="expected_price_per_unit"
+                    type="number"
                    min="0"
                    step="0.01"
                    placeholder={t('harvests.form.placeholders.price')}
@@ -530,11 +543,12 @@ const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
 
            {/* Notes Section */}
            <div>
-             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+             <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                {t('harvests.form.fields.notes')}
              </label>
              <textarea
-               rows={3}
+                id="notes"
+                rows={3}
                placeholder={t('harvests.form.placeholders.notes')}
                {...register('notes')}
                className={`w-full px-3 py-2.5 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all resize-none ${

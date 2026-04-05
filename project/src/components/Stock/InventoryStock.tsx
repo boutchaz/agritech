@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
-import { itemsApi } from '@/lib/api/items';
+import { itemsApi, type ItemStockLevelsResponse, type ItemStockLevelWarehouse } from '@/lib/api/items';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
@@ -24,6 +24,12 @@ interface InventoryStockLevel {
   total_value: number;
 }
 
+interface InventoryWarehouseStockLevel extends Pick<ItemStockLevelWarehouse, 'warehouse_id' | 'warehouse_name'> {
+  item_id: string;
+  total_quantity: number;
+  total_value: number;
+}
+
 export default function InventoryStock() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
@@ -36,7 +42,7 @@ export default function InventoryStock() {
   const { data: warehouses = [] } = useWarehouses();
 
   // Fetch stock levels using NestJS API
-  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery({
+  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['inventory-stock-levels', currentOrganization?.id, selectedWarehouse],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
@@ -56,12 +62,12 @@ export default function InventoryStock() {
   });
 
   // Transform stock levels data to match the expected format
-  const stockLevels = React.useMemo(() => {
-    const result: any[] = [];
+  const stockLevels = React.useMemo<InventoryWarehouseStockLevel[]>(() => {
+    const result: InventoryWarehouseStockLevel[] = [];
 
-    Object.entries(stockLevelsData).forEach(([itemId, itemStock]: [string, any]) => {
+    Object.entries(stockLevelsData).forEach(([itemId, itemStock]) => {
       if (itemStock.warehouses && Array.isArray(itemStock.warehouses)) {
-        itemStock.warehouses.forEach((wh: any) => {
+        itemStock.warehouses.forEach((wh) => {
           // Filter by selected warehouse if not 'all'
           if (selectedWarehouse !== 'all' && wh.warehouse_id !== selectedWarehouse) {
             return;
@@ -85,21 +91,21 @@ export default function InventoryStock() {
   const inventoryData = React.useMemo(() => {
     const itemMap = new Map(items.map(item => [item.id, item]));
     const stockMap = new Map(
-      (stockLevels as any[]).map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
+      stockLevels.map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
     );
 
     const result: InventoryStockLevel[] = [];
 
     // If we have stock data, show items with stock
     if (stockLevels.length > 0) {
-      (stockLevels as any[]).forEach(stock => {
+      stockLevels.forEach(stock => {
         const item = itemMap.get(stock.item_id);
         if (item) {
           result.push({
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: stock.warehouse_id,
             warehouse_name: stock.warehouse_name,
@@ -117,7 +123,7 @@ export default function InventoryStock() {
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: warehouse.id,
             warehouse_name: warehouse.name,
@@ -283,4 +289,3 @@ export default function InventoryStock() {
     </div>
   );
 }
-

@@ -353,7 +353,7 @@ export const PurchaseOrderDetailDialog = ({
 
   // Check if PO is confirmed and stock not yet received
   const canCreateMaterialReceipt = ['confirmed', 'submitted'].includes(po.status) &&
-    !(po as any).stock_received;
+    !po.stock_received;
 
   const remainingToBill = Number(po.grand_total) - Number(po.billed_amount);
 

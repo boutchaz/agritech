@@ -81,7 +81,7 @@ export interface Worker {
 
   // Metadata
   notes?: string;
-  documents?: any;
+  documents?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -155,7 +155,7 @@ export interface MetayageSettlement {
 
   // Calculation
   calculation_basis: CalculationBasis;
-  charges_breakdown?: any;
+  charges_breakdown?: Array<{ label: string; amount: number; type: string }>;
 
   // Payment
   payment_status: PaymentStatus;
@@ -164,7 +164,7 @@ export interface MetayageSettlement {
 
   // Metadata
   notes?: string;
-  documents?: any;
+  documents?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
   created_at: string;
   created_by?: string;
 

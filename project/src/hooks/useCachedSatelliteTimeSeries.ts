@@ -55,6 +55,8 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
 
   const organizationId = currentOrganization?.id;
 
+  type ApiResponse<T> = T | { data: T };
+
   // Query cached data from database
   const {
     data: cachedData,
@@ -79,7 +81,10 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
             },
             organizationId
           );
-          result[index] = Array.isArray(response) ? response : (response as any)?.data || [];
+          const normalizedResponse = response as ApiResponse<SatelliteIndex[]>;
+          result[index] = Array.isArray(normalizedResponse)
+            ? normalizedResponse
+            : (normalizedResponse.data || []);
         } catch (err) {
           console.warn(`Failed to fetch cached data for ${index}:`, err);
           result[index] = [];
@@ -224,13 +229,13 @@ export function useCachedSatelliteTimeSeries(params: CachedTimeSeriesParams): Ca
     const result: Record<string, TimeSeriesDataPoint[]> = {};
 
     for (const index of params.indices) {
-      const indexData = cachedData[index] || [];
-      result[index] = indexData
-        .map((item) => ({
-          date: item.date?.split('T')[0] || item.date,
-          value: item.mean_value ?? (item as any).index_value ?? 0,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const indexData = cachedData[index] || [];
+        result[index] = indexData
+          .map((item) => ({
+            date: item.date?.split('T')[0] || item.date,
+            value: item.mean_value ?? item.index_value ?? 0,
+          }))
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
 
     return result;

@@ -29,23 +29,25 @@ const ParcelSoilAnalysis = () => {
   const [showForm, setShowForm] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedFormType, setSelectedFormType] = useState<AnalysisType | null>(null);
+  const parcelOrganizationId = parcel?.organization_id;
 
-  const returnTo = (search as any).returnTo || 'stay';
+  const returnTo = search.returnTo || 'stay';
 
   // Auto-show form if type is specified in search params (from calibration panel)
   /* eslint-disable react-hooks/set-state-in-effect */
+  /* eslint-disable-next-line react-hooks/exhaustive-deps */
   useEffect(() => {
     if (search.type && !showForm && !selectedFormType) {
       setSelectedFormType(search.type as AnalysisType);
       setShowForm(true);
     }
-  }, [search.type]);
+  }, [search.type, selectedFormType, showForm]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Fetch real analyses data
-  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcel.organization_id);
-  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant', 'parcel', parcel.organization_id);
-  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water', 'parcel', parcel.organization_id);
+  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcelOrganizationId);
+  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant', 'parcel', parcelOrganizationId);
+  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water', 'parcel', parcelOrganizationId);
 
   if (isLoading) {
     return (
@@ -76,7 +78,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
@@ -103,7 +105,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
@@ -130,7 +132,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('water'); // Switch to water tab to show the new analysis
@@ -345,6 +347,7 @@ const ParcelSoilAnalysis = () => {
             <Link
               to="/parcels/$parcelId/reports"
               params={{ parcelId }}
+              search={{ autoRecalibrate: undefined, farmId: undefined }}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <FileText className="w-4 h-4" />
@@ -452,7 +455,7 @@ const ParcelSoilAnalysis = () => {
           ) : (
             <div className="space-y-4">
               {currentAnalyses.map((analysis) => {
-                const analysisData = analysis.data as any;
+                const analysisData = analysis.data;
                 return (
                   <div
                     key={analysis.id}
@@ -543,5 +546,6 @@ export const Route = createFileRoute('/_authenticated/(production)/parcels/$parc
   component: ParcelSoilAnalysis,
   validateSearch: (search: Record<string, unknown>) => ({
     type: (search.type as 'soil' | 'plant' | 'water') || undefined,
+    returnTo: (search.returnTo as 'stay' | 'reports') || undefined,
   }),
 });

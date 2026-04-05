@@ -58,7 +58,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
   });
 
   // Stock control setting (default: allow selling without stock)
-  const allowNegativeStock = (currentOrganization as any)?.accounting_settings?.allow_negative_stock ?? true;
+  const allowNegativeStock = currentOrganization?.accounting_settings?.allow_negative_stock ?? true;
   const { data: stockLevels = [] } = useFarmStockLevels();
   // Build a quick lookup: item_id → total_quantity
   const stockMap = React.useMemo(() => {

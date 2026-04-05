@@ -105,6 +105,7 @@ const getInvoiceSchema = (t: (key: string) => string) =>
     );
 
 type InvoiceFormData = z.infer<ReturnType<typeof getInvoiceSchema>>;
+type InvoiceFormInput = z.input<ReturnType<typeof getInvoiceSchema>>;
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -175,6 +176,8 @@ export const InvoiceForm = ({
       is_purchase_item: true,
     });
 
+  const invoiceSchema = getInvoiceSchema(t);
+
   const {
     register,
     control,
@@ -183,8 +186,8 @@ export const InvoiceForm = ({
     setValue,
     formState: { errors },
     reset,
-  } = useForm<InvoiceFormData>({
-    resolver: zodResolver(getInvoiceSchema(t)),
+  } = useForm<InvoiceFormInput, unknown, InvoiceFormData>({
+    resolver: zodResolver(invoiceSchema),
     defaultValues: {
       invoice_type: "sales",
       invoice_date: getLocalDate(),
@@ -311,7 +314,7 @@ export const InvoiceForm = ({
         parcel_id: existingInvoice.parcel_id || null,
         remarks: existingInvoice.remarks || "",
         items: existingInvoice.items?.map((item) => ({
-          item_id: (item as any).item_id || "",
+          item_id: item.item_id || "",
           item_name: item.item_name,
           description: item.description || "",
           quantity: item.quantity,
@@ -657,8 +660,8 @@ export const InvoiceForm = ({
               <div className="space-y-3 md:hidden">
                 {fields.map((field, index) => {
                   const itemTotal = calculateItemTotal(
-                    watchItems[index]?.quantity || 0,
-                    watchItems[index]?.rate || 0,
+                    Number(watchItems[index]?.quantity || 0),
+                    Number(watchItems[index]?.rate || 0),
                   );
                   return (
                     <div
@@ -1088,8 +1091,8 @@ export const InvoiceForm = ({
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right font-medium">
                           {calculateItemTotal(
-                            watchItems[index]?.quantity || 0,
-                            watchItems[index]?.rate || 0,
+                            Number(watchItems[index]?.quantity || 0),
+                            Number(watchItems[index]?.rate || 0),
                           ).toFixed(2)}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-center">

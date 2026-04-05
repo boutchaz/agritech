@@ -1,6 +1,6 @@
 import { ApiError, FieldError } from '@/lib/api-client-axios';
 import { toast } from 'sonner';
-import { UseFormSetError } from 'react-hook-form';
+import { type FieldValues as ReactHookFormFieldValues, type Path, type UseFormClearErrors, type UseFormSetError } from 'react-hook-form';
 
 /**
  * Generic hook to handle form submission errors
@@ -39,7 +39,7 @@ import { UseFormSetError } from 'react-hook-form';
  *   }
  * });
  */
-export function useFormErrors<FieldValues extends Record<string, any> = any>(
+export function useFormErrors<FieldValues extends ReactHookFormFieldValues = ReactHookFormFieldValues>(
   options?: {
     fieldMappings?: Record<string, string>;
     defaultFieldError?: string;
@@ -82,7 +82,7 @@ export function useFormErrors<FieldValues extends Record<string, any> = any>(
           // Apply field name mapping if configured
           const formField = fieldMappings[fieldError.field] || fieldError.field;
 
-          setError(formField as any, {
+          setError(formField as Path<FieldValues>, {
             type: 'manual',
             message: fieldError.message,
           });
@@ -126,7 +126,7 @@ export function useFormErrors<FieldValues extends Record<string, any> = any>(
     setError: UseFormSetError<FieldValues>
   ): void => {
     errors.forEach((fieldError) => {
-      setError(fieldError.field as any, {
+      setError(fieldError.field as Path<FieldValues>, {
         type: 'manual',
         message: fieldError.message,
       });
@@ -136,7 +136,7 @@ export function useFormErrors<FieldValues extends Record<string, any> = any>(
   /**
    * Clear all form errors
    */
-  const clearAllErrors = (clearErrors: UseFormSetError<FieldValues>): void => {
+  const clearAllErrors = (clearErrors: UseFormClearErrors<FieldValues>): void => {
     clearErrors();
   };
 
@@ -158,12 +158,18 @@ export function parseFieldErrors(error: unknown): FieldError[] {
 
   // Try to parse from plain object
   if (error && typeof error === 'object') {
-    const err = error as any;
+    const err = error as Record<string, unknown>;
+    const message = err.message;
+    const details = err.details;
 
     // Handle NestJS ValidationPipe array format
-    if (Array.isArray(err.message)) {
+    if (Array.isArray(message)) {
       const fieldErrors: FieldError[] = [];
-      err.message.forEach((errorMsg: string) => {
+      message.forEach((errorMsg) => {
+        if (typeof errorMsg !== 'string') {
+          return;
+        }
+
         const match = errorMsg.match(/^(\w+)\s+(.+)$/);
         if (match) {
           fieldErrors.push({
@@ -176,10 +182,15 @@ export function parseFieldErrors(error: unknown): FieldError[] {
     }
 
     // Handle custom details format
-    if (err.details && typeof err.details === 'object') {
-      return Object.entries(err.details).map(([field, message]: [string, any]) => ({
+    if (details && typeof details === 'object') {
+      return Object.entries(details).map(([field, message]: [string, unknown]) => ({
         field,
-        message: typeof message === 'string' ? message : message?.message || String(message),
+        message:
+          typeof message === 'string'
+            ? message
+            : typeof message === 'object' && message !== null && 'message' in message
+              ? String(message.message)
+              : String(message),
       }));
     }
   }

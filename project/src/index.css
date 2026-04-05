@@ -89,9 +89,16 @@
 
 /* Prevent body/html scrolling - only allow scroll in main content area */
 @layer base {
-  html,
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+
   body {
     height: 100%;
+    /* iOS Safari: dynamic viewport + nested main scroll */
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
     margin: 0;
     padding: 0;
@@ -112,6 +119,8 @@
 
   #root {
     height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
   }
 
@@ -136,11 +145,17 @@
     user-select: none;
   }
 
-  /* Tablet-specific: smoother scroll in content areas */
-  @media (min-width: 768px) and (max-width: 1024px) {
+  /*
+   * Momentum scrolling on iOS for the app shell main region.
+   * Do not gate on max-width: iPad Pro landscape (>1024px) must get this too.
+   */
+  [data-main-scroll] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (min-width: 768px) {
     [data-main-scroll] {
       scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
     }
   }
 

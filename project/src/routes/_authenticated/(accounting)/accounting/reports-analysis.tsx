@@ -44,7 +44,7 @@ const AppContent = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id ?? null;
-  const currencyCode = (currentOrganization as any)?.currency_code || 'MAD';
+  const currencyCode = currentOrganization?.currency_code || 'MAD';
   const navigate = useNavigate();
 
   const [filterType, setFilterType] = useState<AnalysisFilterType>('organization');
@@ -114,7 +114,7 @@ const AppContent = () => {
         <ModernPageHeader
           breadcrumbs={[
             { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: FileSpreadsheet, label: t('reports.title', 'Financial Reports'), path: '/accounting/reports' as any },
+            { icon: FileSpreadsheet, label: t('reports.title', 'Financial Reports'), path: '/accounting/reports' },
             { icon: BarChart3, label: t('reports.analysis.title', 'Analyse Multi-Filtres'), isActive: true },
           ]}
           title={t('reports.analysis.title', 'Analyse Financière Multi-Filtres')}

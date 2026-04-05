@@ -318,7 +318,8 @@ const ParcelManagementModal = ({
     setValue("crop_type", parcel.crop_type || "");
     // Pre-select tree family when editing
     if (parcel.crop_category === 'trees' && parcel.crop_type) {
-      const family = Object.entries(TREE_CATEGORIES).find(([, types]) =>
+      const treeCategoryEntries: Array<[string, readonly string[]]> = Object.entries(TREE_CATEGORIES);
+      const family = treeCategoryEntries.find(([, types]) =>
         types.includes(parcel.crop_type!)
       )?.[0] ?? '';
       setTreeFamily(family);
@@ -337,15 +338,15 @@ const ParcelManagementModal = ({
     setValue("irrigation_type", parcel.irrigation_type || "");
     setValue(
       "irrigation_frequency",
-      (parcel as any).irrigation_frequency || "",
+      parcel.irrigation_frequency || "",
     );
     setValue(
       "water_quantity_per_session",
-      (parcel as any).water_quantity_per_session,
+      parcel.water_quantity_per_session,
     );
     setValue(
       "water_quantity_unit",
-      (parcel as any).water_quantity_unit || "m3",
+      parcel.water_quantity_unit || "m3",
     );
     setShowForm(true);
   };

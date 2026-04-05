@@ -236,10 +236,10 @@ const UpcomingTasksWidget = () => {
                       </div>
                     )}
 
-                    {(task as any).worker && (
+                    {task.worker && (
                       <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
                         <User className="h-3 w-3 text-slate-400" />
-                        <span className="truncate">{`${(task as any).worker.first_name} ${(task as any).worker.last_name}`}</span>
+                        <span className="truncate">{`${task.worker.first_name} ${task.worker.last_name}`}</span>
                       </div>
                     )}
 

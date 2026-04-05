@@ -58,6 +58,11 @@ const createTaskFormSchema = (t: (key: string) => string) => z.object({
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
+type SelectChangeEvent = React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+
+const createSelectEvent = (name: keyof TaskFormData, value: string): SelectChangeEvent => {
+  return { target: { name, value } } as SelectChangeEvent;
+};
 
 // Helper to format date for input (YYYY-MM-DD)
 const formatDateForInput = (dateStr: string | null | undefined): string => {
@@ -83,6 +88,8 @@ const TaskForm = ({
 }: TaskFormProps) => {
   const { t } = useTranslation();
   const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
+  const taskWithForfaitAmount = task as (Task & { forfait_amount?: number }) | null | undefined;
+  const taskForfaitAmount = taskWithForfaitAmount?.forfait_amount;
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -104,15 +111,7 @@ const TaskForm = ({
   const syncAssignments = useSyncTaskAssignments();
   const { handleFormError } = useFormErrors<TaskFormData>();
 
-  const {
-    register,
-    handleSubmit: rhfHandleSubmit,
-    reset,
-    setError,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<TaskFormData>({
+  const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: task?.title || '',
@@ -130,10 +129,19 @@ const TaskForm = ({
       work_unit_id: task?.work_unit_id || '',
       units_required: task?.units_required,
       rate_per_unit: task?.rate_per_unit,
-      forfait_amount: task?.forfait_amount,
+      forfait_amount: taskForfaitAmount,
       crop_id: '',
     },
   });
+
+  const {
+    register,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
 
   const formData = watch();
 
@@ -155,12 +163,12 @@ const TaskForm = ({
         work_unit_id: task.work_unit_id || '',
         units_required: task.units_required,
         rate_per_unit: task.rate_per_unit,
-        forfait_amount: task.forfait_amount,
+        forfait_amount: taskForfaitAmount,
         crop_id: '',
       });
       setSelectedWorkerIds(task.assigned_to ? [task.assigned_to] : []);
     }
-  }, [task, reset]);
+  }, [task, reset, taskForfaitAmount]);
 
   // Fetch workers - include all workers if no farm is selected, or filter by farm
   // Pass undefined (not null) when no farm is selected to get all workers
@@ -230,7 +238,7 @@ const TaskForm = ({
       setStockEnabled(false);
       setPlannedItems([]);
     }
-  }, [formData.task_type, isAlwaysStockType, isOptionalStockType]);
+  }, [isAlwaysStockType, isOptionalStockType]);
 
   const onSubmit = async (data: TaskFormData) => {
     if (data.due_date < data.scheduled_start) {
@@ -350,7 +358,7 @@ const TaskForm = ({
           </Button>
         </div>
 
-        <form onSubmit={rhfHandleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('tasks.form.titleLabel')}</Label>
@@ -373,7 +381,7 @@ const TaskForm = ({
               <Select
                 value={formData.task_type}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'task_type', value } } as any;
+                  const event = createSelectEvent('task_type', value);
                   register('task_type').onChange(event);
                 }}
               >
@@ -398,7 +406,7 @@ const TaskForm = ({
               <Select
                 value={formData.priority}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'priority', value } } as any;
+                  const event = createSelectEvent('priority', value);
                   register('priority').onChange(event);
                 }}
               >
@@ -439,7 +447,7 @@ const TaskForm = ({
               <Select
                 value={formData.farm_id}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'farm_id', value } } as any;
+                  const event = createSelectEvent('farm_id', value);
                   register('farm_id').onChange(event);
                 }}
               >
@@ -469,7 +477,7 @@ const TaskForm = ({
                 value={formData.parcel_id || '__none__'}
                 onValueChange={(value) => {
                   const newValue = value === '__none__' ? '' : value;
-                  const event = { target: { name: 'parcel_id', value: newValue } } as any;
+                  const event = createSelectEvent('parcel_id', newValue);
                   register('parcel_id').onChange(event);
                 }}
                 disabled={!formData.farm_id}
@@ -502,7 +510,7 @@ const TaskForm = ({
                 <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
                   🌱 {t('tasks.form.parcelCropInfo', { crop: selectedParcel.crop_type || t('tasks.form.parcelCropUndefined') })}
                   {selectedParcel.variety && ` | ${t('tasks.form.parcelVarietyInfo', { variety: selectedParcel.variety })}`}
-                  {selectedParcel.tree_count && ` | ${t('tasks.form.parcelTreeCount', { count: selectedParcel.tree_count })}`}
+                  {('tree_count' in selectedParcel && typeof selectedParcel.tree_count === 'number') && ` | ${t('tasks.form.parcelTreeCount', { count: selectedParcel.tree_count })}`}
                 </div>
               )}
               {formData.task_type === 'harvesting' && !formData.parcel_id && (
@@ -664,7 +672,7 @@ const TaskForm = ({
             {selectedWorkerIds.length > 0 &&
               workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.fixedSalaryNote') }} />
+                <p className="text-sm text-blue-700 dark:text-blue-300">{t('tasks.form.fixedSalaryNote')}</p>
               </div>
             )}
 
@@ -710,7 +718,7 @@ const TaskForm = ({
                     value={formData.work_unit_id || '__none__'}
                     onValueChange={(value) => {
                       const newValue = value === '__none__' ? '' : value;
-                      const event = { target: { name: 'work_unit_id', value: newValue } } as any;
+                      const event = createSelectEvent('work_unit_id', newValue);
                       register('work_unit_id').onChange(event);
                     }}
                   >
@@ -807,7 +815,7 @@ const TaskForm = ({
           {/* Optional stock toggle for task types that may or may not need products */}
           {isOptionalStockType && (
             <div className="border-t pt-4">
-              <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="flex items-center gap-3 cursor-pointer select-none">
                 <Checkbox
                   id="stock-enabled"
                   checked={stockEnabled}
@@ -817,14 +825,14 @@ const TaskForm = ({
                   }}
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="stock-enabled" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                     {t('tasks.form.enableStockAccess')}
-                  </span>
+                  </Label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {t('tasks.form.enableStockAccessHint')}
                   </p>
                 </div>
-              </label>
+              </div>
             </div>
           )}
 
@@ -959,7 +967,7 @@ const TaskForm = ({
 
               {plannedItems.length > 0 && (
                 <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm text-green-700 dark:text-green-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.stockDeductionNote') }} />
+                  <p className="text-sm text-green-700 dark:text-green-300">{t('tasks.form.stockDeductionNote')}</p>
                 </div>
               )}
             </div>
@@ -1002,4 +1010,3 @@ const TaskForm = ({
 };
 
 export default TaskForm;
-

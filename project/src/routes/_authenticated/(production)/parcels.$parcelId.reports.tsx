@@ -9,7 +9,7 @@ import { SectionLoader } from '@/components/ui/loader';
 const ParcelReportGenerator = lazy(() => import('../../../components/ParcelReportGenerator'));
 
 const ParcelReportsPage = () => {
-  const { t } = useTranslation();
+  useTranslation();
   const { parcelId } = Route.useParams();
   const search = Route.useSearch();
   const { data: parcel, isLoading } = useParcelById(parcelId);
@@ -40,4 +40,11 @@ const ParcelReportsPage = () => {
 
 export const Route = createFileRoute('/_authenticated/(production)/parcels/$parcelId/reports')({
   component: ParcelReportsPage,
+  validateSearch: (search: Record<string, unknown>) => ({
+    farmId: typeof search.farmId === 'string' ? search.farmId : undefined,
+    autoRecalibrate:
+      search.autoRecalibrate === true || search.autoRecalibrate === 'true'
+        ? true
+        : undefined,
+  }),
 });

@@ -88,10 +88,8 @@ export const satelliteIndicesApi = {
     const response = await apiClient.get<SatelliteIndex[] | { data: SatelliteIndex[] }>(url, {}, organizationId);
 
     // Handle both array and { data: [...] } response formats
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return (response as any).data || [];
+    const result = response as unknown as SatelliteIndex[] | { data: SatelliteIndex[] };
+    return Array.isArray(result) ? result : result.data || [];
   },
 
   /**

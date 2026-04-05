@@ -45,7 +45,7 @@ import { pieceWorkApi } from '@/lib/api/piece-work';
 import type {
   WorkUnit,
 } from '@/types/work-units';
-import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES } from '@/types/work-units';
+import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES, type PieceWorkPaymentStatus } from '@/types/work-units';
 
 // =====================================================
 // VALIDATION SCHEMA
@@ -586,7 +586,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
         worker_id: workerId,
         start_date: filters?.startDate,
         end_date: filters?.endDate,
-        payment_status: filters?.status as any,
+        payment_status: filters?.status as PieceWorkPaymentStatus | undefined,
       });
     },
     enabled: !!currentOrganization?.id && !!currentFarm?.id,

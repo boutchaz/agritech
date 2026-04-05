@@ -16,6 +16,24 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
+/**
+ * API response that may be a direct array or wrapped in { data: T }.
+ * Many NestJS endpoints return inconsistent shapes.
+ */
+export type ApiResponse<T> = T | { data: T };
+
+/**
+ * Extract data from an API response that may be an array or { data: array }.
+ */
+export function extractApiResponse<T>(response: unknown): T[] {
+  if (Array.isArray(response)) return response as T[];
+  const wrapped = response as Record<string, unknown>;
+  if (wrapped && typeof wrapped === 'object' && Array.isArray(wrapped.data)) {
+    return wrapped.data as T[];
+  }
+  return [];
+}
+
 export function buildPaginatedQueryString(query: PaginatedQuery & Record<string, unknown>): string {
   const params = new URLSearchParams();
   

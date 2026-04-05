@@ -18,6 +18,24 @@ import type {
 
 const BASE_URL = '/api/v1/items';
 
+export interface ItemStockLevelWarehouse {
+  warehouse_id: string;
+  warehouse_name: string;
+  farm_id: string | null;
+  farm_name: string | null;
+  quantity: number;
+  value: number;
+}
+
+export interface ItemStockLevelSummary {
+  total_quantity: number;
+  total_value: number;
+  is_low_stock?: boolean;
+  warehouses?: ItemStockLevelWarehouse[];
+}
+
+export type ItemStockLevelsResponse = Record<string, ItemStockLevelSummary>;
+
 const baseCrud = createCrudApi<Item, CreateItemInput, ItemFilters, UpdateItemInput>(BASE_URL);
 
 export const itemsApi = {
@@ -166,13 +184,13 @@ export const itemsApi = {
       item_id?: string;
     },
     organizationId?: string,
-  ): Promise<any> {
+  ): Promise<ItemStockLevelsResponse> {
     const params = new URLSearchParams();
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.item_id) params.append('item_id', filters.item_id);
 
     const url = `${BASE_URL}/stock-levels${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<any>(url, {}, organizationId);
+    return apiClient.get<ItemStockLevelsResponse>(url, {}, organizationId);
   },
 
   // =====================================================

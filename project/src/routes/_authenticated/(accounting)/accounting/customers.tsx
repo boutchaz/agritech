@@ -119,7 +119,7 @@ function CustomersPage() {
         tax_id: customer.tax_id || '',
         payment_terms: customer.payment_terms || '',
         credit_limit: customer.credit_limit?.toString() || '',
-        customer_type: (customer.customer_type as any) || '',
+        customer_type: (customer.customer_type || '') as '' | 'individual' | 'business' | 'government' | 'other',
         notes: customer.notes || '',
       });
     } else {

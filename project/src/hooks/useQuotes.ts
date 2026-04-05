@@ -2,6 +2,12 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { useAuth } from '../hooks/useAuth';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
 import { quotesApi, type PaginatedQuoteQuery, type PaginatedResponse } from '../lib/api/quotes';
+import { extractApiResponse } from '../lib/api/types';
+
+interface QuoteItemInput extends InvoiceItemInput {
+  item_id?: string;
+  unit_price?: number;
+}
 
 export interface Quote {
   id: string;
@@ -80,11 +86,7 @@ export function useQuotes(status?: Quote['status']) {
         },
         currentOrganization.id
       );
-      // Handle both array and paginated response formats
-      if (Array.isArray(response)) {
-        return response as Quote[];
-      }
-      return ((response as any)?.data || []) as Quote[];
+      return extractApiResponse<Quote>(response);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -100,7 +102,7 @@ export function usePaginatedQuotes(query: PaginatedQuoteQuery) {
         throw new Error('No organization selected');
       }
 
-      return quotesApi.getPaginated(query, currentOrganization.id);
+      return quotesApi.getPaginated(query, currentOrganization.id) as unknown as PaginatedResponse<Quote>;
     },
     enabled: !!currentOrganization?.id,
     placeholderData: keepPreviousData,
@@ -121,7 +123,7 @@ export function useQuote(quoteId: string | null) {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
       const data = await quotesApi.getOne(quoteId, currentOrganization.id);
-      return data as QuoteWithItems;
+      return data as unknown as QuoteWithItems;
     },
     enabled: !!quoteId && !!currentOrganization?.id,
   });
@@ -139,7 +141,7 @@ export function useCreateQuote() {
       customer_id: string;
       quote_date: string;
       valid_until: string;
-      items: InvoiceItemInput[];
+      items: QuoteItemInput[];
       payment_terms?: string;
       delivery_terms?: string;
       terms_and_conditions?: string;
@@ -159,11 +161,11 @@ export function useCreateQuote() {
           valid_until: quoteData.valid_until,
           items: quoteData.items.map((item, index) => ({
             line_number: index + 1,
-            item_id: (item as any).item_id,
+            item_id: item.item_id,
             item_name: item.item_name,
             description: item.description,
             quantity: Number(item.quantity) || 1,
-            unit_price: Number((item as any).unit_price || item.rate) || 0,
+            unit_price: Number(item.unit_price || item.rate) || 0,
             account_id: item.account_id,
             tax_id: item.tax_id || undefined,
           })),
@@ -197,14 +199,14 @@ export function useUpdateQuote() {
       quoteData,
     }: {
       quoteId: string;
-      quoteData: {
-        customer_id?: string;
-        quote_date?: string;
-        valid_until?: string;
-        items?: InvoiceItemInput[];
-        payment_terms?: string;
-        delivery_terms?: string;
-        terms_and_conditions?: string;
+        quoteData: {
+          customer_id?: string;
+          quote_date?: string;
+          valid_until?: string;
+          items?: QuoteItemInput[];
+          payment_terms?: string;
+          delivery_terms?: string;
+          terms_and_conditions?: string;
         notes?: string;
         reference_number?: string;
       };
@@ -219,18 +221,18 @@ export function useUpdateQuote() {
         ...quoteData,
         items: quoteData.items?.map((item, index) => ({
           line_number: index + 1,
-          item_id: (item as any).item_id,
+          item_id: item.item_id,
           item_name: item.item_name,
           description: item.description,
           quantity: Number(item.quantity) || 1,
-          unit_price: Number((item as any).unit_price || item.rate) || 0,
+          unit_price: Number(item.unit_price || item.rate) || 0,
           account_id: item.account_id,
           tax_id: item.tax_id || undefined,
         })),
       };
 
       const data = await quotesApi.update(quoteId, transformedData, currentOrganization.id);
-      return data as Quote;
+      return data as unknown as Quote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
@@ -256,7 +258,7 @@ export function useUpdateQuoteStatus() {
         { status },
         currentOrganization.id
       );
-      return data as Quote;
+      return data as unknown as Quote;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });

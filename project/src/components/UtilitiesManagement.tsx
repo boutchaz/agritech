@@ -485,8 +485,8 @@ const UtilitiesManagement = () => {
         ...newUtility,
         farm_id: currentFarm.id,
         invoice_url: invoiceUrl,
-        type: newUtility.type as any,
-        payment_status: newUtility.payment_status as any,
+        type: newUtility.type as Utility['type'],
+        payment_status: newUtility.payment_status as Utility['payment_status'],
         amount: newUtility.amount || 0,
         billing_date: newUtility.billing_date || new Date().toISOString().split('T')[0],
       });

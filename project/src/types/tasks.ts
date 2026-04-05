@@ -47,6 +47,10 @@ export interface Task {
   
   // Assignment
   assigned_to?: string; // worker UUID
+  worker?: {
+    first_name: string;
+    last_name: string;
+  } | null;
   
   // Scheduling
   scheduled_start?: string;
@@ -395,7 +399,9 @@ export interface CompleteHarvestTaskResponse {
     quantity: number;
     unit: string;
     harvest_task_id: string;
-    [key: string]: any;
+    notes?: string;
+    worker_id?: string;
+    worker_name?: string;
   };
 }
 
@@ -517,4 +523,3 @@ export function calculateTaskProgress(task: Task): number {
   
   return 0;
 }
-

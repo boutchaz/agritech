@@ -62,7 +62,7 @@ import {
 import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag, Layers } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
-import { itemsApi } from '@/lib/api/items';
+import { itemsApi, type ItemStockLevelsResponse } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
 import type { Item, CreateItemInput, ProductVariant } from '@/types/items';
@@ -98,9 +98,9 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const productVariantSchema = z.object({
   variant_name: z.string().min(1, 'Variant name is required'),
   variant_sku: z.string().optional(),
-  unit_id: z.preprocess(
-    (val) => (val === '' ? undefined : val),
-    z.string().uuid('Invalid unit ID').optional()
+  unit_id: z.string().optional().refine(
+    (value) => !value || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
+    'Invalid unit ID'
   ),
   quantity: z.number().min(0, 'Quantity must be non-negative').optional(),
   min_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
@@ -128,13 +128,6 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
-
   const [groupName, setGroupName] = useState('');
   const [groupCode, setGroupCode] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
@@ -1386,10 +1379,10 @@ export default function ItemManagement() {
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   // Fetch stock levels for items with farm context
-  const { data: stockLevels = {} } = useQuery({
+  const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['items-stock-levels', currentOrganization?.id, selectedFarm],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
@@ -1546,11 +1539,11 @@ export default function ItemManagement() {
                 <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500">
                   <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
                 </SelectTrigger>
-                <SelectContent>
+                  <SelectContent>
                   <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
                   {farms.map((farm) => {
-                    const farmId = (farm as any).farm_id || farm.id;
-                    const farmName = (farm as any).farm_name || farm.name;
+                    const farmId = farm.id;
+                    const farmName = farm.name;
                     return (
                       <SelectItem key={farmId} value={farmId}>
                         {farmName}
@@ -1562,8 +1555,11 @@ export default function ItemManagement() {
             </div>
 
             {/* Low Stock Filter */}
-            <div className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                 onClick={() => setLowStockOnly(!lowStockOnly)}>
+            <button
+              type="button"
+              className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              onClick={() => setLowStockOnly(!lowStockOnly)}
+            >
               <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 <AlertTriangle className={`w-4 h-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
                 <span className={`text-sm font-medium transition-colors ${lowStockOnly ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -1575,7 +1571,7 @@ export default function ItemManagement() {
                 onCheckedChange={setLowStockOnly}
                 className="pointer-events-none"
               />
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -1625,19 +1621,7 @@ export default function ItemManagement() {
                 </TableRow>
               ) : (
                 filteredItems.map((item) => {
-                  const stockLevel = (stockLevels as Record<string, {
-                    total_quantity: number;
-                    total_value: number;
-                    is_low_stock?: boolean;
-                    warehouses?: Array<{
-                      warehouse_id: string;
-                      warehouse_name: string;
-                      farm_id: string | null;
-                      farm_name: string | null;
-                      quantity: number;
-                      value: number;
-                    }>;
-                  }>)[item.id];
+                  const stockLevel = stockLevels[item.id];
                   const isLowStock = stockLevel?.is_low_stock || 
                     (item.minimum_stock_level && stockLevel && 
                      stockLevel.total_quantity < item.minimum_stock_level);
@@ -1661,7 +1645,7 @@ export default function ItemManagement() {
                         {item.item_name}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {(item.item_group as any)?.name || '-'}
+                        {item.item_group?.name || '-'}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {item.default_unit}

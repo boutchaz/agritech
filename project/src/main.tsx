@@ -35,7 +35,7 @@ export { queryClient }
 // Create router context with auth
 const routerContext = {
   auth: {
-    user: null as any,
+    user: null as { id: string; email: string } | null,
     isLoading: true,
   },
 }
