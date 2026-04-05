@@ -20,7 +20,7 @@ const buildSnapshotInput = (
       date: '2026-01-10T12:00:00.000Z',
       health_score: 77,
       confidence_score: 0.72,
-      maturity_phase: 'dormancy_exit',
+      phase_age: 'dormancy_exit',
       status: 'completed',
     },
     {
@@ -28,12 +28,12 @@ const buildSnapshotInput = (
       date: '2026-02-10T12:00:00.000Z',
       health_score: 80,
       confidence_score: 0.76,
-      maturity_phase: 'flowering',
+      phase_age: 'flowering',
       status: 'completed',
     },
   ],
   output: {
-    maturity_phase: 'flowering',
+    phase_age: 'flowering',
     confidence: {
       total_score: 86,
       normalized_score: 0.86,
@@ -186,7 +186,7 @@ describe('CalibrationReviewAdapter', () => {
             date: '2026-01-01T12:00:00.000Z',
             health_score: 70,
             confidence_score: 0.6,
-            maturity_phase: 'dormancy_exit',
+            phase_age: 'dormancy_exit',
             status: 'completed',
           },
           {
@@ -194,7 +194,7 @@ describe('CalibrationReviewAdapter', () => {
             date: '2026-02-01T12:00:00.000Z',
             health_score: 71,
             confidence_score: 0.61,
-            maturity_phase: 'flowering',
+            phase_age: 'flowering',
             status: 'completed',
           },
         ],
@@ -209,7 +209,7 @@ describe('CalibrationReviewAdapter', () => {
             date: '2026-01-01T12:00:00.000Z',
             health_score: 70,
             confidence_score: 0.6,
-            maturity_phase: 'dormancy_exit',
+            phase_age: 'dormancy_exit',
             status: 'completed',
           },
           {
@@ -217,7 +217,7 @@ describe('CalibrationReviewAdapter', () => {
             date: '2026-02-01T12:00:00.000Z',
             health_score: 71,
             confidence_score: 0.61,
-            maturity_phase: 'flowering',
+            phase_age: 'flowering',
             status: 'completed',
           },
           {
@@ -225,7 +225,7 @@ describe('CalibrationReviewAdapter', () => {
             date: '2026-03-01T12:00:00.000Z',
             health_score: 72,
             confidence_score: 0.62,
-            maturity_phase: 'flowering',
+            phase_age: 'flowering',
             status: 'completed',
           },
         ],

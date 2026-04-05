@@ -50,7 +50,7 @@ export class CalibrationReviewAdapter {
     const step4 = this.getStep(output, "step4");
     const step5 = this.getStep(output, "step5");
 
-    const maturityPhase = this.asString(output.maturity_phase) ?? input.parcel_phase;
+    const maturityPhase = this.asString(output.phase_age) ?? input.parcel_phase;
     const confidenceLabel = this.mapConfidenceLabel(input.confidence_score);
     const meanDates = this.asRecord(step4.mean_dates);
     const generatedAtTime = Date.parse(input.generated_at);
@@ -129,7 +129,7 @@ export class CalibrationReviewAdapter {
         : `${historyCount} cycles disponibles`;
 
     const currentPhase =
-      this.formatPhaseName(this.asString(output.maturity_phase) ?? input.parcel_phase) || "Phase non disponible";
+      this.formatPhaseName(this.asString(output.phase_age) ?? input.parcel_phase) || "Phase non disponible";
 
     return {
       signal_state: "NON_DISPONIBLE",
@@ -143,7 +143,7 @@ export class CalibrationReviewAdapter {
       phase_diagnostics: {
         [currentPhase]: {
           status: "estimated",
-          detail: "Phase estimée heuristiquement depuis maturity_phase",
+          detail: "Phase estimée heuristiquement depuis phase_age",
         },
       },
       health_components: {
@@ -213,7 +213,7 @@ export class CalibrationReviewAdapter {
             date: item.date,
             health_score: item.health_score,
             confidence_score: item.confidence_score,
-            maturity_phase: item.maturity_phase,
+            phase_age: item.phase_age,
             status: item.status,
           }))
         : [],

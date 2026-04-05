@@ -78,16 +78,16 @@ const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
 
 type ZoneClassification = "optimal" | "normal" | "stressed";
 type ParcelAiPhase =
-  | "disabled"
+  | "awaiting_data"
   | "calibrating"
-  | "awaiting_validation"
+  | "calibrated"
   | "awaiting_nutrition_option"
   | "active"
-  | "paused"
-  | "calibration"
+  
+  | "ready_calibration"
   | string;
 type JsonObject = Record<string, unknown>;
-type CalibrationMode = "full" | "partial" | "annual";
+type CalibrationType = "initial" | "F2_partial" | "F3_complete";
 type RecalibrationMotif =
   | "water_source_change"
   | "irrigation_change"
@@ -175,7 +175,7 @@ interface HarvestRow {
 
 interface CalibrationResponse {
   parcel_id: string;
-  maturity_phase: string;
+  phase_age: string;
   step3?: {
     global_percentiles?: Record<string, { p50?: number }>;
   };
@@ -210,16 +210,37 @@ export interface CalibrationRecord {
   id: string;
   parcel_id: string;
   organization_id: string;
+  type: string;
   status: string;
   started_at: string | null;
   completed_at: string | null;
-  baseline_ndvi: number | string | null;
-  baseline_ndre: number | string | null;
-  baseline_ndmi: number | string | null;
+  mode_calibrage: string | null;
+  phase_age: string | null;
+  p50_ndvi: number | string | null;
+  p50_nirv: number | string | null;
+  p50_ndmi: number | string | null;
+  p50_ndre: number | string | null;
+  p10_ndvi: number | string | null;
+  p10_ndmi: number | string | null;
   confidence_score: number | string | null;
-  zone_classification: ZoneClassification | null;
-  phenology_stage: string | null;
-  calibration_data: unknown;
+  health_score: number | string | null;
+  yield_potential_min: number | string | null;
+  yield_potential_max: number | string | null;
+  coefficient_etat_parcelle: number | string | null;
+  anomaly_count: number;
+  baseline_data: unknown;
+  diagnostic_data: unknown;
+  anomalies_data: unknown;
+  scores_detail: unknown;
+  profile_snapshot: unknown;
+  recalibration_motif: string | null;
+  previous_baseline: unknown;
+  campaign_bilan: unknown;
+  rapport_fr: string | null;
+  rapport_ar: string | null;
+  validated_by_user: boolean;
+  validated_at: string | null;
+  calibration_version: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -365,10 +386,10 @@ export class CalibrationService {
   ): Promise<CalibrationRecord> {
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const previousPhase = parcel.aiPhase as
-      | "disabled"
-      | "pret_calibrage"
+      | "awaiting_data"
+      | "ready_calibration"
       | "active"
-      | "awaiting_validation"
+      | "calibrated"
       | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
@@ -378,10 +399,10 @@ export class CalibrationService {
     }
 
     const allowedStartPhases = [
-      "disabled",
-      "pret_calibrage",
+      "awaiting_data",
+      "ready_calibration",
       "active",
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
     ];
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
@@ -421,12 +442,11 @@ export class CalibrationService {
       .insert({
         parcel_id: parcelId,
         organization_id: organizationId,
+        type: "initial",
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: dto.mode_calibrage ?? "full",
-        calibration_version: "v2",
-        calibration_data: {
-          version: "v2",
+        calibration_version: "v3",
+        profile_snapshot: {
           request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           parcel: {
             id: parcel.id,
@@ -528,10 +548,10 @@ export class CalibrationService {
 
     const parcel = await this.getParcelContext(parcelId, organizationId);
     const previousPhase = parcel.aiPhase as
-      | "disabled"
-      | "pret_calibrage"
+      | "awaiting_data"
+      | "ready_calibration"
       | "active"
-      | "awaiting_validation"
+      | "calibrated"
       | "awaiting_nutrition_option";
 
     if (parcel.aiPhase === "calibrating") {
@@ -541,10 +561,10 @@ export class CalibrationService {
     }
 
     const allowedStartPhases = [
-      "disabled",
-      "pret_calibrage",
+      "awaiting_data",
+      "ready_calibration",
       "active",
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
     ];
 
@@ -589,15 +609,14 @@ export class CalibrationService {
       .insert({
         parcel_id: parcelId,
         organization_id: organizationId,
+        type: "F2_partial",
         status: "in_progress",
         started_at: startedAt,
-        mode_calibrage: "partial",
         recalibration_motif: motif,
         previous_baseline: previousBaseline,
-        calibration_version: "v2",
-        calibration_data: {
-          version: "v2",
-          request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
+        calibration_version: "v3",
+        profile_snapshot: {
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
           recalibration: {
             motif,
             motif_detail: dto.recalibration_motif_detail ?? null,
@@ -658,10 +677,10 @@ export class CalibrationService {
 
   private isRecoverableCalibrationPhase(value: string): value is AiPhase {
     return (
-      value === "disabled" ||
-      value === "pret_calibrage" ||
+      value === "awaiting_data" ||
+      value === "ready_calibration" ||
       value === "active" ||
-      value === "awaiting_validation" ||
+      value === "calibrated" ||
       value === "awaiting_nutrition_option"
     );
   }
@@ -701,7 +720,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: row, error } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -712,7 +731,7 @@ export class CalibrationService {
       );
     }
 
-    const persistedCalibrationData = this.toJsonObject(row?.calibration_data);
+    const persistedCalibrationData = this.toJsonObject(row?.profile_snapshot);
     const recovery = this.toJsonObject(persistedCalibrationData.recovery);
     const rawPrevious =
       typeof recovery.previous_ai_phase === "string"
@@ -721,7 +740,7 @@ export class CalibrationService {
     const targetPhase: AiPhase =
       rawPrevious && this.isRecoverableCalibrationPhase(rawPrevious)
         ? rawPrevious
-        : "disabled";
+        : "awaiting_data";
 
     try {
       await this.stateMachine.transitionPhase(
@@ -997,7 +1016,7 @@ export class CalibrationService {
       analyses,
       harvest_records: harvestRecords,
       reference_data: referenceData,
-      mode_calibrage: "partial" as CalibrationMode,
+      mode_calibrage: "F2_partial" as CalibrationType,
       recalibration_motif: motif,
       baseline_calibration: previousBaseline,
       updated_blocks: updatedBlocks,
@@ -1030,12 +1049,12 @@ export class CalibrationService {
 
     const { data: existingPartialSnapshot } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
     const existingPartialData = this.toJsonObject(
-      existingPartialSnapshot?.calibration_data,
+      existingPartialSnapshot?.profile_snapshot,
     );
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
@@ -1076,17 +1095,19 @@ export class CalibrationService {
       await supabase
         .from("calibrations")
         .update({
-          status: "completed",
+          status: "validated",
           completed_at: completedAt,
-          mode_calibrage: "partial",
+          mode_calibrage: this.extractModeCalibrage(v2Output),
+          phase_age: this.extractPhaseAge(v2Output, parcel),
           recalibration_motif: motif,
           previous_baseline: previousBaseline,
-          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          p50_nirv: this.extractIndexP50(v2Output, "NIRv"),
+          p50_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
+          p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          zone_classification: zoneClassification,
-          phenology_stage: this.extractPhenologyStage(v2Output),
           health_score: this.toNumber(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
@@ -1094,15 +1115,16 @@ export class CalibrationService {
           yield_potential_max: this.toNumber(
             v2Output.step6?.yield_potential?.maximum,
           ),
-          data_completeness_score: this.toNumber(
-            v2Output.confidence?.total_score,
-          ),
-          maturity_phase: v2Output.maturity_phase,
+          coefficient_etat_parcelle: this.extractCoefficientEtat(v2Output),
           anomaly_count: Array.isArray(v2Output.step5?.anomalies)
             ? v2Output.step5?.anomalies.length
             : 0,
-          calibration_version: "v2",
-          calibration_data: calibrationData,
+          baseline_data: this.extractBaselineData(v2Output),
+          diagnostic_data: this.extractDiagnosticData(v2Output),
+          anomalies_data: v2Output.step5?.anomalies ?? null,
+          scores_detail: this.extractScoresDetail(v2Output),
+          profile_snapshot: calibrationData,
+          calibration_version: "v3",
         })
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
@@ -1148,7 +1170,7 @@ export class CalibrationService {
 
     const bilingualUpdate: Record<string, unknown> = {};
     if (primaryReport || secondaryReport) {
-      bilingualUpdate.calibration_data = {
+      bilingualUpdate.profile_snapshot = {
         ...calibrationData,
         ai_analysis: primaryReport ?? secondaryReport,
       };
@@ -1203,12 +1225,12 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "awaiting_validation",
+        "calibrated",
         organizationId,
       );
       await this.stateMachine.transitionPhase(
         parcelId,
-        "awaiting_validation",
+        "calibrated",
         "active",
         organizationId,
       );
@@ -1496,19 +1518,19 @@ export class CalibrationService {
       return;
     }
 
-    const mode = this.normalizeCalibrationMode(dto.mode_calibrage);
+    const mode = this.normalizeCalibrationType(dto.mode_calibrage);
     const autoActivate = this.shouldAutoActivateAfterCompletion(
       parcel.aiPhase,
       mode,
     );
     const { data: existingCalibrationSnapshot } = await supabase
       .from("calibrations")
-      .select("calibration_data")
+      .select("profile_snapshot")
       .eq("id", calibrationId)
       .eq("organization_id", organizationId)
       .maybeSingle();
     const existingCalibrationData = this.toJsonObject(
-      existingCalibrationSnapshot?.calibration_data,
+      existingCalibrationSnapshot?.profile_snapshot,
     );
     const zoneClassification = this.deriveZoneClassification(v2Output);
     const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
@@ -1552,14 +1574,17 @@ export class CalibrationService {
       await supabase
         .from("calibrations")
         .update({
-          status: "completed",
+          status: "calibrated",
           completed_at: completedAt,
-          baseline_ndvi: this.extractIndexP50(v2Output, "NDVI"),
-          baseline_ndre: this.extractIndexP50(v2Output, "NDRE"),
-          baseline_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          mode_calibrage: this.extractModeCalibrage(v2Output),
+          phase_age: this.extractPhaseAge(v2Output, parcel),
+          p50_ndvi: this.extractIndexP50(v2Output, "NDVI"),
+          p50_nirv: this.extractIndexP50(v2Output, "NIRv"),
+          p50_ndmi: this.extractIndexP50(v2Output, "NDMI"),
+          p50_ndre: this.extractIndexP50(v2Output, "NDRE"),
+          p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
+          p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          zone_classification: zoneClassification,
-          phenology_stage: this.extractPhenologyStage(v2Output),
           health_score: this.toNumber(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
@@ -1567,15 +1592,16 @@ export class CalibrationService {
           yield_potential_max: this.toNumber(
             v2Output.step6?.yield_potential?.maximum,
           ),
-          data_completeness_score: this.toNumber(
-            v2Output.confidence?.total_score,
-          ),
-          maturity_phase: v2Output.maturity_phase,
+          coefficient_etat_parcelle: this.extractCoefficientEtat(v2Output),
           anomaly_count: Array.isArray(v2Output.step5?.anomalies)
             ? v2Output.step5?.anomalies.length
             : 0,
-          calibration_version: "v2",
-          calibration_data: calibrationData,
+          baseline_data: this.extractBaselineData(v2Output),
+          diagnostic_data: this.extractDiagnosticData(v2Output),
+          anomalies_data: v2Output.step5?.anomalies ?? null,
+          scores_detail: this.extractScoresDetail(v2Output),
+          profile_snapshot: calibrationData,
+          calibration_version: "v3",
         })
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
@@ -1621,7 +1647,7 @@ export class CalibrationService {
 
     const bilingualUpdate: Record<string, unknown> = {};
     if (primaryReport || secondaryReport) {
-      bilingualUpdate.calibration_data = {
+      bilingualUpdate.profile_snapshot = {
         ...calibrationData,
         ai_analysis: primaryReport ?? secondaryReport,
       };
@@ -1678,14 +1704,14 @@ export class CalibrationService {
       await this.stateMachine.transitionPhase(
         parcelId,
         "calibrating",
-        "awaiting_validation",
+        "calibrated",
         organizationId,
       );
 
       if (autoActivate) {
         await this.stateMachine.transitionPhase(
           parcelId,
-          "awaiting_validation",
+          "calibrated",
           "active",
           organizationId,
         );
@@ -1833,9 +1859,10 @@ export class CalibrationService {
       status: string;
       health_score: number | null;
       confidence_score: number | null;
-      maturity_phase: string | null;
+      phase_age: string | null;
       error_message: string | null;
-      mode_calibrage: CalibrationMode;
+      type: string;
+      mode_calibrage: string | null;
       recalibration_motif: string | null;
       created_at: string;
       completed_at: string | null;
@@ -1845,7 +1872,7 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
+        "id, type, status, health_score, confidence_score, phase_age, mode_calibrage, error_message, recalibration_motif, profile_snapshot, created_at, completed_at",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
@@ -1874,9 +1901,10 @@ export class CalibrationService {
       status: string;
       health_score: number | null;
       confidence_score: number | null;
-      maturity_phase: string | null;
+      phase_age: string | null;
       error_message: string | null;
-      mode_calibrage: CalibrationMode;
+      type: string;
+      mode_calibrage: string | null;
       recalibration_motif: string | null;
       created_at: string;
       completed_at: string | null;
@@ -1886,11 +1914,11 @@ export class CalibrationService {
     const { data, error } = await supabase
       .from("calibrations")
       .select(
-        "id, status, health_score, confidence_score, maturity_phase, error_message, mode_calibrage, recalibration_motif, calibration_data, created_at, completed_at",
+        "id, type, status, health_score, confidence_score, phase_age, mode_calibrage, error_message, recalibration_motif, profile_snapshot, created_at, completed_at",
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .in("mode_calibrage", ["F2", "partial"])
+      .in("type", ["F2_partial"])
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -1918,7 +1946,7 @@ export class CalibrationService {
 
     return {
       calibration,
-      report: this.toJsonObject(calibration.calibration_data),
+      report: this.toJsonObject(calibration.profile_snapshot),
     };
   }
 
@@ -1928,7 +1956,7 @@ export class CalibrationService {
   ): Promise<CalibrationReviewView> {
     const ALLOWED_STATUSES = [
       "completed",
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
       "active",
     ];
@@ -1960,8 +1988,12 @@ export class CalibrationService {
     }
 
     const record = data as CalibrationRecord;
-    const calibrationData = this.toJsonObject(record.calibration_data);
-    const output = this.toJsonObject(calibrationData.output);
+    const output = {
+      ...this.toJsonObject(record.baseline_data),
+      ...this.toJsonObject(record.diagnostic_data),
+      anomalies: record.anomalies_data,
+      scores: this.toJsonObject(record.scores_detail),
+    };
     const history = await this.getCalibrationHistory(parcelId, organizationId, 5);
 
     const snapshotInput: CalibrationSnapshotInput = {
@@ -1969,21 +2001,17 @@ export class CalibrationService {
       parcel_id: record.parcel_id,
       generated_at: record.completed_at ?? record.updated_at ?? record.created_at,
       output,
-      inputs: this.toJsonObject(calibrationData.inputs),
+      inputs: this.toJsonObject(record.profile_snapshot),
       confidence_score: this.toNumber(record.confidence_score),
       status: record.status,
-      parcel_phase:
-        record.phenology_stage ??
-        (typeof output.maturity_phase === "string"
-          ? output.maturity_phase
-          : "unknown"),
+      parcel_phase: record.phase_age ?? "unknown",
       organization_id: record.organization_id,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,
         health_score: item.health_score,
         confidence_score: item.confidence_score,
-        maturity_phase: item.maturity_phase ?? "unknown",
+        phase_age: item.phase_age ?? "unknown",
         status: item.status,
       })),
     };
@@ -2219,7 +2247,7 @@ export class CalibrationService {
       existingCalibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "awaiting_validation") {
+    if (parcel.aiPhase !== "calibrated") {
       throw new BadRequestException(
         `Calibration can only be validated in awaiting_validation phase (current: ${parcel.aiPhase})`,
       );
@@ -2236,7 +2264,7 @@ export class CalibrationService {
     );
     const validatedAt = new Date().toISOString();
     const calibrationData = {
-      ...this.toJsonObject(existingCalibration.calibration_data),
+      ...this.toJsonObject(existingCalibration.profile_snapshot),
       validation: {
         validated: true,
         validated_at: validatedAt,
@@ -2250,7 +2278,7 @@ export class CalibrationService {
 
     const updatePayload: Record<string, unknown> = {
       status: "completed",
-      calibration_data: calibrationData,
+      profile_snapshot: calibrationData,
     };
 
     if (!existingCalibration.completed_at) {
@@ -2284,7 +2312,7 @@ export class CalibrationService {
 
       await this.stateMachine.transitionPhase(
         existingCalibration.parcel_id,
-        "awaiting_validation",
+        "calibrated",
         "active",
         organizationId,
       );
@@ -2296,13 +2324,13 @@ export class CalibrationService {
         .eq("organization_id", organizationId);
 
       const observationReason = `Confidence score (${Math.round(confidenceScoreAtValidation * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
-      const currentData = this.toJsonObject(updatedCalibration.calibration_data);
+      const currentData = this.toJsonObject(updatedCalibration.profile_snapshot);
       const prevValidation = this.toJsonObject(currentData.validation);
 
       await supabase
         .from("calibrations")
         .update({
-          calibration_data: {
+          profile_snapshot: {
             ...currentData,
             observation_only: true,
             observation_reason: observationReason,
@@ -2325,7 +2353,7 @@ export class CalibrationService {
 
     await this.stateMachine.transitionPhase(
       existingCalibration.parcel_id,
-      "awaiting_validation",
+      "calibrated",
       "awaiting_nutrition_option",
       organizationId,
     );
@@ -2557,19 +2585,24 @@ export class CalibrationService {
     }
   }
 
-  private normalizeCalibrationMode(mode?: string): CalibrationMode {
-    if (mode === "partial" || mode === "annual") {
-      return mode;
-    }
-
-    return "full";
+  private normalizeCalibrationType(mode?: string): CalibrationType {
+    const TYPE_MAP: Record<string, CalibrationType> = {
+      F2_partial: "F2_partial",
+      F3_complete: "F3_complete",
+      initial: "initial",
+      // Legacy values
+      full: "initial",
+      partial: "F2_partial",
+      annual: "F3_complete",
+    };
+    return TYPE_MAP[mode ?? ""] ?? "initial";
   }
 
   private shouldAutoActivateAfterCompletion(
     previousPhase: ParcelAiPhase,
-    mode: CalibrationMode,
+    type: CalibrationType,
   ): boolean {
-    if (mode === "annual" || mode === "partial") {
+    if (type === "F3_complete" || type === "F2_partial") {
       return true;
     }
 
@@ -2716,7 +2749,7 @@ export class CalibrationService {
       waterQuantityPerSession: this.toNumber(parcel.water_quantity_per_session),
       langue: typeof parcel.langue === "string" ? parcel.langue : "fr",
       aiPhase:
-        typeof parcel.ai_phase === "string" ? parcel.ai_phase : "disabled",
+        typeof parcel.ai_phase === "string" ? parcel.ai_phase : "awaiting_data",
     };
   }
 
@@ -3229,7 +3262,7 @@ export class CalibrationService {
   }
 
   private extractPreviousBaseline(calibration: CalibrationRecord): JsonObject {
-    const calibrationData = this.toJsonObject(calibration.calibration_data);
+    const calibrationData = this.toJsonObject(calibration.profile_snapshot);
     const output = this.toJsonObject(calibrationData.output);
 
     if (Object.keys(output).length > 0) {
@@ -3246,59 +3279,29 @@ export class CalibrationService {
     status: string;
     health_score: number | null;
     confidence_score: number | null;
-    maturity_phase: string | null;
+    phase_age: string | null;
     error_message: string | null;
-    mode_calibrage: CalibrationMode;
+    type: string;
+    mode_calibrage: string | null;
     recalibration_motif: string | null;
     created_at: string;
     completed_at: string | null;
   }> {
     return rows.map((row) => {
-      const calibrationData = this.toJsonObject(row.calibration_data);
-      const recalibrationData = this.toJsonObject(calibrationData.recalibration);
-      const requestData = this.toJsonObject(calibrationData.request);
-
-      const modeFromColumn =
-        typeof row.mode_calibrage === "string" ? row.mode_calibrage : null;
-      const modeFromRequest =
-        typeof requestData.mode_calibrage === "string"
-          ? requestData.mode_calibrage
-          : null;
-      const CALIBRATION_MODE_MAP: Record<string, CalibrationMode> = {
-        F1: "full",
-        F2: "partial",
-        F3: "annual",
-        full: "full",
-        partial: "partial",
-        annual: "annual",
-      };
-      const mode: CalibrationMode =
-        CALIBRATION_MODE_MAP[modeFromColumn ?? ""] ??
-        CALIBRATION_MODE_MAP[modeFromRequest ?? ""] ??
-        "full";
-
-      const motifFromColumn =
-        typeof row.recalibration_motif === "string"
-          ? row.recalibration_motif
-          : null;
-      const motifFromData =
-        typeof calibrationData.recalibration_motif === "string"
-          ? calibrationData.recalibration_motif
-          : typeof recalibrationData.motif === "string"
-            ? recalibrationData.motif
-            : null;
-
       return {
         id: row.id as string,
         status: row.status as string,
         health_score: this.toNumber(row.health_score),
         confidence_score: this.toNumber(row.confidence_score),
-        maturity_phase:
-          typeof row.maturity_phase === "string" ? row.maturity_phase : null,
+        phase_age:
+          typeof row.phase_age === "string" ? row.phase_age : null,
         error_message:
           typeof row.error_message === "string" ? row.error_message : null,
-        mode_calibrage: mode,
-        recalibration_motif: motifFromColumn ?? motifFromData,
+        type: typeof row.type === "string" ? row.type : "initial",
+        mode_calibrage:
+          typeof row.mode_calibrage === "string" ? row.mode_calibrage : null,
+        recalibration_motif:
+          typeof row.recalibration_motif === "string" ? row.recalibration_motif : null,
         created_at: row.created_at as string,
         completed_at:
           typeof row.completed_at === "string" ? row.completed_at : null,
@@ -3361,6 +3364,76 @@ export class CalibrationService {
 
     const keys = Object.keys(meanDates);
     return keys.length > 0 ? keys[0] : null;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // V2 EXTRACTION HELPERS
+  // ═══════════════════════════════════════════════════════════════
+
+  private extractIndexPercentile(
+    output: CalibrationResponse,
+    indexName: string,
+    percentile: string,
+  ): number | null {
+    const value = output.step3?.global_percentiles?.[indexName]?.[percentile];
+    return this.toNumber(value);
+  }
+
+  private extractModeCalibrage(output: CalibrationResponse): string | null {
+    const raw = (output as unknown as Record<string, unknown>).mode_calibrage;
+    return typeof raw === "string" ? raw : null;
+  }
+
+  private extractPhaseAge(
+    output: CalibrationResponse,
+    parcel: ParcelContext,
+  ): string | null {
+    // Try from engine output first
+    const fromOutput = (output as unknown as Record<string, unknown>).phase_age;
+    if (typeof fromOutput === "string") return fromOutput;
+    const nested = (fromOutput as Record<string, unknown>)?.phase;
+    if (typeof nested === "string") return nested;
+
+    // Fallback: compute from referentiel
+    if (parcel.plantingYear != null) {
+      const age = new Date().getFullYear() - parcel.plantingYear;
+      try {
+        const { detectPhaseAgeFromReferentiel } = require('./phase-age-detector');
+        const ref = getLocalCropReference(parcel.cropType);
+        if (ref) {
+          return detectPhaseAgeFromReferentiel(age, parcel.system, ref);
+        }
+      } catch {
+        // phase-age-detector not available, return null
+      }
+    }
+    return null;
+  }
+
+  private extractCoefficientEtat(output: CalibrationResponse): number | null {
+    const raw = (output as unknown as Record<string, unknown>).coefficient_etat_parcelle;
+    return this.toNumber(raw);
+  }
+
+  private extractBaselineData(output: CalibrationResponse): Record<string, unknown> {
+    return {
+      percentiles: output.step3?.global_percentiles ?? null,
+      phenology: output.step4 ?? null,
+      zones: output.step7 ?? null,
+    };
+  }
+
+  private extractDiagnosticData(output: CalibrationResponse): Record<string, unknown> | null {
+    const diagnostic = (output as unknown as Record<string, unknown>).diagnostic_explicatif;
+    if (this.isJsonObject(diagnostic)) return diagnostic;
+    return null;
+  }
+
+  private extractScoresDetail(output: CalibrationResponse): Record<string, unknown> {
+    return {
+      health: output.step8 ?? null,
+      confidence: output.confidence ?? null,
+    };
   }
 
   private extractFarmOrganizationId(farms: unknown): string | null {
