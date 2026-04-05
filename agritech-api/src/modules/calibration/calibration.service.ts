@@ -2492,6 +2492,20 @@ export class CalibrationService {
         "awaiting_nutrition_option",
         organizationId,
       );
+    } else if (parcel.aiPhase === "calibrating") {
+      // Calibration completed but phase stuck at calibrating — advance through
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrating",
+        "calibrated",
+        organizationId,
+      );
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
     } else if (parcel.aiPhase === "awaiting_data" || parcel.aiPhase === "ready_calibration") {
       await this.transitionToCalibrating(
         calibration.parcel_id,
@@ -2731,7 +2745,8 @@ export class CalibrationService {
     currentPhase: AiPhase,
     organizationId: string,
   ): Promise<void> {
-    let phase = currentPhase;
+    if (currentPhase === "calibrating") return;
+    let phase: AiPhase = currentPhase;
     if (phase === "awaiting_data") {
       await this.stateMachine.transitionPhase(parcelId, "awaiting_data", "ready_calibration", organizationId);
       phase = "ready_calibration" as AiPhase;
