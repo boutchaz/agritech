@@ -7,6 +7,28 @@ export class DemoDataService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  /** Parse Supabase public object URL → bucket + object path for storage.download */
+  private static parseSupabasePublicStorageUrl(
+    publicUrl: string | null | undefined,
+  ): { bucket: string; objectPath: string } | null {
+    if (!publicUrl || typeof publicUrl !== "string") return null;
+    try {
+      const u = new URL(publicUrl);
+      const marker = "/object/public/";
+      const idx = u.pathname.indexOf(marker);
+      if (idx === -1) return null;
+      const rest = u.pathname.slice(idx + marker.length);
+      const slash = rest.indexOf("/");
+      if (slash === -1) return null;
+      const bucket = rest.slice(0, slash);
+      const objectPath = decodeURIComponent(rest.slice(slash + 1));
+      if (!bucket || !objectPath) return null;
+      return { bucket, objectPath };
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Seed demo data for a new organization
    * Creates minimal but representative data across key modules
@@ -5383,6 +5405,10 @@ export class DemoDataService {
     const tables = [
       "farms",
       "parcels",
+      "satellite_aois",
+      "satellite_indices_data",
+      "calibrations",
+      "ai_recommendations",
       "workers",
       "tasks",
       "harvest_records",
@@ -6258,7 +6284,7 @@ export class DemoDataService {
         {
           exportDate: new Date().toISOString(),
           organizationId,
-          version: "1.0",
+          version: "1.1",
         },
       ],
     };
@@ -6268,12 +6294,20 @@ export class DemoDataService {
     const tables = [
       "farms",
       "parcels",
+      "satellite_aois",
+      "satellite_processing_jobs",
+      "satellite_processing_tasks",
+      "satellite_files",
+      "satellite_indices_data",
+      "cloud_coverage_checks",
+      "satellite_heatmap_cache",
       "workers",
       "cost_centers",
       "structures",
       "warehouses",
       "item_groups",
       "items",
+      "product_variants",
       "customers",
       "suppliers",
       "accounts",
@@ -6287,9 +6321,28 @@ export class DemoDataService {
       "reception_batches",
       "crop_cycles",
       "biological_assets",
-      "product_applications",
       "calibrations",
+      "ai_diagnostic_sessions",
+      "ai_recommendations",
+      "recommendation_events",
+      "annual_plans",
+      "plan_interventions",
+      "evenements_parcelle",
+      "suivis_saison",
+      "monitoring_analyses",
+      "weather_daily",
+      "weather_forecast",
+      "yield_forecasts",
+      "calibration_wizard_drafts",
+      "analyses",
+      "soil_analyses",
+      "parcel_reports",
+      "product_applications",
       "stock_entries",
+      "inventory_items",
+      "inventory_batches",
+      "inventory_serial_numbers",
+      "stock_movements",
       "quotes",
       "sales_orders",
       "purchase_orders",
@@ -6319,6 +6372,18 @@ export class DemoDataService {
         this.logger.warn(`Error exporting ${table}: ${err}`);
         exportData[table] = [];
       }
+    }
+
+    // Analysis recommendations (no organization_id — tied to analyses)
+    if (exportData.analyses && exportData.analyses.length > 0) {
+      const analysisIds = exportData.analyses.map((a: any) => a.id);
+      const { data: analysisRecommendations } = await client
+        .from("analysis_recommendations")
+        .select("*")
+        .in("analysis_id", analysisIds);
+      exportData.analysis_recommendations = analysisRecommendations || [];
+    } else {
+      exportData.analysis_recommendations = [];
     }
 
     // Export related items (no organization_id column)
@@ -6392,12 +6457,30 @@ export class DemoDataService {
       exportData.payment_allocations = paymentAllocations || [];
     }
 
-    // Export storage files as base64
+    // Export storage files as base64 (file_registry + satellite rasters linked from satellite_files)
+    const storageFiles: Array<{
+      bucket: string;
+      path: string;
+      base64: string;
+      mime_type: string;
+    }> = [];
+    const storageKeys = new Set<string>();
+
+    const pushStorageFile = (
+      bucket: string,
+      path: string,
+      base64: string,
+      mime_type: string,
+    ) => {
+      const key = `${bucket}:${path}`;
+      if (storageKeys.has(key)) return;
+      storageKeys.add(key);
+      storageFiles.push({ bucket, path, base64, mime_type });
+    };
+
     const fileRecords = exportData.file_registry || [];
     if (fileRecords.length > 0) {
-      this.logger.log(`Exporting ${fileRecords.length} storage files...`);
-      const storageFiles: Array<{ bucket: string; path: string; base64: string; mime_type: string }> = [];
-
+      this.logger.log(`Exporting ${fileRecords.length} registry storage files...`);
       for (const fileRecord of fileRecords) {
         if (!fileRecord.bucket_name || !fileRecord.file_path) continue;
         try {
@@ -6412,20 +6495,76 @@ export class DemoDataService {
 
           const arrayBuffer = await data.arrayBuffer();
           const base64 = Buffer.from(arrayBuffer).toString('base64');
-          storageFiles.push({
-            bucket: fileRecord.bucket_name,
-            path: fileRecord.file_path,
+          pushStorageFile(
+            fileRecord.bucket_name,
+            fileRecord.file_path,
             base64,
-            mime_type: fileRecord.mime_type || 'application/octet-stream',
-          });
+            fileRecord.mime_type || 'application/octet-stream',
+          );
         } catch (err) {
           this.logger.warn(`Failed to download file ${fileRecord.file_path}: ${err}`);
         }
       }
-
-      exportData._storage_files = storageFiles;
-      this.logger.log(`Exported ${storageFiles.length}/${fileRecords.length} storage files`);
     }
+
+    const satelliteRows = exportData.satellite_files || [];
+    if (satelliteRows.length > 0) {
+      this.logger.log(`Exporting up to ${satelliteRows.length} satellite storage objects...`);
+      const fallbackBuckets = ["satellite-data", "satellite-indices", "files"];
+      for (const row of satelliteRows) {
+        if (!row?.file_path && !row?.public_url) continue;
+        let downloaded = false;
+        const fromUrl = DemoDataService.parseSupabasePublicStorageUrl(row.public_url);
+        if (fromUrl) {
+          try {
+            const { data, error } = await client.storage
+              .from(fromUrl.bucket)
+              .download(fromUrl.objectPath);
+            if (!error && data) {
+              const arrayBuffer = await data.arrayBuffer();
+              pushStorageFile(
+                fromUrl.bucket,
+                fromUrl.objectPath,
+                Buffer.from(arrayBuffer).toString('base64'),
+                "application/octet-stream",
+              );
+              downloaded = true;
+            }
+          } catch (err) {
+            this.logger.warn(`Satellite download from URL failed (${row.file_path}): ${err}`);
+          }
+        }
+        if (!downloaded && row.file_path) {
+          for (const bucket of fallbackBuckets) {
+            try {
+              const { data, error } = await client.storage
+                .from(bucket)
+                .download(row.file_path);
+              if (error || !data) continue;
+              const arrayBuffer = await data.arrayBuffer();
+              pushStorageFile(
+                bucket,
+                row.file_path,
+                Buffer.from(arrayBuffer).toString('base64'),
+                "application/octet-stream",
+              );
+              downloaded = true;
+              break;
+            } catch {
+              /* try next bucket */
+            }
+          }
+        }
+        if (!downloaded) {
+          this.logger.warn(`Could not export satellite file for row ${row.id || row.file_path || "unknown"}`);
+        }
+      }
+    }
+
+    exportData._storage_files = storageFiles;
+    this.logger.log(
+      `Exported ${storageFiles.length} storage object(s) (registry + satellite)`,
+    );
 
     this.logger.log(`Export completed for organization ${organizationId}`);
     return exportData;
@@ -6450,12 +6589,20 @@ export class DemoDataService {
     const importOrder = [
       "farms",
       "parcels",
+      "satellite_aois",
+      "satellite_processing_jobs",
+      "satellite_processing_tasks",
+      "satellite_files",
+      "satellite_indices_data",
+      "cloud_coverage_checks",
+      "satellite_heatmap_cache",
       "workers",
       "cost_centers",
       "structures",
       "warehouses",
       "item_groups",
       "items",
+      "product_variants",
       "customers",
       "suppliers",
       "accounts",
@@ -6469,9 +6616,27 @@ export class DemoDataService {
       "reception_batches",
       "crop_cycles",
       "biological_assets",
-      "product_applications",
       "calibrations",
+      "ai_diagnostic_sessions",
+      "ai_recommendations",
+      "recommendation_events",
+      "annual_plans",
+      "plan_interventions",
+      "evenements_parcelle",
+      "suivis_saison",
+      "monitoring_analyses",
+      "weather_daily",
+      "weather_forecast",
+      "yield_forecasts",
+      "calibration_wizard_drafts",
+      "analyses",
+      "soil_analyses",
+      "parcel_reports",
+      "product_applications",
       "stock_entries",
+      "inventory_items",
+      "inventory_batches",
+      "inventory_serial_numbers",
       "quotes",
       "sales_orders",
       "purchase_orders",
@@ -6509,6 +6674,18 @@ export class DemoDataService {
           // Update foreign key references using ID maps
           this.updateForeignKeys(newRecord, table, idMaps);
 
+          // Calibrations are inserted after parcels; avoid FK failure on ai_calibration_id
+          if (table === "parcels" && newRecord.ai_calibration_id) {
+            delete newRecord.ai_calibration_id;
+          }
+
+          if (table === "calibration_wizard_drafts") {
+            newRecord.user_id = userId;
+          }
+          if (table === "parcel_reports") {
+            newRecord.generated_by = userId;
+          }
+
           // Special handling for file_registry: polymorphic entity_id
           if (table === "file_registry" && newRecord.entity_id && newRecord.entity_type) {
             const entityTypeToTable: Record<string, string> = {
@@ -6517,6 +6694,8 @@ export class DemoDataService {
               worker: "workers", farm: "farms", parcel: "parcels",
               harvest: "harvest_records", customer: "customers",
               supplier: "suppliers", quote: "quotes",
+              satellite_aoi: "satellite_aois",
+              aoi: "satellite_aois",
             };
             const refTable = entityTypeToTable[newRecord.entity_type];
             if (refTable && idMaps[refTable]) {
@@ -6563,7 +6742,35 @@ export class DemoDataService {
     }
 
     // Import child tables (items without organization_id)
-    await this.importChildRecords(client, importData, idMaps, importedCounts);
+    await this.importChildRecords(
+      client,
+      importData,
+      idMaps,
+      importedCounts,
+      organizationId,
+      userId,
+    );
+
+    // Parcels are inserted before calibrations; remap ai_calibration_id after both exist
+    const exportedParcels = importData.parcels;
+    if (
+      exportedParcels &&
+      Array.isArray(exportedParcels) &&
+      idMaps.parcels &&
+      idMaps.calibrations
+    ) {
+      for (const p of exportedParcels) {
+        if (!p?.id || !p.ai_calibration_id) continue;
+        const newParcelId = idMaps.parcels.get(p.id);
+        const newCalId = idMaps.calibrations.get(p.ai_calibration_id);
+        if (!newParcelId || !newCalId) continue;
+        await client
+          .from("parcels")
+          .update({ ai_calibration_id: newCalId })
+          .eq("id", newParcelId)
+          .eq("organization_id", organizationId);
+      }
+    }
 
     // Re-upload storage files
     const storageFiles = importData._storage_files;
@@ -6610,6 +6817,26 @@ export class DemoDataService {
   ): void {
     const foreignKeyMappings: Record<string, Record<string, string>> = {
       parcels: { farm_id: "farms" },
+      satellite_aois: { farm_id: "farms", parcel_id: "parcels" },
+      satellite_processing_jobs: { farm_id: "farms", parcel_id: "parcels" },
+      satellite_processing_tasks: {
+        processing_job_id: "satellite_processing_jobs",
+        farm_id: "farms",
+        parcel_id: "parcels",
+        aoi_id: "satellite_aois",
+      },
+      satellite_files: { parcel_id: "parcels" },
+      satellite_indices_data: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+        processing_job_id: "satellite_processing_jobs",
+      },
+      cloud_coverage_checks: {
+        farm_id: "farms",
+        parcel_id: "parcels",
+        aoi_id: "satellite_aois",
+      },
+      satellite_heatmap_cache: { parcel_id: "parcels" },
       workers: { farm_id: "farms" },
       cost_centers: { farm_id: "farms", parcel_id: "parcels" },
       structures: { farm_id: "farms" },
@@ -6618,6 +6845,7 @@ export class DemoDataService {
         item_group_id: "item_groups",
         default_warehouse_id: "warehouses",
       },
+      product_variants: { item_id: "items" },
       tasks: {
         farm_id: "farms",
         parcel_id: "parcels",
@@ -6667,17 +6895,69 @@ export class DemoDataService {
         farm_id: "farms",
         parcel_id: "parcels",
       },
+      calibrations: {
+        parcel_id: "parcels",
+      },
+      ai_diagnostic_sessions: {
+        parcel_id: "parcels",
+        calibration_id: "calibrations",
+      },
+      ai_recommendations: {
+        parcel_id: "parcels",
+        calibration_id: "calibrations",
+        session_id: "ai_diagnostic_sessions",
+      },
+      recommendation_events: {
+        recommendation_id: "ai_recommendations",
+        parcel_id: "parcels",
+      },
+      annual_plans: {
+        parcel_id: "parcels",
+        calibration_id: "calibrations",
+      },
+      plan_interventions: {
+        annual_plan_id: "annual_plans",
+        parcel_id: "parcels",
+        assigned_to: "workers",
+      },
+      evenements_parcelle: {
+        parcel_id: "parcels",
+        recalibrage_id: "calibrations",
+      },
+      suivis_saison: {
+        parcel_id: "parcels",
+        recalibrage_annual_id: "calibrations",
+      },
+      monitoring_analyses: { parcel_id: "parcels" },
+      weather_daily: { parcel_id: "parcels" },
+      weather_forecast: { parcel_id: "parcels" },
+      yield_forecasts: { parcel_id: "parcels" },
+      calibration_wizard_drafts: { parcel_id: "parcels" },
+      analyses: { parcel_id: "parcels" },
+      soil_analyses: { parcel_id: "parcels" },
+      parcel_reports: { parcel_id: "parcels" },
       product_applications: {
         farm_id: "farms",
         parcel_id: "parcels",
         product_id: "items",
-      },
-      calibrations: {
-        parcel_id: "parcels",
+        task_id: "tasks",
+        ai_recommendation_id: "ai_recommendations",
       },
       stock_entries: {
         from_warehouse_id: "warehouses",
         to_warehouse_id: "warehouses",
+      },
+      inventory_items: { farm_id: "farms" },
+      inventory_batches: {
+        item_id: "items",
+        supplier_id: "suppliers",
+        purchase_order_id: "purchase_orders",
+      },
+      inventory_serial_numbers: {
+        item_id: "items",
+        warehouse_id: "warehouses",
+        supplier_id: "suppliers",
+        purchase_order_id: "purchase_orders",
       },
       quotes: {
         customer_id: "customers",
@@ -6734,7 +7014,13 @@ export class DemoDataService {
     importData: any,
     idMaps: Record<string, Map<string, string>>,
     importedCounts: Record<string, number>,
+    organizationId: string,
+    userId: string,
   ): Promise<void> {
+    if (!idMaps.stock_entry_items) {
+      idMaps.stock_entry_items = new Map();
+    }
+
     // Stock entry items
     const stockEntryItems = importData.stock_entry_items;
     if (
@@ -6744,6 +7030,7 @@ export class DemoDataService {
     ) {
       let count = 0;
       for (const item of stockEntryItems) {
+        const oldId = item.id;
         const newItem = { ...item };
         delete newItem.id;
         delete newItem.created_at;
@@ -6768,12 +7055,97 @@ export class DemoDataService {
           if (newId) newItem.target_warehouse_id = newId;
         }
 
-        const { error } = await client
+        const { data: inserted, error } = await client
           .from("stock_entry_items")
-          .insert(newItem);
+          .insert(newItem)
+          .select("id")
+          .single();
+        if (!error && inserted?.id && oldId) {
+          idMaps.stock_entry_items.set(oldId, inserted.id);
+        }
         if (!error) count++;
       }
       importedCounts.stock_entry_items = count;
+    }
+
+    // Analysis recommendations (child of analyses)
+    const analysisRecommendations = importData.analysis_recommendations;
+    if (
+      analysisRecommendations &&
+      Array.isArray(analysisRecommendations) &&
+      analysisRecommendations.length > 0
+    ) {
+      let count = 0;
+      for (const item of analysisRecommendations) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+        if (newItem.analysis_id && idMaps.analyses) {
+          const newId = idMaps.analyses.get(newItem.analysis_id);
+          if (newId) newItem.analysis_id = newId;
+          else continue;
+        }
+        const { error } = await client
+          .from("analysis_recommendations")
+          .insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.analysis_recommendations = count;
+    }
+
+    // Stock movements (after stock_entry_items so stock_entry_item_id can remap)
+    const stockMovements = importData.stock_movements;
+    if (
+      stockMovements &&
+      Array.isArray(stockMovements) &&
+      stockMovements.length > 0
+    ) {
+      let count = 0;
+      for (const item of stockMovements) {
+        const newItem = { ...item };
+        delete newItem.id;
+        delete newItem.created_at;
+        delete newItem.updated_at;
+        newItem.organization_id = organizationId;
+        if (newItem.item_id && idMaps.items) {
+          const newId = idMaps.items.get(newItem.item_id);
+          if (newId) newItem.item_id = newId;
+          else continue;
+        }
+        if (newItem.warehouse_id && idMaps.warehouses) {
+          const newId = idMaps.warehouses.get(newItem.warehouse_id);
+          if (newId) newItem.warehouse_id = newId;
+          else continue;
+        }
+        if (newItem.stock_entry_id && idMaps.stock_entries) {
+          const newId = idMaps.stock_entries.get(newItem.stock_entry_id);
+          if (newId) newItem.stock_entry_id = newId;
+          else newItem.stock_entry_id = null;
+        }
+        if (newItem.stock_entry_item_id && idMaps.stock_entry_items?.size) {
+          const newId = idMaps.stock_entry_items.get(newItem.stock_entry_item_id);
+          if (newId) newItem.stock_entry_item_id = newId;
+          else newItem.stock_entry_item_id = null;
+        }
+        if (newItem.variant_id && idMaps.product_variants) {
+          const newId = idMaps.product_variants.get(newItem.variant_id);
+          if (newId) newItem.variant_id = newId;
+          else newItem.variant_id = null;
+        }
+        if (newItem.crop_cycle_id && idMaps.crop_cycles) {
+          const newId = idMaps.crop_cycles.get(newItem.crop_cycle_id);
+          if (newId) newItem.crop_cycle_id = newId;
+          else newItem.crop_cycle_id = null;
+        }
+        delete newItem.marketplace_listing_id;
+        delete newItem.marketplace_order_item_id;
+        if (newItem.created_by) newItem.created_by = userId;
+
+        const { error } = await client.from("stock_movements").insert(newItem);
+        if (!error) count++;
+      }
+      importedCounts.stock_movements = count;
     }
 
     // Quote items
