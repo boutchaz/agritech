@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import {  useState, useEffect, useMemo  } from "react";
 import { useTranslation } from "react-i18next";
 import { Banknote, Calculator, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import {
@@ -97,7 +97,7 @@ function isCustomAmountType(type: PaymentType): boolean {
   return ["bonus", "overtime", "advance"].includes(type);
 }
 
-const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
+const WorkerPaymentDialog = ({
   open,
   worker,
   onClose,
@@ -105,7 +105,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   initialPeriodStart,
   initialPeriodEnd,
   initialPaymentType,
-}) => {
+}: WorkerPaymentDialogProps) => {
   const { t } = useTranslation();
   const defaultDates = useMemo(() => getDefaultPeriodDates(), []);
   const [periodStart, setPeriodStart] = useState(

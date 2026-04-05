@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
 import { TestTube, TrendingUp, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
@@ -13,7 +13,7 @@ import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, Water
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
-const AnalysisWidget: React.FC = () => {
+const AnalysisWidget = () => {
   const navigate = useNavigate();
   const { currentFarm, currentOrganization } = useAuth();
   const { t, i18n } = useTranslation();
@@ -163,8 +163,8 @@ const AnalysisWidget: React.FC = () => {
           <Skeleton className="h-8 w-8 rounded-xl" />
         </div>
         <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700/50">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="flex-1 h-9 rounded-xl" />
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="flex-1 h-9 rounded-xl" />
           ))}
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -298,7 +298,7 @@ const AnalysisWidget: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-50 dark:border-slate-700/50">
                   {getSecondaryIndicators(stats.latestAnalysis).map((indicator, idx) => (
                     indicator.value !== undefined && indicator.value !== null && (
-                      <div key={idx} className="text-center bg-slate-50 dark:bg-slate-900/50 py-2 rounded-xl border border-slate-100 dark:border-slate-700/30">
+                      <div key={indicator.label} className="text-center bg-slate-50 dark:bg-slate-900/50 py-2 rounded-xl border border-slate-100 dark:border-slate-700/30">
                         <div className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{indicator.label}</div>
                         <div className="text-xs font-black text-slate-700 dark:text-slate-300 tabular-nums mt-0.5">
                           {typeof indicator.value === 'number' ? indicator.value.toFixed(1) : indicator.value}

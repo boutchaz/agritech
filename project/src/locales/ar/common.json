@@ -4871,7 +4871,11 @@
     "dataRange": "البيانات من {{startDate}} إلى {{endDate}}",
     "location": "الموقع",
     "forecast": {
-      "title": "توقعات الطقس لـ 15 يوماً"
+      "title": "توقعات الطقس لـ 16 يوماً",
+      "empty": "لا تتوفر توقعات قصيرة المدى حالياً.",
+      "precip": "تساقط",
+      "wind": "رياح",
+      "humidity": "رطوبة"
     },
     "summary": {
       "avgTemperature": "متوسط درجة الحرارة",

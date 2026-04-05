@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import {  useEffect, useRef, useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import { sanitizeHtml } from '../lib/sanitize';
@@ -111,7 +111,7 @@ interface TimeSeriesResult {
   };
 }
 
-const MapComponent: React.FC<MapProps> = ({
+const MapComponent = ({
   center,
   zones,
   sensors = [],
@@ -123,7 +123,7 @@ const MapComponent: React.FC<MapProps> = ({
   parcels: propParcels,
   editingParcelId,
   onBoundaryUpdated
-}) => {
+}: MapProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const { t } = useTranslation();
   const tileProvider = useMapProvider();
@@ -1770,7 +1770,7 @@ const MapComponent: React.FC<MapProps> = ({
                     >
                       <option value="">{t('map.select')}</option>
                       {availablePlantingSystems.map((system, idx) => (
-                        <option key={idx} value={system.type}>
+                        <option key={system.type} value={system.type}>
                           {system.type} ({system.spacing})
                         </option>
                       ))}
@@ -2052,21 +2052,21 @@ const MapComponent: React.FC<MapProps> = ({
                       {t('map.indicesToCalculate')}
                     </label>
                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
-                      {availableIndices.map((index) => (
-                        <label key={index} className="flex items-center space-x-2 text-sm">
+                      {availableIndices.map((vegIndex) => (
+                        <label key={vegIndex} className="flex items-center space-x-2 text-sm">
                           <input
                             type="checkbox"
-                            checked={selectedIndices.includes(index)}
+                            checked={selectedIndices.includes(vegIndex)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedIndices(prev => [...prev, index]);
+                                setSelectedIndices(prev => [...prev, vegIndex]);
                               } else {
-                                setSelectedIndices(prev => prev.filter(i => i !== index));
+                                setSelectedIndices(prev => prev.filter(i => i !== vegIndex));
                               }
                             }}
                             className="rounded border-gray-300"
                           />
-                          <span className="text-gray-700 dark:text-gray-300">{index}</span>
+                          <span className="text-gray-700 dark:text-gray-300">{vegIndex}</span>
                         </label>
                       ))}
                     </div>
@@ -2143,8 +2143,8 @@ const MapComponent: React.FC<MapProps> = ({
                       onChange={(e) => setSelectedTimeSeriesIndex(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      {availableIndices.map((index) => (
-                        <option key={index} value={index}>{index}</option>
+                      {availableIndices.map((vegIndex) => (
+                        <option key={vegIndex} value={vegIndex}>{vegIndex}</option>
                       ))}
                     </select>
                   </div>
@@ -2250,30 +2250,34 @@ const MapComponent: React.FC<MapProps> = ({
                   <span>{t('map.vegetationIndices')}</span>
                 </h4>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {indicesResults.map((result, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                          {result.index}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleExportIndexMap(result.index)}
-                          aria-label={t('map.downloadMap')}
-                          className="h-auto w-auto p-1 text-blue-600 hover:text-blue-800"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
+                  {indicesResults.map((result) => {
+                    const vegIndex = result.index;
+
+                    return (
+                      <div key={vegIndex} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            {vegIndex}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleExportIndexMap(vegIndex)}
+                            aria-label={t('map.downloadMap')}
+                            className="h-auto w-auto p-1 text-blue-600 hover:text-blue-800"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {result.value.toFixed(3)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(result.timestamp).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {result.value.toFixed(3)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(result.timestamp).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2313,8 +2317,8 @@ const MapComponent: React.FC<MapProps> = ({
 
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
                   <div className="space-y-2">
-                    {timeSeriesResults.data.map((point, index) => (
-                      <div key={index} className="flex justify-between items-center text-sm">
+                    {timeSeriesResults.data.map((point) => (
+                      <div key={point.date} className="flex justify-between items-center text-sm">
                         <span className="text-gray-600 dark:text-gray-300">
                           {new Date(point.date).toLocaleDateString()}
                         </span>

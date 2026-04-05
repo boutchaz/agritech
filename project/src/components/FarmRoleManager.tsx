@@ -27,11 +27,11 @@ interface FarmRoleManagerProps {
   onClose: () => void;
 }
 
-const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({ 
+const FarmRoleManager = ({ 
   farmId, 
   farmName, 
   onClose 
-}) => {
+}: FarmRoleManagerProps) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {

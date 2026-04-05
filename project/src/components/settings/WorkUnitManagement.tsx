@@ -374,7 +374,7 @@ export function WorkUnitManagement() {
             { label: t('workUnits.stats.active'), value: workUnits.filter((u) => u.is_active).length, icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
             { label: t('workUnits.stats.categories'), value: Object.keys(unitsByCategory).length, icon: Filter, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30' },
           ].map((stat, idx) => (
-            <Card key={idx} className="rounded-3xl border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group hover:shadow-md transition-all">
+            <Card key={stat.label} className="rounded-3xl border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group hover:shadow-md transition-all">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={cn("p-2.5 rounded-2xl shadow-sm border border-transparent group-hover:scale-110 transition-transform duration-500", stat.bg)}>

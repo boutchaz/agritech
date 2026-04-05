@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Building2, MapPin, User, Trash2, Eye, Map, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ interface FarmListItemProps {
   onDelete?: () => void;
 }
 
-const FarmListItem: React.FC<FarmListItemProps> = ({
+const FarmListItem = ({
   farm,
   isSelected = false,
   onSelect,
@@ -33,7 +33,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
   onEditManager,
   onViewParcels,
   onDelete,
-}) => {
+}: FarmListItemProps) => {
   const { t } = useTranslation();
 
   return (

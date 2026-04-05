@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,14 +37,14 @@ function resolveSize(size: AvatarSize | undefined): AvatarSize {
   return 'sm';
 }
 
-const UserAvatar: React.FC<UserAvatarProps> = ({
+const UserAvatar = ({
   src,
   firstName,
   lastName,
   email,
   size = 'sm',
   className,
-}) => {
+}: UserAvatarProps) => {
   const [imgError, setImgError] = useState(false);
   const s = sizeMap[resolveSize(size)];
   const showImage = src && !imgError;

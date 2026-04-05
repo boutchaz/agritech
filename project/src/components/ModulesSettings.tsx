@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import {
   Check, X, Boxes, Lock, ExternalLink, Loader2, AlertCircle,
   TreeDeciduous, Droplets, Waves, Sprout, Flower2, Fish,
@@ -39,7 +39,7 @@ const MODULE_ICONS: Record<string, LucideIcon> = {
 // ============================================================================
 // Main component
 // ============================================================================
-const ModulesSettings: React.FC = () => {
+const ModulesSettings = () => {
   const { t } = useTranslation();
 
   const [selectedModule, setSelectedModule] = useState<OrganizationModule | null>(null);
@@ -261,16 +261,14 @@ const ModulesSettings: React.FC = () => {
 // ============================================================================
 // Category Section (Agriculture / Élevage)
 // ============================================================================
-const CategorySection: React.FC<{
-  title: string;
+const CategorySection = ({ title, icon: Icon, description, accentColor, modules, subscription, onToggle, onModuleClick }: { title: string;
   icon: LucideIcon;
   description: string;
   accentColor: 'green' | 'amber';
   modules: OrganizationModule[];
   subscription: any;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onModuleClick: (module: OrganizationModule) => void;
-}> = ({ title, icon: Icon, description, accentColor, modules, subscription, onToggle, onModuleClick }) => {
+  onModuleClick: (module: OrganizationModule) => void; }) => {
   const { t } = useTranslation();
   const activeCount = modules.filter(m => m.is_active).length;
 
@@ -338,13 +336,11 @@ const CategorySection: React.FC<{
 // ============================================================================
 // Activity Module Card (Agriculture / Élevage modules)
 // ============================================================================
-const ActivityModuleCard: React.FC<{
-  module: OrganizationModule;
+const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onClick }: { module: OrganizationModule;
   subscription: any;
   accentColor: 'green' | 'amber';
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onClick: () => void;
-}> = ({ module, subscription, accentColor, onToggle, onClick }) => {
+  onClick: () => void; }) => {
   const { t } = useTranslation();
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
@@ -435,12 +431,10 @@ const ActivityModuleCard: React.FC<{
 // ============================================================================
 // Functional Module Toggle Card (simpler, for the collapsible section)
 // ============================================================================
-const ModuleToggleCard: React.FC<{
-  module: OrganizationModule;
+const ModuleToggleCard = ({ module, subscription, onToggle, onClick }: { module: OrganizationModule;
   subscription: any;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
-  onClick: () => void;
-}> = ({ module, subscription, onToggle, onClick }) => {
+  onClick: () => void; }) => {
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);
   const isLocked = !moduleAvailable;
 
@@ -492,10 +486,8 @@ const ModuleToggleCard: React.FC<{
 // ============================================================================
 // Module Settings Panel
 // ============================================================================
-const ModuleSettingsPanel: React.FC<{
-  module: OrganizationModule;
-  onClose: () => void;
-}> = ({ module, onClose }) => {
+const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
+  onClose: () => void; }) => {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});

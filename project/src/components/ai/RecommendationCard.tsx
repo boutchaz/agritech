@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Check, X, Play } from 'lucide-react';
 import type { AIRecommendation } from '@/lib/api/ai-recommendations';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ interface RecommendationCardProps {
   isExecuting?: boolean;
 }
 
-export const RecommendationCard: React.FC<RecommendationCardProps> = ({
+export const RecommendationCard = ({
   recommendation,
   onValidate,
   onReject,
@@ -21,7 +21,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   isValidating,
   isRejecting,
   isExecuting,
-}) => {
+}: RecommendationCardProps) => {
   const getPriorityColor = () => {
     switch (recommendation.priority) {
       case 'high': return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20';

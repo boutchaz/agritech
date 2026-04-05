@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { Activity, Tractor, Package, Droplets, Wrench, Leaf } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +13,12 @@ interface ActiveOperationsWidgetProps {
   isLoading?: boolean;
 }
 
-const ActiveOperationsWidget: React.FC<ActiveOperationsWidgetProps> = ({
+const ActiveOperationsWidget = ({
   operations,
   total,
   byType,
   isLoading = false,
-}) => {
+}: ActiveOperationsWidgetProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {

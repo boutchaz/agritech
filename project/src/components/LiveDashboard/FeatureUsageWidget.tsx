@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { BarChart3, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,10 +11,10 @@ interface FeatureUsageWidgetProps {
   isLoading?: boolean;
 }
 
-const FeatureUsageWidget: React.FC<FeatureUsageWidgetProps> = ({
+const FeatureUsageWidget = ({
   features,
   isLoading = false,
-}) => {
+}: FeatureUsageWidgetProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {

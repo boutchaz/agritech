@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { BrainCircuit, CheckCircle2, AlertTriangle, Clock, XCircle, Archive } from 'lucide-react';
 
 type AIStatusBadgeStatus =
@@ -25,7 +25,7 @@ interface AIStatusBadgeProps {
   className?: string;
 }
 
-export const AIStatusBadge: React.FC<AIStatusBadgeProps> = ({ status, className = '' }) => {
+export const AIStatusBadge = ({ status, className = '' }: AIStatusBadgeProps) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'active':

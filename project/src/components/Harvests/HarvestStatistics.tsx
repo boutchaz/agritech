@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { TrendingUp, Package, DollarSign, Calendar } from 'lucide-react';
 import type { HarvestStatistics as HarvestStats } from '../../types/harvests';
 
@@ -6,7 +6,7 @@ interface Props {
   statistics: HarvestStats;
 }
 
-const HarvestStatistics: React.FC<Props> = ({ statistics }) => {
+const HarvestStatistics = ({ statistics }: Props) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg p-6">

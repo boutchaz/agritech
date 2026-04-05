@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { Users, UserCheck, Clock, ChevronRight, Activity } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
-const WorkersActivityWidget: React.FC = () => {
+const WorkersActivityWidget = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const { t } = useTranslation();
@@ -86,8 +86,8 @@ const WorkersActivityWidget: React.FC = () => {
             <Skeleton className="h-3 w-24 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       </div>

@@ -23,7 +23,7 @@ type LanguageSwitcherProps = {
   elevatePopover?: boolean;
 };
 
-const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ compact = false, elevatePopover = false }) => {
+const LanguageSwitcher = ({ compact = false, elevatePopover = false }: LanguageSwitcherProps) => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const queryClient = useQueryClient();

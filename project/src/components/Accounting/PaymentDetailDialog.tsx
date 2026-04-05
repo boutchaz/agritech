@@ -19,12 +19,12 @@ interface PaymentDetailDialogProps {
   mode?: 'view' | 'edit';
 }
 
-export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
+export const PaymentDetailDialog = ({
   payment,
   open,
   onOpenChange,
   mode: initialMode = 'view',
-}) => {
+}: PaymentDetailDialogProps) => {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);

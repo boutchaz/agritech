@@ -36,7 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
-const SubscriptionSettings: React.FC = () => {
+const SubscriptionSettings = () => {
   const { data: subscription, isLoading } = useSubscription();
   const { currentOrganization } = useAuth();
   const { t } = useTranslation();
@@ -397,7 +397,7 @@ const SubscriptionSettings: React.FC = () => {
                       { label: t('subscription.details.includedUsers'), value: subscription?.included_users === null ? t('subscription.details.unlimited') : subscription?.included_users ?? '-' },
                       { label: t('subscription.details.nextBilling'), value: subscription?.next_billing_at ? new Date(subscription.next_billing_at).toLocaleDateString() : '-' },
                     ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between group">
+                      <div key={item.label} className="flex items-center justify-between group">
                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{item.label}</span>
                         <span className={cn("text-xs font-black uppercase tracking-tight", item.color || "text-slate-700 dark:text-slate-300")}>{item.value}</span>
                       </div>
@@ -609,14 +609,14 @@ interface UsageBarProps {
   color?: 'emerald' | 'blue' | 'purple' | 'indigo' | 'rose';
 }
 
-const UsageBar: React.FC<UsageBarProps> = ({
+const UsageBar = ({
   icon,
   label,
   current,
   limit,
   unlimited = false,
   color = 'emerald'
-}) => {
+}: UsageBarProps) => {
   const hasLimit = !unlimited && limit > 0;
   const percentage = hasLimit ? (current / limit) * 100 : 0;
   
@@ -659,11 +659,11 @@ const UsageBar: React.FC<UsageBarProps> = ({
   );
 };
 
-const TimelineItem: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({
+const TimelineItem = ({
   icon,
   label,
   value,
-}) => (
+}: { icon: React.ReactNode; label: string; value: string }) => (
   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 flex flex-col gap-2">
     <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
       {icon}

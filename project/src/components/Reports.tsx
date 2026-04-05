@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Module } from '../types';
@@ -10,7 +10,7 @@ interface ReportsProps {
   activeModules?: Module[];
 }
 
-const Reports: React.FC<ReportsProps> = ({ activeModules: _activeModules = [] }) => {
+const Reports = ({ activeModules: _activeModules = [] }: ReportsProps) => {
   const { currentOrganization } = useOrganizationStore();
   const [baseReports, setBaseReports] = useState<ReportCategory[]>([]);
   const [moduleReports, setModuleReports] = useState<ReportCategory[]>([]);

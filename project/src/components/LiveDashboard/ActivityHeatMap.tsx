@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState, type FC, type MutableRefObject } from 'react';
+import { useEffect, useRef, useMemo, useState, type MutableRefObject } from "react";
 import { cn } from '@/lib/utils';
 import { MapContainer, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -64,7 +64,7 @@ interface ActivityHeatMapProps {
 }
 
 // Fit all bounds controller — called imperatively via ref
-const FitAllController: FC<{ triggerRef: MutableRefObject<(() => void) | null>; data: ActivityHeatmapPoint[] }> = ({ triggerRef, data }) => {
+const FitAllController = ({ triggerRef, data }: { triggerRef: MutableRefObject<(() => void) | null>; data: ActivityHeatmapPoint[] }) => {
   const map = useMap();
   useEffect(() => {
     triggerRef.current = () => {
@@ -80,7 +80,7 @@ const FitAllController: FC<{ triggerRef: MutableRefObject<(() => void) | null>; 
 };
 
 // Auto-fit map bounds to show all data points
-const MapBoundsAdjuster: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
+const MapBoundsAdjuster = ({ data }: { data: ActivityHeatmapPoint[] }) => {
   const map = useMap();
   const fitted = useRef(false);
 
@@ -97,12 +97,12 @@ const MapBoundsAdjuster: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
 };
 
 // Circles colored by activity type
-const ActivityCircles: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
+const ActivityCircles = ({ data }: { data: ActivityHeatmapPoint[] }) => {
   const map = useMap();
 
   return (
     <>
-      {data.map((point, idx) => {
+      {data.map((point, ptIdx) => {
         const color = ACTIVITY_COLORS[point.activityType] ?? '#94a3b8';
         const isInProgress = point.status === 'in_progress';
         const isIdle = point.isIdle ?? false;
@@ -115,7 +115,7 @@ const ActivityCircles: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
 
         return (
           <CircleMarker
-            key={`${point.farmId}-${point.parcelName ?? 'farm'}-${idx}`}
+            key={`${point.farmId}-${point.parcelName ?? 'farm'}-${ptIdx}`}
             center={[point.lat, point.lng]}
             radius={radius}
             pathOptions={{
@@ -182,12 +182,12 @@ const ActivityCircles: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
   );
 };
 
-const ActivityHeatMap: FC<ActivityHeatMapProps> = ({
+const ActivityHeatMap = ({
   data,
   isLoading = false,
   lastUpdated,
   recentActivities = [],
-}) => {
+}: ActivityHeatMapProps) => {
   const { t } = useTranslation();
   const [isSatellite, setIsSatellite] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);

@@ -109,14 +109,12 @@ const getDueDateStatus = (dueDate: string | null | undefined) => {
 };
 
 // Calendar content component (needs to be inside CalendarProvider)
-const CalendarContent: React.FC<{
-  tasks: Task[];
+const CalendarContent = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }: { tasks: Task[];
   organizationId: string;
   onTaskSelect: (task: Task) => void;
   onCreateTask: () => void;
   currentMonth: number;
-  currentYear: number;
-}> = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }) => {
+  currentYear: number; }) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
@@ -575,7 +573,7 @@ const CalendarContent: React.FC<{
 };
 
 // Wrapper to track calendar month/year changes
-const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farms }) => {
+const TasksCalendarInner = ({ organizationId, farms }: TasksCalendarProps) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -645,7 +643,7 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
 };
 
 // Main component wraps with CalendarProvider
-const TasksCalendar: React.FC<TasksCalendarProps> = (props) => {
+const TasksCalendar = (props: TasksCalendarProps) => {
   const { i18n } = useTranslation();
 
   // Map i18n language to calendar locale

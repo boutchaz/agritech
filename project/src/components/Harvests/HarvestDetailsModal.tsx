@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useHarvest } from '../../hooks/useHarvests';
@@ -11,7 +11,7 @@ interface Props {
   onEdit: (harvest: HarvestSummary) => void;
 }
 
-const HarvestDetailsModal: React.FC<Props> = ({ harvestId, onClose, onEdit }) => {
+const HarvestDetailsModal = ({ harvestId, onClose, onEdit }: Props) => {
   const { t } = useTranslation();
   const { data: harvest, isLoading } = useHarvest(harvestId);
 

@@ -123,8 +123,8 @@ export function Level2Diagnostic({ data }: Level2DiagnosticProps) {
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">{t('calibrationReview.level2.annotations')}</h3>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-              {data.annotations.map((note, idx) => (
-                <li key={`annotation-${idx}-${note.substring(0, 10)}`}>{note}</li>
+              {data.annotations.map((note, noteIdx) => (
+                <li key={`annotation-${noteIdx}-${note.substring(0, 10)}`}>{note}</li>
               ))}
             </ul>
           </div>

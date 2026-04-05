@@ -73,7 +73,7 @@ function loadCollapsedSectionIds(): Set<string> {
   return new Set();
 }
 
-const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
+const SettingsLayout = ({ children }: SettingsLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();

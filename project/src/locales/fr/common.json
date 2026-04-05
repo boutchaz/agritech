@@ -5117,7 +5117,11 @@
     "dataRange": "Données du {{startDate}} au {{endDate}}",
     "location": "Localisation",
     "forecast": {
-      "title": "Prévisions Météo sur 15 jours"
+      "title": "Prévisions météo sur 16 jours",
+      "empty": "Aucune prévision à court terme pour le moment.",
+      "precip": "Précip.",
+      "wind": "Vent",
+      "humidity": "Humidité"
     },
     "summary": {
       "avgTemperature": "Température Moyenne",

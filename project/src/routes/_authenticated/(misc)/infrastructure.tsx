@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { useAutoStartTour } from '@/contexts/TourContext'
@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 

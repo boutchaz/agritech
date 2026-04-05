@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
@@ -30,11 +30,11 @@ interface InvoiceDetailDialogProps {
   invoiceId: string | null;
 }
 
-export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
+export const InvoiceDetailDialog = ({
   isOpen,
   onClose,
   invoiceId,
-}) => {
+}: InvoiceDetailDialogProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
@@ -289,8 +289,8 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                     </TableRow>
                   </TableHeader>
                   <TableBody className="bg-white dark:bg-gray-900">
-                    {invoice.items?.map((item, index) => (
-                      <TableRow key={item.id} className={index !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
+                    {invoice.items?.map((item, rowIdx) => (
+                      <TableRow key={item.id} className={rowIdx !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
                         <TableCell className="py-3 px-4">
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">{item.item_name}</p>

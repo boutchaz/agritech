@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Skeleton } from '@/components/ui/skeleton';
 
 /**
@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
  * Rendered when `currentOrganization` is null (auth still loading).
  * Once org loads, individual widget skeletons take over (Layer 2).
  */
-const DashboardSkeleton: React.FC = () => {
+const DashboardSkeleton = () => {
   return (
     <>
       {/* ===== HEADER SKELETON ===== */}
@@ -87,8 +87,8 @@ const DashboardSkeleton: React.FC = () => {
 
           {/* KPI Tier */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <WidgetCardSkeleton key={`row1-${i}`} variant="stat" />
+            {[1, 2, 3, 4].map((_, row1Idx) => (
+              <WidgetCardSkeleton key={`row1-${row1Idx}`} variant="stat" />
             ))}
           </div>
 
@@ -147,8 +147,8 @@ function WidgetCardSkeleton({
               <Skeleton className="h-3 w-20 rounded" />
               <Skeleton className="h-px flex-1 mx-3 rounded" />
             </div>
-            {Array.from({ length: 2 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-xl" />
+            {Array.from({ length: 2 }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
             ))}
           </div>
         </>
@@ -162,8 +162,8 @@ function WidgetCardSkeleton({
               <Skeleton className="h-3 w-32 rounded" />
               <Skeleton className="h-px flex-1 mx-3 rounded" />
             </div>
-            {Array.from({ length: lines }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+            {Array.from({ length: lines }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-16 w-full rounded-2xl" />
             ))}
           </div>
         </>

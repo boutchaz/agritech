@@ -143,13 +143,13 @@ const toInputDate = (value: string | null | undefined) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps> = ({
+export const PurchaseOrderDetailDialog = ({
   purchaseOrder,
   open,
   onOpenChange,
   onEdit,
   onDownloadPDF,
-}) => {
+}: PurchaseOrderDetailDialogProps) => {
   const { currentOrganization } = useAuth();
   const purchaseOrderId = purchaseOrder?.id ?? null;
   const {
@@ -957,7 +957,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
                   <TableBody>
                     {po.items && po.items.length > 0 ? (
                       po.items.map((item: PurchaseOrderItem, index: number) => (
-                        <TableRow key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                        <TableRow key={item.id} className="border-b border-gray-100 dark:border-gray-800">
                           <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}
                           </TableCell>

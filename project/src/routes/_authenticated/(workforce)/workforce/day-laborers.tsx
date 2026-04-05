@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth'
@@ -8,7 +8,7 @@ import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { ListPageSkeleton } from '@/components/ui/page-skeletons';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 

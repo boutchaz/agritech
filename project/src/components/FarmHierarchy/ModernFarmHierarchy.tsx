@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import {  useState, useMemo, useRef, useEffect  } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,12 +60,12 @@ type FarmFormValues = {
   name: string;
 };
 
-const ModernFarmHierarchy: React.FC<ModernFarmHierarchyProps> = ({
+const ModernFarmHierarchy = ({
   organizationId,
   onFarmSelect: _onFarmSelect,
   onAddParcel: _onAddParcel,
   onManageFarm
-}) => {
+}: ModernFarmHierarchyProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

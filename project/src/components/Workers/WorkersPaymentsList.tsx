@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
 import { Loader2, Banknote } from 'lucide-react';
@@ -13,7 +13,7 @@ interface WorkersPaymentsListProps {
   organizationId: string;
 }
 
-const WorkersPaymentsList: React.FC<WorkersPaymentsListProps> = ({ organizationId }) => {
+const WorkersPaymentsList = ({ organizationId }: WorkersPaymentsListProps) => {
   const { t, i18n } = useTranslation();
   const { data: payments = [], isLoading } = usePayments(organizationId);
   const language = i18n.language.startsWith('fr') ? 'fr' : 'en';

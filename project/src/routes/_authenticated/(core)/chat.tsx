@@ -8,7 +8,7 @@ import { Building2, Bot } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui/loader';
 
-const ChatPage: React.FC = () => {
+const ChatPage = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 

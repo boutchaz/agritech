@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import {  useEffect, useMemo, useState  } from "react";
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import Dashboard from '@/components/Dashboard'
@@ -60,7 +60,7 @@ function getStoredLiveMode(): boolean {
   }
 }
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
@@ -318,7 +318,7 @@ export const Route = createFileRoute('/_authenticated/(core)/dashboard')({
   component: withRouteProtection(AppContent, 'read', 'Dashboard'),
 })
 
-const QuickActionsButton: React.FC = () => {
+const QuickActionsButton = () => {
   const { t } = useTranslation();
   const { toggle } = useCommandPaletteToggle();
 

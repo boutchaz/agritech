@@ -11,7 +11,7 @@ interface FeatureGateProps {
   fallback?: React.ReactNode;
 }
 
-const FeatureGate: React.FC<FeatureGateProps> = ({ feature, children, fallback }) => {
+const FeatureGate = ({ feature, children, fallback }: FeatureGateProps) => {
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
 
@@ -29,7 +29,7 @@ interface FeatureLockedMessageProps {
   onUpgrade: () => void;
 }
 
-const FeatureLockedMessage: React.FC<FeatureLockedMessageProps> = ({ onUpgrade }) => {
+const FeatureLockedMessage = ({ onUpgrade }: FeatureLockedMessageProps) => {
   return (
     <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
       <Lock className="h-12 w-12 text-gray-400 mb-4" />

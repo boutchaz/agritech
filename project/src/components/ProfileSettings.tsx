@@ -26,7 +26,7 @@ interface PasswordChangeData {
   confirmPassword: string;
 }
 
-const ProfileSettings: React.FC = () => {
+const ProfileSettings = () => {
   const { user, currentOrganization, userRole } = useAuth();
   const { t } = useTranslation();
   const [profile, setProfile] = useState<UserProfile | null>(null);

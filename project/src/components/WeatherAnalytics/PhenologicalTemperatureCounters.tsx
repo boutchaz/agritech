@@ -352,13 +352,13 @@ interface PhenologicalTemperatureCountersProps {
   endDate?: string;
 }
 
-const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersProps> = ({
+const PhenologicalTemperatureCounters = ({
   temperatureData,
   cropType,
   treeType,
   startDate,
   endDate,
-}) => {
+}: PhenologicalTemperatureCountersProps) => {
   const { t } = useTranslation();
 
   // State for date range customization per stage

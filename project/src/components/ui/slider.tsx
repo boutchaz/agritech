@@ -35,9 +35,9 @@ const Slider = React.forwardRef<
         )}
       />
     </SliderPrimitive.Track>
-    {(props.value ?? props.defaultValue ?? [0]).map((_, i) => (
+    {(props.value ?? props.defaultValue ?? [0]).map((_, thumbIdx) => (
       <SliderPrimitive.Thumb
-        key={i}
+        key={"thumb-" + thumbIdx}
         className={cn(
           'block h-5 w-5 rounded-full border-2 border-primary-500 bg-white shadow-sm',
           'transition-[color,box-shadow,border-color] duration-150 ease-out',

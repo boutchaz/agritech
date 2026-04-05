@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,7 +35,7 @@ interface WorkersListProps {
   farms: Array<{ id: string; name: string }>;
 }
 
-const WorkersList: React.FC<WorkersListProps> = ({ organizationId, farms }) => {
+const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

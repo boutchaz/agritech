@@ -343,8 +343,8 @@ export default function StockReportsDashboard() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {movementsByType.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                      {movementsByType.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
                       ))}
                     </Pie>
                     <Tooltip />

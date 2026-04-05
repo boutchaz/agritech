@@ -237,8 +237,8 @@ function HarvestsPage() {
           {/* Harvests List */}
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-64"></div>
+              {[1, 2, 3].map(skIdx => (
+                <div key={"sk-" + skIdx} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-64"></div>
               ))}
             </div>
           ) : harvests.length === 0 ? (

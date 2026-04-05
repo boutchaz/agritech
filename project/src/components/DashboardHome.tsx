@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
 import { TrendingUp, AlertCircle, CheckCircle, Activity, Users, Package, Loader2, RefreshCw, Beaker, MapPin, CheckSquare } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -18,7 +18,7 @@ const colorClasses: Record<string, { bg: string; text: string }> = {
   teal: { bg: 'bg-teal-100 dark:bg-teal-900/20', text: 'text-teal-600 dark:text-teal-400' },
 };
 
-const DashboardHome: React.FC = () => {
+const DashboardHome = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const { data: summary, isLoading, error, refetch } = useDashboardSummary(currentFarm?.id);
@@ -148,7 +148,7 @@ const DashboardHome: React.FC = () => {
             const colors = colorClasses[stat.color] || colorClasses.green;
             return (
               <div
-                key={index}
+                key={stat.title}
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-center justify-between mb-4">
@@ -182,7 +182,7 @@ const DashboardHome: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {quickActions.map((action, index) => (
             <Button
-              key={index}
+              key={action.title}
               variant="outline"
               onClick={action.onClick}
               className="p-4 h-auto text-left justify-start border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-600 group flex-col items-start"

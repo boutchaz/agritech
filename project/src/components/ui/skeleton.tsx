@@ -71,8 +71,8 @@ function WidgetSkeleton({ className, lines = 3 }: { className?: string; lines?: 
         <Skeleton className="h-8 w-8 rounded-full" />
       </div>
       <div className="space-y-3">
-        {Array.from({ length: lines }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3">
+        {Array.from({ length: lines }).map((_, itemIdx) => (
+          <div key={"sk-" + itemIdx} className="flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <div className="flex-1">
               <Skeleton className="h-4 w-3/4 mb-1" />
@@ -89,8 +89,8 @@ function WidgetSkeleton({ className, lines = 3 }: { className?: string; lines?: 
 function TableRowSkeleton({ columns = 4, className }: { columns?: number; className?: string }) {
   return (
     <div className={cn("flex items-center gap-4 p-4 border-b border-gray-100 dark:border-gray-700", className)}>
-      {Array.from({ length: columns }).map((_, i) => (
-        <Skeleton key={i} className="h-4 flex-1" />
+      {Array.from({ length: columns }).map((_, columnIdx) => (
+        <Skeleton key={"sk-" + columnIdx} className="h-4 flex-1" />
       ))}
     </div>
   )
@@ -127,8 +127,8 @@ function ChartSkeleton({ className, height = "h-48" }: { className?: string; hei
 function StatsGridSkeleton({ count = 6 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
-      {Array.from({ length: count }).map((_, i) => (
-        <StatCardSkeleton key={i} />
+      {Array.from({ length: count }).map((_, statIdx) => (
+        <StatCardSkeleton key={"sk-" + statIdx} />
       ))}
     </div>
   )

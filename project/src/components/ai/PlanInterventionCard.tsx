@@ -74,8 +74,8 @@ export function PlanInterventionCard({
           </p>
           {farmerCopy.bullets.length > 0 && (
             <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600 dark:text-gray-400">
-              {farmerCopy.bullets.map((line, index) => (
-                <li key={`${intervention.id}-${index}`}>{line}</li>
+              {farmerCopy.bullets.map((line) => (
+                <li key={`${intervention.id}-${line}`}>{line}</li>
               ))}
             </ul>
           )}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import {  useState  } from "react";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -213,7 +213,7 @@ const moreMenuItems: MoreMenuItem[] = [
   },
 ];
 
-const MobileBottomNav: React.FC = () => {
+const MobileBottomNav = () => {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
   const location = useLocation();

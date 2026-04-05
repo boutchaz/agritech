@@ -24,7 +24,7 @@ import heroBg from '../assets/bg-360-day.webp';
 import { appConfig } from '@/config/app';
 import { toast } from 'sonner';
 
-const LandingPage: React.FC = () => {
+const LandingPage = () => {
   const { t } = useTranslation();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
   const [scrolled, setScrolled] = useState(false);
@@ -838,7 +838,7 @@ const LandingPage: React.FC = () => {
                   { icon: 'M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z', link: 'https://www.facebook.com/search/top?q=agrogina' }
                 ].map((social, i) => (
                   <a 
-                    key={i} 
+                    key={social.link} 
                     href={social.link} 
                     target="_blank" 
                     rel="noopener noreferrer" 

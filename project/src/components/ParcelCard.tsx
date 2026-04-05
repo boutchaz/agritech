@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, lazy, Suspense } from 'react';
+import {  useMemo, useCallback, useState, lazy, Suspense  } from "react";
 import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
 import type { SensorData } from '../types';
 import SensorChart from './SensorChart';
@@ -45,7 +45,7 @@ interface ParcelCardProps {
   disableInnerScroll?: boolean;
 }
 
-const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
+const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }: ParcelCardProps) => {
   const navigate = useNavigate();
 
   // Fetch latest satellite indices for this parcel

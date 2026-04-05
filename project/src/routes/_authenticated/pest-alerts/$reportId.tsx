@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import { usePestReport, useUpdatePestReport, useEscalatePestReport } from '@/hooks/usePestAlerts';
@@ -221,9 +221,9 @@ function PestReportDetailPage() {
             <CardContent>
               {report.photo_urls && report.photo_urls.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {report.photo_urls.map((url, idx) => (
-                    <div key={idx} className="aspect-square rounded-lg overflow-hidden border bg-gray-100">
-                      <img src={url} alt={`Preuve ${idx + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer" />
+                  {report.photo_urls.map((url) => (
+                    <div key={url} className="aspect-square rounded-lg overflow-hidden border bg-gray-100">
+                      <img src={url} alt="Preuve" className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer" />
                     </div>
                   ))}
                 </div>

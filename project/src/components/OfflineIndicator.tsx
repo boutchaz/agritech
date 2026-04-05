@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import {  useEffect, useState  } from "react";
 import { useNetworkStatusContext } from './NetworkStatusProvider';
 import { useTranslation } from 'react-i18next';
 import { WifiOff, Wifi, WifiLow } from 'lucide-react';

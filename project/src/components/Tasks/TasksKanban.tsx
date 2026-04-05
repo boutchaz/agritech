@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import {  useState, useMemo, useCallback  } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -149,8 +149,8 @@ function KanbanSkeleton() {
               <Skeleton className="h-5 w-6 rounded-full" />
             </div>
             <div className="flex-1 p-2 space-y-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
+              {[1, 2].map((skIdx) => (
+                <div key={"sk-" + skIdx} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
                   <div className="flex gap-1.5">
                     <Skeleton className="h-5 w-14 rounded" />
@@ -433,7 +433,7 @@ function KanbanColumn({ status, tasks, lang, t, onSelectTask, isDropTarget, isIn
 
 // --- Main Kanban Component ---
 
-const TasksKanban: React.FC<TasksKanbanProps> = ({ organizationId, onSelectTask }) => {
+const TasksKanban = ({ organizationId, onSelectTask }: TasksKanbanProps) => {
   const { t, i18n } = useTranslation();
   const lang = i18n.language?.startsWith('fr') ? 'fr' : i18n.language?.startsWith('ar') ? 'fr' : 'en';
 

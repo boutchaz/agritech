@@ -215,12 +215,16 @@ function SatelliteAnalysisPage() {
                 <div>
                   <h3 className="font-medium mb-3">{t('production.satelliteAnalysis.latestResultsTitle')}</h3>
                   <div className="space-y-2">
-                    {calculationResults.indices.map((result, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-600">{result.index}:</span>
-                        <span className="font-medium">{result.value.toFixed(3)}</span>
-                      </div>
-                    ))}
+                    {calculationResults.indices.map((result) => {
+                      const vegIndex = result.index;
+
+                      return (
+                        <div key={vegIndex} className="flex justify-between items-center">
+                          <span className="text-gray-600">{result.index}:</span>
+                          <span className="font-medium">{result.value.toFixed(3)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>

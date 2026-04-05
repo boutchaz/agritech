@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import {  useState, useEffect, useMemo  } from "react";
 import { Plus, FileText, Trash2, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import SoilAnalysisForm from './SoilAnalysisForm';
@@ -21,7 +21,7 @@ interface Parcel {
   soil_type?: string | null;
 }
 
-const SoilAnalysisPage: React.FC = () => {
+const SoilAnalysisPage = () => {
   const { currentFarm } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');

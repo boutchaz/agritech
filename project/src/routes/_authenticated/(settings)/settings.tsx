@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { createFileRoute, Outlet, redirect, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
@@ -10,7 +10,7 @@ import { useAutoStartTour } from '@/contexts/TourContext'
 import { PageLoader } from '@/components/ui/loader'
 import { Button } from '@/components/ui/button';
 
-const SettingsLayoutComponent: React.FC = () => {
+const SettingsLayoutComponent = () => {
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import {  useState, useEffect, useRef  } from "react";
 import {
   Satellite,
   TrendingUp,
@@ -45,7 +45,7 @@ interface SatelliteIndicesProps {
   parcel: Parcel;
 }
 
-const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
+const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
   const {
     calculateIndices,
     getTimeSeries,
@@ -405,9 +405,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
             {(activeTab === "timeseries"
               ? timeSeriesIndices
               : availableIndices
-            ).map((index) => (
-              <option key={index} value={index}>
-                {index}
+            ).map((vegIndex) => (
+              <option key={vegIndex} value={vegIndex}>
+                {vegIndex}
               </option>
             ))}
           </select>
@@ -578,24 +578,28 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
 
           {indicesData && (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {indicesData.indices.map((indexData) => (
-                <div
-                  key={indexData.index}
-                  className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                >
-                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                    {indexData.index}
-                  </div>
+              {indicesData.indices.map((indexData) => {
+                const vegIndex = indexData.index;
+
+                return (
                   <div
-                    className={`text-2xl font-bold ${getIndexColor(indexData.index, indexData.value)}`}
+                    key={vegIndex}
+                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
                   >
-                    {indexData.value.toFixed(3)}
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {vegIndex}
+                    </div>
+                    <div
+                      className={`text-2xl font-bold ${getIndexColor(vegIndex, indexData.value)}`}
+                    >
+                      {indexData.value.toFixed(3)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      {new Date(indexData.timestamp).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    {new Date(indexData.timestamp).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -665,9 +669,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                     onChange={(e) => setSelectedIndex(e.target.value)}
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    {timeSeriesIndices.map((index) => (
-                      <option key={index} value={index}>
-                        {index}
+                    {timeSeriesIndices.map((vegIndex) => (
+                      <option key={vegIndex} value={vegIndex}>
+                        {vegIndex}
                       </option>
                     ))}
                   </select>
@@ -741,12 +745,12 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                 </Button>
               </div>
               <div className="grid grid-cols-3 lg:grid-cols-4 gap-2">
-                {timeSeriesIndices.map((index) => {
-                  const isSelected = selectedIndices.includes(index);
+                {timeSeriesIndices.map((vegIndex) => {
+                  const isSelected = selectedIndices.includes(vegIndex);
                   return (
                     <Button
-                      key={index}
-                      onClick={() => toggleIndexSelection(index)}
+                      key={vegIndex}
+                      onClick={() => toggleIndexSelection(vegIndex)}
                       className={`flex items-center justify-between px-3 py-2 rounded-md text-sm transition-colors ${
                         isSelected
                           ? "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-2 border-blue-500"
@@ -756,9 +760,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                       <span className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: getIndexColor(index) }}
+                          style={{ backgroundColor: getIndexColor(vegIndex) }}
                         />
-                        {index}
+                        {vegIndex}
                       </span>
                       {isSelected && <Check className="h-3 w-3" />}
                     </Button>
@@ -931,9 +935,9 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   </summary>
                   <div className="mt-2 max-h-64 overflow-y-auto">
                     <div className="grid grid-cols-1 gap-2">
-                      {timeSeriesData.data.map((point, index) => (
+                      {timeSeriesData.data.map((point) => (
                         <div
-                          key={index}
+                          key={point.date}
                           className="flex justify-between items-center py-2 px-3 bg-white dark:bg-gray-800 rounded"
                         >
                           <span className="text-sm text-gray-600 dark:text-gray-400">
@@ -965,18 +969,18 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                   {/* Mobile-friendly stacked cards */}
                   <div className="space-y-3 md:hidden">
                     {Object.entries(multiTimeSeriesData).map(
-                      ([index, data]) => (
+                      ([vegIndex, data]) => (
                         <div
-                          key={index}
+                          key={vegIndex}
                           className="rounded-lg border border-gray-200 dark:border-gray-600 p-3 bg-white dark:bg-gray-800"
                         >
                           <div className="flex items-center gap-2 mb-3">
                             <div
                               className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: getIndexColor(index) }}
+                              style={{ backgroundColor: getIndexColor(vegIndex) }}
                             />
                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {index}
+                              {vegIndex}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-sm">
@@ -1042,17 +1046,17 @@ const SatelliteIndices: React.FC<SatelliteIndicesProps> = ({ parcel }) => {
                       </TableHeader>
                       <TableBody className="divide-y divide-gray-200 dark:divide-gray-600">
                         {Object.entries(multiTimeSeriesData).map(
-                          ([index, data]) => (
-                            <TableRow key={index}>
+                          ([vegIndex, data]) => (
+                            <TableRow key={vegIndex}>
                               <TableCell className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">
                                 <span className="flex items-center gap-2">
                                   <div
                                     className="w-3 h-3 rounded-full"
                                     style={{
-                                      backgroundColor: getIndexColor(index),
+                                      backgroundColor: getIndexColor(vegIndex),
                                     }}
                                   />
-                                  {index}
+                                  {vegIndex}
                                 </span>
                               </TableCell>
                               <TableCell className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">

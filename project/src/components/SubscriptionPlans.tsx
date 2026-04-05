@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { Check, Building2, TrendingUp, Sprout } from 'lucide-react';
 import {
   SUBSCRIPTION_PLANS,
@@ -20,7 +20,7 @@ interface SubscriptionPlansProps {
   ) => void;
 }
 
-const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) => {
+const SubscriptionPlans = ({ onSelectPlan }: SubscriptionPlansProps) => {
   const { data: subscription } = useSubscription();
   const normalizedPlanType = normalizePlanType(
     subscription?.formula || subscription?.plan_type || null,
@@ -166,8 +166,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
                 </Button>
 
                 <div className="mt-6 space-y-2">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-2">
+                  {plan.features.map((feature) => (
+                    <div key={feature} className="flex items-start space-x-2">
                       <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
                     </div>

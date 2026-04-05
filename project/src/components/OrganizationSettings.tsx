@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, CheckCircle, User, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
@@ -42,7 +42,7 @@ interface OrganizationData {
 
 type SettingsTab = 'general' | 'ai-providers';
 
-const OrganizationSettings: React.FC = () => {
+const OrganizationSettings = () => {
   const { currentOrganization, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();

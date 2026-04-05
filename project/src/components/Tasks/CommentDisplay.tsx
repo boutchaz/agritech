@@ -27,9 +27,10 @@ export default function CommentDisplay({ comment }: CommentDisplayProps) {
 
     // Add the mention as a highlighted badge
     const displayName = match[1];
+    const matchPos = match.index;
     parts.push(
       <span
-        key={`mention-${match.index}`}
+        key={`mention-${matchPos}`}
         className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
       >
         @{displayName}

@@ -39,7 +39,7 @@ interface ExperienceLevelProviderProps {
   children: React.ReactNode;
 }
 
-export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = ({ children }) => {
+export const ExperienceLevelProvider = ({ children }: ExperienceLevelProviderProps) => {
   const { profile, user } = useAuth();
   const queryClient = useQueryClient();
 

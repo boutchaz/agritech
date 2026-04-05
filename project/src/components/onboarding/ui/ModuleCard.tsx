@@ -15,7 +15,7 @@ interface ModuleCardProps {
   requiredPlan?: string | null;
 }
 
-export const ModuleCard: React.FC<ModuleCardProps> = ({
+export const ModuleCard = ({
   name,
   description,
   icon,
@@ -25,7 +25,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   recommended,
   locked = false,
   requiredPlan,
-}) => {
+}: ModuleCardProps) => {
   const colorMap: Record<string, { bg: string; border: string; iconBg: string; check: string }> = {
     emerald: { bg: 'bg-emerald-50', border: 'border-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600', check: 'bg-emerald-500' },
     blue: { bg: 'bg-blue-50', border: 'border-blue-500', iconBg: 'bg-blue-100 text-blue-600', check: 'bg-blue-500' },

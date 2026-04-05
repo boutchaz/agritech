@@ -79,11 +79,11 @@ const getDueDateStatus = (dueDate: string | null | undefined) => {
   return null;
 };
 
-const TasksList: React.FC<TasksListProps> = ({
+const TasksList = ({
   organizationId,
   onSelectTask,
   onCreateTask,
-}) => {
+}: TasksListProps) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();

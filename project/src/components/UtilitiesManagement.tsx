@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
+import {  useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, BookOpen, Loader2 } from 'lucide-react';
 import { storageApi } from '../lib/api/storage';
@@ -67,7 +67,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 
 // No more hardcoded account codes - will be dynamically looked up by account type/subtype
 
-const UtilitiesManagement: React.FC = () => {
+const UtilitiesManagement = () => {
   const { currentOrganization, currentFarm, user } = useAuth();
   const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
   const { format: formatCurrency, symbol: currency } = useCurrency();

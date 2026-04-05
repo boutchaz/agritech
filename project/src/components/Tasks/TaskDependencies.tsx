@@ -181,7 +181,7 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
             </p>
             <ul className="mt-1 text-sm text-amber-700 dark:text-amber-400 list-disc list-inside">
               {blockerNames.map((name: string, i: number) => (
-                <li key={i}>{name}</li>
+                <li key={name}>{name}</li>
               ))}
             </ul>
           </div>

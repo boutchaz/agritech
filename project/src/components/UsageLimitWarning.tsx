@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, Zap } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useSubscription, useSubscriptionUsage } from '../hooks/useSubscription';
@@ -9,7 +9,7 @@ interface UsageLimitWarningProps {
   onUpgrade?: () => void;
 }
 
-const UsageLimitWarning: React.FC<UsageLimitWarningProps> = ({ limitType, onUpgrade }) => {
+const UsageLimitWarning = ({ limitType, onUpgrade }: UsageLimitWarningProps) => {
   const { data: subscription } = useSubscription();
   const { data: usage } = useSubscriptionUsage();
   const navigate = useNavigate();

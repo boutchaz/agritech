@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { usersApi } from '@/lib/api/users';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { farmsApi } from '@/lib/api/farms';
@@ -45,7 +45,7 @@ interface FarmData {
   description: string;
 }
 
-const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
+const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);

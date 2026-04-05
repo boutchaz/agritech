@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,11 +11,11 @@ interface ConcurrentUsersWidgetProps {
   isLoading?: boolean;
 }
 
-const ConcurrentUsersWidget: React.FC<ConcurrentUsersWidgetProps> = ({
+const ConcurrentUsersWidget = ({
   users,
   total,
   isLoading = false,
-}) => {
+}: ConcurrentUsersWidgetProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import {  useState, useEffect, useCallback  } from "react";
 import { AlertCircle, Satellite, Download, Database, RefreshCw, Calculator, Calendar, Layers, Activity, Zap, Info, Check } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -13,7 +13,6 @@ import {
 } from '../../lib/satellite-api';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
-import { ButtonLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,13 +36,13 @@ interface CachedIndexResult {
   date: string;
 }
 
-const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
+const IndicesCalculator = ({
   parcelId,
   parcelName,
   farmId,
   boundary,
   onResultsUpdate
-}) => {
+}: IndicesCalculatorProps) => {
   const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -90,9 +89,9 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
           organizationId
         );
         // Get the most recent entry with mean_value for each index
-        const sorted = response
-          .filter(item => item.mean_value !== undefined && item.mean_value !== null)
-          .sort((a, b) => new Date(a.date).getTime() - new Date(a.date).getTime());
+          const sorted = response
+            .filter(item => item.mean_value !== undefined && item.mean_value !== null)
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
         if (sorted.length > 0) {
           allIndices.push({
@@ -113,6 +112,7 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
     if (!cachedIndices || cachedIndices.length === 0) return null;
 
     return {
+      request_id: 'cache',
       timestamp: new Date().toISOString(),
       indices: cachedIndices.map(item => ({
         index: item.index,
@@ -364,13 +364,14 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
               </div>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-                {VEGETATION_INDICES.map((index: VegetationIndexType) => {
-                  const isSelected = selectedIndices.includes(index);
-                  const colors = getIndexColors(index);
+                {VEGETATION_INDICES.map((vegIndex: VegetationIndexType) => {
+                  const isSelected = selectedIndices.includes(vegIndex);
+                  const colors = getIndexColors(vegIndex);
                   return (
                     <button
-                      key={index}
-                      onClick={() => handleIndexToggle(index)}
+                      type="button"
+                      key={vegIndex}
+                      onClick={() => handleIndexToggle(vegIndex)}
                       className={cn(
                         "group flex flex-col items-start p-3 rounded-xl border-2 transition-all text-left relative overflow-hidden",
                         isSelected 
@@ -382,9 +383,9 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
                         "px-2 py-0.5 rounded text-[10px] font-bold mb-2 uppercase tracking-tighter border",
                         colors.bg, colors.text, colors.border
                       )}>
-                        {index}
+                        {vegIndex}
                       </div>
-                      <p className="text-[10px] text-slate-500 font-medium leading-snug line-clamp-2">{VEGETATION_INDEX_DESCRIPTIONS[index]}</p>
+                      <p className="text-[10px] text-slate-500 font-medium leading-snug line-clamp-2">{VEGETATION_INDEX_DESCRIPTIONS[vegIndex]}</p>
                       
                       {isSelected && (
                         <div className="absolute top-2 right-2">
@@ -464,26 +465,27 @@ const IndicesCalculator: React.FC<IndicesCalculatorProps> = ({
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {getDisplayResults()!.indices.map((result: any, index: number) => {
-                  const colors = getIndexColors(result.index as VegetationIndexType);
+                {getDisplayResults()!.indices.map((result: any) => {
+                  const vegIndex = result.index as VegetationIndexType;
+                  const colors = getIndexColors(vegIndex);
                   return (
-                    <Card key={index} className="border-slate-100 shadow-none bg-slate-50/30 overflow-hidden group hover:border-slate-200 transition-colors">
+                    <Card key={vegIndex} className="border-slate-100 shadow-none bg-slate-50/30 overflow-hidden group hover:border-slate-200 transition-colors">
                       <CardContent className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
                           <div className={cn(
                             "px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-tight",
                             colors.bg, colors.text, colors.border
                           )}>
-                            {result.index}
+                            {vegIndex}
                           </div>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-[250px] text-[10px]">
-                              {VEGETATION_INDEX_DESCRIPTIONS[result.index as VegetationIndexType]}
-                            </TooltipContent>
-                          </Tooltip>
+                              {VEGETATION_INDEX_DESCRIPTIONS[vegIndex]}
+                          </TooltipContent>
+                        </Tooltip>
                         </div>
                         <div className="flex items-end gap-1">
                           <span className="text-2xl font-black text-slate-800 tabular-nums tracking-tighter">

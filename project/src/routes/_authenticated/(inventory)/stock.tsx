@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +14,7 @@ import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t, i18n } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const router = useRouter();

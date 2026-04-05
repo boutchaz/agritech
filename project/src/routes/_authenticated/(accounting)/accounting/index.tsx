@@ -15,7 +15,7 @@ import { useJournalStats } from '@/hooks/useJournalEntries';
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();

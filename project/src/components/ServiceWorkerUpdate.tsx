@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { toast } from 'sonner';
 import { ButtonLoader } from '@/components/ui/loader';
@@ -22,6 +22,15 @@ const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 
 export function ServiceWorkerUpdate() {
   const [isUpdating, setIsUpdating] = useState(false);
+  const swCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (swCheckIntervalRef.current) {
+        clearInterval(swCheckIntervalRef.current);
+      }
+    };
+  }, []);
 
   const {
     needRefresh: [needRefresh, setNeedRefresh],
@@ -32,7 +41,7 @@ export function ServiceWorkerUpdate() {
       if (!registration) return;
 
       // Periodic check for new SW
-      setInterval(async () => {
+      swCheckIntervalRef.current = setInterval(async () => {
         // Don't check if the page is hidden or offline
         if (document.hidden || !navigator.onLine) return;
 

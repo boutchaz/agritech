@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import {  useState, useMemo, useEffect, useCallback  } from "react";
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
@@ -248,7 +248,7 @@ function ModuleNotFound({ moduleId, activeModules }: { moduleId: string; activeM
   );
 }
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { currentOrganization } = useAuth();
   const { moduleId } = Route.useParams();
   const { data: orgModules = [], isLoading: modulesLoading } = useModules();

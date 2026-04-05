@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Sprout, Globe, User, ArrowRight, Clock } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
@@ -31,11 +31,11 @@ const TIMEZONES = [
   { id: 'UTC', name: 'UTC', offset: 'GMT+0', icon: '🌍' },
 ];
 
-export const WelcomeStep: React.FC<WelcomeStepProps> = ({
+export const WelcomeStep = ({
   profileData,
   onUpdate,
   onNext,
-}) => {
+}: WelcomeStepProps) => {
   const [subStep, setSubStep] = useState(0);
   const [showGreeting, setShowGreeting] = useState(true);
 

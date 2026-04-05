@@ -44,7 +44,7 @@ interface QuoteFormProps {
   quote?: Quote | null;
 }
 
-export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSuccess, quote }) => {
+export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createQuote = useCreateQuote();

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 
-const SubscriptionBanner: React.FC = () => {
+const SubscriptionBanner = () => {
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();

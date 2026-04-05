@@ -21,7 +21,7 @@ interface AdaptiveSectionProps {
  * In medium mode: Visible but may be collapsible
  * In expert mode: Always visible and expanded
  */
-export const AdaptiveSection: React.FC<AdaptiveSectionProps> = ({
+export const AdaptiveSection = ({
   children,
   requiredFeature,
   title = 'Options avancées',
@@ -29,7 +29,7 @@ export const AdaptiveSection: React.FC<AdaptiveSectionProps> = ({
   collapsible = true,
   defaultExpanded = false,
   className = '',
-}) => {
+}: AdaptiveSectionProps) => {
   const { level, hasFeature } = useExperienceLevel();
   const [isExpanded, setIsExpanded] = React.useState(
     level === 'expert' ? true : defaultExpanded

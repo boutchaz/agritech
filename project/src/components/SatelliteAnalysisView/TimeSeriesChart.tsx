@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {  useState, useEffect, useCallback, useMemo, useRef  } from "react";
 import { 
   LineChart, 
   Line, 
@@ -76,7 +76,7 @@ const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
         </div>
         <CardContent className="p-3 space-y-2">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {payload.map((entry: any, idx: number) => {
+          {payload.map((entry: any) => {
             const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             if (isTemp && !showTemperature) return null;
             
@@ -85,7 +85,7 @@ const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
               : formatTooltipValue(entry.value);
 
             return (
-              <div key={idx} className="flex items-center justify-between gap-4 text-xs">
+              <div key={entry.dataKey ?? entry.name} className="flex items-center justify-between gap-4 text-xs">
                 <div className="flex items-center gap-2">
                   <div 
                     className="w-2 h-2 rounded-full shadow-sm" 
@@ -155,13 +155,13 @@ interface WeatherPoint {
   et0_fao_evapotranspiration?: number;
 }
 
-const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
+const TimeSeriesChart = ({
   parcelId,
   parcelName,
   farmId,
   boundary,
   defaultIndex = 'NIRv'
-}) => {
+}: TimeSeriesChartProps) => {
   const { currentOrganization } = useAuth();
   const { t, i18n } = useTranslation('satellite');
   const queryClient = useQueryClient();
@@ -169,6 +169,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const cloudCoverage = DEFAULT_CLOUD_COVERAGE;
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const DATE_RANGE_STORAGE_KEY = `timeseries-date-range-${parcelId}`;
 
@@ -203,6 +204,16 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       } catch (_e) {}
     }
   }, [startDate, DATE_RANGE_STORAGE_KEY]);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   const getIndexColor = (index: TimeSeriesIndexType): string => {
     const colors: Record<string, string> = {
@@ -317,7 +328,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       });
 
       let lastCompleted = 0;
-      const pollInterval = setInterval(async () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+      pollIntervalRef.current = setInterval(async () => {
         try {
           const status = await satelliteApi.getTimeSeriesSyncStatus(parcelId);
           const isDone = status.status === 'completed' || status.status === 'failed' || status.status === 'idle';
@@ -336,14 +350,14 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           }
 
           if (isDone) {
-            clearInterval(pollInterval);
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
             await refetchCache().catch(() => undefined);
             queryClient.invalidateQueries({ queryKey: ['satellite-indices-cache', parcelId] });
             setIsSyncing(false);
             setSyncProgress(null);
           }
         } catch (pollErr) {
-          clearInterval(pollInterval);
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           setIsSyncing(false);
           setSyncProgress(null);
         }
@@ -553,12 +567,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                     <span className="text-sm font-semibold text-slate-700">{t('timeSeries.labels.startDate')} - {t('timeSeries.labels.endDate')}</span>
                   </div>
                   <div className="flex gap-1.5 p-1 bg-slate-100 rounded-lg">
-                    {([
-                      { label: '3m', days: 90 },
-                      { label: '6m', days: 180 },
-                      { label: '1y', days: 365 },
-                      { label: '2y', days: 730 },
-                    ] as const).map(({ label, days }) => {
+                        {([
+                          { label: '3m', days: 90 },
+                          { label: '6m', days: 180 },
+                          { label: '1y', days: 365 },
+                          { label: '2y', days: 730 },
+                        ] as const).map(({ label, days }) => {
                       const range = getDateRangeLastNDays(days);
                       const active = startDate === range.start_date && endDate === range.end_date;
                       return (
@@ -704,16 +718,16 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                           </>
                         )}
 
-                        {selectedIndices.map(index => (
+                        {selectedIndices.map(vegIndex => (
                           <Line
                             yAxisId="left"
-                            key={index}
+                            key={vegIndex}
                             type="monotone"
-                            dataKey={index}
-                            name={index}
-                            stroke={getIndexColor(index)}
+                            dataKey={vegIndex}
+                            name={vegIndex}
+                            stroke={getIndexColor(vegIndex)}
                             strokeWidth={3}
-                            dot={{ r: 0, fill: getIndexColor(index), strokeWidth: 2, stroke: '#fff' }}
+                            dot={{ r: 0, fill: getIndexColor(vegIndex), strokeWidth: 2, stroke: '#fff' }}
                             activeDot={{ r: 6, strokeWidth: 0 }}
                             connectNulls
                           />
@@ -737,20 +751,20 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
             {/* Index Descriptions Panel */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {selectedIndices.map(index => (
-                <Card key={index} className="border-slate-100 shadow-none bg-white">
+              {selectedIndices.map(vegIndex => (
+                <Card key={vegIndex} className="border-slate-100 shadow-none bg-white">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                        <span className="text-sm font-bold text-slate-800">{index}</span>
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                        <span className="text-sm font-bold text-slate-800">{vegIndex}</span>
                       </div>
                       <UITooltip>
                         <TooltipTrigger asChild>
                           <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
-                          {getIndexDescription(index)}
+                          {getIndexDescription(vegIndex)}
                         </TooltipContent>
                       </UITooltip>
                     </div>
@@ -778,12 +792,12 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               <CardContent className="p-0">
                 <ScrollArea className="h-[280px]">
                   <div className="p-2 space-y-1">
-                    {TIME_SERIES_INDICES.map(index => {
-                      const isSelected = selectedIndices.includes(index);
+                        {TIME_SERIES_INDICES.map(vegIndex => {
+                      const isSelected = selectedIndices.includes(vegIndex);
                       return (
                         <button
-                          key={index}
-                          onClick={() => toggleIndex(index)}
+                          key={vegIndex}
+                          onClick={() => toggleIndex(vegIndex)}
                           className={cn(
                             "w-full flex items-center justify-between p-2.5 rounded-lg transition-all text-left",
                             isSelected ? "bg-blue-50/80 border border-blue-100" : "hover:bg-slate-100 border border-transparent"
@@ -802,10 +816,10 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                               "text-xs font-semibold tracking-tight",
                               isSelected ? "text-blue-700" : "text-slate-600"
                             )}>
-                              {index === 'TCARI_OSAVI' ? 'TCARI / OSAVI' : index}
+                              {vegIndex === 'TCARI_OSAVI' ? 'TCARI / OSAVI' : vegIndex}
                             </span>
                           </div>
-                          <div className="w-1.5 h-6 rounded-full opacity-60" style={{ backgroundColor: getIndexColor(index) }} />
+                          <div className="w-1.5 h-6 rounded-full opacity-60" style={{ backgroundColor: getIndexColor(vegIndex) }} />
                         </button>
                       );
                     })}
@@ -858,24 +872,24 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100">
-                  {selectedIndices.map(index => {
-                    const stats = calculateStatistics(index);
+                  {selectedIndices.map(vegIndex => {
+                    const stats = calculateStatistics(vegIndex);
                     if (!stats) return (
-                      <div key={index} className="p-4 flex items-center justify-between opacity-40 grayscale">
-                        <span className="text-xs font-bold text-slate-500 uppercase">{index}</span>
+                      <div key={vegIndex} className="p-4 flex items-center justify-between opacity-40 grayscale">
+                        <span className="text-xs font-bold text-slate-500 uppercase">{vegIndex}</span>
                         <span className="text-[10px] italic">No data</span>
                       </div>
                     );
                     return (
-                      <div key={index} className="p-4 space-y-2.5">
+                      <div key={vegIndex} className="p-4 space-y-2.5">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                            <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{index}</span>
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{vegIndex}</span>
                           </div>
                           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 shadow-sm">
                             <span className="text-[10px] font-bold text-slate-600 uppercase">Trend</span>
-                            {getTrendIcon(index)}
+                            {getTrendIcon(vegIndex)}
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
@@ -900,8 +914,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                     );
                   })}
                   
-                  {showTemperature && weatherData && weatherData.length > 0 && (
-                    <div className="p-4 bg-orange-50/30 space-y-2.5 border-t border-orange-100">
+                      {showTemperature && weatherData && weatherData.length > 0 && (
+                        <div className="p-4 bg-orange-50/30 space-y-2.5 border-t border-orange-100">
                       <div className="flex items-center gap-2">
                         <Thermometer className="w-3.5 h-3.5 text-orange-500" />
                         <span className="text-xs font-bold text-orange-700 uppercase tracking-tight">Temperature</span>

@@ -18,7 +18,7 @@ const ITEMS_PER_PAGE = 6;
 
 // Parcel interface removed - using the type from useParcels hook instead
 
-const AnalysisPage: React.FC = () => {
+const AnalysisPage = () => {
   const { t } = useTranslation('common');
   const { currentFarm, currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);

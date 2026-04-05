@@ -24,11 +24,11 @@ interface FarmHierarchyManagerProps {
   onManageRoles?: (farmId: string, farmName: string) => void;
 }
 
-const FarmHierarchyManager: React.FC<FarmHierarchyManagerProps> = ({
+const FarmHierarchyManager = ({
   organizationId,
   currentUserId,
   onManageRoles
-}) => {
+}: FarmHierarchyManagerProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const queryClient = useQueryClient();
   const [expandedFarms, setExpandedFarms] = useState<Set<string>>(new Set());

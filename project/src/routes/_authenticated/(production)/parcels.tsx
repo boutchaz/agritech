@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import {  useState, useEffect, useRef, useCallback  } from "react";
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -20,7 +20,7 @@ interface ParcelsListContentProps {
   search: { farmId?: string };
 }
 
-const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
+const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
@@ -624,7 +624,7 @@ const ParcelsListContent: React.FC<ParcelsListContentProps> = ({ search }) => {
   );
 };
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const location = useLocation();
   const search = Route.useSearch();
   // Match /parcels/{id} or /parcels/{id}/ or /parcels/{id}/something

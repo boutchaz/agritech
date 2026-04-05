@@ -108,8 +108,8 @@ function CertificationsPage() {
       {/* List */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
+          {[1, 2, 3].map((skIdx) => (
+            <div key={"sk-" + skIdx} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-9 w-9 rounded-lg" />

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import InteractiveIndexViewer from './InteractiveIndexViewer';
@@ -12,11 +12,11 @@ interface IndexImageViewerProps {
   boundary?: number[][];
 }
 
-const IndexImageViewer: React.FC<IndexImageViewerProps> = ({
+const IndexImageViewer = ({
   parcelId,
   parcelName,
   boundary
-}) => {
+}: IndexImageViewerProps) => {
   const { t } = useTranslation('satellite');
 
   return (

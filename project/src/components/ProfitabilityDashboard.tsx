@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import {  useState, useMemo, useEffect  } from "react";
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles, Wheat, CalendarRange } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
@@ -23,7 +23,7 @@ import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelC
 import { AdaptiveSection as _AdaptiveSection } from './adaptive/AdaptiveSection';
 import { Badge } from './ui/badge';
 
-const ProfitabilityDashboard: React.FC = () => {
+const ProfitabilityDashboard = () => {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
 
@@ -31,7 +31,6 @@ const ProfitabilityDashboard: React.FC = () => {
   const { level, config } = useExperienceLevel();
   const showExport = useFeatureFlag('showDataExport');
   const showAnalytics = useFeatureFlag('showAnalytics');
-  const _showAdvancedFilters = useFeatureFlag('showAdvancedFilters');
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setMonth(date.getMonth() - 3);
@@ -492,8 +491,8 @@ const ProfitabilityDashboard: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {profitabilityData.byParcel.map((parcel, idx) => (
-                      <TableRow key={idx}>
+                    {profitabilityData.byParcel.map((parcel) => (
+                      <TableRow key={parcel.parcel_id ?? parcel.parcel_name}>
                         <TableCell className="font-medium">{parcel.parcel_name}</TableCell>
                         <TableCell className="text-right text-red-600 dark:text-red-400">
                           {formatCurrency(parcel.total_costs)}

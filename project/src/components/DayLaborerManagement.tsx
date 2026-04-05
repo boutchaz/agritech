@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { workersApi, type Worker } from '../lib/api/workers';
@@ -34,7 +34,7 @@ interface DayLaborer {
   farm_id: string;
 }
 
-const DayLaborerManagement: React.FC = () => {
+const DayLaborerManagement = () => {
   const { currentFarm, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const farmId = currentFarm?.id;

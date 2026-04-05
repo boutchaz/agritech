@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import {  useState, useEffect, useMemo  } from "react";
 import {
   X,
   Play,
@@ -51,12 +51,12 @@ interface TaskDetailDialogProps {
   onEdit?: () => void;
 }
 
-const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
+const TaskDetailDialog = ({
   task,
   organizationId,
   onClose,
   onEdit,
-}) => {
+}: TaskDetailDialogProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();

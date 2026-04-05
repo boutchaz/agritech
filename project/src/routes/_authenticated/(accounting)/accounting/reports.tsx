@@ -47,7 +47,7 @@ const formatCurrency = (amount: number): string => {
   }).format(Math.abs(amount));
 };
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
 

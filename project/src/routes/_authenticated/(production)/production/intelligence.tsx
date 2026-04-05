@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,7 @@ import { Building2, BarChart3, Home } from 'lucide-react';
 import { PageLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 

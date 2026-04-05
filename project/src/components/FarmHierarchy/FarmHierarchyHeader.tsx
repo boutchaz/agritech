@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
@@ -35,7 +35,7 @@ interface FarmHierarchyHeaderProps {
   onFiltersChange?: (filters: { type: 'all' | 'main' | 'sub'; status: 'all' | 'active' | 'inactive' }) => void;
 }
 
-const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
+const FarmHierarchyHeader = ({
   organizationName,
   totalFarms,
   totalArea,
@@ -52,7 +52,7 @@ const FarmHierarchyHeader: React.FC<FarmHierarchyHeaderProps> = ({
   onToggleFilters,
   filters,
   onFiltersChange,
-}) => {
+}: FarmHierarchyHeaderProps) => {
   const { t } = useTranslation();
 
   return (

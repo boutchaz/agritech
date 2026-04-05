@@ -408,7 +408,16 @@
     "tipsTitle": "نصائح",
     "tipsBody": "أفكار لإجراءات على القطعة — للقراءة والتطبيق إن رغبت.",
     "calendarCardTitle": "تقويم الموسم",
-    "calendarCardBody": "مهام شهراً بشهر حسب محصولك وبياناتك."
+    "calendarCardBody": "مهام شهراً بشهر حسب محصولك وبياناتك.",
+    "stepper": {
+      "title": "خط أنابيب Agromind IA",
+      "calibration": "المعايرة",
+      "calibrationDesc": "جمع وتحليل بيانات الأقمار الصناعية والطقس",
+      "nutrition": "التغذية A / B / C",
+      "nutritionDesc": "اختر برنامج إدارة التغذية",
+      "active": "المتابعة النشطة",
+      "activeDesc": "التنبيهات والتوصيات وخطة التدخلات"
+    }
   },
   "planStatus": {
     "draft": "بانتظار التأكيد",

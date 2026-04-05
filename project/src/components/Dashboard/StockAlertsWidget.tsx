@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
 import { Package, AlertTriangle, ChevronRight, TrendingDown, CheckCircle } from 'lucide-react';
@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 
-const StockAlertsWidget: React.FC = () => {
+const StockAlertsWidget = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { data: inventory = [], isLoading } = useInventory();
@@ -50,8 +50,8 @@ const StockAlertsWidget: React.FC = () => {
             <Skeleton className="h-3 w-20 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
           ))}
         </div>
         <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">

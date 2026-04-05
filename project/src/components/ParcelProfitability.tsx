@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   TrendingUp,
@@ -45,7 +45,7 @@ interface ParcelProfitabilityProps {
   parcelName: string;
 }
 
-const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
+const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { format: formatCurrency, currencyCode, symbol: currencySymbol } = useCurrency();

@@ -49,6 +49,17 @@ export interface TemperatureTimeSeries {
   ltn_max: number;
 }
 
+/** Daily outlook from Open-Meteo (same shape as Nest GET /weather/parcel/:id). */
+export interface ParcelForecastDay {
+  date: string;
+  temp: { day: number; min: number; max: number };
+  humidity: number;
+  windSpeed: number;
+  description: string;
+  icon: string;
+  precipitation: number;
+}
+
 export interface WeatherAnalyticsData {
   temperature_series: TemperatureTimeSeries[];
   monthly_precipitation: MonthlyWeatherData[];
@@ -60,6 +71,8 @@ export interface WeatherAnalyticsData {
     latitude: number;
     longitude: number;
   };
+  /** Short-range daily forecast (Open-Meteo via Nest or browser; no OpenWeather API key). */
+  forecast?: ParcelForecastDay[];
 }
 
 export interface ClimateNormals {
@@ -112,8 +125,33 @@ function ensureWGS84(boundary: number[][]): number[][] {
   return boundary;
 }
 
+function wmoCodeToOpenWeatherStyleIcon(code: number): string {
+  if (code <= 1) return '01d';
+  if (code <= 3) return '02d';
+  if (code <= 48) return '50d';
+  if (code <= 55) return '09d';
+  if (code <= 65) return '10d';
+  if (code <= 77) return '13d';
+  if (code <= 82) return '09d';
+  if (code <= 99) return '11d';
+  return '03d';
+}
+
+function wmoCodeToDescription(code: number): string {
+  if (code === 0) return 'Clear sky';
+  if (code <= 3) return 'Partly cloudy';
+  if (code <= 48) return 'Fog';
+  if (code <= 55) return 'Drizzle';
+  if (code <= 65) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Rain showers';
+  if (code <= 99) return 'Thunderstorm';
+  return 'Unknown';
+}
+
 class WeatherClimateService {
   private readonly archiveUrl = 'https://archive-api.open-meteo.com/v1';
+  private readonly forecastUrl = 'https://api.open-meteo.com/v1/forecast';
 
   /**
    * Fetch current weather data for a date range
@@ -374,6 +412,52 @@ class WeatherClimateService {
   }
 
   /**
+   * Open-Meteo short-range forecast (no API key). Used when analytics are built in the browser.
+   */
+  private async fetchShortForecastOpenMeteo(
+    lat: number,
+    lon: number,
+  ): Promise<ParcelForecastDay[]> {
+    try {
+      const params = new URLSearchParams({
+        latitude: lat.toString(),
+        longitude: lon.toString(),
+        daily:
+          'temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max',
+        timezone: 'auto',
+        forecast_days: '16',
+      });
+      const res = await fetch(`${this.forecastUrl}?${params}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      const d = json.daily;
+      if (!d?.time?.length) return [];
+      const out: ParcelForecastDay[] = [];
+      for (let i = 0; i < d.time.length; i++) {
+        const wmo = d.weather_code?.[i] ?? 0;
+        const wMs = d.wind_speed_10m_max?.[i] ?? 0;
+        out.push({
+          date: d.time[i],
+          temp: {
+            day:
+              ((d.temperature_2m_max?.[i] ?? 0) + (d.temperature_2m_min?.[i] ?? 0)) / 2,
+            min: d.temperature_2m_min?.[i] ?? 0,
+            max: d.temperature_2m_max?.[i] ?? 0,
+          },
+          humidity: 0,
+          windSpeed: Math.round(wMs * 3.6),
+          description: wmoCodeToDescription(wmo),
+          icon: wmoCodeToOpenWeatherStyleIcon(wmo),
+          precipitation: d.precipitation_sum?.[i] ?? 0,
+        });
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Main method to get complete weather analytics for a parcel
    */
   async getWeatherAnalytics(
@@ -387,8 +471,10 @@ class WeatherClimateService {
     // Calculate centroid
     const { lat, lon } = calculateCentroid(wgs84Boundary);
 
-    // Fetch current weather data
-    const dailyData = await this.getCurrentWeatherData(lat, lon, startDate, endDate);
+    const [dailyData, forecast] = await Promise.all([
+      this.getCurrentWeatherData(lat, lon, startDate, endDate),
+      this.fetchShortForecastOpenMeteo(lat, lon),
+    ]);
 
     // Fetch climate normals
     const normals = await this.getClimateNormals(lat, lon);
@@ -439,6 +525,7 @@ class WeatherClimateService {
         latitude: lat,
         longitude: lon,
       },
+      forecast,
     };
   }
 

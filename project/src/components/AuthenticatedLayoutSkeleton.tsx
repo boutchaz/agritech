@@ -54,10 +54,10 @@ export function AuthenticatedLayoutSkeleton() {
           {/* Nav items */}
           <div className="flex-1 overflow-hidden px-2 py-3 space-y-1">
             {/* Main nav items */}
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={`nav-${i}`} className={cn('flex items-center gap-3 h-11 px-2 rounded-md', isCollapsed && 'justify-center')}>
+            {Array.from({ length: 6 }).map((_, navIdx) => (
+              <div key={`nav-${navIdx}`} className={cn('flex items-center gap-3 h-11 px-2 rounded-md', isCollapsed && 'justify-center')}>
                 <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
-                {!isCollapsed && <Skeleton className={cn('h-4', i === 0 ? 'w-20' : i === 1 ? 'w-28' : 'w-24')} />}
+                {!isCollapsed && <Skeleton className={cn('h-4', navIdx === 0 ? 'w-20' : navIdx === 1 ? 'w-28' : 'w-24')} />}
               </div>
             ))}
 
@@ -75,10 +75,10 @@ export function AuthenticatedLayoutSkeleton() {
             )}
 
             {/* Sub items */}
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={`sub-${i}`} className={cn('flex items-center gap-3 h-10 rounded-md', isCollapsed ? 'justify-center px-2' : 'pl-8 pr-2')}>
+            {Array.from({ length: 4 }).map((_, subIdx) => (
+              <div key={`sub-${subIdx}`} className={cn('flex items-center gap-3 h-10 rounded-md', isCollapsed ? 'justify-center px-2' : 'pl-8 pr-2')}>
                 <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
-                {!isCollapsed && <Skeleton className={cn('h-3.5', i % 2 === 0 ? 'w-20' : 'w-16')} />}
+                {!isCollapsed && <Skeleton className={cn('h-3.5', subIdx % 2 === 0 ? 'w-20' : 'w-16')} />}
               </div>
             ))}
 
@@ -94,10 +94,10 @@ export function AuthenticatedLayoutSkeleton() {
               </div>
             )}
 
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={`sub2-${i}`} className={cn('flex items-center gap-3 h-10 rounded-md', isCollapsed ? 'justify-center px-2' : 'pl-8 pr-2')}>
+            {Array.from({ length: 3 }).map((_, sub2Idx) => (
+              <div key={`sub2-${sub2Idx}`} className={cn('flex items-center gap-3 h-10 rounded-md', isCollapsed ? 'justify-center px-2' : 'pl-8 pr-2')}>
                 <Skeleton className="h-4 w-4 rounded flex-shrink-0" />
-                {!isCollapsed && <Skeleton className={cn('h-3.5', i % 2 === 0 ? 'w-16' : 'w-24')} />}
+                {!isCollapsed && <Skeleton className={cn('h-3.5', sub2Idx % 2 === 0 ? 'w-16' : 'w-24')} />}
               </div>
             ))}
           </div>
@@ -184,8 +184,8 @@ export function AuthenticatedLayoutSkeleton() {
             <div className="p-3 sm:p-4 lg:p-6 space-y-6 animate-in fade-in duration-300">
               {/* Stat cards row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-800">
+                {Array.from({ length: 4 }).map((_, statIdx) => (
+                  <div key={"sk-" + statIdx} className="bg-white dark:bg-slate-900 rounded-lg p-6 shadow-sm border border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between mb-4">
                       <Skeleton className="h-10 w-10 rounded-lg" />
                     </div>
@@ -198,8 +198,8 @@ export function AuthenticatedLayoutSkeleton() {
 
               {/* Content cards row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
+                {Array.from({ length: 2 }).map((_, cardIdx) => (
+                  <div key={"sk-" + cardIdx} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-10 w-10 rounded-xl" />
@@ -209,9 +209,9 @@ export function AuthenticatedLayoutSkeleton() {
                     </div>
                     <Skeleton className="h-12 w-full rounded-lg mb-4" />
                     <div className="space-y-2">
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <Skeleton key={j} className="h-16 w-full rounded-lg" />
-                      ))}
+                        {Array.from({ length: 3 }).map((_, rowIdx) => (
+                          <Skeleton key={rowIdx} className="h-16 w-full rounded-lg" />
+                        ))}
                     </div>
                   </div>
                 ))}
@@ -219,8 +219,8 @@ export function AuthenticatedLayoutSkeleton() {
 
               {/* Another row */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
+                {Array.from({ length: 2 }).map((_, cardIdx) => (
+                  <div key={"sk-" + cardIdx} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 p-7">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
                         <Skeleton className="h-10 w-10 rounded-xl" />
@@ -229,8 +229,8 @@ export function AuthenticatedLayoutSkeleton() {
                       <Skeleton className="h-4 w-16" />
                     </div>
                     <div className="space-y-3">
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <div key={j} className="flex items-center gap-3">
+                        {Array.from({ length: 3 }).map((_, rowIdx) => (
+                          <div key={rowIdx} className="flex items-center gap-3">
                           <Skeleton className="h-10 w-10 rounded-lg" />
                           <div className="flex-1">
                             <Skeleton className="h-4 w-3/4 mb-1" />
@@ -249,8 +249,8 @@ export function AuthenticatedLayoutSkeleton() {
         {/* ===== MOBILE BOTTOM NAV SKELETON ===== */}
         <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-around px-2 py-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-1 px-3 py-1">
+            {Array.from({ length: 5 }).map((_, mobileNavIdx) => (
+              <div key={"sk-" + mobileNavIdx} className="flex flex-col items-center gap-1 px-3 py-1">
                 <Skeleton className="h-5 w-5 rounded" />
                 <Skeleton className="h-2.5 w-8" />
               </div>

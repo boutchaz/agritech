@@ -74,13 +74,13 @@ const formatDateForInput = (dateStr: string | null | undefined): string => {
   return '';
 };
 
-const TaskForm: React.FC<TaskFormProps> = ({
+const TaskForm = ({
   task,
   organizationId,
   farms,
   onClose,
   onSuccess,
-}) => {
+}: TaskFormProps) => {
   const { t } = useTranslation();
   const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
   const today = new Date().toISOString().split('T')[0];
@@ -867,7 +867,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     const unitLabel = selectedVariant?.unit ?? selectedProd?.unit ?? '';
                     const availableStock = selectedVariant?.quantity ?? selectedProd?.quantity ?? 0;
                     return (
-                      <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div key={item.product_id} className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex items-end gap-3">
                           <div className="flex-1 space-y-1">
                             <Label className="text-xs">{t('tasks.form.productLabel')}</Label>

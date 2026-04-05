@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from "react";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -40,7 +40,7 @@ const formatCurrency = (amount: number, currencyCode = 'MAD') =>
 
 const formatPercent = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id ?? null;

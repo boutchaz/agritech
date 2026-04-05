@@ -52,13 +52,13 @@ interface ApplicationFormDialogProps {
   onSuccess?: () => void;
 }
 
-export const ApplicationFormDialog: React.FC<ApplicationFormDialogProps> = ({
+export const ApplicationFormDialog = ({
   open,
   onOpenChange,
   parcelId,
   farmId,
   onSuccess,
-}) => {
+}: ApplicationFormDialogProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();

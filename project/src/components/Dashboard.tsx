@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Activity, AlertTriangle, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
@@ -23,7 +23,7 @@ interface DashboardProps {
   settings: DashboardSettings;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
+const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
   const { t } = useTranslation();
   const { latestReadings } = useSensorData();
   const { currentFarm } = useAuth();
@@ -223,8 +223,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {settings.layout.middleRow
             .filter(w => !['tasks', 'soil', 'parcels', 'stock', 'workers', 'harvests'].includes(w))
-            .map((widgetType, index) => (
-              <div key={`middle-${widgetType}-${index}`} className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            .map((widgetType) => (
+              <div key={`middle-${widgetType}`} className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                 {renderWidget(widgetType)}
               </div>
             ))}
@@ -233,8 +233,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
 
       {(settings.layout?.bottomRow?.length ?? 0) > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {settings.layout.bottomRow.map((widgetType, index) => (
-            <div key={`bottom-${widgetType}-${index}`} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+          {settings.layout.bottomRow.map((widgetType) => (
+            <div key={`bottom-${widgetType}`} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
               {renderWidget(widgetType)}
             </div>
           ))}

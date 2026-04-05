@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { DEFAULT_CURRENCY } from '../utils/currencies';
@@ -12,7 +12,7 @@ import { SectionLoader } from '@/components/ui/loader';
 
 type Application = ProductApplication;
 
-const ProductApplications: React.FC = () => {
+const ProductApplications = () => {
   const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);

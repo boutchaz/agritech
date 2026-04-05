@@ -26,7 +26,7 @@ const ROLE_HIERARCHY: Record<string, number> = {
 
 
 
-export const LocalAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

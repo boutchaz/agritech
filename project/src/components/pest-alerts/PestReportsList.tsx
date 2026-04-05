@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { PestAlertCard } from './PestAlertCard';
 import type { PestReportResponseDto } from '@/lib/api/pest-alerts';
 import { Bug } from 'lucide-react';
@@ -8,12 +8,12 @@ interface PestReportsListProps {
   isLoading: boolean;
 }
 
-export const PestReportsList: React.FC<PestReportsListProps> = ({ reports, isLoading }) => {
+export const PestReportsList = ({ reports, isLoading }: PestReportsListProps) => {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="space-y-3">
+        {[1, 2, 3, 4, 5, 6].map((_, skIdx) => (
+          <div key={"sk-" + skIdx} className="space-y-3">
             <div className="h-[125px] w-full rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
             <div className="space-y-2">
               <div className="h-4 w-[250px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded" />

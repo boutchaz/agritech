@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,13 +60,13 @@ const createFarmSchema = z.object({
 
 type CreateFarmFormValues = z.infer<typeof createFarmSchema>;
 
-const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
+const FarmHierarchyTree = ({
   organizationId,
   onAddParcel,
   onEditParcel,
   onDeleteParcel,
   onManageRoles
-}) => {
+}: FarmHierarchyTreeProps) => {
   const queryClient = useQueryClient();
 
   // React Hook Form

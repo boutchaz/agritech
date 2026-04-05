@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { Bot, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
@@ -134,14 +134,14 @@ export function AssistantMessage({ content, timestamp, language }: AssistantMess
       <div className="max-w-[80%] rounded-lg px-4 py-2 bg-muted">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            {segments.map((segment, idx) => {
+            {segments.map((segment) => {
               if (segment.type === 'card' && segment.cardType && segment.cardData) {
                 const CardComponent = cardRegistry[segment.cardType];
-                return CardComponent ? <CardComponent key={idx} data={segment.cardData} /> : null;
+                return CardComponent ? <CardComponent key={`${segment.cardType}-${JSON.stringify(segment.cardData)}`} data={segment.cardData} /> : null;
               }
               return (
                 <div
-                  key={idx}
+                  key={segment.text ?? segment.cardType ?? segment.type}
                   className="text-sm chat-markdown"
                   dangerouslySetInnerHTML={{
                     __html: sanitizeMarkdownHtml(addDeepLinks(marked.parse(segment.text || '') as string)),

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertCircle, CheckCircle, Info, Calendar, Package } from 'lucide-react';
 import type { Recommendation } from '../../utils/soilRecommendations';
 
@@ -6,7 +6,7 @@ interface RecommendationsPanelProps {
   recommendations: Recommendation[];
 }
 
-const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ recommendations }) => {
+const RecommendationsPanel = ({ recommendations }: RecommendationsPanelProps) => {
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'high':
@@ -72,7 +72,7 @@ const RecommendationsPanel: React.FC<RecommendationsPanelProps> = ({ recommendat
       <div className="space-y-3">
         {recommendations.map((rec, index) => (
           <div
-            key={index}
+            key={rec.title}
             className={`rounded-lg p-4 border ${getPriorityBg(rec.priority)}`}
           >
             <div className="flex items-start space-x-3">

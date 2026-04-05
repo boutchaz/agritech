@@ -13,7 +13,7 @@ interface SelectionCardProps {
   disabled?: boolean;
 }
 
-export const SelectionCard: React.FC<SelectionCardProps> = ({
+export const SelectionCard = ({
   title,
   description,
   icon,
@@ -22,7 +22,7 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
   color = 'emerald',
   badge,
   disabled = false,
-}) => {
+}: SelectionCardProps) => {
   const colorClasses = {
     emerald: {
       bg: 'bg-emerald-50',

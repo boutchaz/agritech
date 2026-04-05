@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
 import { MapPin, TrendingUp, ChevronRight, Layers } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const ParcelsOverviewWidget: React.FC = () => {
+const ParcelsOverviewWidget = () => {
   const navigate = useNavigate();
   const { currentOrganization, currentFarm } = useAuth();
   const { t } = useTranslation();
@@ -54,8 +54,8 @@ const ParcelsOverviewWidget: React.FC = () => {
             <Skeleton className="h-3 w-20 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       </div>

@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
  * Shows all available levels with feature comparison
  * Users can upgrade or downgrade at any time
  */
-export const ExperienceLevelSelector: React.FC = () => {
+export const ExperienceLevelSelector = () => {
   const { level: currentLevel, setLevel } = useExperienceLevel();
   const { t } = useTranslation();
   const [selectedLevel, setSelectedLevel] = React.useState(currentLevel);

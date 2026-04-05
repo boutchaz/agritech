@@ -1,12 +1,41 @@
-import React from 'react';
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TemperatureTimeSeries } from '../../services/weatherClimateService';
+
+interface TooltipPayload {
+  name: string;
+  value: number;
+  color: string;
+  label?: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
+        <p className="font-medium mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={entry.label} style={{ color: entry.color }} className="text-sm">
+            {entry.name}: {entry.value}°C
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 interface TemperatureChartsProps {
   data: TemperatureTimeSeries[];
 }
 
-const TemperatureCharts: React.FC<TemperatureChartsProps> = ({ data }) => {
+const TemperatureCharts = ({ data }: TemperatureChartsProps) => {
   if (!data || data.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500 dark:text-gray-400">
@@ -26,34 +55,6 @@ const TemperatureCharts: React.FC<TemperatureChartsProps> = ({ data }) => {
     currentMax: Math.round(d.current_max * 10) / 10,
     ltnMax: Math.round(d.ltn_max * 10) / 10,
   }));
-
-  interface TooltipPayload {
-    name: string;
-    value: number;
-    color: string;
-  }
-
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: TooltipPayload[];
-    label?: string;
-  }
-
-  const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded shadow-lg">
-          <p className="font-medium mb-2">{label}</p>
-          {payload.map((entry, index) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
-              {entry.name}: {entry.value}°C
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-8">

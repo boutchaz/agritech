@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from "react";
 import { Plus, Edit2, Trash2, Building2, Wrench, Droplets, FlaskRound as Flask, Building, MapPin } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -31,7 +31,7 @@ const STRUCTURE_TYPE_KEYS = ['stable', 'technical_room', 'basin', 'well', 'other
 // Basin shape keys for translation lookup
 const BASIN_SHAPE_KEYS = ['trapezoidal', 'rectangular', 'cubic', 'circular'] as const;
 
-const InfrastructureManagement: React.FC = () => {
+const InfrastructureManagement = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -665,7 +665,7 @@ const InfrastructureManagement: React.FC = () => {
                 <p className="font-medium text-xs text-gray-500 mb-1">{t('infrastructure.fields.equipment')}:</p>
                 <ul className="list-disc list-inside text-xs space-y-0.5">
                   {structure.structure_details.equipment.slice(0, 3).map((item: string, index: number) => (
-                    <li key={index}>{item}</li>
+                    <li key={item}>{item}</li>
                   ))}
                   {structure.structure_details.equipment.length > 3 && (
                     <li className="text-gray-400">+{structure.structure_details.equipment.length - 3} {t('infrastructure.more')}...</li>

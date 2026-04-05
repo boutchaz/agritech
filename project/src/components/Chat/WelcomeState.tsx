@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';

@@ -408,7 +408,16 @@
     "tipsTitle": "Tips",
     "tipsBody": "Suggested actions for your parcel — read and apply if you wish.",
     "calendarCardTitle": "Season calendar",
-    "calendarCardBody": "Tasks month by month, based on your crop and data."
+    "calendarCardBody": "Tasks month by month, based on your crop and data.",
+    "stepper": {
+      "title": "Agromind IA pipeline",
+      "calibration": "Calibration",
+      "calibrationDesc": "Satellite & weather data collection and analysis",
+      "nutrition": "Nutrition A / B / C",
+      "nutritionDesc": "Choose a nutrition management program",
+      "active": "Active monitoring",
+      "activeDesc": "Alerts, recommendations, and intervention plan"
+    }
   },
   "planStatus": {
     "draft": "To confirm",

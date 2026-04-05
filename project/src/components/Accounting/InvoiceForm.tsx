@@ -34,7 +34,7 @@ import { useParcelsByFarm } from "@/hooks/useParcelsQuery";
 import { calculateInvoiceTotals } from "@/lib/taxCalculations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2, ExternalLink, PackagePlus } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import {  useState, useEffect  } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
@@ -113,12 +113,12 @@ interface InvoiceFormProps {
   editInvoiceId?: string | null;
 }
 
-export const InvoiceForm: React.FC<InvoiceFormProps> = ({
+export const InvoiceForm = ({
   isOpen,
   onClose,
   onSuccess,
   editInvoiceId,
-}) => {
+}: InvoiceFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, farms } = useAuth();
   const navigate = useNavigate();

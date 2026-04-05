@@ -47,7 +47,7 @@ const PRICING_TIERS = {
   enterprise: 150,
 } as const;
 
-const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
+const ROICalculator = ({ className }: ROICalculatorProps) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<'calculator' | 'email'>('calculator');
   const [email, setEmail] = useState('');

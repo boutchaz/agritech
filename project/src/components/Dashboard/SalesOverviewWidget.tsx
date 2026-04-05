@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
 import { ShoppingCart, ChevronRight, TrendingUp, Clock, CheckCircle, Truck } from 'lucide-react';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
-const SalesOverviewWidget: React.FC = () => {
+const SalesOverviewWidget = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { data: orders = [], isLoading } = useSalesOrders();
@@ -87,8 +87,8 @@ const SalesOverviewWidget: React.FC = () => {
         </div>
         <Skeleton className="h-24 w-full rounded-2xl" />
         <div className="grid grid-cols-2 min-[520px]:grid-cols-4 gap-2 sm:gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
+          {[1, 2, 3, 4].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-16 rounded-xl" />
           ))}
         </div>
         <div className="space-y-3 mt-auto">
@@ -96,8 +96,8 @@ const SalesOverviewWidget: React.FC = () => {
             <Skeleton className="h-3 w-20 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2].map((i) => (
-            <Skeleton key={i} className="h-12 w-full rounded-xl" />
+          {[1, 2].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-xl" />
           ))}
         </div>
       </div>

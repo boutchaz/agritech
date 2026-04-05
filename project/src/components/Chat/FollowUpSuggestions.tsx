@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
 
@@ -13,9 +13,9 @@ export function FollowUpSuggestions({ suggestions, onSend, disabled }: FollowUpS
 
   return (
     <div className="flex flex-wrap gap-2 mt-2">
-      {suggestions.map((suggestion, idx) => (
+      {suggestions.map((suggestion) => (
         <Button
-          key={idx}
+          key={suggestion}
           variant="outline"
           size="sm"
           className="h-auto py-1.5 px-3 text-xs gap-1.5"

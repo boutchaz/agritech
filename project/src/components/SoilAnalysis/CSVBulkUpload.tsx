@@ -25,7 +25,7 @@ interface ParsedAnalysis {
   notes?: string;
 }
 
-const CSVBulkUpload: React.FC<CSVBulkUploadProps> = ({ onImportComplete }) => {
+const CSVBulkUpload = ({ onImportComplete }: CSVBulkUploadProps) => {
   const [showModal, setShowModal] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAnalysis[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -277,7 +277,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       </h4>
                       <ul className="text-sm text-red-800 dark:text-red-300 space-y-1">
                         {errors.map((error, index) => (
-                          <li key={index}>• {error}</li>
+                          <li key={error}>• {error}</li>
                         ))}
                       </ul>
                     </div>
@@ -306,7 +306,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       </TableHeader>
                       <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {parsedData.slice(0, 5).map((row, index) => (
-                          <TableRow key={index}>
+                          <TableRow key={row.parcel_name}>
                             <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.parcel_name}</TableCell>
                             <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.sample_date}</TableCell>
                             <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.ph_level}</TableCell>

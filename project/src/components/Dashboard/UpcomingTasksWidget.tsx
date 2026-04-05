@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import {  useState, useMemo  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
 import { Calendar, Clock, User, MapPin, ChevronRight } from 'lucide-react';
@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const UpcomingTasksWidget: React.FC = () => {
+const UpcomingTasksWidget = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const { t, i18n } = useTranslation();
@@ -134,8 +134,8 @@ const UpcomingTasksWidget: React.FC = () => {
             <Skeleton className="h-3 w-32 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-2xl" />
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-16 w-full rounded-2xl" />
           ))}
         </div>
       </div>

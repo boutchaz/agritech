@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from 'lucide-react';
@@ -41,7 +41,7 @@ export function PlanCalendarCard({ data }: { data: PlanCalendarData }) {
           )}
         </div>
         {items.map((item, idx) => (
-          <div key={idx} className="flex items-center justify-between text-sm">
+          <div key={item.description} className="flex items-center justify-between text-sm">
             <span>{item.description}</span>
             <Badge className={statusColors[item.status] || 'bg-muted'} variant="outline">
               {item.status}

@@ -79,12 +79,12 @@ interface PurchaseOrderFormProps {
   purchaseOrder?: PurchaseOrderWithItems | null;
 }
 
-export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
+export const PurchaseOrderForm = ({
   open,
   onOpenChange,
   onSuccess,
   purchaseOrder,
-}) => {
+}: PurchaseOrderFormProps) => {
   const { currentOrganization, user } = useAuth();
   const createPurchaseOrder = useCreatePurchaseOrder();
   const updatePurchaseOrder = useUpdatePurchaseOrder();

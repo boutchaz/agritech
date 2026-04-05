@@ -22,7 +22,7 @@ interface Parcel {
   boundary?: number[][];
 }
 
-const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
+const ModuleView = ({ module, sensorData }: ModuleViewProps) => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
@@ -352,9 +352,9 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
           {/* Pagination dots */}
           {parcelsToDisplay.length > 1 && (
             <div className="flex justify-center space-x-2 mt-4">
-              {parcelsToDisplay.map((_, index) => (
+              {parcelsToDisplay.map((parcel, index) => (
                 <Button variant="green"
-                  key={index}
+                  key={"dot-" + parcel.id}
                   onClick={() => setCurrentParcelIndex(index)}
                   className={`w-3 h-3 rounded-full transition-colors ${ index === currentParcelIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
                   aria-label={t('moduleView.goToParcel', { number: index + 1 })}
@@ -381,7 +381,7 @@ const ModuleView: React.FC<ModuleViewProps> = ({ module, sensorData }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {module.metrics?.map((metric, index) => (
             <div
-              key={index}
+              key={metric.name}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6"
             >
               <div className="flex items-center justify-between">

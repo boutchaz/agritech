@@ -41,7 +41,7 @@ interface CommandAction {
   onSelect: () => void;
 }
 
-export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ children }) => {
+export const GlobalCommandPalette = ({ children }: GlobalCommandPaletteProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);

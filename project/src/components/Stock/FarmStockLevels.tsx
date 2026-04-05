@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
 import { Package, Warehouse, Building2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';

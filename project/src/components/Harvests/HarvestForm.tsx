@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import {  useMemo, useEffect  } from "react";
 import { X, Wheat, Calendar, Star, MapPin, TrendingUp, Warehouse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -36,7 +36,7 @@ const harvestSchema = z.object({
 
 type HarvestFormData = z.infer<typeof harvestSchema>;
 
-const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
+const HarvestForm = ({ harvest, onClose }: HarvestFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { handleFormError } = useFormErrors<HarvestFormData>();
@@ -459,7 +459,7 @@ const HarvestForm: React.FC<HarvestFormProps> = ({ harvest, onClose }) => {
                    }`}
                  >
                    <option value="">{t('harvests.form.placeholders.unspecified')}</option>
-                   {INTENDED_FOR.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                   {INTENDED_FOR.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                  </select>
                  {errors.intended_for && (
                    <p className="text-red-600 text-sm mt-1">{errors.intended_for.message}</p>

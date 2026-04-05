@@ -49,7 +49,7 @@ interface ModulePopoverProps {
   isCollapsed: boolean;
 }
 
-export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => {
+export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
   const { t } = useTranslation();
   const { data: modules = [], isLoading } = useModules();
   const { data: subscription } = useSubscription();

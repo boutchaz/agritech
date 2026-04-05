@@ -143,12 +143,12 @@ export function CorrectiveActionsList({
     return (
       <div className="rounded-md border">
         <div className="flex items-center gap-4 p-3 border-b bg-muted/30">
-          {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-            <Skeleton key={i} className="h-4 flex-1" />
+          {[1, 2, 3, 4, 5, 6, 7].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-4 flex-1" />
           ))}
         </div>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+        {[1, 2, 3].map((_, skIdx) => (
+          <div key={"sk-" + skIdx} className="flex items-center gap-4 p-4 border-b last:border-b-0">
             <div className="w-[250px] space-y-1">
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-3 w-16 rounded" />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
@@ -34,7 +34,7 @@ import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePaginati
 import { SectionLoader } from '@/components/ui/loader';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);

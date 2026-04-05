@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -115,7 +115,7 @@ interface WorkerFormProps {
   onSuccess?: () => void;
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({
+const WorkerForm = ({
   open,
   worker,
   organizationId,
@@ -123,7 +123,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   existingWorkers = [],
   onClose,
   onSuccess,
-}) => {
+}: WorkerFormProps) => {
   const { t } = useTranslation();
   const { handleFormError } = useFormErrors<WorkerFormData>();
   const isEditing = !!worker;
@@ -1191,7 +1191,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           <div className="flex flex-wrap gap-2">
             {specialties.map((specialty, index) => (
               <span
-                key={index}
+                key={specialty}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
               >
                 {specialty}
@@ -1230,7 +1230,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           <div className="flex flex-wrap gap-2">
             {certifications.map((cert, index) => (
               <span
-                key={index}
+                key={cert}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm"
               >
                 {cert}

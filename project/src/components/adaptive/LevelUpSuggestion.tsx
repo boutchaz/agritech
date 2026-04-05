@@ -11,7 +11,7 @@ import { EXPERIENCE_LEVELS } from '@/types/experience-level';
  * Shows when user has accumulated enough usage to benefit from higher level
  * Can be dismissed permanently per session
  */
-export const LevelUpSuggestion: React.FC = () => {
+export const LevelUpSuggestion = () => {
   const { level: _level, setLevel, shouldSuggestUpgrade, dismissHint } = useExperienceLevel();
   const [isDismissed, setIsDismissed] = React.useState(false);
 

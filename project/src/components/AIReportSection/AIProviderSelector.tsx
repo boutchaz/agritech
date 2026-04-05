@@ -41,12 +41,12 @@ const defaultProviderInfo = {
   description: 'Provider not configured',
 };
 
-export const AIProviderSelector: React.FC<AIProviderSelectorProps> = ({
+export const AIProviderSelector = ({
   providers,
   selectedProvider,
   onSelect,
   disabled = false,
-}) => {
+}: AIProviderSelectorProps) => {
   // Filter out zai if not available, but keep it if available (it's our platform AI)
   const displayProviders = providers.filter((p) => p.provider !== 'zai' || p.available);
   

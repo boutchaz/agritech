@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -33,7 +33,7 @@ interface ProductionDashboardProps {
   parcelId?: string;
 }
 
-export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcelId }) => {
+export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState({

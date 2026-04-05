@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Calculator, Info, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,11 +16,11 @@ interface MetayageCalculatorProps {
   onSuccess?: () => void;
 }
 
-const MetayageCalculator: React.FC<MetayageCalculatorProps> = ({
+const MetayageCalculator = ({
   organizationId,
   farmId,
   onSuccess,
-}) => {
+}: MetayageCalculatorProps) => {
   const { t } = useTranslation();
   const { data: workers = [] } = useWorkers(organizationId, farmId);
   const createSettlement = useCreateMetayageSettlement();

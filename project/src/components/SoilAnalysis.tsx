@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import {  useEffect  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -73,7 +73,7 @@ const soilAnalysisSchema = z.object({
 
 type SoilAnalysisFormData = z.infer<typeof soilAnalysisSchema>;
 
-const SoilAnalysis: React.FC<SoilAnalysisProps> = ({ onSave, onCancel, initialData }) => {
+const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
   const { handleFormError } = useFormErrors<SoilAnalysisFormData>();
   const {
     register,

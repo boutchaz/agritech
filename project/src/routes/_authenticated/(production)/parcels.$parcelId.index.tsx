@@ -233,8 +233,8 @@ const ParcelOverview = () => {
 
         {isLoadingTasks ? (
           <div className="space-y-2 py-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full rounded-lg" />
+            {Array.from({ length: 3 }).map((_, skIdx) => (
+              <Skeleton key={"sk-" + skIdx} className="h-12 w-full rounded-lg" />
             ))}
           </div>
         ) : parcelTasks && parcelTasks.length > 0 ? (

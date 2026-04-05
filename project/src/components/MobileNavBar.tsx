@@ -1,4 +1,4 @@
-import React from "react";
+
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,13 +12,13 @@ interface MobileNavBarProps {
   className?: string;
 }
 
-export const MobileNavBar: React.FC<MobileNavBarProps> = ({
+export const MobileNavBar = ({
   title,
   showBackButton = true,
   showHomeButton = true,
   onBackClick,
   className,
-}) => {
+}: MobileNavBarProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {

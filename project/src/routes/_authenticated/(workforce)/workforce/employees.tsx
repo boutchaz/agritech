@@ -1,4 +1,4 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
@@ -7,7 +7,7 @@ import OrganizationSwitcher from '@/components/OrganizationSwitcher'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { PageLoader } from '@/components/ui/loader'
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { currentOrganization, currentFarm } = useAuth();
 
   if (!currentOrganization) {

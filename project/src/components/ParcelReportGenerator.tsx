@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import {
   FileText,
   Download,
@@ -27,12 +27,12 @@ interface ParcelReportGeneratorProps {
   searchParams?: any;
 }
 
-const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
+const ParcelReportGenerator = ({
   parcelId,
   parcelName: _parcelName,
   parcelData,
   searchParams
-}) => {
+}: ParcelReportGeneratorProps) => {
   const _queryClient = useQueryClient();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);

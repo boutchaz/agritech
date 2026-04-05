@@ -32,9 +32,9 @@ export function LeafletBaseTileLayers({
 
   return (
     <>
-      {specs.map((s, i) => (
+      {specs.map((s, tileIdx) => (
         <TileLayer
-          key={`${s.url.slice(0, 80)}-${i}`}
+          key={`${s.url.slice(0, 80)}-${tileIdx}`}
           url={s.url}
           attribution={s.attribution}
           tileSize={s.tileSize ?? 256}

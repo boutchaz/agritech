@@ -15,11 +15,11 @@ interface RoleProtectedRouteProps {
  * Component to protect routes based on user role
  * If user doesn't have required role, shows access denied or redirects
  */
-export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
+export const RoleProtectedRoute = ({
   children,
   allowedRoles,
   redirectTo = '/settings/account'
-}) => {
+}: RoleProtectedRouteProps) => {
   const { userRole, loading, currentOrganization, refreshUserData } = useAuth();
 
   // Show loading state while checking role

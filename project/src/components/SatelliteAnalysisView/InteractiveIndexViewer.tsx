@@ -107,11 +107,11 @@ export const COLOR_PALETTES: Record<ColorPalette, { name: string; colors: string
   }
 };
 
-const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
+const InteractiveIndexViewer = ({
   parcelId,
   parcelName,
   boundary
-}) => {
+}: InteractiveIndexViewerProps) => {
   const { t, i18n } = useTranslation('satellite');
 
   // View mode: single, multi-grid, multi-overlay, or temporal-compare
@@ -504,6 +504,7 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   { id: 'temporal-compare', label: t('satellite:heatmap.viewModes.temporalCompare'), icon: GitCompareArrows },
                 ].map((mode) => (
                   <button
+                    type="button"
                     key={mode.id}
                     onClick={() => setViewMode(mode.id as any)}
                     className={cn(
@@ -618,8 +619,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {VEGETATION_INDICES.map(idx => (
-                            <SelectItem key={idx} value={idx} className="text-xs font-medium">{idx}</SelectItem>
+                          {VEGETATION_INDICES.map(vegIndex => (
+                            <SelectItem key={vegIndex} value={vegIndex} className="text-xs font-medium">{vegIndex}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -679,14 +680,15 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                     <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('satellite:heatmap.labels.indicesToCompare')}</Label>
                     <ScrollArea className="h-[200px] border border-slate-100 rounded-lg p-2 bg-slate-50/50">
                       <div className="grid grid-cols-2 gap-1">
-                        {VEGETATION_INDICES.map(idx => {
-                          const isSelected = selectedIndices.includes(idx);
+                        {VEGETATION_INDICES.map(vegIndex => {
+                          const isSelected = selectedIndices.includes(vegIndex);
                           return (
                             <button
-                              key={idx}
+                              type="button"
+                              key={vegIndex}
                               onClick={() => {
-                                if (isSelected) setSelectedIndices(selectedIndices.filter(i => i !== idx));
-                                else setSelectedIndices([...selectedIndices, idx]);
+                                if (isSelected) setSelectedIndices(selectedIndices.filter(i => i !== vegIndex));
+                                else setSelectedIndices([...selectedIndices, vegIndex]);
                               }}
                               className={cn(
                                 "flex items-center gap-2 p-2 rounded-md transition-all text-left",
@@ -696,10 +698,10 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                               <div className={cn("w-3 h-3 rounded border flex items-center justify-center transition-all", isSelected ? "bg-emerald-600 border-emerald-600" : "bg-white border-slate-300")}>
                                 {isSelected && <Check className="w-2 h-2 text-white" />}
                               </div>
-                              <span className="text-[10px] font-bold">{idx}</span>
-                            </button>
-                          );
-                        })}
+                               <span className="text-[10px] font-bold">{vegIndex}</span>
+                             </button>
+                           );
+                         })}
                       </div>
                     </ScrollArea>
                   </div>
@@ -709,27 +711,27 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   <div className="space-y-3 pt-2">
                     <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('satellite:heatmap.labels.overlayOpacity')}</Label>
                     <div className="space-y-2.5">
-                      {selectedIndices.map(index => (
-                        <div key={index} className="space-y-1.5">
+                      {selectedIndices.map(vegIndex => (
+                        <div key={vegIndex} className="space-y-1.5">
                           <div className="flex justify-between items-center px-1">
                             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tight flex items-center gap-1.5">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: getIndexColor(index)}} />
-                              {index}
+                              <div className="w-1.5 h-1.5 rounded-full" style={{backgroundColor: getIndexColor(vegIndex)}} />
+                              {vegIndex}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400">{Math.round((overlayOpacity.get(index) || 0.7) * 100)}%</span>
+                            <span className="text-[10px] font-bold text-slate-400">{Math.round((overlayOpacity.get(vegIndex) || 0.7) * 100)}%</span>
                           </div>
                           <input 
                             type="range"
                             min="0"
                             max="100"
                             step="5"
-                            value={(overlayOpacity.get(index) || 0.7) * 100}
-                            onChange={(e) => {
-                              const val = parseInt(e.target.value);
-                              const newOpacity = new Map(overlayOpacity);
-                              newOpacity.set(index, val / 100);
-                              setOverlayOpacity(newOpacity);
-                            }}
+                             value={(overlayOpacity.get(vegIndex) || 0.7) * 100}
+                             onChange={(e) => {
+                               const val = parseInt(e.target.value);
+                               const newOpacity = new Map(overlayOpacity);
+                               newOpacity.set(vegIndex, val / 100);
+                               setOverlayOpacity(newOpacity);
+                             }}
                             className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                           />
                         </div>
@@ -858,8 +860,8 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                   { label: t('satellite:heatmap.stats.p90'), value: (data as any).statistics.p90, icon: ArrowUp, color: 'text-emerald-500' },
                   { label: t('satellite:heatmap.stats.std'), value: (data as any).statistics.std, icon: BarChart4, color: 'text-purple-600' },
                   { label: 'Pixels', value: (data as any).statistics.count, icon: LayoutGrid, color: 'text-amber-600', isCount: true },
-                ].map((stat, i) => (
-                  <Card key={i} className="border-slate-100 shadow-none bg-white">
+                ].map((stat) => (
+                  <Card key={stat.label} className="border-slate-100 shadow-none bg-white">
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">
                       <stat.icon className={cn("w-3.5 h-3.5 mb-1", stat.color)} />
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{stat.label}</span>
@@ -877,27 +879,27 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
           {viewMode === 'multi-grid' && multiData.size > 0 && !isLoading && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Array.from(multiData.entries()).map(([index, indexData]) => (
-                  <Card key={index} className="border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                    <CardHeader className="bg-slate-50 border-b border-slate-100 p-3 flex flex-row items-center justify-between space-y-0">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{index}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                        {t('satellite:heatmap.stats.moy')} {(indexData.statistics?.mean ?? 0).toFixed(3)}
-                      </span>
-                    </CardHeader>
+                  {Array.from(multiData.entries()).map(([vegIndex, indexData]) => (
+                    <Card key={vegIndex} className="border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                      <CardHeader className="bg-slate-50 border-b border-slate-100 p-3 flex flex-row items-center justify-between space-y-0">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                          <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{vegIndex}</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                          {t('satellite:heatmap.stats.moy')} {(indexData.statistics?.mean ?? 0).toFixed(3)}
+                        </span>
+                      </CardHeader>
                     <div className="h-64 relative bg-slate-50">
                       <LeafletHeatmapViewer
                         parcelId={parcelId}
                         parcelName={parcelName}
                         boundary={boundary}
                         initialData={indexData}
-                        selectedIndex={index}
+                        selectedIndex={vegIndex}
                         selectedDate={selectedDate}
                         embedded={true}
-                        colorPalette={indexColorPalettes.get(index) || 'red-green'}
+                        colorPalette={indexColorPalettes.get(vegIndex) || 'red-green'}
                         baseLayer={baseLayer}
                         compact={true}
                       />
@@ -925,12 +927,12 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {Array.from(multiData.entries()).map(([index, data]) => (
-                        <TableRow key={index} className="hover:bg-slate-50/50 transition-colors">
+                      {Array.from(multiData.entries()).map(([vegIndex, data]) => (
+                        <TableRow key={vegIndex} className="hover:bg-slate-50/50 transition-colors">
                           <TableCell className="py-2.5 pl-6">
                             <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getIndexColor(index) }} />
-                              <span className="text-xs font-bold text-slate-700">{index}</span>
+                              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                              <span className="text-xs font-bold text-slate-700">{vegIndex}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-right text-xs font-bold tabular-nums text-slate-700">{(data.statistics?.mean ?? 0).toFixed(3)}</TableCell>
@@ -974,21 +976,21 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 
               {/* Legends Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {Array.from(multiData.keys()).map(index => (
-                  <Card key={index} className="border-slate-100 shadow-none bg-white">
-                    <CardContent className="p-3 flex items-center gap-3">
-                      <div 
-                        className="w-8 h-8 rounded-lg shadow-sm border border-slate-100 flex items-center justify-center font-bold text-[10px] text-white" 
-                        style={{ 
-                          backgroundColor: getIndexColor(index),
-                          opacity: overlayOpacity.get(index) || 0.7 
-                        }}
-                      >
-                        {index.substring(0, 2)}
+                      {Array.from(multiData.keys()).map(vegIndex => (
+                    <Card key={vegIndex} className="border-slate-100 shadow-none bg-white">
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div 
+                          className="w-8 h-8 rounded-lg shadow-sm border border-slate-100 flex items-center justify-center font-bold text-[10px] text-white" 
+                          style={{ 
+                          backgroundColor: getIndexColor(vegIndex),
+                          opacity: overlayOpacity.get(vegIndex) || 0.7 
+                          }}
+                        >
+                        {vegIndex.substring(0, 2)}
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-800 leading-tight">{index}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Mean: {(multiData.get(index)?.statistics?.mean ?? 0).toFixed(3)}</span>
+                        <span className="text-xs font-bold text-slate-800 leading-tight">{vegIndex}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Mean: {(multiData.get(vegIndex)?.statistics?.mean ?? 0).toFixed(3)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -1105,15 +1107,13 @@ const InteractiveIndexViewer: React.FC<InteractiveIndexViewerProps> = ({
 };
 
 // Multi-Index Overlay Map Component
-const MultiIndexOverlayMap: React.FC<{
-  parcelId: string;
+const MultiIndexOverlayMap = ({ boundary, multiData, overlayOpacity, baseLayer }: { parcelId: string;
   parcelName?: string;
   boundary?: number[][];
   multiData: Map<VegetationIndexType, HeatmapDataResponse>;
   overlayOpacity: Map<VegetationIndexType, number>;
   selectedDate: string;
-  baseLayer: 'osm' | 'satellite';
-}> = ({ boundary, multiData, overlayOpacity, baseLayer }) => {
+  baseLayer: 'osm' | 'satellite'; }) => {
   const { t } = useTranslation('satellite');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const indices = Array.from(multiData.keys());
@@ -1154,16 +1154,16 @@ const MultiIndexOverlayMap: React.FC<{
           pathOptions={{ color: '#ffffff', weight: 2, fillOpacity: 0, dashArray: '5, 10' }}
         />
 
-        {indices.map(index => {
-          const indexData = multiData.get(index);
+        {indices.map(vegIndex => {
+          const indexData = multiData.get(vegIndex);
           if (!indexData) return null;
           return (
             <GridHeatmapLayer
-              key={index}
+              key={vegIndex}
               data={indexData}
-              selectedIndex={index}
-              colorPalette={getIndexColorPalette(index)}
-              opacity={overlayOpacity.get(index) || 0.7}
+              selectedIndex={vegIndex}
+              colorPalette={getIndexColorPalette(vegIndex)}
+              opacity={overlayOpacity.get(vegIndex) || 0.7}
             />
           );
         })}

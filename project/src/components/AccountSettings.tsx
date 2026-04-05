@@ -95,7 +95,7 @@ function normalizeProfileTimezone(tz: string | undefined): string {
   return 'UTC';
 }
 
-const AccountSettings: React.FC = () => {
+const AccountSettings = () => {
   const { user, currentOrganization, userRole } = useAuth();
   const { i18n, t } = useTranslation();
   const queryClient = useQueryClient();

@@ -145,8 +145,8 @@ export function ExpertLecture({ audit }: ExpertLectureProps) {
             <div className="space-y-2">
               <h3 className="text-sm font-medium text-muted-foreground">{t('calibrationReview.expertLecture.missingData')}</h3>
               <div className="space-y-2">
-                {audit.missing_data.map((item, idx) => (
-                  <div key={`missing-${item.field}-${idx}`} className="p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-lg text-sm">
+                {audit.missing_data.map((item, fieldIdx) => (
+                  <div key={`missing-${item.field}-${fieldIdx}`} className="p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-900/30 rounded-lg text-sm">
                     <div className="flex items-center gap-2 font-medium text-orange-800 dark:text-orange-300 mb-1">
                       <AlertCircle className="h-4 w-4" />
                       {item.field}

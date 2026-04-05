@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AIStatusBadge } from './AIStatusBadge';
 import type { AICalibration } from '@/lib/api/ai-calibration';
 
@@ -6,7 +6,7 @@ interface CalibrationCardProps {
   calibration: AICalibration;
 }
 
-export const CalibrationCard: React.FC<CalibrationCardProps> = ({ calibration }) => {
+export const CalibrationCard = ({ calibration }: CalibrationCardProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex justify-between items-start mb-4">

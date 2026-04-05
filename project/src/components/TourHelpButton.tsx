@@ -106,12 +106,10 @@ const TOUR_CONFIGS: TourInfo[] = [
   },
 ];
 
-const SyncStatusIndicator: React.FC<{
-  syncStatus: 'syncing' | 'synced' | 'error' | 'idle';
+const SyncStatusIndicator = ({ syncStatus, lastSyncError, onRefresh, t }: { syncStatus: 'syncing' | 'synced' | 'error' | 'idle';
   lastSyncError: string | null;
   onRefresh: () => void;
-  t: TFunction;
-}> = ({ syncStatus, lastSyncError, onRefresh, t }) => {
+  t: TFunction; }) => {
   if (syncStatus === 'syncing') {
     return (
       <div className="flex items-center gap-1 text-xs text-blue-600" title={t('helpCenter.syncing', 'Syncing...')}>
@@ -143,7 +141,7 @@ const SyncStatusIndicator: React.FC<{
   return null;
 };
 
-export const TourHelpButton: React.FC = () => {
+export const TourHelpButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const { t } = useTranslation();

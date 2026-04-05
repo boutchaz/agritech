@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Home, ArrowLeft, Search, Sprout } from 'lucide-react';
@@ -11,11 +11,11 @@ interface NotFoundProps {
   showSearch?: boolean;
 }
 
-export const NotFound: React.FC<NotFoundProps> = ({
+export const NotFound = ({
   title = 'Page Not Found',
   message = "The page you're looking for doesn't exist or hasn't been created yet.",
   showSearch = false,
-}) => {
+}: NotFoundProps) => {
   const navigate = useNavigate();
   const { t } = useTranslation('common');
 

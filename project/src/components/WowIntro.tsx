@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, Suspense } from 'react';
+import {  useEffect, useRef, useState, useMemo, Suspense  } from "react";
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, PerspectiveCamera, Sparkles, Float, Sky, Points, PointMaterial } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette } from '@react-three/postprocessing';
@@ -67,8 +67,8 @@ const NeuralOrchard = ({ progress }: { progress: number }) => {
 
   return (
     <group>
-      {treePositions.map((pos, i) => (
-        <group key={i} position={pos as any}>
+      {treePositions.map((pos, treeIdx) => (
+        <group key={"tree-" + treeIdx} position={pos as any}>
           {/* Trunk - simple line for tech look */}
           <mesh position={[0, 0.5, 0]}>
             <cylinderGeometry args={[0.01, 0.02, 1, 4]} />
@@ -109,8 +109,8 @@ const OrbitalNode = () => {
         <meshStandardMaterial color="#ffffff" emissive="#10b981" emissiveIntensity={5} />
       </mesh>
       {/* Orbital Rings */}
-      {[1, 1.3, 1.6].map((radius, i) => (
-        <mesh key={i} rotation={[Math.random() * Math.PI, Math.random() * Math.PI, 0]}>
+      {[1, 1.3, 1.6].map((radius, meshIdx) => (
+        <mesh key={"mesh-" + meshIdx} rotation={[Math.random() * Math.PI, Math.random() * Math.PI, 0]}>
           <torusGeometry args={[radius, 0.01, 16, 100]} />
           <meshBasicMaterial color="#10b981" transparent opacity={0.5} />
         </mesh>
@@ -132,7 +132,7 @@ const OrbitalNode = () => {
 
 // --- Main Intro Component ---
 
-export const WowIntro: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [simProgress, setSimProgress] = useState(0);
@@ -251,8 +251,8 @@ export const WowIntro: React.FC<{ onComplete: () => void }> = ({ onComplete }) =
           </p>
           
           <div className="mt-16 flex flex-col gap-2">
-            {[ "Satellite Mesh: Active", "Field Topography: Scanned", "Neural Yield: Optimized" ].map((t, i) => (
-              <div key={i} className="flex items-center gap-4 text-white font-mono text-[10px] uppercase tracking-[0.3em]">
+            {[ "Satellite Mesh: Active", "Field Topography: Scanned", "Neural Yield: Optimized" ].map((t, statIdx) => (
+              <div key={"stat-" + statIdx} className="flex items-center gap-4 text-white font-mono text-[10px] uppercase tracking-[0.3em]">
                 <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
                 {t}
               </div>

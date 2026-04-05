@@ -408,7 +408,16 @@
     "tipsTitle": "Conseils",
     "tipsBody": "Idées d’actions pour la parcelle — à lire et à mettre en œuvre si vous le souhaitez.",
     "calendarCardTitle": "Calendrier de la saison",
-    "calendarCardBody": "Tâches mois par mois, selon votre culture et vos données."
+    "calendarCardBody": "Tâches mois par mois, selon votre culture et vos données.",
+    "stepper": {
+      "title": "Pipeline Agromind IA",
+      "calibration": "Calibrage",
+      "calibrationDesc": "Collecte et analyse des données satellite et météo",
+      "nutrition": "Nutrition A / B / C",
+      "nutritionDesc": "Choisir un programme de gestion nutritionnelle",
+      "active": "Suivi actif",
+      "activeDesc": "Alertes, recommandations et plan d'interventions"
+    }
   },
   "planStatus": {
     "draft": "À confirmer",

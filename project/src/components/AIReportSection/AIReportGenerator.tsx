@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import {
   Bot,
   Loader2,
@@ -23,7 +23,7 @@ import type { AIProvider, AIReportSections } from '../../lib/api/ai-reports';
 import { Button } from '@/components/ui/button';
 import { StatusDot } from '@/components/ui/status-dot';
 
-const PendingJobsBanner: React.FC<{ onSelectJob: (jobId: string) => void }> = ({ onSelectJob }) => {
+const PendingJobsBanner = ({ onSelectJob }: { onSelectJob: (jobId: string) => void }) => {
   const { t } = useTranslation();
   const { data, isLoading } = usePendingAIReportJobs();
   
@@ -72,11 +72,11 @@ interface AIReportGeneratorProps {
   searchParams?: any;
 }
 
-export const AIReportGenerator: React.FC<AIReportGeneratorProps> = ({
+export const AIReportGenerator = ({
   parcelId,
   parcelName,
   searchParams,
-}) => {
+}: AIReportGeneratorProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);

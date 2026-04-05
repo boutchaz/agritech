@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import {  useState, useEffect, useCallback  } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Plus,
@@ -162,7 +162,7 @@ interface StockManagementProps {
   activeTab: InventoryTab;
 }
 
-const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
+const StockManagement = ({ activeTab }: StockManagementProps) => {
   const { t } = useTranslation('stock');
   const { currentOrganization, currentFarm } = useAuth();
   const { symbol: _currencySymbol } = useCurrency();

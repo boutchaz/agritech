@@ -24,13 +24,13 @@ interface ConfettiEffectProps {
 const DEFAULT_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#06B6D4'] as const;
 const MINI_COLORS = ['#10B981', '#34D399', '#6EE7B7'] as const;
 
-export const ConfettiEffect: React.FC<ConfettiEffectProps> = ({
+export const ConfettiEffect = ({
   isActive,
   duration = 3000,
   particleCount = 100,
   colors,
   onComplete,
-}) => {
+}: ConfettiEffectProps) => {
   const [particles, setParticles] = useState<Particle[]>([]);
 
   // Use a ref to avoid recreating the effect when onComplete changes
@@ -139,7 +139,7 @@ export const ConfettiEffect: React.FC<ConfettiEffectProps> = ({
 };
 
 // Mini confetti for step completions
-export const MiniConfetti: React.FC<{ isActive: boolean }> = ({ isActive }) => {
+export const MiniConfetti = ({ isActive }: { isActive: boolean }) => {
   return (
     <ConfettiEffect
       isActive={isActive}

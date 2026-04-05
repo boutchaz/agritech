@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { TimeSeriesPoint } from '../services/satelliteIndicesService';
 
 interface MultiIndexData {
@@ -14,11 +14,11 @@ interface MultiIndexChartProps {
   height?: number;
 }
 
-const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
+const MultiIndexChart = ({
   datasets,
   width = 800,
   height = 400
-}) => {
+}: MultiIndexChartProps) => {
   const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
   const [visibleIndices, setVisibleIndices] = useState<Record<string, boolean>>(
     Object.fromEntries(datasets.map(ds => [ds.index, ds.visible !== false]))
@@ -135,8 +135,8 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
           />
 
           {/* Grid lines */}
-          {yTicks.map((tick, i) => (
-            <g key={`y-grid-${i}`}>
+          {yTicks.map((tick, gridIdx) => (
+            <g key={`y-grid-${gridIdx}`}>
               <line
                 x1={margin.left}
                 y1={margin.top + tick.y}
@@ -150,9 +150,9 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
             </g>
           ))}
 
-          {xTicks.map((tick, i) => (
+          {xTicks.map((tick, gridIdx) => (
             <line
-              key={`x-grid-${i}`}
+              key={`x-grid-${gridIdx}`}
               x1={margin.left + tick.x}
               y1={margin.top}
               x2={margin.left + tick.x}
@@ -185,9 +185,9 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
           />
 
           {/* Y-axis labels */}
-          {yTicks.map((tick, i) => (
+          {yTicks.map((tick, labelIdx) => (
             <text
-              key={`y-label-${i}`}
+              key={`y-label-${labelIdx}`}
               x={margin.left - 10}
               y={margin.top + tick.y + 4}
               textAnchor="end"
@@ -200,9 +200,9 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
           ))}
 
           {/* X-axis labels */}
-          {xTicks.map((tick, i) => (
+          {xTicks.map((tick, labelIdx) => (
             <text
-              key={`x-label-${i}`}
+              key={`x-label-${labelIdx}`}
               x={margin.left + tick.x}
               y={margin.top + chartHeight + 20}
               textAnchor="middle"
@@ -216,19 +216,20 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
 
           {/* Data lines */}
           {visibleDatasets.map((dataset) => {
+            const vegIndex = dataset.index;
             const pathData = dataset.data
               .filter(point => point && point.date !== undefined && point.value !== undefined)
-              .map((point, i) => {
-                const x = (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
-                const y = chartHeight - ((point.value - adjustedMinValue) / adjustedValueRange * chartHeight);
-                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                .map((point, ptIdx) => {
+                  const x = (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
+                  const y = chartHeight - ((point.value - adjustedMinValue) / adjustedValueRange * chartHeight);
+                  return `${ptIdx === 0 ? 'M' : 'L'} ${x} ${y}`;
               })
               .join(' ');
 
-            const isHovered = hoveredIndex === dataset.index;
+            const isHovered = hoveredIndex === vegIndex;
 
             return (
-              <g key={dataset.index}>
+              <g key={vegIndex}>
                 {/* Line */}
                 <path
                   d={pathData}
@@ -238,21 +239,21 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   opacity={isHovered ? 1 : 0.8}
-                  onMouseEnter={() => setHoveredIndex(dataset.index)}
-                  onMouseLeave={() => setHoveredIndex(null)}
-                  className="transition-all duration-200"
-                />
+                    onMouseEnter={() => setHoveredIndex(vegIndex)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    className="transition-all duration-200"
+                  />
 
                 {/* Data points */}
                 {dataset.data
                   .filter(point => point && point.date !== undefined && point.value !== undefined)
-                  .map((point, i) => {
+                  .map((point, ptIdx) => {
                     const x = margin.left + (new Date(point.date).getTime() - minDate) / dateRange * chartWidth;
                     const y = margin.top + chartHeight - ((point.value - adjustedMinValue) / adjustedValueRange * chartHeight);
 
                     return (
                       <circle
-                        key={`${dataset.index}-point-${i}`}
+                        key={`${vegIndex}-point-${ptIdx}`}
                         cx={x}
                         cy={y}
                         r={isHovered ? "5" : "3"}
@@ -263,7 +264,7 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
                         className="transition-all duration-200"
                       >
                         <title>
-                          {dataset.index}: {new Date(point.date).toLocaleDateString('fr-FR')} - {point.value.toFixed(4)}
+                          {vegIndex}: {new Date(point.date).toLocaleDateString('fr-FR')} - {point.value.toFixed(4)}
                         </title>
                       </circle>
                     );
@@ -323,15 +324,16 @@ const MultiIndexChart: React.FC<MultiIndexChartProps> = ({
               Indices
             </text>
             {datasets.map((dataset, i) => {
-              const isVisible = visibleIndices[dataset.index];
-              const isHovered = hoveredIndex === dataset.index;
+              const vegIndex = dataset.index;
+              const isVisible = visibleIndices[vegIndex];
+              const isHovered = hoveredIndex === vegIndex;
 
               return (
                 <g
-                  key={dataset.index}
+                  key={vegIndex}
                   transform={`translate(0, ${20 + i * 25})`}
-                  onClick={() => toggleIndex(dataset.index)}
-                  onMouseEnter={() => setHoveredIndex(dataset.index)}
+                  onClick={() => toggleIndex(vegIndex)}
+                  onMouseEnter={() => setHoveredIndex(vegIndex)}
                   onMouseLeave={() => setHoveredIndex(null)}
                   className="cursor-pointer"
                 >

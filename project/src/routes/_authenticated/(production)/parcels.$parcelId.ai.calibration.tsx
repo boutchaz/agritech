@@ -750,13 +750,13 @@ const RecommendationsList = ({ recommendations }: { recommendations: Recommendat
 
   return (
     <div className="space-y-3">
-      {recommendations.map((recommendation, index) => {
+      {recommendations.map((recommendation) => {
         const severity = toSeverityLevel(recommendation.severity);
         const sev = SEVERITY_COLORS[severity];
 
         return (
           <div
-            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${index}`}
+            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${recommendation.message}`}
             className={`p-4 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
           >
             <div className="flex items-center gap-2 flex-wrap mb-1.5">

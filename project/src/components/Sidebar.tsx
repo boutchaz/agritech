@@ -117,12 +117,12 @@ function CollapsedSectionPopover({
   );
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
+const Sidebar = ({
   modules: _modules,
   onModuleChange,
   isDarkMode,
   onThemeToggle,
-}) => {
+}: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation("common");

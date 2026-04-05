@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { Users, Activity, Building2, Clock, TrendingUp, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +10,10 @@ interface LiveSummaryCardsProps {
   isLoading?: boolean;
 }
 
-const LiveSummaryCards: React.FC<LiveSummaryCardsProps> = ({
+const LiveSummaryCards = ({
   summary,
   isLoading = false,
-}) => {
+}: LiveSummaryCardsProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -88,7 +88,7 @@ const LiveSummaryCards: React.FC<LiveSummaryCardsProps> = ({
         const Icon = card.icon;
         return (
           <div
-            key={index}
+            key={card.label}
             className={`group relative bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}
           >
             {/* Background decoration */}

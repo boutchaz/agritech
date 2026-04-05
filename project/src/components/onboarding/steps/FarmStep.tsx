@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { MapPin, Ruler, Cloud, Droplets, ArrowRight, Sprout } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { ButtonLoader } from '@/components/ui/loader';
@@ -45,12 +45,12 @@ const SIZE_UNITS = [
   { id: 'm2', name: 'Mètres²', factor: 10000 },
 ];
 
-export const FarmStep: React.FC<FarmStepProps> = ({
+export const FarmStep = ({
   farmData,
   onUpdate,
   onNext,
   isLoading = false,
-}) => {
+}: FarmStepProps) => {
   const [subStep, setSubStep] = useState(0);
 
   const isValid = farmData.name.trim() && farmData.location.trim() && farmData.size > 0;
@@ -186,11 +186,11 @@ export const FarmStep: React.FC<FarmStepProps> = ({
                 </div>
               </div>
               <div className="flex flex-wrap gap-1 max-w-[150px]">
-                {Array.from({ length: Math.min(footballFields, 20) }).map((_, i) => (
+                {Array.from({ length: Math.min(footballFields, 20) }).map((_, ffIdx) => (
                   <div
-                    key={i}
+                    key={"ff-" + ffIdx}
                     className="w-4 h-3 bg-emerald-400 rounded-sm animate-scale-in"
-                    style={{ animationDelay: `${i * 50}ms` }}
+                    style={{ animationDelay: `${ffIdx * 50}ms` }}
                   />
                 ))}
                 {footballFields > 20 && (

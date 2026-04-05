@@ -5,6 +5,6 @@ interface AuthProviderSwitchProps {
   children: React.ReactNode;
 }
 
-export const AuthProviderSwitch: React.FC<AuthProviderSwitchProps> = ({ children }) => {
+export const AuthProviderSwitch = ({ children }: AuthProviderSwitchProps) => {
   return <MultiTenantAuthProvider>{children}</MultiTenantAuthProvider>;
 };

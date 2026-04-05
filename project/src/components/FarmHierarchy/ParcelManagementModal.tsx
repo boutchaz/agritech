@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Edit, Leaf, MapPin, Plus, Sprout, Trash2 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -109,11 +109,11 @@ type ParcelFormValues = {
   water_quantity_unit?: string;
 };
 
-const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
+const ParcelManagementModal = ({
   farmId,
   farmName,
   onClose,
-}) => {
+}: ParcelManagementModalProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -680,8 +680,8 @@ const ParcelManagementModal: React.FC<ParcelManagementModalProps> = ({
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {availablePlantingSystems.map((system, idx) => (
-                                <SelectItem key={idx} value={system.type}>
+                              {availablePlantingSystems.map((system) => (
+                                <SelectItem key={system.type} value={system.type}>
                                   {system.type} ({system.spacing})
                                 </SelectItem>
                               ))}

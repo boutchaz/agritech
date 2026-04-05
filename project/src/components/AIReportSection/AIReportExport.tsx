@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Loader, FileText, FileIcon, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
@@ -16,13 +16,13 @@ interface AIReportExportProps {
   onPreview?: () => void;
 }
 
-export const AIReportExport: React.FC<AIReportExportProps> = ({
+export const AIReportExport = ({
   sections,
   parcelName,
   generatedAt,
   provider,
   onPreview,
-}) => {
+}: AIReportExportProps) => {
   const { t } = useTranslation();
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingDOCX, setIsExportingDOCX] = useState(false);

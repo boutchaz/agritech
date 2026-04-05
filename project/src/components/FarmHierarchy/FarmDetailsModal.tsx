@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { farmsService } from '../../services/farmsService';
@@ -31,12 +31,12 @@ interface FarmDetailsModalProps {
   onManageParcels?: () => void;
 }
 
-const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
+const FarmDetailsModal = ({
   farmId,
   onClose,
   onEdit,
   onManageParcels
-}) => {
+}: FarmDetailsModalProps) => {
   const { t } = useTranslation();
 
   // Fetch farm details using farmsService (apiClient)

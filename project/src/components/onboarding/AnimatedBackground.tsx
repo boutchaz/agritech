@@ -10,7 +10,7 @@ interface FloatingElement {
   type: 'leaf' | 'seed' | 'sparkle';
 }
 
-const FloatingIcon: React.FC<{ type: FloatingElement['type']; className?: string; size?: number }> = ({ type, className, size = 24 }) => {
+const FloatingIcon = ({ type, className, size = 24 }: { type: FloatingElement['type']; className?: string; size?: number }) => {
   const svgStyle = { width: size, height: size };
   if (type === 'leaf') {
     return (
@@ -34,7 +34,7 @@ const FloatingIcon: React.FC<{ type: FloatingElement['type']; className?: string
   );
 };
 
-export const AnimatedBackground: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AnimatedBackground = ({ children }: { children: React.ReactNode }) => {
   const [elements, setElements] = useState<FloatingElement[]>([]);
 
   useEffect(() => {

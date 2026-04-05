@@ -104,7 +104,7 @@ interface CustomTooltipProps extends TooltipRenderProps {
   t: TFunction;
 }
 
-const CustomTooltip: React.FC<CustomTooltipProps> = ({
+const CustomTooltip = ({
   continuous,
   index,
   step,
@@ -116,7 +116,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   tooltipProps,
   isLastStep,
   t,
-}) => {
+}: CustomTooltipProps) => {
   // Detect mobile for responsive styling
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   return (
@@ -823,7 +823,7 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-export const TourProvider: React.FC<TourProviderProps> = ({ children }) => {
+export const TourProvider = ({ children }: TourProviderProps) => {
   const { user } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();

@@ -17,12 +17,12 @@ interface FarmImportDialogProps {
   onSuccess: () => void;
 }
 
-const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
+const FarmImportDialog = ({
   open,
   onOpenChange,
   organizationId,
   onSuccess,
-}) => {
+}: FarmImportDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);

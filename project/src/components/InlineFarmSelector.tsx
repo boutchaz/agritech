@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { cn } from '@/lib/utils';
 import { useAuth } from '../hooks/useAuth';
 import { MapPin, ChevronDown, Check } from 'lucide-react';
@@ -17,10 +17,10 @@ interface InlineFarmSelectorProps {
   className?: string;
 }
 
-const InlineFarmSelector: React.FC<InlineFarmSelectorProps> = ({
+const InlineFarmSelector = ({
   message,
   className = '',
-}) => {
+}: InlineFarmSelectorProps) => {
   const { t } = useTranslation();
   const { farms, currentFarm, setCurrentFarm } = useAuth();
 

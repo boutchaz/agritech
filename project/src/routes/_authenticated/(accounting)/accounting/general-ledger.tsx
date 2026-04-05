@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,7 +19,7 @@ import { PageLoader } from '@/components/ui/loader';
 import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -275,9 +275,9 @@ const AppContent: React.FC = () => {
                             {formatCurrency(report.opening_balance, currencySymbol)}
                           </TableCell>
                         </TableRow>
-                        {report.entries.map((entry, index) => (
+                        {report.entries.map((entry) => (
                           <TableRow
-                            key={`${entry.journal_entry_id}-${index}`}
+                            key={`${entry.journal_entry_id}`}
                             className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                           >
                             <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">

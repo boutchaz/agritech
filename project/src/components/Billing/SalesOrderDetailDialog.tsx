@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
@@ -64,11 +64,11 @@ interface SalesOrderDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
+export const SalesOrderDetailDialog = ({
   salesOrder,
   open,
   onOpenChange,
-}) => {
+}: SalesOrderDetailDialogProps) => {
   useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import {  useState, useCallback, useEffect, useRef, useMemo  } from "react";
 import { Download, Layers, ZoomIn, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
 import { MapContainer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -13,7 +13,7 @@ import {
   DEFAULT_CLOUD_COVERAGE,
   formatDateForAPI
 } from '../../lib/satellite-api';
-import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
+import { type ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
 import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
@@ -45,12 +45,12 @@ interface LeafletHeatmapViewerProps {
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-export const GridHeatmapLayer: React.FC<{
+export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }: {
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
   colorPalette?: ColorPalette;
   opacity?: number;
-}> = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }) => {
+}) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -164,7 +164,83 @@ export const GridHeatmapLayer: React.FC<{
   return null;
 };
 
-const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
+interface ColorScaleProps {
+  data: HeatmapDataResponse;
+  colorPalette: ColorPalette | string;
+}
+
+const ColorScale = ({ data, colorPalette }: ColorScaleProps) => {
+  const steps = 20;
+  const stepHeight = 20;
+  const scaleHeight = steps * stepHeight;
+  const palette = COLOR_PALETTES[(colorPalette || 'red-green') as ColorPalette];
+
+  const getColorForNormalized = (normalized: number): string => {
+    const colors = palette.colors;
+    const safeNorm = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0.5;
+    const index = safeNorm * (colors.length - 1);
+    const lowerIndex = Math.floor(index);
+    const upperIndex = Math.min(Math.ceil(index), colors.length - 1);
+
+    if (lowerIndex === upperIndex || !colors[lowerIndex] || !colors[upperIndex]) {
+      return colors[lowerIndex] || colors[0];
+    }
+
+    const t = index - lowerIndex;
+    const lower = colors[lowerIndex];
+    const upper = colors[upperIndex];
+
+    const lowerRGB = {
+      r: parseInt(lower.slice(1, 3), 16),
+      g: parseInt(lower.slice(3, 5), 16),
+      b: parseInt(lower.slice(5, 7), 16)
+    };
+    const upperRGB = {
+      r: parseInt(upper.slice(1, 3), 16),
+      g: parseInt(upper.slice(3, 5), 16),
+      b: parseInt(upper.slice(5, 7), 16)
+    };
+
+    const r = Math.round(lowerRGB.r + (upperRGB.r - lowerRGB.r) * t);
+    const g = Math.round(lowerRGB.g + (upperRGB.g - lowerRGB.g) * t);
+    const b = Math.round(lowerRGB.b + (upperRGB.b - lowerRGB.b) * t);
+
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  return (
+    <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-[1000]">
+      <div className="flex items-center">
+        <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
+          {Array.from({ length: steps }).map((_, stepIdx) => {
+            const value = data.statistics.max - (stepIdx / (steps - 1)) * (data.statistics.max - data.statistics.min);
+            const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
+            const color = getColorForNormalized(normalized);
+
+            return (
+              <div
+                key={"step-" + stepIdx}
+                style={{
+                  backgroundColor: color,
+                  height: stepHeight,
+                  width: '20px',
+                  border: '0.5px solid #ccc'
+                }}
+              />
+            );
+          })}
+        </div>
+        <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
+          <span>{(data.statistics?.max ?? 0).toFixed(1)}</span>
+          <span>{(((data.statistics?.max ?? 0) + (data.statistics?.min ?? 0)) / 2).toFixed(1)}</span>
+          <span>{(data.statistics?.min ?? 0).toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LeafletHeatmapViewer = ({
   parcelId,
   parcelName,
   boundary,
@@ -175,7 +251,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
   colorPalette = 'red-green',
   compact = false,
   baseLayer = 'satellite'
-}) => {
+}: LeafletHeatmapViewerProps) => {
   const { t } = useTranslation('satellite');
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NIRv');
   const [selectedDate, setSelectedDate] = useState(propSelectedDate || '');
@@ -338,81 +414,6 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
     return [];
   }, [data?.aoi_boundary, boundary]);
 
-  // Color scale component using the selected color palette
-  const ColorScale: React.FC = () => {
-    if (!data) return null;
-
-    const steps = 20;
-    const stepHeight = 20;
-    const scaleHeight = steps * stepHeight;
-    const palette = COLOR_PALETTES[colorPalette || 'red-green'];
-
-    // Helper function to interpolate colors from the palette
-    const getColorForNormalized = (normalized: number): string => {
-      const colors = palette.colors;
-      const safeNorm = Number.isFinite(normalized) ? Math.max(0, Math.min(1, normalized)) : 0.5;
-      const index = safeNorm * (colors.length - 1);
-      const lowerIndex = Math.floor(index);
-      const upperIndex = Math.min(Math.ceil(index), colors.length - 1);
-
-      if (lowerIndex === upperIndex || !colors[lowerIndex] || !colors[upperIndex]) {
-        return colors[lowerIndex] || colors[0];
-      }
-
-      const t = index - lowerIndex;
-      const lower = colors[lowerIndex];
-      const upper = colors[upperIndex];
-
-      const lowerRGB = {
-        r: parseInt(lower.slice(1, 3), 16),
-        g: parseInt(lower.slice(3, 5), 16),
-        b: parseInt(lower.slice(5, 7), 16)
-      };
-      const upperRGB = {
-        r: parseInt(upper.slice(1, 3), 16),
-        g: parseInt(upper.slice(3, 5), 16),
-        b: parseInt(upper.slice(5, 7), 16)
-      };
-
-      const r = Math.round(lowerRGB.r + (upperRGB.r - lowerRGB.r) * t);
-      const g = Math.round(lowerRGB.g + (upperRGB.g - lowerRGB.g) * t);
-      const b = Math.round(lowerRGB.b + (upperRGB.b - lowerRGB.b) * t);
-
-      return `rgb(${r}, ${g}, ${b})`;
-    };
-
-    return (
-      <div className="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded shadow-lg border border-gray-200 dark:border-gray-700 z-[1000]">
-        <div className="flex items-center">
-          <div className="flex flex-col mr-2" style={{ height: scaleHeight }}>
-            {Array.from({ length: steps }).map((_, i) => {
-              const value = data.statistics.max - (i / (steps - 1)) * (data.statistics.max - data.statistics.min);
-              const normalized = (value - data.statistics.min) / (data.statistics.max - data.statistics.min);
-              const color = getColorForNormalized(normalized);
-
-              return (
-                <div
-                  key={i}
-                  style={{
-                    backgroundColor: color,
-                    height: stepHeight,
-                    width: '20px',
-                    border: '0.5px solid #ccc'
-                  }}
-                />
-              );
-            })}
-          </div>
-          <div className="flex flex-col justify-between text-xs text-gray-900 dark:text-gray-100" style={{ height: scaleHeight }}>
-            <span>{(data.statistics?.max ?? 0).toFixed(1)}</span>
-            <span>{(((data.statistics?.max ?? 0) + (data.statistics?.min ?? 0)) / 2).toFixed(1)}</span>
-            <span>{(data.statistics?.min ?? 0).toFixed(1)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className={`bg-white rounded-lg shadow p-6 space-y-6 ${embedded ? 'p-0 shadow-none' : ''}`}>
       {!embedded && (
@@ -472,8 +473,8 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
                   onChange={(e) => setSelectedIndex(e.target.value as VegetationIndexType)}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
-                  {VEGETATION_INDICES.map(index => (
-                    <option key={index} value={index}>{index}</option>
+                  {VEGETATION_INDICES.map((vegIndex) => (
+                    <option key={vegIndex} value={vegIndex}>{vegIndex}</option>
                   ))}
                 </select>
               </div>
@@ -561,7 +562,7 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
               )}
             </Button>
           )}
-          <ColorScale />
+          {data && <ColorScale data={data} colorPalette={colorPalette} />}
           {/* Statistics Box (like desired.png) */}
           {data?.statistics && (
             <div key="stats-box" className="absolute bottom-4 left-4 bg-black bg-opacity-75 text-white p-3 rounded text-sm z-[1000]">

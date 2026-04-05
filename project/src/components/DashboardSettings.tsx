@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { LayoutGrid, Save, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardSettingsApi } from '../lib/api/dashboard-settings';
@@ -40,7 +40,7 @@ function normalizeDashboardLayout(raw: unknown): DashboardSettingsType['layout']
   };
 }
 
-const DashboardSettings: React.FC = () => {
+const DashboardSettings = () => {
   const { user, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -408,22 +408,22 @@ const DashboardSettings: React.FC = () => {
         </h3>
         <div className="space-y-3 sm:space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {layout.topRow.map((item, index) => (
-              <div key={index} className="min-h-9 sm:h-8 px-1 bg-green-100 dark:bg-green-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-green-800 dark:text-green-200">
+            {layout.topRow.map((item) => (
+              <div key={item} className="min-h-9 sm:h-8 px-1 bg-green-100 dark:bg-green-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-green-800 dark:text-green-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {layout.middleRow.map((item, index) => (
-              <div key={index} className="min-h-9 sm:h-8 px-1 bg-blue-100 dark:bg-blue-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-blue-800 dark:text-blue-200">
+            {layout.middleRow.map((item) => (
+              <div key={item} className="min-h-9 sm:h-8 px-1 bg-blue-100 dark:bg-blue-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-blue-800 dark:text-blue-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {layout.bottomRow.map((item, index) => (
-              <div key={index} className="min-h-9 sm:h-8 px-1 bg-purple-100 dark:bg-purple-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-purple-800 dark:text-purple-200">
+            {layout.bottomRow.map((item) => (
+              <div key={item} className="min-h-9 sm:h-8 px-1 bg-purple-100 dark:bg-purple-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-purple-800 dark:text-purple-200">
                 {t(`dashboard.layoutOptions.${item}`)}
               </div>
             ))}

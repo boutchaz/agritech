@@ -181,8 +181,8 @@ function CertificationDetailPage() {
               <div className="space-y-4">
                 <Skeleton className="h-6 w-44" />
                 <div className="rounded-md border">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                  {[1, 2, 3].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center gap-4 p-4 border-b last:border-b-0">
                       <Skeleton className="h-4 w-20" />
                       <Skeleton className="h-4 w-24" />
                       <Skeleton className="h-4 w-20" />
@@ -198,8 +198,8 @@ function CertificationDetailPage() {
               <div className="rounded-lg border bg-card p-6 space-y-4">
                 <Skeleton className="h-6 w-36" />
                 <div className="space-y-2">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="flex items-center justify-between p-2 border rounded-md">
+                  {[1, 2].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center justify-between p-2 border rounded-md">
                       <div className="flex items-center gap-2">
                         <Skeleton className="h-4 w-4" />
                         <Skeleton className="h-4 w-24" />
@@ -339,8 +339,8 @@ function CertificationDetailPage() {
             <CardContent>
               {certification.documents && certification.documents.length > 0 ? (
                 <div className="space-y-2">
-                  {certification.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
+                  {certification.documents.map((doc) => (
+                    <div key={doc.url} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         <span className="text-sm truncate">{doc.type}</span>

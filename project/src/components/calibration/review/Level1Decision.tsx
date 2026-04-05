@@ -90,8 +90,8 @@ export function Level1Decision({ data }: Level1DecisionProps) {
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground">{t('calibrationReview.level1.detectedSignals')}</h3>
             <div className="space-y-2">
-              {data.detected_signals.map((signal, idx) => (
-                <Alert key={`${signal.type}-${idx}`} className={cn("py-2 px-3", getSeverityColor(signal.severity))}>
+              {data.detected_signals.map((signal, sigIdx) => (
+                <Alert key={`${signal.type}-${sigIdx}`} className={cn("py-2 px-3", getSeverityColor(signal.severity))}>
                   <div className="flex items-start gap-3">
                     {signal.source === 'extreme_event' ? (
                       <Thermometer className="h-4 w-4 mt-0.5" />
@@ -127,8 +127,8 @@ export function Level1Decision({ data }: Level1DecisionProps) {
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground">{t('calibrationReview.level1.operationalAlerts')}</h3>
             <div className="space-y-2">
-              {data.operational_alerts.map((alert, idx) => (
-                <Alert key={`${alert.code}-${idx}`} className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900/50">
+              {data.operational_alerts.map((alert, alertIdx) => (
+                <Alert key={`${alert.code}-${alertIdx}`} className="border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-900/50">
                   <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
                   <div className="ml-2">
                     <div className="flex items-center gap-2">

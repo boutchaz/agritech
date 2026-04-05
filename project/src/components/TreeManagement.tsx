@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import {  useState  } from "react";
 import {
   Plus,
   Trash2,
@@ -24,7 +24,7 @@ interface TreeManagementProps {
   onDataChange?: () => void;
 }
 
-const TreeManagement: React.FC<TreeManagementProps> = ({ onDataChange }) => {
+const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
   const { currentOrganization } = useAuth();
 
   // Use the hooks to fetch data from the backend

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import {
   DollarSign,
   CheckCircle,
@@ -25,10 +25,10 @@ interface PaymentsListProps {
   onSelectPayment?: (paymentId: string) => void;
 }
 
-const PaymentsList: React.FC<PaymentsListProps> = ({
+const PaymentsList = ({
   organizationId,
   onSelectPayment,
-}) => {
+}: PaymentsListProps) => {
   const [filters, setFilters] = useState<PaymentFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
 

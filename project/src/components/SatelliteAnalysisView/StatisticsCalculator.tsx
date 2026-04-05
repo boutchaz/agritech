@@ -22,12 +22,12 @@ interface StatisticsCalculatorProps {
   boundary?: number[][];
 }
 
-const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
+const StatisticsCalculator = ({
   parcelId,
   parcelName,
   farmId,
   boundary
-}) => {
+}: StatisticsCalculatorProps) => {
   const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -359,19 +359,19 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
         <div>
           <label className="text-sm font-medium mb-3 block">Vegetation Indices</label>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {VEGETATION_INDICES.map(index => (
-              <label key={index} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
+            {VEGETATION_INDICES.map(vegIndex => (
+              <label key={vegIndex} className="flex items-center p-2 border rounded-md cursor-pointer hover:bg-gray-50">
                 <input
                   type="checkbox"
-                  checked={selectedIndices.includes(index)}
-                  onChange={() => handleIndexToggle(index)}
+                  checked={selectedIndices.includes(vegIndex)}
+                  onChange={() => handleIndexToggle(vegIndex)}
                   className="mr-2"
                 />
                 <span
                   className="text-sm font-medium"
-                  style={{ color: getIndexColor(index) }}
+                  style={{ color: getIndexColor(vegIndex) }}
                 >
-                  {index}
+                  {vegIndex}
                 </span>
               </label>
             ))}
@@ -503,22 +503,22 @@ const StatisticsCalculator: React.FC<StatisticsCalculatorProps> = ({
 
                 {/* Statistics for each index */}
                 <div className="grid gap-4">
-                  {Object.entries(displayStats.statistics).map(([index, stats]) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  {Object.entries(displayStats.statistics).map(([vegIndex, stats]) => (
+                    <div key={vegIndex} className="border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-medium" style={{ color: getIndexColor(index as VegetationIndexType) }}>
-                            {index}
+                          <h4 className="font-medium" style={{ color: getIndexColor(vegIndex as VegetationIndexType) }}>
+                            {vegIndex}
                           </h4>
                           <p className="text-sm text-gray-600">
-                            {VEGETATION_INDEX_DESCRIPTIONS[index as VegetationIndexType]}
+                            {VEGETATION_INDEX_DESCRIPTIONS[vegIndex as VegetationIndexType]}
                           </p>
                         </div>
-                        {displayStats.tiff_files?.[index as VegetationIndexType] && (
+                        {displayStats.tiff_files?.[vegIndex as VegetationIndexType] && (
                           <Button
                             onClick={() => downloadTiff(
-                              index as VegetationIndexType,
-                              displayStats.tiff_files![index as VegetationIndexType].url
+                              vegIndex as VegetationIndexType,
+                              displayStats.tiff_files![vegIndex as VegetationIndexType].url
                             )}
                             className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 text-sm"
                           >

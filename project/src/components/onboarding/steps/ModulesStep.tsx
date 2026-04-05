@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   MapPin,
   Package,
@@ -74,13 +74,13 @@ const getColorFromName = (colorName: string): string => {
   return colorMap[colorName] || 'gray';
 };
 
-export const ModulesStep: React.FC<ModulesStepProps> = ({
+export const ModulesStep = ({
   moduleSelection,
   selectedPlanType,
   onUpdate,
   onNext,
   isLoading: isSubmitting = false,
-}) => {
+}: ModulesStepProps) => {
   const { data: config, isLoading: isLoadingConfig, error } = useModuleConfig();
   const modules = config?.modules || [];
 

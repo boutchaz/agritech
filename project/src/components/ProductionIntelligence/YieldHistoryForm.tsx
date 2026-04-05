@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,11 +43,11 @@ interface YieldHistoryFormProps {
   onSuccess?: () => void;
 }
 
-export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
+export const YieldHistoryForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: YieldHistoryFormProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const createYield = useCreateYieldHistory();
   const { data: farms = [] } = useFarms(currentOrganization?.id);

@@ -144,7 +144,7 @@ export const satelliteIndicesApi = {
    */
   async exists(
     parcelId: string,
-    indexName: string,
+    vegIndex: string,
     date: string,
     organizationId?: string
   ): Promise<boolean> {
@@ -152,7 +152,7 @@ export const satelliteIndicesApi = {
       const data = await this.getAll(
         {
           parcel_id: parcelId,
-          index_name: indexName,
+          index_name: vegIndex,
           date_from: date,
           date_to: date,
         },

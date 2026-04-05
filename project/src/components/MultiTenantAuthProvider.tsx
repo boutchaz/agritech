@@ -48,7 +48,7 @@ const toTitleCase = (value: string) =>
     .map(token => token.charAt(0).toUpperCase() + token.slice(1))
     .join(' ');
 
-export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t: _t } = useTranslation();
   const location = useLocation();
   const queryClient = useQueryClient();

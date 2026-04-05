@@ -23,7 +23,7 @@ interface CanProps {
  *   <Button>Create Farm</Button>
  * </Can>
  */
-export const Can: React.FC<CanProps> = ({ I, a, children, fallback }) => {
+export const Can = ({ I, a, children, fallback }: CanProps) => {
   return (
     <CASLCan I={I} a={a} passThrough>
       {(allowed) => (allowed ? <>{children}</> : fallback ? <>{fallback}</> : null)}

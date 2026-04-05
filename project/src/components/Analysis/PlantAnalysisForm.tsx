@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -148,7 +148,7 @@ const plantAnalysisSchema = z.object({
 
 type PlantAnalysisFormData = z.infer<typeof plantAnalysisSchema>;
 
-const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<PlantAnalysisFormData>();
   const [selectedParams, setSelectedParams] = useState<PlantParamKey[]>(DEFAULT_PLANT_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);

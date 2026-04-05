@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import {  useEffect, useMemo, useState  } from "react";
 import { Plus, X, Edit2, Trash2, Calendar } from 'lucide-react';
 import { workersApi } from '../lib/api/workers';
 import { useAuth } from '../hooks/useAuth';
@@ -41,7 +41,7 @@ const employeeSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
-const EmployeeManagement: React.FC = () => {
+const EmployeeManagement = () => {
   const { currentFarm, currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);

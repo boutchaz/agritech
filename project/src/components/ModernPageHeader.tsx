@@ -35,7 +35,7 @@ interface ModernPageHeaderProps {
   showSearch?: boolean;
 }
 
-const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
+const ModernPageHeader = ({
   breadcrumbs,
   title,
   subtitle,
@@ -43,7 +43,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
   searchPlaceholder = 'Rechercher...',
   onSearch,
   showSearch = false,
-}) => {
+}: ModernPageHeaderProps) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -151,7 +151,7 @@ const ModernPageHeader: React.FC<ModernPageHeaderProps> = ({
                   const isLast = index === breadcrumbs.length - 1;
 
                   return (
-                    <React.Fragment key={`${item.path ?? item.label}-${index}`}>
+                    <React.Fragment key={`${item.path ?? item.label}`}>
                       {index > 0 && <BreadcrumbSeparator className="opacity-20" />}
                       <BreadcrumbListItem>
                         {isLast ? (

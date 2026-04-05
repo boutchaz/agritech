@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { Upload, CheckCircle, AlertCircle, Loader2, FileArchive, Lock } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -13,7 +13,7 @@ interface ImportWizardProps {
   onCancel?: () => void;
 }
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({ onComplete, onCancel }) => {
+export const ImportWizard = ({ onComplete, onCancel }: ImportWizardProps) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>('select');
   const [bundlePath, setBundlePath] = useState('');

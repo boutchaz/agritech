@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { useNavigate } from '@tanstack/react-router';
 import { TrendingUp, ChevronRight, Calendar, Package as PackageIcon } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const HarvestSummaryWidget: React.FC = () => {
+const HarvestSummaryWidget = () => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const { t, i18n } = useTranslation();

@@ -36,7 +36,7 @@ interface PaymentFormProps {
   onCancel?: () => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ payment, onSuccess, onCancel }) => {
+export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) => {
   const { t } = useTranslation('accounting');
   const createPayment = useCreatePayment();
   const updatePayment = useUpdatePayment();

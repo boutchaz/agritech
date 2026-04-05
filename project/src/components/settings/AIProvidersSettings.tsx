@@ -60,7 +60,7 @@ const providers: ProviderConfig[] = [
   },
 ];
 
-export const AIProvidersSettings: React.FC = () => {
+export const AIProvidersSettings = () => {
   const { t } = useTranslation();
   const { data: settings = [], isLoading } = useOrganizationAISettings();
   const upsertMutation = useUpsertAIProvider();

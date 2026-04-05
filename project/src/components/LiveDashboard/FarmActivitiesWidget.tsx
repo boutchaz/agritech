@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Activity, Clock, MapPin, User, Zap, CheckCircle, AlertCircle, FileText, Package } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,11 +12,11 @@ interface FarmActivitiesWidgetProps {
   isLoading?: boolean;
 }
 
-const FarmActivitiesWidget: React.FC<FarmActivitiesWidgetProps> = ({
+const FarmActivitiesWidget = ({
   activities,
   total,
   isLoading = false,
-}) => {
+}: FarmActivitiesWidgetProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {
@@ -38,8 +38,8 @@ const FarmActivitiesWidget: React.FC<FarmActivitiesWidgetProps> = ({
             <Skeleton className="h-3 w-32 rounded" />
             <Skeleton className="h-px flex-1 mx-3 rounded" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+          {[1, 2, 3].map((skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="h-20 w-full rounded-2xl" />
           ))}
         </div>
       </div>

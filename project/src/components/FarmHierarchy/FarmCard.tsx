@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
   Building2,
@@ -32,7 +32,7 @@ interface FarmCardProps {
   onDelete?: () => void;
 }
 
-const FarmCard: React.FC<FarmCardProps> = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }) => {
+const FarmCard = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }: FarmCardProps) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
 

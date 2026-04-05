@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
@@ -9,10 +9,10 @@ interface SubscriptionRequiredProps {
   message?: string;
 }
 
-const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
+const SubscriptionRequired = ({
   reason = 'no_subscription',
   message,
-}) => {
+}: SubscriptionRequiredProps) => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
 

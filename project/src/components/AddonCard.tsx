@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Check, Plus, Loader2, X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePurchaseAddon, useCancelAddon } from '../hooks/useAddons';
@@ -20,12 +20,12 @@ interface AddonCardProps {
   onPurchaseSuccess?: () => void;
 }
 
-const AddonCard: React.FC<AddonCardProps> = ({
+const AddonCard = ({
   addon,
   activeAddon,
   hasAvailableSlots,
   onPurchaseSuccess,
-}) => {
+}: AddonCardProps) => {
   const purchaseAddon = usePurchaseAddon();
   const cancelAddon = useCancelAddon();
   const [confirmOpen, setConfirmOpen] = useState(false);

@@ -60,21 +60,23 @@ export function Level3Biophysical({ data }: Level3BiophysicalProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {indicesList.map((index) => (
-                  <TableRow key={index.name}>
-                    <TableCell className="font-medium">{index.name}</TableCell>
-                    <TableCell>
-                      {index.data ? (
-                        getLatestValue(index.data)
-                      ) : (
-                        <span className="text-muted-foreground italic text-xs">{t('calibrationReview.level3.notAvailable')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {index.data ? getTrendIcon(index.data) : <Minus className="h-4 w-4 text-gray-400" />}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {indicesList.map((vegIdx) => {
+                  return (
+                    <TableRow key={vegIdx.name}>
+                      <TableCell className="font-medium">{vegIdx.name}</TableCell>
+                      <TableCell>
+                        {vegIdx.data ? (
+                          getLatestValue(vegIdx.data)
+                        ) : (
+                          <span className="text-muted-foreground italic text-xs">{t('calibrationReview.level3.notAvailable')}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {vegIdx.data ? getTrendIcon(vegIdx.data) : <Minus className="h-4 w-4 text-gray-400" />}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -112,9 +114,9 @@ export function Level3Biophysical({ data }: Level3BiophysicalProps) {
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-muted-foreground">{t('calibrationReview.level3.percentiles')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Object.entries(data.percentiles).map(([indexName, stats]) => (
-                <div key={indexName} className="p-3 border rounded-lg text-sm">
-                  <div className="font-medium mb-2">{indexName}</div>
+              {Object.entries(data.percentiles).map(([vegIndex, stats]) => (
+                <div key={vegIndex} className="p-3 border rounded-lg text-sm">
+                  <div className="font-medium mb-2">{vegIndex}</div>
                   <div className="grid grid-cols-3 gap-2 text-xs text-center">
                     <div className="bg-muted/50 p-1 rounded">
                       <div className="text-muted-foreground">P10</div>
