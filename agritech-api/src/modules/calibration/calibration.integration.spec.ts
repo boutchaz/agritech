@@ -24,6 +24,16 @@ import { AnnualPlanService } from '../annual-plan/annual-plan.service';
 import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { SatelliteProxyService } from '../satellite-indices/satellite-proxy.service';
+import { CalibrationReviewAdapter } from './calibration-review.adapter';
+
+const mockSatelliteProxyService = {
+  proxy: jest.fn(),
+};
+
+const mockCalibrationReviewAdapter = {
+  transform: jest.fn(),
+};
 
 const mockStateMachine = {
   transitionPhase: jest.fn(),
@@ -73,17 +83,19 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
+        { provide: DatabaseService, useValue: mockDatabaseService },
         CalibrationService,
         { provide: CalibrationStateMachine, useValue: mockStateMachine },
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: AIReportsService, useValue: mockAIReportsService },
         { provide: AnnualPlanService, useValue: mockAnnualPlanService },
         { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: SatelliteProxyService, useValue: mockSatelliteProxyService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: NotificationsGateway, useValue: mockNotificationsGateway },
+        { provide: CalibrationReviewAdapter, useValue: mockCalibrationReviewAdapter },
         AiDiagnosticsService,
         AiAlertsService,
-        { provide: DatabaseService, useValue: mockDatabaseService },
       ],
     }).compile();
 

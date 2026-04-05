@@ -18,9 +18,19 @@ import { SatelliteCacheService } from '../satellite-indices/satellite-cache.serv
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { AnnualPlanService } from '../annual-plan/annual-plan.service';
+import { SatelliteProxyService } from '../satellite-indices/satellite-proxy.service';
+import { CalibrationReviewAdapter } from './calibration-review.adapter';
 
 const mockAIReportsService = {
   generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
+};
+
+const mockSatelliteProxyService = {
+  proxy: jest.fn(),
+};
+
+const mockCalibrationReviewAdapter = {
+  transform: jest.fn(),
 };
 
 const mockStateMachine = {
@@ -75,9 +85,11 @@ describe('CalibrationService', () => {
         { provide: NutritionOptionService, useValue: mockNutritionOptionService },
         { provide: AIReportsService, useValue: mockAIReportsService },
         { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: SatelliteProxyService, useValue: mockSatelliteProxyService },
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: NotificationsGateway, useValue: mockNotificationsGateway },
         { provide: AnnualPlanService, useValue: mockAnnualPlanService },
+        { provide: CalibrationReviewAdapter, useValue: mockCalibrationReviewAdapter },
       ],
     }).compile();
 
@@ -93,6 +105,8 @@ describe('CalibrationService', () => {
     mockNotificationsService.createNotification.mockReset();
     mockNotificationsGateway.emitToOrganization.mockReset();
     mockAnnualPlanService.ensurePlan.mockReset();
+    mockSatelliteProxyService.proxy.mockReset();
+    mockCalibrationReviewAdapter.transform.mockReset();
     delete process.env.SATELLITE_SERVICE_URL;
   });
 
@@ -201,7 +215,7 @@ describe('CalibrationService', () => {
         planting_system: agromindCalibrationFixture.parcel.system,
         planting_year: 2015,
         variety: 'picholine_marocaine',
-        ai_phase: 'awaiting_validation',
+        ai_phase: 'active',
         boundary: parcelBoundary,
         organization_id: organizationId,
         irrigation_frequency: 'weekly',
@@ -250,7 +264,7 @@ describe('CalibrationService', () => {
     expect(mockStateMachine.transitionPhase).toHaveBeenNthCalledWith(
       1,
       parcelId,
-      'awaiting_validation',
+      'active',
       'calibrating',
       organizationId,
     );
@@ -258,7 +272,7 @@ describe('CalibrationService', () => {
       2,
       parcelId,
       'calibrating',
-      'awaiting_validation',
+      'active',
       organizationId,
     );
   });
@@ -364,63 +378,41 @@ describe('CalibrationService', () => {
       return createMockQueryBuilder();
     });
 
-    const fetchSpy = jest
-      .spyOn(global, 'fetch')
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            pixels: [
-              { lon: -7.5, lat: 33.5, value: 0.55 },
-              { lon: -7.4999, lat: 33.5, value: 0.52 },
-            ],
-            bounds: { min_lon: -7.5, max_lon: -7.4999, min_lat: 33.5, max_lat: 33.5001 },
-            scale: 10,
-            count: 2,
-            stats: { min: 0.52, max: 0.55, mean: 0.535, median: 0.535, std: 0.015 },
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
+    mockSatelliteProxyService.proxy
+      .mockResolvedValueOnce({
+        pixels: [
+          { lon: -7.5, lat: 33.5, value: 0.55 },
+          { lon: -7.4999, lat: 33.5, value: 0.52 },
+        ],
+        bounds: { min_lon: -7.5, max_lon: -7.4999, min_lat: 33.5, max_lat: 33.5001 },
+        scale: 10,
+        count: 2,
+        stats: { min: 0.52, max: 0.55, mean: 0.535, median: 0.535, std: 0.015 },
+      })
+      .mockResolvedValueOnce({ crop_type: 'olivier', updated_rows: 1 })
+      .mockResolvedValueOnce({
+        parcel_id: parcelId,
+        maturity_phase: 'pleine_production',
+        step3: {
+          global_percentiles: {
+            NDVI: { p50: 0.55 },
+            NDRE: { p50: 0.21 },
+            NDMI: { p50: 0.17 },
           },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ crop_type: 'olivier', updated_rows: 1 }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            parcel_id: parcelId,
-            maturity_phase: 'pleine_production',
-            step3: {
-              global_percentiles: {
-                NDVI: { p50: 0.55 },
-                NDRE: { p50: 0.21 },
-                NDMI: { p50: 0.17 },
-              },
-            },
-            step4: { mean_dates: { peak: '2025-06-01' } },
-            step5: { anomalies: [{ type: 'sudden_drop' }] },
-            step6: { yield_potential: { minimum: 1000, maximum: 1500 } },
-            step7: {
-              zone_summary: [
-                { class_name: 'C', surface_percent: 40 },
-                { class_name: 'B', surface_percent: 35 },
-              ],
-              spatial_pattern_type: 'mixed',
-            },
-            step8: { health_score: { total: 84 } },
-            confidence: { total_score: 86, normalized_score: 0.86 },
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        ),
-      );
+        },
+        step4: { mean_dates: { peak: '2025-06-01' } },
+        step5: { anomalies: [{ type: 'sudden_drop' }] },
+        step6: { yield_potential: { minimum: 1000, maximum: 1500 } },
+        step7: {
+          zone_summary: [
+            { class_name: 'C', surface_percent: 40 },
+            { class_name: 'B', surface_percent: 35 },
+          ],
+          spatial_pattern_type: 'mixed',
+        },
+        step8: { health_score: { total: 84 } },
+        confidence: { total_score: 86, normalized_score: 0.86 },
+      });
 
     await (service as unknown as { runCalibrationInBackground: (...args: unknown[]) => Promise<void> }).runCalibrationInBackground(
       'calibration-v2-001',
@@ -439,40 +431,41 @@ describe('CalibrationService', () => {
       {},
     );
 
-    expect(fetchSpy).toHaveBeenCalledTimes(3);
-    expect(fetchSpy).toHaveBeenNthCalledWith(
+    expect(mockSatelliteProxyService.proxy).toHaveBeenCalledTimes(3);
+    expect(mockSatelliteProxyService.proxy).toHaveBeenNthCalledWith(
       1,
-      'http://satellite-service.test/api/calibration/v2/extract-raster',
-      expect.objectContaining({ method: 'POST' }),
+      'POST',
+      '/calibration/v2/extract-raster',
+      expect.objectContaining({ body: expect.any(Object), organizationId }),
     );
-    expect(fetchSpy).toHaveBeenNthCalledWith(
+    expect(mockSatelliteProxyService.proxy).toHaveBeenNthCalledWith(
       2,
-      'http://satellite-service.test/api/calibration/v2/precompute-gdd',
-      expect.objectContaining({ method: 'POST' }),
+      'POST',
+      '/calibration/v2/precompute-gdd',
+      expect.objectContaining({ body: expect.any(Object), organizationId }),
     );
-    expect(fetchSpy).toHaveBeenNthCalledWith(
+    expect(mockSatelliteProxyService.proxy).toHaveBeenNthCalledWith(
       3,
-      'http://satellite-service.test/api/calibration/v2/run',
-      expect.objectContaining({ method: 'POST' }),
+      'POST',
+      '/calibration/v2/run',
+      expect.objectContaining({ body: expect.any(Object), organizationId }),
     );
 
-    const v2Body = fetchSpy.mock.calls[2]?.[1]?.body;
-    expect(typeof v2Body).toBe('string');
-    if (typeof v2Body !== 'string') {
-      throw new Error('V2 calibration request body should be a string');
-    }
-    const parsed = JSON.parse(v2Body) as Record<string, unknown>;
+    const runCall = mockSatelliteProxyService.proxy.mock.calls[2];
+    const runOptions = runCall?.[2] as { body?: Record<string, unknown> };
+    const parsed = runOptions?.body as Record<string, unknown>;
+    expect(parsed).toBeDefined();
     expect(parsed.calibration_input).toBeDefined();
     expect(parsed.satellite_images).toBeDefined();
     expect(parsed.weather_rows).toBeDefined();
 
     expect(calibrationUpdateQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        calibration_version: 'v2',
+        calibration_version: 'v3',
         health_score: 84,
         yield_potential_min: 1000,
         yield_potential_max: 1500,
-        maturity_phase: 'pleine_production',
+        phase_age: 'pleine_production',
         anomaly_count: 1,
       }),
     );
@@ -486,8 +479,9 @@ describe('CalibrationService', () => {
     expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
       parcelId,
       'calibrating',
-      'awaiting_validation',
+      'calibrated',
       organizationId,
     );
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledTimes(1);
   });
 });
