@@ -1213,10 +1213,9 @@ const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onR
   );
 };
 
-const NutritionOptionSelector = ({ parcelId, calibrationId, phase, disabled }: {
+const NutritionOptionSelector = ({ parcelId, calibrationId, disabled }: {
   parcelId: string;
   calibrationId: string;
-  phase: CalibrationPhase;
   disabled?: boolean;
 }) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
@@ -1644,7 +1643,6 @@ const AICalibrationPage = () => {
           <NutritionOptionSelector
             parcelId={parcelId}
             calibrationId={reportData.calibration.id}
-            phase={phase ?? 'unknown'}
             disabled={calibrationActuallyRunning}
           />
           )}
