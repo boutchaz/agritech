@@ -50,6 +50,9 @@ interface DryRunRowPreview {
 const isDryRun = process.argv.includes('--dry-run');
 
 /**
+ * Pushes referentials into Supabase (e.g. hosted DB updates). Local/dev: `crop_ai_references`
+ * is also seeded by `project/supabase/migrations/00000000000000_schema.sql` on `db reset`.
+ *
  * Discovers all referential files in referentials/ matching DATA_*.json.
  * Crop type is derived from filename: DATA_OLIVIER.json → olivier, DATA_PALMIER_DATTIER.json → palmier_dattier.
  * Add a new referential by placing DATA_<crop_type>.json in referentials/; metadata.culture in the file must match.
@@ -240,7 +243,12 @@ async function main(): Promise<void> {
       console.log(`SUCCESS ${row.crop_type}: upserted version ${row.version}`);
     } catch (error) {
       hasFailure = true;
-      const message = error instanceof Error ? error.message : String(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === 'object' && error !== null && 'message' in error
+            ? String((error as { message: unknown }).message)
+            : JSON.stringify(error);
       console.error(`FAILURE ${cropFile.cropType}: ${message}`);
     }
   }

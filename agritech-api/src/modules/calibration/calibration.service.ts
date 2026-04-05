@@ -1993,6 +1993,11 @@ export class CalibrationService {
       },
       diagnostic_explicatif: diagnosticData,
       coefficient_etat_parcelle: this.toNumber(calibration.coefficient_etat_parcelle),
+      metadata: {
+        version: calibration.calibration_version ?? "v3",
+        generated_at: calibration.completed_at ?? calibration.created_at,
+        data_quality_flags: this.buildDataQualityFlags(calibration),
+      },
     };
 
     return {
@@ -3568,6 +3573,18 @@ export class CalibrationService {
 
   private toJsonObject(value: unknown): JsonObject {
     return this.isJsonObject(value) ? value : {};
+  }
+
+  private buildDataQualityFlags(calibration: CalibrationRecord): string[] {
+    const flags: string[] = [];
+    const confidence = this.toNumber(calibration.confidence_score);
+    if (confidence !== null && confidence < 50) flags.push('low_confidence');
+    if (confidence !== null && confidence < 25) flags.push('insufficient_satellite_data');
+    if (calibration.phase_age === 'juvenile') flags.push('juvenile_plantation');
+    if (calibration.phase_age === 'senescence') flags.push('senescence_detected');
+    if (calibration.mode_calibrage === 'lecture_pure') flags.push('observation_mode_only');
+    if ((this.toNumber(calibration.anomaly_count) ?? 0) > 3) flags.push('high_anomaly_count');
+    return flags;
   }
 
   /** Convert to integer (for INTEGER columns like confidence_score, health_score) */

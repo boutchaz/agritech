@@ -611,7 +611,7 @@ const DetailedAnalysis: React.FC<{ output: CalibrationV2Output; t: (key: string)
         )}
       </div>
 
-      {output.metadata.data_quality_flags.includes('evergreen_phenology_approximate') && (
+      {output?.metadata?.data_quality_flags?.includes('evergreen_phenology_approximate') && (
         <div className="flex items-start space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30">
           <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
@@ -833,7 +833,7 @@ const CalibrationImprovement: React.FC<{
   output: CalibrationV2Output;
   report?: Record<string, unknown> | null;
 }> = ({ output, report }) => {
-  const flags = output.metadata.data_quality_flags;
+  const flags = output?.metadata?.data_quality_flags;
   const conf = output.confidence;
   const satelliteImages = getRunSatelliteImages(report);
   const runCloudValues = satelliteImages
@@ -939,8 +939,8 @@ const CalibrationImprovement: React.FC<{
 
       <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
         <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-          <span>Version: {output.metadata.version}</span>
-          <span>Generated: {formatDate(output.metadata.generated_at)}</span>
+          <span>Version: {output?.metadata?.version}</span>
+          <span>Generated: {formatDate(output?.metadata?.generated_at)}</span>
         </div>
       </div>
     </div>
@@ -1038,7 +1038,7 @@ const CalibrationV2Report: React.FC<{
   t: (key: string) => string;
   phase?: string;
 }> = ({ output, report, t, phase }) => {
-  const hasInsufficientData = output.metadata.data_quality_flags.includes('insufficient_satellite_data');
+  const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
 
   return (
     <div className="space-y-4" data-testid="calibration-v2-report">

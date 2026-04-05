@@ -6554,6 +6554,7 @@ CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
 
 
 -- Seed crop_ai_references from repo referentials (DATA_*.json). Idempotent: upserts on crop_type.
+-- Regenerate: node project/scripts/generate-crop-ai-references-sql.mjs
 
 INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
 VALUES (

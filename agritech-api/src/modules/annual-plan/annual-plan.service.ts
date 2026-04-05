@@ -935,8 +935,8 @@ export class AnnualPlanService {
     if (!data || !this.hasReferenceData(data)) {
       throw new BadRequestException(
         `No AI referential in crop_ai_references for crop_type "${cropType}". ` +
-          `Load it from the repo referentials (e.g. referentials/DATA_OLIVIER.json → olivier): ` +
-          `cd agritech-api && SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx ts-node scripts/seed-ai-references.ts`,
+          `Apply migrations / run \`cd project && npm run db:reset\` so the schema seeds referentials, ` +
+          `or load from repo: \`cd agritech-api && SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... npx ts-node scripts/seed-ai-references.ts\`.`,
       );
     }
 
