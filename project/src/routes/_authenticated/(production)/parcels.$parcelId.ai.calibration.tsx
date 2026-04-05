@@ -215,12 +215,12 @@ function toSeverityLevel(value: string): SeverityLevel {
 }
 
 const PhaseBanner: React.FC<{ phase: CalibrationPhase }> = ({ phase }) => {
-  if (phase === 'awaiting_validation') {
+  if (phase === 'calibrated') {
     return (
       <div
         className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4"
         data-testid="calibration-phase-banner"
-        data-phase="awaiting_validation"
+        data-phase="calibrated"
       >
         <div className="flex items-center space-x-3">
           <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -1606,7 +1606,7 @@ const AICalibrationPage = () => {
         />
       )}
 
-      {!isCalibrating && (phase === 'awaiting_validation' || phase === 'awaiting_nutrition_option' || phase === 'active') && (
+      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active') && (
         <CalibrationReviewSection parcelId={parcelId} />
       )}
 
@@ -1774,7 +1774,7 @@ const AICalibrationPage = () => {
         </CollapsibleSection>
       )}
 
-      {phase === 'awaiting_validation' && hasV2Report && v2Output && reportData?.calibration?.id && (
+      {phase === 'calibrated' && hasV2Report && v2Output && reportData?.calibration?.id && (
         <ValidationPanel
           calibrationId={reportData.calibration.id}
           parcelId={parcelId}
