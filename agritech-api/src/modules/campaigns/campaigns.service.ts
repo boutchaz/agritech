@@ -6,6 +6,8 @@ import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCampaignDto, CampaignStatus } from './dto';
 import { CampaignFiltersDto } from './dto/campaign-filters.dto';
 
+const TABLE = 'agricultural_campaigns';
+
 @Injectable()
 export class CampaignsService {
   private readonly logger = new Logger(CampaignsService.name);
@@ -18,47 +20,21 @@ export class CampaignsService {
   async findAll(organizationId: string, filters: CampaignFiltersDto = {}) {
     const client = this.databaseService.getAdminClient();
     let query = client
-      .from('campaigns')
+      .from(TABLE)
       .select('*', { count: 'exact' })
       .eq('organization_id', organizationId);
 
-    // Apply filters
-    if (filters.type) {
-      query = query.eq('type', filters.type);
+    if (filters.campaign_type) {
+      query = query.eq('campaign_type', filters.campaign_type);
     }
     if (filters.status) {
       query = query.eq('status', filters.status);
     }
-    if (filters.farm_id) {
-      query = query.contains('farm_ids', [filters.farm_id]);
-    }
-    if (filters.parcel_id) {
-      query = query.contains('parcel_ids', [filters.parcel_id]);
-    }
-    if (filters.start_date_from) {
-      query = query.gte('start_date', filters.start_date_from);
-    }
-    if (filters.start_date_to) {
-      query = query.lte('start_date', filters.start_date_to);
-    }
-    if (filters.end_date_from) {
-      query = query.gte('end_date', filters.end_date_from);
-    }
-    if (filters.end_date_to) {
-      query = query.lte('end_date', filters.end_date_to);
-    }
-    if (filters.min_priority) {
-      query = query.gte('priority', filters.min_priority);
-    }
-    if (filters.max_priority) {
-      query = query.lte('priority', filters.max_priority);
-    }
     if (filters.search) {
       const s = sanitizeSearch(filters.search);
-      if (s) query = query.or(`name.ilike.%${s}%,description.ilike.%${s}%`);
+      if (s) query = query.or(`name.ilike.%${s}%,description.ilike.%${s}%,code.ilike.%${s}%`);
     }
 
-    // Apply pagination and sorting
     const page = filters.page || 1;
     const pageSize = filters.pageSize || 12;
     const sortBy = filters.sortBy || 'start_date';
@@ -88,13 +64,16 @@ export class CampaignsService {
   async findOne(id: string, organizationId: string) {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
-      .from('campaigns')
+      .from(TABLE)
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
 
-    if (error) {
+    if (error || !data) {
+      if (error?.code === 'PGRST116' || !data) {
+        throw new NotFoundException('Campaign not found');
+      }
       this.logger.error(`Failed to fetch campaign: ${error.message}`);
       throw error;
     }
@@ -105,25 +84,42 @@ export class CampaignsService {
   async create(organizationId: string, userId: string, createDto: CreateCampaignDto) {
     const client = this.databaseService.getAdminClient();
 
-    // Check if campaign with same name exists
+    // Check if campaign with same code exists
     const { data: existing } = await client
-      .from('campaigns')
+      .from(TABLE)
       .select('id')
       .eq('organization_id', organizationId)
-      .eq('name', createDto.name)
+      .eq('code', createDto.code)
       .maybeSingle();
 
     if (existing) {
-      throw new ConflictException('Campaign with this name already exists');
+      throw new ConflictException('Campaign with this code already exists');
+    }
+
+    // If this campaign is marked as current, unset all others
+    if (createDto.is_current) {
+      await client
+        .from(TABLE)
+        .update({ is_current: false })
+        .eq('organization_id', organizationId)
+        .eq('is_current', true);
     }
 
     const { data, error } = await client
-      .from('campaigns')
+      .from(TABLE)
       .insert({
         organization_id: organizationId,
         created_by: userId,
+        name: createDto.name,
+        code: createDto.code,
+        description: createDto.description,
+        start_date: createDto.start_date,
+        end_date: createDto.end_date,
+        campaign_type: createDto.campaign_type || 'general',
         status: createDto.status || CampaignStatus.PLANNED,
-        ...createDto,
+        is_current: createDto.is_current || false,
+        primary_fiscal_year_id: createDto.primary_fiscal_year_id || null,
+        secondary_fiscal_year_id: createDto.secondary_fiscal_year_id || null,
       })
       .select()
       .single();
@@ -137,34 +133,40 @@ export class CampaignsService {
   }
 
   async update(id: string, organizationId: string, userId: string, updateDto: Partial<CreateCampaignDto>) {
+    // Check if campaign exists
+    const existing = await this.findOne(id, organizationId);
+
     const client = this.databaseService.getAdminClient();
 
-    // Check if campaign exists
-    const { data: existing } = await this.findOne(id, organizationId);
-    if (!existing) {
-      throw new NotFoundException('Campaign not found');
-    }
-
-    // If updating name, check for duplicates
-    if (updateDto.name && updateDto.name !== existing.name) {
+    // If updating code, check for duplicates
+    if (updateDto.code && updateDto.code !== existing.code) {
       const { data: duplicate } = await client
-        .from('campaigns')
+        .from(TABLE)
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('name', updateDto.name)
+        .eq('code', updateDto.code)
         .neq('id', id)
         .maybeSingle();
 
       if (duplicate) {
-        throw new ConflictException('Campaign with this name already exists');
+        throw new ConflictException('Campaign with this code already exists');
       }
     }
 
+    // If setting as current, unset all others
+    if (updateDto.is_current) {
+      await client
+        .from(TABLE)
+        .update({ is_current: false })
+        .eq('organization_id', organizationId)
+        .eq('is_current', true)
+        .neq('id', id);
+    }
+
     const { data, error } = await client
-      .from('campaigns')
+      .from(TABLE)
       .update({
         ...updateDto,
-        updated_by: userId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -181,21 +183,15 @@ export class CampaignsService {
   }
 
   async remove(id: string, organizationId: string) {
-    const client = this.databaseService.getAdminClient();
+    const existing = await this.findOne(id, organizationId);
 
-    // Check if campaign exists
-    const { data: existing } = await this.findOne(id, organizationId);
-    if (!existing) {
-      throw new NotFoundException('Campaign not found');
-    }
-
-    // Prevent deletion of active campaigns
     if (existing.status === CampaignStatus.ACTIVE) {
-      throw new ConflictException('Cannot delete active campaign. Pause or complete it first.');
+      throw new ConflictException('Cannot delete active campaign. Complete or cancel it first.');
     }
 
+    const client = this.databaseService.getAdminClient();
     const { error } = await client
-      .from('campaigns')
+      .from(TABLE)
       .delete()
       .eq('id', id)
       .eq('organization_id', organizationId);
@@ -209,19 +205,13 @@ export class CampaignsService {
   }
 
   async updateStatus(id: string, organizationId: string, userId: string, status: CampaignStatus) {
+    const existing = await this.findOne(id, organizationId);
+
     const client = this.databaseService.getAdminClient();
-
-    // Check if campaign exists
-    const { data: existing } = await this.findOne(id, organizationId);
-    if (!existing) {
-      throw new NotFoundException('Campaign not found');
-    }
-
     const { data, error } = await client
-      .from('campaigns')
+      .from(TABLE)
       .update({
         status,
-        updated_by: userId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -236,15 +226,14 @@ export class CampaignsService {
 
     // Notify management about campaign status change
     try {
-      const campaignName = existing.name || 'Campaign';
       await this.notificationsService.createNotificationsForRoles(
         organizationId,
         MANAGEMENT_ROLES,
         userId,
         NotificationType.CAMPAIGN_STATUS_CHANGED,
-        `📅 ${campaignName}: ${existing.status} → ${status}`,
+        `📅 ${existing.name}: ${existing.status} → ${status}`,
         `Campaign status updated to ${status}`,
-        { campaignId: id, campaignName, oldStatus: existing.status, newStatus: status },
+        { campaignId: id, campaignName: existing.name, oldStatus: existing.status, newStatus: status },
       );
     } catch (notifError) {
       this.logger.warn(`Failed to send campaign notification: ${notifError}`);
@@ -256,54 +245,26 @@ export class CampaignsService {
   async getStatistics(organizationId: string) {
     const client = this.databaseService.getAdminClient();
 
-    // Get total count by type
-    const { data: byType, error: typeError } = await client
-      .from('campaigns')
-      .select('type')
+    const { data, error } = await client
+      .from(TABLE)
+      .select('campaign_type, status')
       .eq('organization_id', organizationId);
 
-    if (typeError) {
-      this.logger.error(`Failed to fetch campaigns by type: ${typeError.message}`);
-      throw typeError;
+    if (error) {
+      this.logger.error(`Failed to fetch campaign statistics: ${error.message}`);
+      throw error;
     }
 
-    const typeCounts = byType.reduce((acc, campaign) => {
-      acc[campaign.type] = (acc[campaign.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+    const typeCounts: Record<string, number> = {};
+    const statusCounts: Record<string, number> = {};
 
-    // Get total count by status
-    const { data: byStatus, error: statusError } = await client
-      .from('campaigns')
-      .select('status')
-      .eq('organization_id', organizationId);
-
-    if (statusError) {
-      this.logger.error(`Failed to fetch campaigns by status: ${statusError.message}`);
-      throw statusError;
+    for (const row of data || []) {
+      typeCounts[row.campaign_type] = (typeCounts[row.campaign_type] || 0) + 1;
+      statusCounts[row.status] = (statusCounts[row.status] || 0) + 1;
     }
-
-    const statusCounts = byStatus.reduce((acc, campaign) => {
-      acc[campaign.status] = (acc[campaign.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Get total budget
-    const { data: budgets, error: budgetError } = await client
-      .from('campaigns')
-      .select('budget')
-      .eq('organization_id', organizationId);
-
-    if (budgetError) {
-      this.logger.error(`Failed to fetch campaign budgets: ${budgetError.message}`);
-      throw budgetError;
-    }
-
-    const totalBudget = budgets.reduce((sum, campaign) => sum + (campaign.budget || 0), 0);
 
     return {
-      total: byType.length,
-      totalBudget,
+      total: (data || []).length,
       byType: typeCounts,
       byStatus: statusCounts,
     };
