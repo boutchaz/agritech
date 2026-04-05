@@ -1622,11 +1622,6 @@ const AICalibrationPage = () => {
         (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) &&
         reportData?.calibration?.id && (
         <div className="space-y-4" data-testid="calibration-action-panels">
-          <NutritionOptionSelector
-            parcelId={parcelId}
-            calibrationId={reportData.calibration.id}
-            phase={phase ?? 'unknown'}
-          />
           {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && (
             <ValidationPanel
               calibrationId={reportData.calibration.id}
@@ -1636,6 +1631,11 @@ const AICalibrationPage = () => {
               onReCalibrate={handleOpenFullRecalibrationWizard}
             />
           )}
+          <NutritionOptionSelector
+            parcelId={parcelId}
+            calibrationId={reportData.calibration.id}
+            phase={phase ?? 'unknown'}
+          />
         </div>
       )}
 
