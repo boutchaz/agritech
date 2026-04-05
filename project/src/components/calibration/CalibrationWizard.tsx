@@ -469,9 +469,11 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     return <SectionLoader />;
   }
 
+  const activeStepDef = STEPS[currentStep - 1];
+
   return (
-    <div className="space-y-6" data-testid="calibration-initial-wizard">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6" data-testid="calibration-initial-wizard">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('calibration.wizard.title')}</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           {t('calibration.wizard.subtitle')}
@@ -493,9 +495,17 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-5">
-        <div className="overflow-x-auto -mx-1 px-1 pb-1">
-          <div className="flex items-start min-w-max">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-4 sm:px-4 sm:py-5">
+        <div className="mb-3 min-w-0 md:hidden">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {t('calibration.wizard.stepProgress', { current: currentStep, total: STEPS.length })}
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white break-words">
+            {activeStepDef?.title}
+          </p>
+        </div>
+        <div className="-mx-1 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-gutter:stable] snap-x snap-mandatory touch-pan-x md:snap-none">
+          <div className="flex min-w-max items-start md:min-w-0 md:flex-wrap md:justify-center md:gap-y-3 lg:flex-nowrap lg:justify-start">
             {STEPS.map((step, index) => {
               const isActive = currentStep === step.number;
               const isCompleted = isStepCompleted(step.number);
@@ -517,12 +527,11 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
                     type="button"
                     data-testid={`calibration-wizard-step-${step.number}`}
                     onClick={() => setStep(step.number)}
-                    className={`flex flex-col items-center gap-2 px-3 pt-1 pb-2 rounded-xl transition-all duration-150 cursor-pointer group ${
+                    className={`flex min-w-[5.25rem] shrink-0 snap-center flex-col items-center gap-2 px-2 pt-1 pb-2 rounded-xl transition-all duration-150 cursor-pointer group sm:min-w-[5.5rem] sm:px-3 md:min-w-[5.5rem] ${
                       isActive
                         ? 'bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-200 dark:ring-blue-800'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
                     }`}
-                    style={{ minWidth: 88 }}
                   >
                     {/* Circle */}
                     <div className={`flex items-center justify-center w-9 h-9 rounded-full border-2 text-sm font-semibold shadow-sm transition-all ${
@@ -536,7 +545,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
                     </div>
 
                     {/* Label */}
-                    <span className={`text-[11px] font-medium leading-tight text-center max-w-[80px] ${
+                    <span className={`max-w-[5.5rem] text-center text-[10px] font-medium leading-tight sm:max-w-[6.5rem] sm:text-[11px] ${
                       isActive
                         ? 'text-blue-700 dark:text-blue-300'
                         : isCompleted
@@ -577,21 +586,32 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
             void handleNext();
           }
         }}
-        className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-6"
+        className="min-w-0 space-y-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5"
       >
-        {renderStepContent()}
+        <div className="min-w-0">{renderStepContent()}</div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-          <Button type="button" variant="outline" onClick={handleSaveAndCompleteLater}>
+        <div className="flex flex-col gap-3 border-t border-gray-200 pt-2 dark:border-gray-700 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleSaveAndCompleteLater}
+            className="order-3 w-full sm:order-1 sm:w-auto"
+          >
             {t('calibration.wizard.saveLater')}
           </Button>
 
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={handlePrevious} disabled={currentStep === 1}>
+          <div className="flex w-full gap-2 sm:order-2 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="min-w-0 flex-1 sm:flex-initial"
+            >
               {t('calibration.wizard.previous')}
             </Button>
             {currentStep < 8 && (
-              <Button type="submit" >
+              <Button type="submit" className="min-w-0 flex-1 sm:flex-initial">
                 {t('calibration.wizard.next')}
               </Button>
             )}

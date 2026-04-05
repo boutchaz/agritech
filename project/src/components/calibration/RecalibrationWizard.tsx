@@ -525,16 +525,43 @@ export function RecalibrationWizard({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
+    <div className="min-w-0 max-w-full space-y-4 sm:space-y-6">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assistant de recalibrage partiel</h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
           Met a jour un bloc specifique sans relancer un recalibrage complet de la parcelle.
         </p>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 overflow-x-auto">
-        <div className="flex items-center min-w-[640px] justify-between">
+      <div className="min-w-0 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+        <div className="space-y-2 md:hidden">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Étape {currentStep} sur {STEPS.length}
+          </p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">
+            {STEPS[currentStep - 1]?.title}
+          </p>
+          <div className="flex gap-1.5 pt-1" role="presentation">
+            {STEPS.map((step) => {
+              const isActive = currentStep === step.number;
+              const isCompleted = currentStep > step.number;
+              return (
+                <div
+                  key={step.number}
+                  className={`h-1.5 min-w-0 flex-1 rounded-full ${
+                    isActive
+                      ? 'bg-blue-600'
+                      : isCompleted
+                        ? 'bg-green-600'
+                        : 'bg-gray-200 dark:bg-gray-600'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="hidden md:flex md:flex-wrap md:items-center md:justify-between md:gap-x-2 md:gap-y-3">
           {STEPS.map((step, index) => {
             const isActive = currentStep === step.number;
             const isCompleted = currentStep > step.number;
@@ -542,23 +569,29 @@ export function RecalibrationWizard({
             return (
               <div key={step.number} className="flex items-center">
                 <div
-                  className={`flex items-center justify-center w-9 h-9 rounded-full border-2 ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-full border-2 ${
                     isCompleted
-                      ? 'bg-green-600 border-green-600 text-white'
+                      ? 'border-green-600 bg-green-600 text-white'
                       : isActive
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-400'
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : 'border-gray-300 bg-white text-gray-400 dark:border-gray-600 dark:bg-gray-800'
                   }`}
                 >
-                  {isCompleted ? <Check className="w-4 h-4" /> : step.number}
+                  {isCompleted ? <Check className="h-4 w-4" /> : step.number}
                 </div>
-                <div className="ml-2 mr-3">
-                  <p className={`text-sm font-medium ${isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                <div className="ml-2 mr-2 max-w-[8rem] sm:mr-3 sm:max-w-none">
+                  <p
+                    className={`text-sm font-medium ${
+                      isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
                     {step.title}
                   </p>
                 </div>
                 {index < STEPS.length - 1 && (
-                  <ChevronRight className={`h-4 w-4 ${isCompleted ? 'text-green-600' : 'text-gray-400 dark:text-gray-600'}`} />
+                  <ChevronRight
+                    className={`h-4 w-4 shrink-0 ${isCompleted ? 'text-green-600' : 'text-gray-400 dark:text-gray-600'}`}
+                  />
                 )}
               </div>
             );
@@ -566,15 +599,26 @@ export function RecalibrationWizard({
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 space-y-6">
-        {renderStep()}
+      <div className="min-w-0 space-y-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+        <div className="min-w-0">{renderStep()}</div>
 
         {currentStep < 4 && (
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <Button type="button" variant="outline" onClick={() => setCurrentStep(Math.max(1, currentStep - 1))} disabled={currentStep === 1}>
+          <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-2 dark:border-gray-700 sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+              disabled={currentStep === 1}
+              className="w-full sm:w-auto"
+            >
               Precedent
             </Button>
-            <Button variant="blue" type="button" disabled={!canGoNext} onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
+            <Button
+              variant="blue"
+              type="button"
+              disabled={!canGoNext}
+              onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
+              className="w-full sm:w-auto"
             >
               Suivant
             </Button>

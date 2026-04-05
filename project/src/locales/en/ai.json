@@ -145,6 +145,7 @@
       "saveLater": "Save and finish later",
       "previous": "Back",
       "next": "Next",
+      "stepProgress": "Step {{current}} of {{total}}",
       "toastProgressSaved": "Progress saved. You can continue later.",
       "toastRequiredStepsError": "Complete the required fields in steps 1 and 2 first.",
       "toastLaunched": "Calibration started.",

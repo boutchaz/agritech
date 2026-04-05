@@ -145,6 +145,7 @@
       "saveLater": "حفظ ومتابعة لاحقاً",
       "previous": "السابق",
       "next": "التالي",
+      "stepProgress": "الخطوة {{current}} من {{total}}",
       "toastProgressSaved": "تم حفظ التقدم. يمكنك المتابعة لاحقاً.",
       "toastRequiredStepsError": "أكمل الحقول الإلزامية في الخطوتين 1 و2 أولاً.",
       "toastLaunched": "بدأت المعايرة.",

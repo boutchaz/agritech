@@ -145,6 +145,7 @@
       "saveLater": "Sauvegarder et compléter plus tard",
       "previous": "Précédent",
       "next": "Suivant",
+      "stepProgress": "Étape {{current}} sur {{total}}",
       "toastProgressSaved": "Progression sauvegardée. Vous pouvez reprendre plus tard.",
       "toastRequiredStepsError": "Les champs obligatoires des étapes 1 et 2 doivent être complétés.",
       "toastLaunched": "Calibrage lancé.",
