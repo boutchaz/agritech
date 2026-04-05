@@ -3,6 +3,7 @@
     "title": "Séries temporelles d'indices de végétation",
     "subtitle": "Tendances historiques pour {{name}}",
     "subtitleFallback": "Tendances historiques pour Parcelle {{id}}",
+    "cacheVsHeatmapHint": "Ce graphique lit les indices enregistrés en base. La carte thermique peut interroger le moteur pour d'autres dates — si une date y apparaît mais pas ici, élargissez la plage si besoin et utilisez « Récupérer depuis satellite » pour synchroniser.",
     "dataPoints": "{{count}} points",
     "warnings": {
       "sparseData": "Données limitées.",

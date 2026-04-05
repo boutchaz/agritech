@@ -201,7 +201,7 @@ const TimeSeriesChart = ({
     } catch (_e) {}
     return getDateRangeLastNDays(730).start_date;
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => localCalendarISODate());
 
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -229,6 +229,29 @@ const TimeSeriesChart = ({
       }
     };
   }, []);
+
+  // Heatmap uses live available-dates + engine; timeseries reads cached rows. Extend end date to the
+  // latest stored acquisition so newer synced dates are not excluded when "today" lags the catalog.
+  useEffect(() => {
+    if (!organizationId || !parcelId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await satelliteIndicesApi.getAll(
+          { parcel_id: parcelId, page: 1, limit: 1 },
+          organizationId,
+        );
+        const latest = rows[0]?.date?.split('T')[0];
+        if (cancelled || !latest) return;
+        setEndDate((prev) => (latest > prev ? latest : prev));
+      } catch {
+        /* ignore — chart still works with current end date */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, parcelId]);
 
   const getIndexColor = (index: TimeSeriesIndexType): string => {
     const colors: Record<string, string> = {
@@ -321,7 +344,7 @@ const TimeSeriesChart = ({
         else indicesToSync.add(index);
       }
 
-      const syncEndDate = new Date().toISOString().split('T')[0];
+      const syncEndDate = localCalendarISODate();
       const syncResponse = await satelliteApi.startTimeSeriesSync({
         parcel_id: parcelId,
         farm_id: farmId,
@@ -425,23 +448,10 @@ const TimeSeriesChart = ({
         .filter((point): point is { date: string; value: number } => point !== null)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const temporallyFilteredPoints = validPoints.filter((point, pointIndex, points) => {
-        const neighbors: number[] = [];
-        let offset = 1;
-        while (neighbors.length < 3 && (pointIndex - offset >= 0 || pointIndex + offset < points.length)) {
-          if (pointIndex - offset >= 0) neighbors.push(points[pointIndex - offset].value);
-          if (neighbors.length < 3 && pointIndex + offset < points.length) neighbors.push(points[pointIndex + offset].value);
-          offset += 1;
-        }
-        if (neighbors.length < 2) return true;
-        const neighborMean = neighbors.reduce((sum, value) => sum + value, 0) / neighbors.length;
-        const neighborVariance = neighbors.reduce((sum, value) => sum + Math.pow(value - neighborMean, 2), 0) / neighbors.length;
-        const neighborStd = Math.sqrt(neighborVariance);
-        const difference = Math.abs(point.value - neighborMean);
-        return neighborStd === 0 ? difference <= 1e-6 : difference <= 3 * neighborStd;
-      });
+      // Show all valid cache points. A previous 3σ neighbor filter dropped real acquisitions (e.g. new
+      // scene after a gap), which made the chart disagree with the heatmap date picker.
 
-      for (const point of temporallyFilteredPoints) {
+      for (const point of validPoints) {
         const existing: MultiIndexData = dateMap.get(point.date) || { date: point.date };
         existing[index] = point.value;
         dateMap.set(point.date, existing);
@@ -545,6 +555,9 @@ const TimeSeriesChart = ({
                   {t('timeSeries.dataPoints', { count: stats.total })}
                 </Badge>
               )}
+            </p>
+            <p className="text-xs text-slate-400 pl-1 max-w-3xl leading-relaxed">
+              {t('timeSeries.cacheVsHeatmapHint')}
             </p>
           </div>
 

@@ -3,6 +3,7 @@
     "title": "Vegetation Index Time Series",
     "subtitle": "Historical trends for {{name}}",
     "subtitleFallback": "Historical trends for Parcel {{id}}",
+    "cacheVsHeatmapHint": "This chart reads stored index rows from the app database. The heatmap can show additional acquisition dates from the processing service — if a date appears there but not here, widen the range if needed and use \"Fetch from satellite\" to sync.",
     "dataPoints": "{{count}} points",
     "warnings": {
       "sparseData": "Limited data.",
