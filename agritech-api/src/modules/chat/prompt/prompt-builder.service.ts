@@ -8,6 +8,35 @@ type BuiltContext = any;
 @Injectable()
 export class PromptBuilderService {
   private readonly summarizer = new ContextSummarizerService();
+
+  /**
+   * Explains why forecast rows may be missing so the model does not falsely blame "no parcel coordinates".
+   */
+  private weatherForecastUnavailableExplanation(context: BuiltContext): string {
+    const d = context.satelliteWeather?.weather_forecast?.diagnostics;
+    if (!d) {
+      return 'No forecast rows were attached. Do not insist that parcels lack GPS or AOI unless farm data in context clearly shows unmappable parcels.';
+    }
+    const bits: string[] = [
+      `openweather_configured=${d.openweather_configured}`,
+      `parcels_loaded=${d.parcels_loaded}`,
+      `parcels_with_resolved_location=${d.parcels_resolved_location}`,
+      `forecasts_returned=${d.forecasts_returned}`,
+    ];
+    if (!d.openweather_configured) {
+      bits.push('Likely cause: OpenWeatherMap API key is not set on the server.');
+    } else if (d.parcels_loaded > 0 && d.parcels_resolved_location === 0) {
+      bits.push(
+        'Likely cause: no location could be built from parcel boundary JSON, PostGIS centroid/boundary_geom, or satellite AOI geometry.',
+      );
+    } else if (d.parcels_resolved_location > 0 && d.forecasts_returned === 0) {
+      bits.push(
+        'Likely cause: weather API error, rate limit, or empty response despite resolved coordinates.',
+      );
+    }
+    return `System diagnostics: ${bits.join('; ')}`;
+  }
+
   buildSystemPrompt(options?: { enableTools?: boolean }): string {
     const toolInstructions = options?.enableTools
       ? `
@@ -156,20 +185,22 @@ You MUST respond with valid JSON matching the specified schema.`;
         : '⚠️ REQUIRED LANGUAGE: Respond ONLY in English. The entire response must be in English.';
 
     // Check if weather forecast is available (no string matching - AI already routed to weather agent)
-    const hasWeatherForecast = context.satelliteWeather?.weather_forecast?.available && 
-                               context.satelliteWeather.weather_forecast.parcels.length > 0;
-    
-    // Determine if this is a weather query by checking if weather context was loaded
-    // (AI routing already determined this, so we just check if weather data exists)
-    const isWeatherQuery = context.satelliteWeather !== null && hasWeatherForecast;
+    const hasWeatherForecast =
+      context.satelliteWeather?.weather_forecast?.available &&
+      context.satelliteWeather.weather_forecast.parcels.length > 0;
+
+    /** Weather-specific routing from ContextBuilderService (not "satellite indices" only). */
+    const weatherIntent = context.contextRouting?.weather === true;
+    const satelliteOrWeatherLoaded = context.satelliteWeather !== null;
 
     const conversationContext = conversationHistory.length > 0
       ? `\n====================================================\nCONVERSATION HISTORY\n====================================================\n${conversationHistory.map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`).join('\n\n')}\n`
       : '';
 
-    // Add weather forecast emphasis if query is about weather
-    const weatherEmphasis = isWeatherQuery && hasWeatherForecast 
-      ? `\n\n⚠️ IMPORTANT: The user is asking about weather/forecast. You MUST use the "Weather Forecast (Next 5 Days)" data provided below to answer their question. The forecast includes:
+    // Add weather forecast emphasis when the router flagged a weather question
+    const weatherEmphasis =
+      weatherIntent && hasWeatherForecast
+        ? `\n\n⚠️ IMPORTANT: The user is asking about weather/forecast. You MUST use the "Weather Forecast (Next 5 Days)" data provided below to answer their question. The forecast includes:
 - Tomorrow's weather (labeled as "Tomorrow")
 - Precipitation amounts in mm
 - Rain probability percentages
@@ -177,14 +208,11 @@ You MUST respond with valid JSON matching the specified schema.`;
 - Weather descriptions
 
 If the user asks "will it rain tomorrow", check the "Tomorrow" forecast entry for precipitation > 0mm or rain probability > 0%. Answer directly based on this data.`
-      : isWeatherQuery && !hasWeatherForecast
-      ? `\n\n⚠️ NOTE: The user is asking about weather, but weather forecast data is not available. This could be because:
-- OpenWeatherMap API key is not configured (set OPENWEATHER_API_KEY environment variable)
-- Parcels don't have boundary coordinates configured
-- Weather API is temporarily unavailable
+        : weatherIntent && satelliteOrWeatherLoaded && !hasWeatherForecast
+          ? `\n\n⚠️ NOTE: The user is asking about weather, but no usable forecast rows were attached below. ${this.weatherForecastUnavailableExplanation(context)}
 
-Inform the user about this limitation and suggest they configure the weather API or check parcel boundaries.`
-      : '';
+Explain the limitation briefly using the diagnostics above. Do **not** claim parcels lack coordinates or AOI if \`parcels_with_resolved_location\` is greater than zero.`
+          : '';
 
     return `${langInstruction}${weatherEmphasis}
 
@@ -391,7 +419,7 @@ ${p.forecasts.map((f, idx) => {
   const dayLabel = idx === 0 ? 'Today' : isTomorrow ? 'Tomorrow' : `Day ${idx + 1}`;
   return `  ${dayLabel} (${f.date}): ${f.temp.day}°C (${f.temp.min}-${f.temp.max}°C), ${f.description}, Precipitation: ${f.precipitation}mm${f.rainProbability !== undefined ? `, Rain probability: ${f.rainProbability}%` : ''}${f.humidity !== undefined ? `, Humidity: ${f.humidity}%` : ''}${f.windSpeed !== undefined ? `, Wind: ${f.windSpeed} km/h` : ''}`;
 }).join('\n')}
-`).join('\n') : 'Weather forecast not available. Make sure parcels have boundary coordinates configured and OpenWeatherMap API key is set.'}
+`).join('\n') : `[No per-parcel forecast rows] ${this.weatherForecastUnavailableExplanation(context)}`}
 ` : 'No satellite/weather data available.'}
 
 ====================================================

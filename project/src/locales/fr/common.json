@@ -3238,6 +3238,7 @@
     "detail": {
       "tabs": {
         "overview": "Vue d'ensemble",
+        "agromind": "Agromind IA",
         "soil": "Analyses",
         "satellite": "Satellite",
         "weather": "Météo",
@@ -3248,6 +3249,7 @@
       "loading": "Chargement des détails de la parcelle...",
       "notFound": "Parcelle non trouvée",
       "backToParcels": "Retour aux Parcelles",
+      "tabsNavAria": "Sections de la parcelle",
       "breadcrumbs": {
         "farm": "Ferme",
         "parcels": "Parcelles"

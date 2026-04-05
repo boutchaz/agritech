@@ -326,6 +326,12 @@ interface SettingsContext {
 
 export { AgromindiaParcelContext } from './agromindia-context.service';
 
+/** Which context modules the router requested for this query (prompt hints). */
+export interface ContextRoutingFlags {
+  weather: boolean;
+  satellite: boolean;
+}
+
 export interface BuiltContext {
   organization: OrganizationContext;
   farms?: FarmContext | null;
@@ -348,6 +354,8 @@ export interface BuiltContext {
   currentDate: string;
   currentSeason: string;
   agromindiaIntel?: AgromindiaParcelContext[] | null;
+  /** Populated so the prompt can distinguish weather vs satellite-only routing. */
+  contextRouting?: ContextRoutingFlags;
 }
 
 interface SatelliteWeatherContext {
@@ -386,6 +394,13 @@ interface SatelliteWeatherContext {
       forecasts: WeatherForecast[];
     }>;
     available: boolean;
+    /** Why forecast rows may be missing — keeps the LLM from blaming "no coordinates" incorrectly. */
+    diagnostics?: {
+      openweather_configured: boolean;
+      parcels_loaded: number;
+      parcels_resolved_location: number;
+      forecasts_returned: number;
+    };
   };
 }
 
@@ -664,6 +679,10 @@ export class ContextBuilderService {
        currentDate,
        currentSeason,
        agromindiaIntel,
+       contextRouting: {
+         weather: contextNeeds.weather,
+         satellite: contextNeeds.satellite,
+       },
      };
    }
 
@@ -2280,6 +2299,12 @@ export class ContextBuilderService {
         weather_forecast: {
           parcels: [],
           available: false,
+          diagnostics: {
+            openweather_configured: this.weatherProvider?.isConfigured() ?? false,
+            parcels_loaded: 0,
+            parcels_resolved_location: 0,
+            forecasts_returned: 0,
+          },
         },
       };
     }
@@ -2382,22 +2407,86 @@ export class ContextBuilderService {
     let weatherForecast = {
       parcels: [] as Array<{ parcel_id: string; parcel_name: string; forecasts: WeatherForecast[] }>,
       available: false,
+      diagnostics: {
+        openweather_configured: this.weatherProvider?.isConfigured() ?? false,
+        parcels_loaded: parcels.length,
+        parcels_resolved_location: 0,
+        forecasts_returned: 0,
+      },
     };
 
-    if (this.weatherProvider.isConfigured()) {
+    const postgisPoints = await this.fetchPostgisParcelCentroids(organizationId, parcelIds);
+    const { data: aoiRows } = await client
+      .from('satellite_aois')
+      .select('parcel_id, geometry_json, updated_at')
+      .eq('organization_id', organizationId)
+      .in('parcel_id', parcelIds)
+      .eq('is_active', true);
+
+    const aoiGeometryByParcel = new Map<string, unknown>();
+    const sortedAois = [...(aoiRows || [])].sort(
+      (a: { updated_at?: string }, b: { updated_at?: string }) =>
+        new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime(),
+    );
+    for (const row of sortedAois) {
+      const pid = row.parcel_id as string;
+      if (pid && !aoiGeometryByParcel.has(pid)) {
+        aoiGeometryByParcel.set(pid, row.geometry_json);
+      }
+    }
+
+    const resolveForecastPoint = (parcel: any): { latitude: number; longitude: number } | null => {
+      const boundaryRaw =
+        typeof parcel.boundary === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(parcel.boundary);
+              } catch {
+                return null;
+              }
+            })()
+          : parcel.boundary;
+
+      const fromBoundary = this.normalizeParcelBoundaryCoordinates(boundaryRaw);
+      if (fromBoundary?.length) {
+        const wgs84 = WeatherProvider.ensureWGS84(fromBoundary);
+        return WeatherProvider.calculateCentroid(wgs84);
+      }
+
+      const pg = postgisPoints.get(parcel.id);
+      if (pg) {
+        return { latitude: pg.lat, longitude: pg.lng };
+      }
+
+      const aoiGeom = aoiGeometryByParcel.get(parcel.id);
+      const fromAoi = this.normalizeParcelBoundaryCoordinates(aoiGeom);
+      if (fromAoi?.length) {
+        const wgs84 = WeatherProvider.ensureWGS84(fromAoi);
+        return WeatherProvider.calculateCentroid(wgs84);
+      }
+
+      return null;
+    };
+
+    let resolvedCount = 0;
+    for (const p of parcels) {
+      if (resolveForecastPoint(p)) {
+        resolvedCount += 1;
+      }
+    }
+    weatherForecast.diagnostics.parcels_resolved_location = resolvedCount;
+
+    const wp = this.weatherProvider;
+    if (wp?.isConfigured()) {
       try {
         const forecastPromises = parcels.map(async (parcel: any) => {
           try {
-            if (!parcel.boundary || parcel.boundary.length === 0) {
+            const point = resolveForecastPoint(parcel);
+            if (!point) {
               return null;
             }
 
-            // Ensure coordinates are in WGS84
-            const wgs84Boundary = WeatherProvider.ensureWGS84(parcel.boundary);
-            const { latitude, longitude } = WeatherProvider.calculateCentroid(wgs84Boundary);
-
-            // Get 5-day forecast
-            const forecastData = await this.weatherProvider.getForecast(latitude, longitude, 5);
+            const forecastData = await wp.getForecast(point.latitude, point.longitude, 5);
 
             return {
               parcel_id: parcel.id,
@@ -2411,9 +2500,18 @@ export class ContextBuilderService {
         });
 
         const forecastResults = await Promise.all(forecastPromises);
+        const ok = forecastResults.filter(Boolean) as Array<{
+          parcel_id: string;
+          parcel_name: string;
+          forecasts: WeatherForecast[];
+        }>;
         weatherForecast = {
-          parcels: forecastResults.filter(Boolean),
-          available: forecastResults.some(Boolean),
+          parcels: ok,
+          available: ok.length > 0,
+          diagnostics: {
+            ...weatherForecast.diagnostics,
+            forecasts_returned: ok.length,
+          },
         };
 
         this.logger.log(`Fetched weather forecast for ${weatherForecast.parcels.length} parcels`);
@@ -2612,6 +2710,145 @@ export class ContextBuilderService {
         variance_percent: null,
       })),
     };
+  }
+
+  /**
+   * Turn parcel.boundary JSONB, GeoJSON, AOI geometry_json, etc. into [lng, lat][] for centroid/weather.
+   */
+  private normalizeParcelBoundaryCoordinates(raw: unknown): number[][] | null {
+    if (raw == null) {
+      return null;
+    }
+    if (typeof raw === 'string') {
+      try {
+        return this.normalizeParcelBoundaryCoordinates(JSON.parse(raw));
+      } catch {
+        return null;
+      }
+    }
+    if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+      const o = raw as Record<string, unknown>;
+      if (o.type === 'Feature' && o.geometry) {
+        return this.normalizeParcelBoundaryCoordinates(o.geometry);
+      }
+      if (o.type === 'Point' && Array.isArray(o.coordinates)) {
+        const c = o.coordinates as number[];
+        if (c.length >= 2 && typeof c[0] === 'number' && typeof c[1] === 'number') {
+          return [[c[0], c[1]]];
+        }
+        return null;
+      }
+      if (o.type === 'Polygon' && Array.isArray(o.coordinates)) {
+        const ring = (o.coordinates as number[][][])[0];
+        if (!Array.isArray(ring) || ring.length < 1) {
+          return null;
+        }
+        return ring
+          .filter((pt) => Array.isArray(pt) && pt.length >= 2 && typeof pt[0] === 'number' && typeof pt[1] === 'number')
+          .map((pt) => [pt[0], pt[1]]);
+      }
+      if (o.type === 'MultiPolygon' && Array.isArray(o.coordinates)) {
+        const first = (o.coordinates as number[][][][])[0];
+        if (!first?.[0]) {
+          return null;
+        }
+        return first[0]
+          .filter((pt) => Array.isArray(pt) && pt.length >= 2 && typeof pt[0] === 'number' && typeof pt[1] === 'number')
+          .map((pt) => [pt[0], pt[1]]);
+      }
+    }
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return null;
+    }
+    const first = raw[0] as unknown;
+    if (Array.isArray(first) && typeof (first as number[])[0] === 'number') {
+      const pairs = raw as number[][];
+      if (pairs.every((p) => Array.isArray(p) && p.length >= 2 && typeof p[0] === 'number' && typeof p[1] === 'number')) {
+        return pairs.length >= 1 ? pairs : null;
+      }
+      return null;
+    }
+    if (typeof first === 'object' && first !== null) {
+      const out: number[][] = [];
+      for (const pt of raw as Array<Record<string, unknown>>) {
+        const lat =
+          typeof pt.lat === 'number'
+            ? pt.lat
+            : typeof pt.latitude === 'number'
+              ? pt.latitude
+              : null;
+        const lng =
+          typeof pt.lng === 'number'
+            ? pt.lng
+            : typeof pt.lon === 'number'
+              ? pt.lon
+              : typeof pt.longitude === 'number'
+                ? pt.longitude
+                : null;
+        if (lat != null && lng != null) {
+          out.push([lng, lat]);
+        }
+      }
+      return out.length >= 1 ? out : null;
+    }
+    return null;
+  }
+
+  /**
+   * When JSON boundary is empty but PostGIS has centroid/boundary_geom (e.g. legacy sync), still resolve a point.
+   */
+  private async fetchPostgisParcelCentroids(
+    organizationId: string,
+    parcelIds: string[],
+  ): Promise<Map<string, { lat: number; lng: number }>> {
+    const map = new Map<string, { lat: number; lng: number }>();
+    if (!parcelIds.length) {
+      return map;
+    }
+    let pool;
+    try {
+      pool = this.databaseService.getPgPool();
+    } catch {
+      return map;
+    }
+    const client = await pool.connect();
+    try {
+      const res = await client.query(
+        `SELECT p.id::text AS id,
+          COALESCE(
+            ST_Y(p.centroid::geometry),
+            ST_Y(ST_Centroid(p.boundary_geom::geometry))
+          ) AS lat,
+          COALESCE(
+            ST_X(p.centroid::geometry),
+            ST_X(ST_Centroid(p.boundary_geom::geometry))
+          ) AS lng
+         FROM parcels p
+         WHERE p.organization_id = $1::uuid
+           AND p.id = ANY($2::uuid[])
+           AND (p.centroid IS NOT NULL OR p.boundary_geom IS NOT NULL)`,
+        [organizationId, parcelIds],
+      );
+      for (const row of res.rows) {
+        const lat = parseFloat(row.lat);
+        const lng = parseFloat(row.lng);
+        if (
+          Number.isFinite(lat) &&
+          Number.isFinite(lng) &&
+          Math.abs(lat) <= 90 &&
+          Math.abs(lng) <= 180
+        ) {
+          map.set(row.id, { lat, lng });
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `fetchPostgisParcelCentroids failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      client.release();
+    }
+    return map;
   }
 
   summarizeContext(context: BuiltContext) {

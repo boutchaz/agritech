@@ -3125,6 +3125,7 @@
     "detail": {
       "tabs": {
         "overview": "نظرة عامة",
+        "agromind": "Agromind IA",
         "soil": "التحليلات",
         "satellite": "القمر الصناعي",
         "weather": "الطقس",
@@ -3135,6 +3136,7 @@
       "loading": "جاري تحميل تفاصيل القطعة...",
       "notFound": "القطعة غير موجودة",
       "backToParcels": "العودة إلى القطع",
+      "tabsNavAria": "أقسام القطعة",
       "breadcrumbs": {
         "farm": "المزرعة",
         "parcels": "القطع"

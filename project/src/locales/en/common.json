@@ -3242,6 +3242,7 @@
     "detail": {
       "tabs": {
         "overview": "Overview",
+        "agromind": "Agromind IA",
         "soil": "Analysis",
         "satellite": "Satellite",
         "weather": "Weather",
@@ -3252,6 +3253,7 @@
       "loading": "Loading parcel details...",
       "notFound": "Parcel not found",
       "backToParcels": "Back to Parcels",
+      "tabsNavAria": "Parcel sections",
       "breadcrumbs": {
         "farm": "Farm",
         "parcels": "Parcels"
