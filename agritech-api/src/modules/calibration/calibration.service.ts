@@ -407,7 +407,7 @@ export class CalibrationService {
     ];
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Calibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Calibration can only start from awaiting_data, ready_calibration, active, calibrated, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
@@ -566,7 +566,7 @@ export class CalibrationService {
 
     if (!allowedStartPhases.includes(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Partial recalibration can only start from pret_calibrage, disabled, active, awaiting_validation, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
+        `Partial recalibration can only start from awaiting_data, ready_calibration, active, calibrated, or awaiting_nutrition_option phase (current: ${parcel.aiPhase})`,
       );
     }
 
