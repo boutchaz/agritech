@@ -1821,7 +1821,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "Imagerie satellite de meilleure qualité. Nécessite un jeton API.",
     "mapProviderDescription": "Sélectionnez la source de tuiles pour les fonds de carte.",
-    "mapProviderTokenWarning": "Mapbox nécessite une variable d'environnement VITE_MAPBOX_TOKEN. La carte utilisera les tuiles par défaut tant qu'elle n'est pas configurée.",
+    "mapProviderTokenWarning": "Les fonds Mapbox nécessitent VITE_MAPBOX_TOKEN et VITE_MAP_PROVIDER=mapbox. Utilisez VITE_MAP_PROVIDER=default pour OSM/Esri uniquement et éviter la consommation de tuiles Mapbox.",
     "placeholders": {
       "name": "Nom de votre organisation",
       "slug": "slug-organisation",

@@ -1825,7 +1825,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "Higher-quality satellite imagery. Requires an API token.",
     "mapProviderDescription": "Select the tile source for map backgrounds.",
-    "mapProviderTokenWarning": "Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.",
+    "mapProviderTokenWarning": "Mapbox basemaps need VITE_MAPBOX_TOKEN and VITE_MAP_PROVIDER=mapbox. Set VITE_MAP_PROVIDER=default to use free OSM/Esri tiles only and avoid Mapbox tile usage.",
     "placeholders": {
       "name": "Your organization name",
       "slug": "organization-slug",

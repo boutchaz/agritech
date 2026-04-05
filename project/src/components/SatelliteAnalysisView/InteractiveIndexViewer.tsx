@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { MapContainer, TileLayer, Polygon } from 'react-leaflet';
+import { MapContainer, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
    satelliteApi,
@@ -37,6 +37,7 @@ import {
    formatDateForAPI
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
+import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 import { Button } from '../ui/button';
 import { cn } from '../../lib/utils';
@@ -1143,11 +1144,10 @@ const MultiIndexOverlayMap: React.FC<{
         zoom={15}
         style={{ height: '100%', width: '100%' }}
       >
-        {baseLayer === 'satellite' ? (
-          <TileLayer attribution='&copy; ESRI' url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" />
-        ) : (
-          <TileLayer attribution='&copy; OSM' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        )}
+        <LeafletBaseTileLayers
+          variant={baseLayer === 'satellite' ? 'satellite' : 'streets'}
+          withSatelliteReferenceLabels={baseLayer === 'satellite'}
+        />
 
         <Polygon
           positions={boundary.map(coord => [coord[1], coord[0]] as [number, number])}

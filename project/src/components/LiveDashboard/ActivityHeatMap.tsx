@@ -1,18 +1,19 @@
-import React, { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, type FC, type MutableRefObject } from 'react';
 import { cn } from '@/lib/utils';
-import { MapContainer, TileLayer, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, CircleMarker, Popup, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Map, RefreshCw, Layers, Maximize2, Minimize2 } from 'lucide-react';
+import { Map as MapIcon, RefreshCw, Layers, Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from '@/components/ui/skeleton';
 import type { ActivityHeatmapPoint, FarmActivity } from '../../services/liveDashboardService';
 import { Button } from '@/components/ui/button';
 import NewsTicker from './NewsTicker';
+import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 // Fix Leaflet default icon issue
 if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
@@ -63,18 +64,23 @@ interface ActivityHeatMapProps {
 }
 
 // Fit all bounds controller — called imperatively via ref
-const FitAllController: React.FC<{ triggerRef: React.MutableRefObject<(() => void) | null>; data: ActivityHeatmapPoint[] }> = ({ triggerRef, data }) => {
+const FitAllController: FC<{ triggerRef: MutableRefObject<(() => void) | null>; data: ActivityHeatmapPoint[] }> = ({ triggerRef, data }) => {
   const map = useMap();
-  triggerRef.current = () => {
-    if (!data || data.length === 0) return;
-    const bounds = L.latLngBounds(data.map(p => [p.lat, p.lng] as [number, number]));
-    if (bounds.isValid()) map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 13, duration: 1 });
-  };
+  useEffect(() => {
+    triggerRef.current = () => {
+      if (!data || data.length === 0) return;
+      const bounds = L.latLngBounds(data.map(p => [p.lat, p.lng] as [number, number]));
+      if (bounds.isValid()) map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 13, duration: 1 });
+    };
+    return () => {
+      triggerRef.current = null;
+    };
+  }, [data, map, triggerRef]);
   return null;
 };
 
 // Auto-fit map bounds to show all data points
-const MapBoundsAdjuster: React.FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
+const MapBoundsAdjuster: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
   const map = useMap();
   const fitted = useRef(false);
 
@@ -91,7 +97,7 @@ const MapBoundsAdjuster: React.FC<{ data: ActivityHeatmapPoint[] }> = ({ data })
 };
 
 // Circles colored by activity type
-const ActivityCircles: React.FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
+const ActivityCircles: FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) => {
   const map = useMap();
 
   return (
@@ -176,7 +182,7 @@ const ActivityCircles: React.FC<{ data: ActivityHeatmapPoint[] }> = ({ data }) =
   );
 };
 
-const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
+const ActivityHeatMap: FC<ActivityHeatMapProps> = ({
   data,
   isLoading = false,
   lastUpdated,
@@ -186,8 +192,20 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
   const [isSatellite, setIsSatellite] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fitAllRef = useRef<(() => void) | null>(null);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const mapShellRef = useRef<HTMLDivElement | null>(null);
 
   const defaultCenter: [number, number] = [33.5731, -7.5898];
+
+  useEffect(() => {
+    const el = mapShellRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      requestAnimationFrame(() => leafletMapRef.current?.invalidateSize());
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Stats
   const activeFarmsCount = useMemo(() => new Set(data.filter(p => !p.isIdle && p.farmId).map(p => p.farmId)).size, [data]);
@@ -216,7 +234,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
-              <Map className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <MapIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
@@ -258,7 +276,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
                   !isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
                 )}
               >
-                <Map className="h-3 w-3 mr-1.5" />
+                <MapIcon className="h-3 w-3 mr-1.5" />
                 Plan
               </Button>
             </div>
@@ -284,30 +302,21 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
       </div>
 
       {/* Map Content */}
-      <div className={cn("relative overflow-hidden", isFullscreen ? "flex-1 min-h-0" : "h-[500px]")}>
+      <div
+        ref={mapShellRef}
+        className={cn("relative overflow-hidden", isFullscreen ? "flex-1 min-h-0" : "h-[500px]")}
+      >
         <MapContainer
-          key={isFullscreen ? 'fullscreen' : 'normal'}
+          ref={leafletMapRef}
           center={defaultCenter}
           zoom={6}
           style={{ height: '100%', width: '100%', position: 'absolute', inset: 0 }}
           className="z-0"
         >
-          {isSatellite ? (
-            <>
-              <TileLayer
-                attribution='Tiles &copy; Esri'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-              <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-              />
-            </>
-          ) : (
-            <TileLayer
-              attribution='&copy; OSM'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-          )}
+          <LeafletBaseTileLayers
+            variant={isSatellite ? 'satellite' : 'streets'}
+            withSatelliteReferenceLabels={isSatellite}
+          />
           <MapBoundsAdjuster data={data} />
           <FitAllController triggerRef={fitAllRef} data={data} />
           <ActivityCircles data={data} />
@@ -318,7 +327,7 @@ const ActivityHeatMap: React.FC<ActivityHeatMapProps> = ({
           <div className="absolute inset-0 flex flex-col items-center justify-center z-[1000] pointer-events-none">
             <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-700 px-10 py-8 text-center max-w-sm">
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-3xl w-fit mx-auto mb-4 border border-slate-100 dark:border-slate-800">
-                <Map className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+                <MapIcon className="h-10 w-10 text-slate-300 dark:text-slate-600" />
               </div>
               <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('liveDashboard.heatmap.noFarms')}</h4>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">

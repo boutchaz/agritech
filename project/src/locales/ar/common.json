@@ -1807,7 +1807,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "صور أقمار صناعية عالية الجودة. يتطلب رمز API.",
     "mapProviderDescription": "اختر مصدر البلاط لخلفيات الخريطة.",
-    "mapProviderTokenWarning": "يتطلب Mapbox متغير بيئة VITE_MAPBOX_TOKEN. ستستخدم الخريطة البلاط الافتراضي حتى يتم تكوينه.",
+    "mapProviderTokenWarning": "خرائط Mapbox تحتاج VITE_MAPBOX_TOKEN و VITE_MAP_PROVIDER=mapbox. اضبط VITE_MAP_PROVIDER=default لاستخدام OSM/Esri فقط وتقليل استهلاك بلاط Mapbox.",
     "placeholders": {
       "name": "اسم منظمتك",
       "slug": "معرف-المنظمة",

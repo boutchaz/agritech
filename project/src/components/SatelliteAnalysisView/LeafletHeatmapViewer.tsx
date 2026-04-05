@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Download, Layers, ZoomIn, Loader, Calendar, RefreshCw, AlertCircle } from 'lucide-react';
-import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
+import { MapContainer, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -16,6 +16,7 @@ import {
 import { ColorPalette, COLOR_PALETTES } from './InteractiveIndexViewer';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from 'react-i18next';
+import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 // Fix Leaflet default icon issue - only in browser
 if (typeof window !== 'undefined') {
@@ -577,17 +578,10 @@ const LeafletHeatmapViewer: React.FC<LeafletHeatmapViewerProps> = ({
             style={{ height: '100%', width: '100%' }}
             className="leaflet-container"
           >
-            {baseLayer === 'satellite' ? (
-              <TileLayer
-                attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-              />
-            ) : (
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-            )}
+            <LeafletBaseTileLayers
+              variant={baseLayer === 'satellite' ? 'satellite' : 'streets'}
+              withSatelliteReferenceLabels={baseLayer === 'satellite'}
+            />
 
             {/* AOI Polygon Boundary - Matching research notebook style */}
             {polygonPositions.length > 0 && (
