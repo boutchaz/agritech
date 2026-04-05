@@ -70,13 +70,19 @@ export class CalibrationStateMachine {
     }
 
     const supabase = this.databaseService.getAdminClient();
-    const { data, error } = await supabase
+    const query = supabase
       .from("parcels")
       .update({ ai_phase: toPhase })
       .eq("id", parcelId)
-      .eq("organization_id", organizationId)
-      .eq("ai_phase", fromPhase)
-      .select("id");
+      .eq("organization_id", organizationId);
+
+    if (fromPhase === "awaiting_data") {
+      query.is("ai_phase", null);
+    } else {
+      query.eq("ai_phase", fromPhase);
+    }
+
+    const { data, error } = await query.select("id");
 
     if (error) {
       throw new BadRequestException(
