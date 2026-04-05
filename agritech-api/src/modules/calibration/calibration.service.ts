@@ -87,7 +87,8 @@ function getCalibrationLookbackDate(plantingYear: number | null): string {
 }
 
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
-const MINIMUM_CONFIDENCE_FOR_ACTIVE = 0.25;
+/** Minimum confidence score (0-100 scale) for active recommendations */
+const MINIMUM_CONFIDENCE_FOR_ACTIVE = 25;
 
 type ZoneClassification = "optimal" | "normal" | "stressed";
 type ParcelAiPhase =
@@ -1063,7 +1064,10 @@ export class CalibrationService {
     );
 
     const zoneClassification = this.deriveZoneClassification(v2Output);
-    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const rawConfidence = this.toNumber(v2Output.confidence?.normalized_score);
+    const confidenceScore = rawConfidence !== null
+      ? (rawConfidence <= 1 ? Math.round(rawConfidence * 100) : Math.round(rawConfidence))
+      : null;
     const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
       ...existingPartialData,
@@ -1113,7 +1117,7 @@ export class CalibrationService {
           p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
           p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          health_score: this.toInteger(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
           ),
@@ -1538,7 +1542,10 @@ export class CalibrationService {
       existingCalibrationSnapshot?.profile_snapshot,
     );
     const zoneClassification = this.deriveZoneClassification(v2Output);
-    const confidenceScore = this.toNumber(v2Output.confidence?.normalized_score);
+    const rawConfidenceFull = this.toNumber(v2Output.confidence?.normalized_score);
+    const confidenceScore = rawConfidenceFull !== null
+      ? (rawConfidenceFull <= 1 ? Math.round(rawConfidenceFull * 100) : Math.round(rawConfidenceFull))
+      : null;
     const observationMode = this.buildObservationModeContext(confidenceScore);
     const calibrationData = {
       ...existingCalibrationData,
@@ -1590,7 +1597,7 @@ export class CalibrationService {
           p10_ndvi: this.extractIndexPercentile(v2Output, "NDVI", "p10"),
           p10_ndmi: this.extractIndexPercentile(v2Output, "NDMI", "p10"),
           confidence_score: confidenceScore,
-          health_score: this.toNumber(v2Output.step8?.health_score?.total),
+          health_score: this.toInteger(v2Output.step8?.health_score?.total),
           yield_potential_min: this.toNumber(
             v2Output.step6?.yield_potential?.minimum,
           ),
@@ -2330,7 +2337,7 @@ export class CalibrationService {
         .eq("id", existingCalibration.parcel_id)
         .eq("organization_id", organizationId);
 
-      const observationReason = `Confidence score (${Math.round(confidenceScoreAtValidation * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`;
+      const observationReason = `Confidence score (${confidenceScoreAtValidation}%) below minimum threshold (${MINIMUM_CONFIDENCE_FOR_ACTIVE}%) for active recommendations`;
       const currentData = this.toJsonObject(updatedCalibration.profile_snapshot);
       const prevValidation = this.toJsonObject(currentData.validation);
 
@@ -2639,7 +2646,7 @@ export class CalibrationService {
   } {
     if (
       confidenceScore === null ||
-      confidenceScore >= MINIMUM_CONFIDENCE_FOR_ACTIVE
+      confidenceScore !== null && confidenceScore >= MINIMUM_CONFIDENCE_FOR_ACTIVE
     ) {
       return {
         observationOnly: false,
@@ -2649,7 +2656,7 @@ export class CalibrationService {
 
     return {
       observationOnly: true,
-      observationReason: `Confidence score (${Math.round(confidenceScore * 100)}%) below minimum threshold (${Math.round(MINIMUM_CONFIDENCE_FOR_ACTIVE * 100)}%) for active recommendations`,
+      observationReason: `Confidence score (${confidenceScore}%) below minimum threshold (${MINIMUM_CONFIDENCE_FOR_ACTIVE}%) for active recommendations`,
     };
   }
 
@@ -3519,6 +3526,12 @@ export class CalibrationService {
 
   private toJsonObject(value: unknown): JsonObject {
     return this.isJsonObject(value) ? value : {};
+  }
+
+  /** Convert to integer (for INTEGER columns like confidence_score, health_score) */
+  private toInteger(value: unknown): number | null {
+    const num = this.toNumber(value);
+    return num !== null ? Math.round(num) : null;
   }
 
   private toNumber(value: unknown): number | null {
