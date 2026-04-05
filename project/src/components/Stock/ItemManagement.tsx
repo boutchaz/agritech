@@ -86,7 +86,7 @@ const itemFormSchema = z.object({
   is_sales_item: z.boolean().optional(),
   is_purchase_item: z.boolean().optional(),
   is_stock_item: z.boolean().optional(),
-  images: z.array(z.any()).optional(),
+  images: z.array(z.string()).optional(),
   website_description: z.string().optional(),
   marketplace_category_slug: z.string().optional(),
   show_in_website: z.boolean().optional(),

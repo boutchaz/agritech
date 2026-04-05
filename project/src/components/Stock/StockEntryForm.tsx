@@ -122,7 +122,7 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
   });
 };
 
-type StockEntryFormData = any; // Will be inferred from dynamic schema
+type StockEntryFormData = z.infer<ReturnType<typeof getStockEntrySchema>>;
 
 interface StockEntryFormProps {
   open: boolean;

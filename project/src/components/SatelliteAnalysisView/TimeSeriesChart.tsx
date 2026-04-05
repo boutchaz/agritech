@@ -39,7 +39,7 @@ import {
   getDateRangeLastNDays,
   DEFAULT_CLOUD_COVERAGE
 } from '../../lib/satellite-api';
-import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
+import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
@@ -256,7 +256,7 @@ const TimeSeriesChart = ({
     queryKey: ['satellite-indices-cache', parcelId, selectedIndices, startDate, endDate],
     queryFn: async () => {
       if (!organizationId || !parcelId || !startDate || !endDate) return {};
-      const result: Record<string, any[]> = {};
+      const result: Record<string, (SatelliteIndex | { date: string; index_value: number; mean_value: number })[]> = {};
       const derivedIndices = ['NIRvP', 'TCARI_OSAVI'];
       const cachedIndices = selectedIndices.filter(i => !derivedIndices.includes(i));
       const onDemandIndices = selectedIndices.filter(i => derivedIndices.includes(i));

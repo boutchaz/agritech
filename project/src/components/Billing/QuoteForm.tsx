@@ -28,7 +28,7 @@ import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
-import { calculateInvoiceTotals } from '@/lib/taxCalculations';
+import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/config';
@@ -73,7 +73,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
 
   const isRTL = i18n.language === 'ar';
 
-  const [totals, setTotals] = useState<any>(null);
+  const [totals, setTotals] = useState<InvoiceTotals | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
