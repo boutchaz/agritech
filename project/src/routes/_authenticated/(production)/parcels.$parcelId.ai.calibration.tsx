@@ -356,6 +356,7 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
             </span>
           </div>
 
+          {yieldPotential && (
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Yield Potential</div>
             <div className="flex items-baseline space-x-1">
@@ -365,7 +366,7 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
               <span className="text-sm text-gray-500 dark:text-gray-400">t/ha</span>
             </div>
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Method: {yieldPotential.method.replace(/_/g, ' ')} · Bracket: {yieldPotential.reference_bracket.replace(/_/g, ' ')}
+              Method: {(yieldPotential.method ?? '').replace(/_/g, ' ')} · Bracket: {(yieldPotential.reference_bracket ?? '').replace(/_/g, ' ')}
             </div>
             {yieldPotential.historical_average != null && (
               <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -379,6 +380,7 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 
@@ -669,7 +671,7 @@ const AnomalyList = ({
                       {formatDate(anomaly.date)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                      {anomaly.anomaly_type.replace(/_/g, ' ')}
+                      {(anomaly.anomaly_type ?? '').replace(/_/g, ' ')}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
                       {anomaly.severity}
@@ -728,7 +730,7 @@ const AnomalyList = ({
                 <Thermometer className={`w-4 h-4 ${sev.text}`} />
                 <span className="text-sm text-gray-900 dark:text-white">{formatDate(event.date)}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                  {event.event_type.replace(/_/g, ' ')}
+                  {(event.event_type ?? '').replace(/_/g, ' ')}
                 </span>
                 <span className={`text-xs font-medium ${sev.text}`}>{event.severity}</span>
               </div>
@@ -763,7 +765,7 @@ const RecommendationsList = ({ recommendations }: { recommendations: Recommendat
           >
             <div className="flex items-center gap-2 flex-wrap mb-1.5">
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                {recommendation.type.replace(/_/g, ' ')}
+                {(recommendation.type ?? '').replace(/_/g, ' ')}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
                 {severity}
