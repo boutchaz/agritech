@@ -777,7 +777,7 @@ const TimeSeriesChart = ({
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed italic">
-                      {getIndexDescription(index)}
+                      {getIndexDescription(vegIndex)}
                     </p>
                   </CardContent>
                 </Card>
