@@ -65,6 +65,7 @@ interface InteractiveIndexViewerProps {
 }
 
 type VisualizationType = 'leaflet' | 'scatter';
+type ViewMode = 'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare';
 
 // Color palette configurations
 export type ColorPalette = 'viridis' | 'red-green' | 'blue-red' | 'rainbow' | 'terrain' | 'green-red-inverted' | 'blue-red-inverted';
@@ -115,7 +116,7 @@ const InteractiveIndexViewer = ({
   const { t, i18n } = useTranslation('satellite');
 
   // View mode: single, multi-grid, multi-overlay, or temporal-compare
-  const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare'>('single');
+  const [viewMode, setViewMode] = useState<ViewMode>('single');
 
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NIRv');
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE']);
@@ -436,8 +437,24 @@ const InteractiveIndexViewer = ({
     const { pixel_data, visualization, index } = data;
     return {
       tooltip: {
-        formatter: function (params: any) {
-          const [lon, lat, value] = params.data;
+        formatter: function (params) {
+          const pointParams = Array.isArray(params) ? params[0] : params;
+          const pointData = pointParams?.data;
+
+          if (
+            !Array.isArray(pointData)
+            || pointData.length < 3
+            || pointData[0] == null
+            || pointData[1] == null
+            || pointData[2] == null
+            || typeof pointData[0] !== 'number'
+            || typeof pointData[1] !== 'number'
+            || typeof pointData[2] !== 'number'
+          ) {
+            return '';
+          }
+
+          const [lon, lat, value] = pointData;
           return `<div class="p-2">
             <div class="font-bold text-slate-800">${index}: ${value.toFixed(3)}</div>
             <div class="text-xs text-slate-500">Lon: ${lon.toFixed(6)}</div>
@@ -468,6 +485,15 @@ const InteractiveIndexViewer = ({
     };
   };
 
+  const viewModes = [
+    { id: 'single' as const, label: t('satellite:heatmap.viewModes.single'), icon: Eye },
+    { id: 'multi-grid' as const, label: t('satellite:heatmap.viewModes.multiGrid'), icon: LayoutGrid },
+    { id: 'multi-overlay' as const, label: t('satellite:heatmap.viewModes.multiOverlay'), icon: Copy },
+    { id: 'temporal-compare' as const, label: t('satellite:heatmap.viewModes.temporalCompare'), icon: GitCompareArrows },
+  ] as const satisfies ReadonlyArray<{ id: ViewMode; label: string; icon: typeof Eye }>;
+
+  const stats = data?.statistics;
+
   const downloadData = () => {
     if (!data) return;
     const jsonData = JSON.stringify(data, null, 2);
@@ -497,16 +523,11 @@ const InteractiveIndexViewer = ({
             </CardHeader>
             <CardContent className="p-2">
               <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { id: 'single', label: t('satellite:heatmap.viewModes.single'), icon: Eye },
-                  { id: 'multi-grid', label: t('satellite:heatmap.viewModes.multiGrid'), icon: LayoutGrid },
-                  { id: 'multi-overlay', label: t('satellite:heatmap.viewModes.multiOverlay'), icon: Copy },
-                  { id: 'temporal-compare', label: t('satellite:heatmap.viewModes.temporalCompare'), icon: GitCompareArrows },
-                ].map((mode) => (
+                {viewModes.map((mode) => (
                   <button
                     type="button"
                     key={mode.id}
-                    onClick={() => setViewMode(mode.id as any)}
+                    onClick={() => setViewMode(mode.id)}
                     className={cn(
                       "flex flex-col items-center justify-center p-3 rounded-lg border transition-all gap-1.5",
                       viewMode === mode.id 
@@ -853,13 +874,13 @@ const InteractiveIndexViewer = ({
 
               {/* Statistics Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {(data as any).statistics && [
-                  { label: t('satellite:heatmap.stats.mean'), value: (data as any).statistics.mean, icon: Activity, color: 'text-blue-600' },
-                  { label: t('satellite:heatmap.stats.median'), value: (data as any).statistics.median, icon: Minus, color: 'text-slate-600' },
-                  { label: t('satellite:heatmap.stats.p10'), value: (data as any).statistics.p10, icon: ArrowDown, color: 'text-rose-500' },
-                  { label: t('satellite:heatmap.stats.p90'), value: (data as any).statistics.p90, icon: ArrowUp, color: 'text-emerald-500' },
-                  { label: t('satellite:heatmap.stats.std'), value: (data as any).statistics.std, icon: BarChart4, color: 'text-purple-600' },
-                  { label: 'Pixels', value: (data as any).statistics.count, icon: LayoutGrid, color: 'text-amber-600', isCount: true },
+                {stats && [
+                  { label: t('satellite:heatmap.stats.mean'), value: stats.mean, icon: Activity, color: 'text-blue-600' },
+                  { label: t('satellite:heatmap.stats.median'), value: stats.median, icon: Minus, color: 'text-slate-600' },
+                  { label: t('satellite:heatmap.stats.p10'), value: stats.p10, icon: ArrowDown, color: 'text-rose-500' },
+                  { label: t('satellite:heatmap.stats.p90'), value: stats.p90, icon: ArrowUp, color: 'text-emerald-500' },
+                  { label: t('satellite:heatmap.stats.std'), value: stats.std, icon: BarChart4, color: 'text-purple-600' },
+                  { label: 'Pixels', value: stats.count, icon: LayoutGrid, color: 'text-amber-600', isCount: true },
                 ].map((stat) => (
                   <Card key={stat.label} className="border-slate-100 shadow-none bg-white">
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">

@@ -159,7 +159,7 @@ const WorkerPaymentDialog = ({
     if (requiresCustomAmount) {
       setCalculatedPayment(null);
     }
-  }, [paymentType, requiresCustomAmount]);
+  }, [requiresCustomAmount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCalculate = async () => {
@@ -234,7 +234,7 @@ const WorkerPaymentDialog = ({
         period_start: periodStart,
         period_end: periodEnd,
         base_amount: calculatedPayment.base_amount,
-        task_bonus: (calculatedPayment as any).task_bonus ?? 0,
+        task_bonus: calculatedPayment.task_bonus ?? 0,
         advance_deduction: calculatedPayment.advance_deductions,
         days_worked: calculatedPayment.days_worked,
         hours_worked: calculatedPayment.hours_worked,
@@ -526,10 +526,11 @@ const WorkerPaymentDialog = ({
 
                   <div className="space-y-2 text-sm">
                     {/* Show "already paid" notice if base salary was already paid */}
-                    {(calculatedPayment as any).already_paid_base > 0 && (
+                    {calculatedPayment.already_paid_base != null &&
+                    calculatedPayment.already_paid_base > 0 && (
                       <div className="flex justify-between text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
                         <span>✓ Salaire de base déjà payé :</span>
-                        <span>{formatCurrency((calculatedPayment as any).already_paid_base)}</span>
+                        <span>{formatCurrency(calculatedPayment.already_paid_base)}</span>
                       </div>
                     )}
 
@@ -546,20 +547,22 @@ const WorkerPaymentDialog = ({
                     )}
 
                     {/* Per-unit/days breakdown: only show if base salary is not already paid */}
-                    {calculatedPayment.base_amount > 0 && (calculatedPayment as any).units_completed > 0 ? (
+                    {calculatedPayment.base_amount > 0 &&
+                    calculatedPayment.units_completed != null &&
+                    calculatedPayment.units_completed > 0 ? (
                       <>
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">
                             Unités complétées :
                           </span>
-                          <span>{(calculatedPayment as any).units_completed}</span>
+                          <span>{calculatedPayment.units_completed ?? 0}</span>
                         </div>
-                        {(calculatedPayment as any).rate_per_unit != null && (
+                        {calculatedPayment.rate_per_unit != null && (
                           <div className="flex justify-between">
                             <span className="text-gray-600 dark:text-gray-400">
                               Taux par unité :
                             </span>
-                            <span>{formatCurrency((calculatedPayment as any).rate_per_unit)}</span>
+                            <span>{formatCurrency(calculatedPayment.rate_per_unit)}</span>
                           </div>
                         )}
                       </>
@@ -603,10 +606,11 @@ const WorkerPaymentDialog = ({
                       </div>
                     )}
 
-                    {(calculatedPayment as any).task_bonus > 0 && (
+                    {calculatedPayment.task_bonus != null &&
+                    calculatedPayment.task_bonus > 0 && (
                       <div className="flex justify-between text-purple-600 dark:text-purple-400">
                         <span>+ Tâches supplémentaires :</span>
-                        <span>{formatCurrency((calculatedPayment as any).task_bonus)}</span>
+                        <span>{formatCurrency(calculatedPayment.task_bonus)}</span>
                       </div>
                     )}
 
