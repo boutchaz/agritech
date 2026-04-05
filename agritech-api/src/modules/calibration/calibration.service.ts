@@ -2309,9 +2309,9 @@ export class CalibrationService {
       existingCalibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "calibrated") {
+    if (parcel.aiPhase !== "calibrated" && parcel.aiPhase !== "active") {
       throw new BadRequestException(
-        `Calibration can only be validated in awaiting_validation phase (current: ${parcel.aiPhase})`,
+        `Calibration can only be validated when calibration data exists (current: ${parcel.aiPhase})`,
       );
     }
 
