@@ -1216,17 +1216,20 @@ const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onR
   );
 };
 
-const NutritionOptionSelector = ({ parcelId, calibrationId, phase }: {
+const NutritionOptionSelector = ({ parcelId, calibrationId, phase, disabled }: {
   parcelId: string;
   calibrationId: string;
   phase: CalibrationPhase;
+  disabled?: boolean;
 }) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
   const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
-  const canConfirmNutrition = phase === 'awaiting_nutrition_option' || phase === 'calibrated' || phase === 'calibrating';
+  const canConfirmNutrition = !disabled && (
+    phase === 'awaiting_nutrition_option' || phase === 'calibrated' || phase === 'calibrating'
+  );
 
   if (isSuggestionLoading) {
     return (
@@ -1546,8 +1549,10 @@ const AICalibrationPage = () => {
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
   const calibrationActuallyRunning = calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
-  const isCalibrating = calibrationActuallyRunning || (phase === 'calibrating' && !calibration);
-  const calibrationCompletedButPhaseStuck = (phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress';
+  const isCalibrating = calibrationActuallyRunning || (phase === 'calibrating' && !calibration && !hasV2Report);
+  const calibrationCompletedButPhaseStuck =
+    ((phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress') ||
+    (phase === 'calibrating' && !calibrationActuallyRunning && hasV2Report && (calibration?.status === 'completed' || calibration?.status === 'validated'));
   const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
@@ -1555,7 +1560,7 @@ const AICalibrationPage = () => {
     phase === 'ready_calibration' ||
     ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
-  const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
+  const isObservationOnly = phase === 'active' && parcelData?.ai_observation_only === true;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
 
   const handleOpenPartialRecalibration = () => {
@@ -1633,11 +1638,16 @@ const AICalibrationPage = () => {
               onReCalibrate={handleOpenFullRecalibrationWizard}
             />
           )}
+          {(phase === 'awaiting_nutrition_option' ||
+            calibration?.status === 'validated' ||
+            calibrationCompletedButPhaseStuck) && (
           <NutritionOptionSelector
             parcelId={parcelId}
             calibrationId={reportData.calibration.id}
             phase={phase ?? 'unknown'}
+            disabled={calibrationActuallyRunning}
           />
+          )}
         </div>
       )}
 

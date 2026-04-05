@@ -50,6 +50,12 @@ export function useStartCalibration(parcelId: string) {
         currentOrganization?.id,),
       });
       queryClient.invalidateQueries({ queryKey: ["ai-calibration", parcelId] });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.byId(parcelId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.all,
+      });
       toast.success("Calcul de suivi démarré");
     },
     onError: (error) => {
@@ -96,6 +102,12 @@ export function useStartPartialRecalibration(parcelId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.calibration.history(parcelId,
         currentOrganization?.id,),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.byId(parcelId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: parcelsKeys.all,
       });
       toast.success(i18n.t("toasts.partialRecalibrationStarted", { ns: "ai" }));
     },
