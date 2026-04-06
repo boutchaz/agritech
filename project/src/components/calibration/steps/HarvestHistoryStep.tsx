@@ -35,7 +35,7 @@ export function HarvestHistoryStep({ form }: HarvestHistoryStepProps) {
           variant="outline"
           size="sm"
           disabled={!canAddRow}
-          onClick={() => append({ year: new Date().getFullYear(), yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' })}
+          onClick={() => append({ year: new Date().getFullYear() - 1, yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' })}
           className="self-start"
         >
           <Plus className="w-4 h-4" />

@@ -282,9 +282,9 @@ export const calibrationWizardDefaultValues: CalibrationWizardFormValues = {
     chlorides_pct: undefined,
   },
   harvests: [
+    { year: new Date().getFullYear() - 3, yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' },
     { year: new Date().getFullYear() - 2, yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' },
     { year: new Date().getFullYear() - 1, yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' },
-    { year: new Date().getFullYear(), yield_value: 0, unit: 't_ha', quality_grade: '', observation: '' },
   ],
   harvest_regularity: undefined,
   pruning_practiced: undefined,
