@@ -19,6 +19,7 @@ interface ReadinessResponse {
 
 interface ValidationStepProps {
   parcelId: string;
+  organizationId?: string;
   onLaunchCalibration: () => Promise<void>;
   canLaunch: boolean;
   isLaunching: boolean;
@@ -59,14 +60,15 @@ function statusMultiplier(statuses: Array<'pass' | 'fail' | 'warning'>): number 
   return 1;
 }
 
-export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLaunching }: ValidationStepProps) {
+export function ValidationStep({ parcelId, organizationId: orgIdProp, onLaunchCalibration, canLaunch, isLaunching }: ValidationStepProps) {
   const { currentOrganization } = useAuth();
+  const orgId = orgIdProp || currentOrganization?.id;
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchReadiness = useCallback(async () => {
-    if (!currentOrganization?.id) {
+    if (!orgId) {
       setError('Aucune organisation selectionnee');
       setIsLoading(false);
       return;
@@ -76,14 +78,14 @@ export function ValidationStep({ parcelId, onLaunchCalibration, canLaunch, isLau
     setError(null);
 
     try {
-      const response = await calibrationApi.checkReadiness(parcelId, currentOrganization.id);
+      const response = await calibrationApi.checkReadiness(parcelId, orgId);
       setReadiness(response);
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Impossible de verifier le niveau de preparation');
     } finally {
       setIsLoading(false);
     }
-  }, [currentOrganization?.id, parcelId]);
+  }, [orgId, parcelId]);
 
   useEffect(() => {
     fetchReadiness();
