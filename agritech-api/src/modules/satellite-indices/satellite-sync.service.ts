@@ -13,6 +13,7 @@ interface ParcelRow {
   farm_id: string | null;
   organization_id: string;
   planting_year: number | null;
+  crop_type: string | null;
 }
 
 export interface SyncProgress {
@@ -98,7 +99,7 @@ export class SatelliteSyncService {
     const client = this.db.getAdminClient();
     const { data, error } = await client
       .from('parcels')
-      .select('id, name, boundary, farm_id, organization_id, planting_year')
+      .select('id, name, boundary, farm_id, organization_id, planting_year, crop_type')
       .eq('is_active', true)
       .not('boundary', 'is', null);
 
@@ -136,6 +137,7 @@ export class SatelliteSyncService {
       parcel.id,
       parcel.organization_id,
       parcel.planting_year,
+      parcel.crop_type,
     );
     const endDate = this.formatDate(new Date());
 

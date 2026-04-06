@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { DatabaseService } from "../database/database.service";
 import { SatelliteProxyService } from "./satellite-proxy.service";
+import { resolveParcelSyncLookbackStartDate } from "./parcel-sync-lookback";
 
 interface CacheEntry {
   data: unknown;
@@ -165,6 +166,7 @@ export class SatelliteCacheService {
     parcelId: string,
     organizationId: string,
     plantingYear?: number | null,
+    cropType?: string | null,
   ): Promise<string> {
     try {
       const client = this.db.getAdminClient();
@@ -190,34 +192,8 @@ export class SatelliteCacheService {
       );
     }
 
-    // No existing data — determine lookback from planting year
-    const now = new Date();
-
-    if (plantingYear != null) {
-      const parcelAge = now.getFullYear() - plantingYear;
-
-      if (parcelAge >= 3) {
-        // Old parcel: 36 months of history
-        const start = new Date();
-        start.setMonth(start.getMonth() - 36);
-        return start.toISOString().split("T")[0];
-      }
-
-      if (parcelAge < 2) {
-        // Young parcel: from Jan 1 of planting year
-        return `${plantingYear}-01-01`;
-      }
-
-      // 2-3 years: 24 months
-      const start = new Date();
-      start.setMonth(start.getMonth() - 24);
-      return start.toISOString().split("T")[0];
-    }
-
-    // No planting year: default 24 months
-    const start = new Date();
-    start.setMonth(start.getMonth() - 24);
-    return start.toISOString().split("T")[0];
+    // No existing data — lookback from planting year + crop referential phases_maturite_ans
+    return resolveParcelSyncLookbackStartDate(plantingYear, cropType ?? null);
   }
 
   /**

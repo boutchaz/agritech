@@ -77,6 +77,7 @@ export class MonitoringCronService {
             parcel.id,
             parcel.organization_id,
             parcel.planting_year ?? null,
+            (parcel.crop_type as string | null) ?? null,
           );
 
           this.logger.log(

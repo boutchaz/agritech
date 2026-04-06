@@ -110,6 +110,7 @@ describe('MonitoringCronService — delta sync', () => {
       'parcel-1',
       'org-1',
       2021,
+      'olives',
     );
 
     // Should call syncParcelSatelliteData with delta range, NOT the fixed 10-day range
