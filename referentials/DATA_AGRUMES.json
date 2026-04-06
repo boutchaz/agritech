@@ -7,6 +7,11 @@
     "genre": "Citrus",
     "pays": "Maroc"
   },
+  "gdd": {
+    "tbase_c": 13.0,
+    "plafond_c": 36.0,
+    "reference": "Calibration engine — citrus growing degree days (caps)"
+  },
   "especes": {
     "orange": {
       "nom_scientifique": "Citrus sinensis",

@@ -5,10 +5,12 @@ from datetime import date
 import pytest
 
 from app.services.calibration.referential_utils import (
+    clear_gdd_referential_cache,
     cycle_year_for_date,
     filter_points_to_cycle,
     french_month_to_num,
     get_cycle_months_from_stades_bbch,
+    get_gdd_tbase_tupper,
     get_index_key_from_referential,
     get_phenology_periods_from_stades_bbch,
     get_satellite_thresholds_from_referential,
@@ -145,3 +147,21 @@ def test_group_points_by_cycle_year() -> None:
     assert 2025 in grouped
     assert len(grouped[2024]) == 4  # Dec23, Jan24, Jun24, Nov24
     assert len(grouped[2025]) == 1  # Dec24
+
+
+def test_get_gdd_tbase_tupper_from_disk_agrumes() -> None:
+    clear_gdd_referential_cache()
+    tb, tu = get_gdd_tbase_tupper("agrumes", None)
+    assert tb == 13.0
+    assert tu == 36.0
+
+
+def test_get_gdd_tbase_tupper_embedded_reference_overrides_file() -> None:
+    ref = {"gdd": {"tbase_c": 11.0, "plafond_c": 34.0}}
+    tb, tu = get_gdd_tbase_tupper("agrumes", ref)
+    assert tb == 11.0
+    assert tu == 34.0
+
+
+def test_get_gdd_tbase_tupper_unknown_crop() -> None:
+    assert get_gdd_tbase_tupper("ble", None) == (None, None)

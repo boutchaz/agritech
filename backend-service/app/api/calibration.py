@@ -288,6 +288,7 @@ class PrecomputeGddRequest(BaseModel):
     chill_threshold: int | None = None
     nirv_series: list[dict[str, Any]] = Field(default_factory=list)
     rows: list[dict[str, Any]] = Field(default_factory=list)
+    reference_data: dict[str, Any] | None = None
 
 
 class PrecomputeGddResponse(BaseModel):
@@ -482,6 +483,7 @@ async def precompute_gdd_v2(request: PrecomputeGddRequest):
         variety=request.variety,
         chill_threshold=request.chill_threshold,
         nirv_series=request.nirv_series,
+        reference_data=request.reference_data,
     )
 
     return PrecomputeGddResponse(

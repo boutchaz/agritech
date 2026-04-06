@@ -3,21 +3,30 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from .referential_utils import (
+    CROP_TYPE_TO_REFERENTIAL_JSON,
+    FALLBACK_GDD_TBASE,
+    FALLBACK_GDD_TUPPER,
+    get_gdd_tbase_tupper,
+)
 
-# De Melo-Abreu (2004) parameters for olive; standard values for other crops.
-TBASE_BY_CROP: dict[str, float] = {
-    "olivier": 7.5,
-    "agrumes": 13.0,
-    "avocatier": 10.0,
-    "palmier_dattier": 18.0,
-}
+# Snapshot of thresholds from referential JSON (or fallbacks) at import — for callers
+# that expect dicts. Prefer :func:`get_gdd_tbase_tupper` when ``reference_data`` is available.
 
-TUPPER_BY_CROP: dict[str, float] = {
-    "olivier": 30.0,
-    "agrumes": 36.0,
-    "avocatier": 33.0,
-    "palmier_dattier": 45.0,
-}
+
+def _snapshot_gdd_maps() -> tuple[dict[str, float], dict[str, float]]:
+    tbase_map: dict[str, float] = {}
+    tupper_map: dict[str, float] = {}
+    for crop in CROP_TYPE_TO_REFERENTIAL_JSON:
+        tb, tu = get_gdd_tbase_tupper(crop, None)
+        if tb is not None:
+            tbase_map[crop] = tb
+        if tu is not None:
+            tupper_map[crop] = tu
+    return tbase_map, tupper_map
+
+
+TBASE_BY_CROP, TUPPER_BY_CROP = _snapshot_gdd_maps()
 
 # Fallback chill-hour threshold when no variety-specific value is provided.
 CHILL_THRESHOLD_DEFAULT: dict[str, int] = {
@@ -102,22 +111,33 @@ def compute_olive_gdd_two_phase(
     rows: list[dict[str, Any]],
     chill_threshold: int,
     nirv_series: list[dict[str, Any]],
+    *,
+    reference_data: dict[str, Any] | None = None,
+    tbase: float | None = None,
+    tupper: float | None = None,
 ) -> list[dict[str, Any]]:
     """De Melo-Abreu (2004) two-phase chill-heating model for olive.
 
     Phase 1 — Chill accumulation: chill hours accumulate during dormancy
     months (Nov–Feb) until the variety-specific *chill_threshold* is met.
 
-    Phase 2 — GDD accumulation: daily GDD (Tbase=7.5, Tupper=30) accrues
-    only when **both** conditions are satisfied:
-      1. Tmoy > Tbase (7.5 C)
+    Phase 2 — GDD accumulation: daily GDD (Tbase / Tupper from referential ``gdd``)
+    accrues only when **both** conditions are satisfied:
+      1. Tmoy > Tbase
       2. NIRv shows ≥ 20 % rise above winter baseline (or NIRv unavailable
          for that date → temperature-only fallback).
 
     The chill accumulator resets every November (new dormancy cycle).
     """
-    tbase = TBASE_BY_CROP["olivier"]
-    tupper = TUPPER_BY_CROP["olivier"]
+    if tbase is None or tupper is None:
+        tb, tu = get_gdd_tbase_tupper("olivier", reference_data)
+        tbase = tb if tbase is None else tbase
+        tupper = tu if tupper is None else tupper
+    if tbase is None:
+        tbase = FALLBACK_GDD_TBASE["olivier"]
+    if tupper is None:
+        tupper = FALLBACK_GDD_TUPPER["olivier"]
+
     nirv_lookup = _build_nirv_lookup(nirv_series)
     nirv_baseline = _compute_nirv_baseline(nirv_lookup, rows)
 
@@ -181,8 +201,10 @@ def precompute_gdd_rows(
     variety: str | None = None,
     chill_threshold: int | None = None,
     nirv_series: list[dict[str, Any]] | None = None,
+    reference_data: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    if crop_type not in TBASE_BY_CROP:
+    _ = variety
+    if crop_type not in CROP_TYPE_TO_REFERENTIAL_JSON:
         return rows, 0
 
     # --- Olive: two-phase De Melo-Abreu model ---
@@ -192,6 +214,7 @@ def precompute_gdd_rows(
             rows,
             chill_threshold=threshold,
             nirv_series=nirv_series or [],
+            reference_data=reference_data,
         )
         updated = sum(
             1
@@ -201,8 +224,9 @@ def precompute_gdd_rows(
         return result, updated
 
     # --- Other crops: simple GDD with Tupper cap ---
-    tbase = TBASE_BY_CROP[crop_type]
-    tupper = TUPPER_BY_CROP.get(crop_type)
+    tbase, tupper = get_gdd_tbase_tupper(crop_type, reference_data)
+    if tbase is None:
+        return rows, 0
     column = f"gdd_{crop_type}"
     updated = 0
     result_rows: list[dict[str, Any]] = []

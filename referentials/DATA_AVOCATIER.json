@@ -6,6 +6,11 @@
     "nom_scientifique": "Persea americana Mill.",
     "pays": "Maroc"
   },
+  "gdd": {
+    "tbase_c": 10.0,
+    "plafond_c": 33.0,
+    "reference": "Calibration engine — avocado growing degree days (caps)"
+  },
   "varietes": [
     {
       "code": "HASS",

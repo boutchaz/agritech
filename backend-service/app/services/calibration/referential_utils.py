@@ -2,7 +2,34 @@
 
 from __future__ import annotations
 
+import json
+import os
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
+
+# Crop type (API / calibration_input) → referentials/DATA_*.json
+CROP_TYPE_TO_REFERENTIAL_JSON: dict[str, str] = {
+    "olivier": "DATA_OLIVIER.json",
+    "agrumes": "DATA_AGRUMES.json",
+    "avocatier": "DATA_AVOCATIER.json",
+    "palmier_dattier": "DATA_PALMIER_DATTIER.json",
+}
+
+# Used when referential file is missing or gdd block incomplete (e.g. minimal deploy).
+FALLBACK_GDD_TBASE: dict[str, float] = {
+    "olivier": 7.5,
+    "agrumes": 13.0,
+    "avocatier": 10.0,
+    "palmier_dattier": 18.0,
+}
+
+FALLBACK_GDD_TUPPER: dict[str, float] = {
+    "olivier": 30.0,
+    "agrumes": 36.0,
+    "avocatier": 33.0,
+    "palmier_dattier": 45.0,
+}
 
 # Default phenology period months when no referential stades_bbch is available.
 # Used by both step3 (percentile calculation) and step4 (phenology detection).
@@ -324,3 +351,96 @@ def get_stages_gdd_ranges_from_stades_bbch(
         ):
             ranges[code] = (float(gdd_cumul[0]), float(gdd_cumul[1]))
     return ranges
+
+
+def _referentials_dir() -> Path | None:
+    """Directory containing DATA_*.json. Override with AGRITECH_REFERENTIALS_DIR."""
+    env = os.environ.get("AGRITECH_REFERENTIALS_DIR", "").strip()
+    if env:
+        p = Path(env).expanduser()
+        return p if p.is_dir() else None
+    # repo_root = parent of backend-service/
+    here = Path(__file__).resolve()
+    candidate = here.parents[4] / "referentials"
+    return candidate if candidate.is_dir() else None
+
+
+def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
+    """Read tbase_c and plafond_c from referential ``gdd`` object."""
+    if not isinstance(gdd, dict):
+        return None, None
+    tbase: float | None = None
+    tupper: float | None = None
+    raw_base = gdd.get("tbase_c")
+    raw_cap = gdd.get("plafond_c")
+    if isinstance(raw_base, (int, float)):
+        tbase = float(raw_base)
+    if isinstance(raw_cap, (int, float)):
+        tupper = float(raw_cap)
+    return tbase, tupper
+
+
+@lru_cache(maxsize=8)
+def _load_gdd_from_referential_file(crop_type: str) -> tuple[float | None, float | None]:
+    """Load ``gdd.tbase_c`` / ``gdd.plafond_c`` from referentials JSON on disk."""
+    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
+    if not filename:
+        return None, None
+    root = _referentials_dir()
+    if root is None:
+        return None, None
+    path = root / filename
+    if not path.is_file():
+        return None, None
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    return _parse_gdd_block(data.get("gdd"))
+
+
+def get_gdd_tbase_tupper(
+    crop_type: str,
+    reference_data: dict[str, Any] | None = None,
+) -> tuple[float | None, float | None]:
+    """Resolve GDD base and upper temperature caps for a supported crop.
+
+    Priority: embedded ``reference_data["gdd"]`` → referential JSON on disk →
+    :data:`FALLBACK_GDD_TBASE` / :data:`FALLBACK_GDD_TUPPER`.
+
+    Returns ``(None, None)`` when *crop_type* is not one of the four referential
+    crops (caller should use generic defaults, e.g. tbase 10°C).
+    """
+    if crop_type not in CROP_TYPE_TO_REFERENTIAL_JSON:
+        return None, None
+
+    tbase: float | None = None
+    tupper: float | None = None
+
+    if reference_data is not None:
+        tb, tu = _parse_gdd_block(reference_data.get("gdd"))
+        if tb is not None:
+            tbase = tb
+            tupper = tu if tu is not None else FALLBACK_GDD_TUPPER.get(crop_type)
+
+    if tbase is None:
+        tb, tu = _load_gdd_from_referential_file(crop_type)
+        if tb is not None:
+            tbase = tb
+            if tu is not None:
+                tupper = tu
+            elif tupper is None:
+                tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+        else:
+            tbase = FALLBACK_GDD_TBASE.get(crop_type)
+            tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+    elif tupper is None:
+        tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+
+    return tbase, tupper
+
+
+def clear_gdd_referential_cache() -> None:
+    """Clear LRU cache (for tests that swap referential files)."""
+    _load_gdd_from_referential_file.cache_clear()
