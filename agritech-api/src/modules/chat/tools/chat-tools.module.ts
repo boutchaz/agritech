@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AnnualPlanModule } from '../../annual-plan/annual-plan.module';
 import { TasksModule } from '../../tasks/tasks.module';
 import { HarvestsModule } from '../../harvests/harvests.module';
@@ -15,7 +15,7 @@ import { PendingActionService } from './pending-action.service';
     AnnualPlanModule,
     HarvestsModule,
     ProductApplicationsModule,
-    ParcelEventsModule,
+    forwardRef(() => ParcelEventsModule),
     StockEntriesModule,
     TaskAssignmentsModule,
   ],

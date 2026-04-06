@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -26,6 +28,7 @@ type ParcelEventRecord = {
 export class ParcelEventsService {
   constructor(
     private readonly databaseService: DatabaseService,
+    @Inject(forwardRef(() => CalibrationService))
     private readonly calibrationService: CalibrationService,
   ) {}
 
