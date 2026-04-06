@@ -356,6 +356,8 @@ export class CalibrationService {
     organizationId: string,
     userId: string,
   ) {
+    await this.ensureParcelInOrganizationForWizard(parcelId, organizationId);
+
     const client = this.databaseService.getAdminClient();
     const { error } = await client
       .from('calibration_wizard_drafts')
@@ -2874,6 +2876,40 @@ export class CalibrationService {
       organizationId,
       authToken,
     })) as ZonesResponse;
+  }
+
+  /**
+   * Parcel must exist and belong to the org (same rules as calibration flows),
+   * without requiring crop_type — wizard drafts may exist before the parcel is complete.
+   */
+  private async ensureParcelInOrganizationForWizard(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: parcel, error } = await supabase
+      .from("parcels")
+      .select("id, organization_id, farms(organization_id)")
+      .eq("id", parcelId)
+      .single();
+
+    if (error || !parcel) {
+      throw new NotFoundException("Parcel not found");
+    }
+
+    const belongsToOrganization =
+      this.matchesOrganization(parcel.organization_id, organizationId) ||
+      this.matchesOrganization(
+        this.extractFarmOrganizationId(parcel.farms),
+        organizationId,
+      );
+
+    if (!belongsToOrganization) {
+      this.logger.warn(
+        `[ensureParcelInOrganizationForWizard] Org mismatch — parcel.org: ${parcel.organization_id}, received: ${organizationId}`,
+      );
+      throw new NotFoundException("Parcel not found");
+    }
   }
 
   private async getParcelContext(

@@ -68,75 +68,6 @@ export class StockEntriesController {
     });
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single stock entry with items' })
-  @ApiParam({ name: 'id', description: 'Stock entry ID' })
-  @ApiResponse({ status: 200, description: 'Stock entry retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Stock entry not found' })
-  async findOne(@Req() req: any, @Param('id') id: string) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.stockEntriesService.findOne(id, organizationId);
-  }
-
-  @Post()
-  @ApiOperation({ summary: 'Create a new stock entry' })
-  @ApiResponse({ status: 201, description: 'Stock entry created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() createStockEntryDto: CreateStockEntryDto, @Req() req: any) {
-    const organizationId = req.headers['x-organization-id'];
-    createStockEntryDto.organization_id = organizationId;
-    createStockEntryDto.created_by = req.user.sub;
-    return this.stockEntriesService.createStockEntry(createStockEntryDto);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a draft stock entry' })
-  @ApiParam({ name: 'id', description: 'Stock entry ID' })
-  @ApiResponse({ status: 200, description: 'Stock entry updated successfully' })
-  @ApiResponse({ status: 400, description: 'Only draft entries can be updated' })
-  @ApiResponse({ status: 404, description: 'Stock entry not found' })
-  async update(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() updateStockEntryDto: UpdateStockEntryDto,
-  ) {
-    const organizationId = req.headers['x-organization-id'];
-    const userId = req.user.sub;
-    return this.stockEntriesService.updateStockEntry(id, organizationId, userId, updateStockEntryDto);
-  }
-
-  @Patch(':id/post')
-  @ApiOperation({ summary: 'Post/finalize a stock entry' })
-  @ApiParam({ name: 'id', description: 'Stock entry ID' })
-  @ApiResponse({ status: 200, description: 'Stock entry posted successfully' })
-  @ApiResponse({ status: 400, description: 'Stock entry cannot be posted' })
-  async post(@Param('id') id: string, @Req() req: any) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.stockEntriesService.postStockEntry(id, organizationId, req.user.sub);
-  }
-
-  @Patch(':id/cancel')
-  @ApiOperation({ summary: 'Cancel a stock entry' })
-  @ApiParam({ name: 'id', description: 'Stock entry ID' })
-  @ApiResponse({ status: 200, description: 'Stock entry cancelled successfully' })
-  @ApiResponse({ status: 400, description: 'Stock entry cannot be cancelled' })
-  async cancel(@Param('id') id: string, @Req() req: any) {
-    const organizationId = req.headers['x-organization-id'];
-    const userId = req.user.sub;
-    return this.stockEntriesService.cancelStockEntry(id, organizationId, userId);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete a draft stock entry' })
-  @ApiParam({ name: 'id', description: 'Stock entry ID' })
-  @ApiResponse({ status: 200, description: 'Stock entry deleted successfully' })
-  @ApiResponse({ status: 400, description: 'Only draft entries can be deleted' })
-  @ApiResponse({ status: 404, description: 'Stock entry not found' })
-  async remove(@Param('id') id: string, @Req() req: any) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.stockEntriesService.deleteStockEntry(id, organizationId);
-  }
-
   @Get('movements/list')
   @ApiOperation({ summary: 'Get stock movements with filters' })
   @ApiQuery({ name: 'item_id', required: false })
@@ -277,5 +208,74 @@ export class StockEntriesController {
   async deleteAccountMapping(@Req() req: any, @Param('id') id: string) {
     const organizationId = req.headers['x-organization-id'];
     return this.stockEntriesService.deleteStockAccountMapping(id, organizationId);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single stock entry with items' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Stock entry not found' })
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.findOne(id, organizationId);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create a new stock entry' })
+  @ApiResponse({ status: 201, description: 'Stock entry created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async create(@Body() createStockEntryDto: CreateStockEntryDto, @Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    createStockEntryDto.organization_id = organizationId;
+    createStockEntryDto.created_by = req.user.sub;
+    return this.stockEntriesService.createStockEntry(createStockEntryDto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a draft stock entry' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry updated successfully' })
+  @ApiResponse({ status: 400, description: 'Only draft entries can be updated' })
+  @ApiResponse({ status: 404, description: 'Stock entry not found' })
+  async update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() updateStockEntryDto: UpdateStockEntryDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.stockEntriesService.updateStockEntry(id, organizationId, userId, updateStockEntryDto);
+  }
+
+  @Patch(':id/post')
+  @ApiOperation({ summary: 'Post/finalize a stock entry' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry posted successfully' })
+  @ApiResponse({ status: 400, description: 'Stock entry cannot be posted' })
+  async post(@Param('id') id: string, @Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.postStockEntry(id, organizationId, req.user.sub);
+  }
+
+  @Patch(':id/cancel')
+  @ApiOperation({ summary: 'Cancel a stock entry' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry cancelled successfully' })
+  @ApiResponse({ status: 400, description: 'Stock entry cannot be cancelled' })
+  async cancel(@Param('id') id: string, @Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.stockEntriesService.cancelStockEntry(id, organizationId, userId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a draft stock entry' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Only draft entries can be deleted' })
+  @ApiResponse({ status: 404, description: 'Stock entry not found' })
+  async remove(@Param('id') id: string, @Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.deleteStockEntry(id, organizationId);
   }
 }

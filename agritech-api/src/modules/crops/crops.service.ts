@@ -19,7 +19,7 @@ export class CropsService {
         `
         *,
         farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
+        parcels(id, name),
         crop_varieties(id, name)
       `,
         { count: "exact" },
@@ -66,7 +66,7 @@ export class CropsService {
     const crops = (data || []).map((crop: any) => ({
       ...crop,
       farm_name: crop.farms?.name,
-      parcel_name: crop.parcels?.parcel_name,
+      parcel_name: crop.parcels?.name,
       variety_name: crop.crop_varieties?.name,
       // Remove nested objects
       farms: undefined,
@@ -86,7 +86,7 @@ export class CropsService {
         `
         *,
         farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
+        parcels(id, name),
         crop_varieties(id, name)
       `,
       )
@@ -105,7 +105,7 @@ export class CropsService {
     return {
       ...data,
       farm_name: data.farms?.name,
-      parcel_name: data.parcels?.parcel_name,
+      parcel_name: data.parcels?.name,
       variety_name: data.crop_varieties?.name,
       farms: undefined,
       parcels: undefined,
@@ -137,7 +137,7 @@ export class CropsService {
         `
         *,
         farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
+        parcels(id, name),
         crop_varieties(id, name)
       `,
       )
@@ -151,7 +151,7 @@ export class CropsService {
     return {
       ...data,
       farm_name: data.farms?.name,
-      parcel_name: data.parcels?.parcel_name,
+      parcel_name: data.parcels?.name,
       variety_name: data.crop_varieties?.name,
       farms: undefined,
       parcels: undefined,
@@ -196,7 +196,7 @@ export class CropsService {
         `
         *,
         farms!inner(id, name, organization_id),
-        parcels(id, parcel_name),
+        parcels(id, name),
         crop_varieties(id, name)
       `,
       )
@@ -210,7 +210,7 @@ export class CropsService {
     return {
       ...data,
       farm_name: data.farms?.name,
-      parcel_name: data.parcels?.parcel_name,
+      parcel_name: data.parcels?.name,
       variety_name: data.crop_varieties?.name,
       farms: undefined,
       parcels: undefined,

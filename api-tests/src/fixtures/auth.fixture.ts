@@ -52,7 +52,7 @@ export const test = base.extend<AuthFixture>({
       return;
     }
 
-    const response = await request.get('/api/v1/auth/organizations', {
+    const response = await request.get('/api/v1/users/me/organizations', {
       headers: {
         Authorization: `Bearer ${authTokens.accessToken}`,
       },

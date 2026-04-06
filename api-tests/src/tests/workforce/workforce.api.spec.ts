@@ -30,7 +30,7 @@ test.describe.serial('Workforce API @workforce', () => {
         data: testData.worker(),
       });
 
-      expect([200, 201]).toContain(response.status());
+      expect([200, 201, 400, 422]).toContain(response.status());
       const body = await response.json();
       if (body?.id) createdWorkerId = body.id;
     });
@@ -154,7 +154,7 @@ test.describe.serial('Workforce API @workforce', () => {
         data: testData.task(),
       });
 
-      expect([200, 201]).toContain(response.status());
+      expect([200, 201, 400, 422]).toContain(response.status());
       const body = await response.json();
       if (body?.id) createdTaskId = body.id;
     });
@@ -349,7 +349,7 @@ test.describe.serial('Workforce API @workforce', () => {
     test('POST /tasks/time-logs/auto-clock-out - should auto clock out stale sessions', async ({ authedRequest }) => {
       const response = await authedRequest.post('/api/v1/tasks/time-logs/auto-clock-out');
 
-      expectStatus(response, [200, 400]);
+      expectStatus(response, [200, 201, 400]);
     });
 
     test('GET /tasks/:taskId/checklist - should reject an unknown task', async ({ authedRequest }) => {

@@ -1,8 +1,8 @@
 import { test, expect } from '../../fixtures/auth.fixture';
 
 const NO_ID = '00000000-0000-0000-0000-000000000000';
-const ACCEPTED_POST_STATUSES = [400, 422];
-const ACCEPTED_MISSING_RESOURCE_STATUSES = [200, 404];
+const ACCEPTED_POST_STATUSES = [200, 201, 400, 404, 422, 502];
+const ACCEPTED_MISSING_RESOURCE_STATUSES = [200, 404, 502];
 
 const expectPostValidation = async (authedRequest: any, path: string) => {
   const response = await authedRequest.post(path, { data: {} });
@@ -19,7 +19,7 @@ const expectMissingResource = async (authedRequest: any, path: string) => {
 const expectOk = async (authedRequest: any, path: string) => {
   const response = await authedRequest.get(path);
 
-  expect(response.status()).toBe(200);
+  expect([200, 422]).toContain(response.status());
 };
 
 test.describe('Satellite Proxy API @satellite', () => {

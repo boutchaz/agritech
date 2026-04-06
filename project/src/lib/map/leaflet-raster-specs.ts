@@ -11,8 +11,9 @@ export interface LeafletRasterLayerSpec {
   maxZoom?: number;
 }
 
-const ESRI_IMAGERY =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+/** Esri Clarity — newer, higher-res imagery than standard World_Imagery. Free. */
+const ESRI_CLARITY =
+  'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ESRI_REFERENCE =
   'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 const OSM = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -35,8 +36,8 @@ export function getLeafletRasterLayerSpecs(
     }
     const layers: LeafletRasterLayerSpec[] = [
       {
-        url: ESRI_IMAGERY,
-        attribution: 'Tiles \u00a9 Esri',
+        url: ESRI_CLARITY,
+        attribution: 'Imagery \u00a9 Esri (Clarity)',
         maxZoom: 19,
       },
     ];

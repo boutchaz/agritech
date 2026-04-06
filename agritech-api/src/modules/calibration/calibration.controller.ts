@@ -451,6 +451,7 @@ export class CalibrationController {
   @Delete("draft")
   @ApiOperation({ summary: "Delete calibration wizard draft" })
   @ApiResponse({ status: 200, description: "Draft deleted" })
+  @ApiResponse({ status: 404, description: "Parcel not found" })
   async deleteDraft(
     @Param("parcelId") parcelId: string,
     @Req() req: Request,

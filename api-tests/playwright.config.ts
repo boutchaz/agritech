@@ -8,8 +8,8 @@ const BASE_URL = process.env.API_BASE_URL || 'https://agritech-api.thebzlab.onli
 
 export default defineConfig({
   testDir: './src/tests',
-  fullyParallel: false, // Run sequentially to avoid race conditions on shared data
-  workers: 1,
+  fullyParallel: true,
+  workers: process.env.CI ? 4 : 8,
   retries: process.env.CI ? 1 : 0,
   timeout: 30_000,
   expect: {

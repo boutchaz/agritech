@@ -498,6 +498,9 @@ export class ItemsService {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+        throw new NotFoundException('Product variant not found');
+      }
       this.logger.error(`Failed to update product variant: ${error.message}`);
       throw new BadRequestException(`Failed to update product variant: ${error.message}`);
     }
@@ -599,6 +602,9 @@ export class ItemsService {
   async createItem(dto: CreateItemDto): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    const dtoExt = dto as CreateItemDto & { is_inventory_item?: boolean };
+    const { is_inventory_item, ...dtoForInsert } = dtoExt;
+
     // Generate item code if not provided
     let itemCode = dto.item_code;
     if (!itemCode) {
@@ -611,15 +617,16 @@ export class ItemsService {
 
     // Prepare item data with explicit defaults for boolean fields
     const itemData = {
-      ...dto,
+      ...dtoForInsert,
       item_code: itemCode,
       stock_uom: dto.stock_uom || dto.default_unit,
       updated_by: dto.created_by,
-      // Ensure boolean fields have proper defaults
       is_active: dto.is_active ?? true,
       is_sales_item: dto.is_sales_item ?? false,
       is_purchase_item: dto.is_purchase_item ?? false,
-      is_stock_item: dto.is_stock_item ?? true,
+      is_stock_item:
+        dto.is_stock_item ??
+        (is_inventory_item !== undefined ? is_inventory_item : true),
     };
 
     this.logger.debug(`Creating item with data: ${JSON.stringify(itemData)}`);
