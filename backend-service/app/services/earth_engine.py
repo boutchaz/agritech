@@ -1627,14 +1627,14 @@ class EarthEngineService:
                 search_end = (search_date + timedelta(days=1)).strftime("%Y-%m-%d")
 
                 try:
-                    # Heatmap uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
-                    # SCL is reserved for available-dates AOI-level cloud filtering.
+                    # Use same SCL AOI-level cloud filter as available-dates to ensure
+                    # consistent date availability between timeseries and heatmap.
                     collection = self.get_sentinel2_collection(
                         geometry,
                         search_start,
                         search_end,
                         max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
-                        use_aoi_cloud_filter=False,
+                        use_aoi_cloud_filter=True,
                     )
                     collection_size = collection.size().getInfo()
                     if collection_size > 0:

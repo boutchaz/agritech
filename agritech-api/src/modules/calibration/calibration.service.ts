@@ -2901,6 +2901,9 @@ export class CalibrationService {
       );
 
     if (!belongsToOrganization) {
+      this.logger.warn(
+        `[getParcelContext] Org mismatch — parcel.org: ${parcel.organization_id}, received: ${organizationId}`,
+      );
       throw new NotFoundException("Parcel not found");
     }
 

@@ -247,7 +247,8 @@ export async function apiRequest<T>(
     }
 
     if (response.status === 404) {
-      throw new Error("The requested resource was not found.");
+      const msg = (error?.message as string) || (error?.error as string);
+      throw new Error(msg || "The requested resource was not found.");
     }
 
     const errorMessage =

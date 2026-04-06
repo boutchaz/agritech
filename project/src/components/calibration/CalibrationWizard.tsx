@@ -457,6 +457,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     return (
       <ValidationStep
         parcelId={parcelId}
+        organizationId={currentOrganization?.id}
         onLaunchCalibration={launchCalibration}
         canLaunch={canLaunchByRequiredData}
         isLaunching={startCalibration.isPending}
