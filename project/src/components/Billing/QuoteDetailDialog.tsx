@@ -6,8 +6,6 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -31,7 +29,7 @@ import {
   AlertCircle,
   Pencil,
 } from 'lucide-react';
-import type { Quote, QuoteWithItems } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote, QuoteWithItems } from '@/types/quotes';
 import { useConvertQuoteToOrder, useQuote } from '@/hooks/useQuotes';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
@@ -53,6 +51,7 @@ import { format } from 'date-fns';
 import type { Locale } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface QuoteDetailDialogProps {
   quote: Quote | null;
@@ -359,23 +358,35 @@ export const QuoteDetailDialog = ({
 
   if (isDetailLoading || !resolvedQuote) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        size="4xl"
+        className={cn(isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
           <SectionLoader className="py-10" />
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        size="4xl"
+        className={cn(isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             {t('quotes.detail.error')}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveDialog>
     );
   }
 
@@ -496,8 +507,16 @@ export const QuoteDetailDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('quotes.detail.title', { number: q.quote_number })}
+      description={t('quotes.detail.subtitle')}
+      size="4xl"
+      className={cn(isRTL && 'text-right')}
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <div dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>
@@ -841,7 +860,7 @@ export const QuoteDetailDialog = ({
                   </TableHeader>
                   <TableBody>
                     {q.items && q.items.length > 0 ? (
-                      q.items.map((item: any, index: number) => (
+                      q.items.map((item: Record<string, unknown>, index: number) => (
                         <TableRow key={item.item_name} className="border-b border-gray-100 dark:border-gray-800">
                           <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
                             {item.item_name}
@@ -967,8 +986,6 @@ export const QuoteDetailDialog = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-
       <AlertDialog
         open={pendingStatus !== null}
         onOpenChange={(open) => {
@@ -1007,6 +1024,7 @@ export const QuoteDetailDialog = ({
           ) : null}
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+      </div>
+    </ResponsiveDialog>
   );
 };

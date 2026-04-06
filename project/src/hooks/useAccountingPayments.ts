@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import type { Database } from '../types/database.types';
-import { syncPaymentToLedger, linkJournalEntry } from '../lib/ledger-integration';
+import { syncPaymentToLedger, linkJournalEntry, type PaymentData } from '../lib/ledger-integration';
 import { paymentsApi, type PaginatedPaymentQuery, type PaginatedResponse } from '../lib/api/payments';
 
 type AccountingPayment = Database['public']['Tables']['accounting_payments']['Row'];
@@ -62,7 +62,7 @@ export function usePaginatedPayments(query: PaginatedPaymentQuery) {
         throw new Error('No organization selected');
       }
 
-      return paymentsApi.getPaginated(query, currentOrganization.id);
+      return paymentsApi.getPaginated(query, currentOrganization.id) as unknown as PaginatedResponse<Payment>;
     },
     enabled: !!currentOrganization?.id,
     placeholderData: keepPreviousData,
@@ -102,20 +102,34 @@ export function usePaymentsByType(type: 'received' | 'paid') {
 export function usePaymentStats() {
   const { data: payments } = useAccountingPayments();
 
-  const stats = {
-    total: payments?.length || 0,
-    received: payments?.filter(p => p.payment_type === 'receive' || p.payment_type === 'received').length || 0,
-    paid: payments?.filter(p => p.payment_type === 'pay' || p.payment_type === 'paid').length || 0,
-    draft: payments?.filter(p => p.status === 'draft').length || 0,
-    submitted: payments?.filter(p => p.status === 'submitted').length || 0,
-    cancelled: payments?.filter(p => p.status === 'cancelled').length || 0,
-    totalReceived: payments
-      ?.filter(p => p.payment_type === 'receive' || p.payment_type === 'received')
+    const stats = {
+      total: payments?.length || 0,
+      received:
+        payments?.filter(p => {
+          const paymentType = p.payment_type as string;
+          return paymentType === 'receive' || paymentType === 'received';
+        }).length || 0,
+      paid:
+        payments?.filter(p => {
+          const paymentType = p.payment_type as string;
+          return paymentType === 'pay' || paymentType === 'paid';
+        }).length || 0,
+      draft: payments?.filter(p => p.status === 'draft').length || 0,
+      submitted: payments?.filter(p => p.status === 'submitted').length || 0,
+      cancelled: payments?.filter(p => p.status === 'cancelled').length || 0,
+      totalReceived: payments
+      ?.filter(p => {
+        const paymentType = p.payment_type as string;
+        return paymentType === 'receive' || paymentType === 'received';
+      })
       ?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
-    totalPaid: payments
-      ?.filter(p => p.payment_type === 'pay' || p.payment_type === 'paid')
+      totalPaid: payments
+      ?.filter(p => {
+        const paymentType = p.payment_type as string;
+        return paymentType === 'pay' || paymentType === 'paid';
+      })
       ?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
-  };
+    };
 
   return stats;
 }
@@ -151,8 +165,7 @@ export function useCreatePayment() {
 
       // Sync to ledger (create journal entry for double-entry bookkeeping)
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const ledgerResult = await syncPaymentToLedger(data as any, user?.id || '');
+        const ledgerResult = await syncPaymentToLedger(data as PaymentData, user?.id || '');
 
         if (ledgerResult.success && ledgerResult.journalEntryId) {
           // Link the journal entry to the payment

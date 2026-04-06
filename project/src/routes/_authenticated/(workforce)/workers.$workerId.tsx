@@ -45,6 +45,7 @@ import { fr } from "date-fns/locale";
 import WorkerForm from "@/components/Workers/WorkerForm";
 import WorkerPaymentDialog from "@/components/Workers/WorkerPaymentDialog";
 import type { PaymentType } from "@/types/payments";
+import type { PaymentRecord, MetayageSettlement as MetayageSettlementType, WorkRecord } from "@/types/workers";
 
 import { paymentRecordsApi } from "@/lib/api/payment-records";
 import { cn } from "@/lib/utils";
@@ -109,10 +110,10 @@ function WorkerDetailPage() {
       queryClient.invalidateQueries({
         queryKey: ["worker-stats", currentOrganization.id, workerId],
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to approve payment:", error);
       toast.error(
-        error.message ||
+        (error instanceof Error ? error.message : undefined) ||
           t("workers.payments.approveError") ||
           "Failed to approve payment",
       );
@@ -145,7 +146,7 @@ function WorkerDetailPage() {
     }
   };
 
-  const handleSettlementPayment = (settlement: any) => {
+  const handleSettlementPayment = (settlement: MetayageSettlementType) => {
     if (!settlement?.period_start || !settlement?.period_end) return;
     setPaymentPeriod({
       start: settlement.period_start,
@@ -593,7 +594,7 @@ function WorkerDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {payments.map((payment: any) => (
+                      {payments.map((payment: PaymentRecord) => (
                         <TableRow
                           key={payment.id}
                           className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -728,7 +729,7 @@ function WorkerDetailPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {workRecords.map((record: any) => (
+                      {workRecords.map((record: WorkRecord) => (
                         <TableRow
                           key={record.id}
                           className="border-b border-gray-100 dark:border-gray-800"
@@ -865,7 +866,7 @@ function WorkerDetailPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {settlements.map((settlement: any) => (
+                      {settlements.map((settlement: MetayageSettlementType) => (
                           <TableRow
                             key={settlement.id}
                             className="border-b border-gray-100 dark:border-gray-800"
@@ -961,7 +962,7 @@ function WorkerDetailPage() {
           open={showEditForm}
           worker={worker}
           organizationId={currentOrganization.id}
-          farms={farms.map((f: any) => ({ id: f.id, name: f.name }))}
+                farms={farms.map((f: { id: string; name: string }) => ({ id: f.id, name: f.name }))}
           onClose={() => setShowEditForm(false)}
           onSuccess={() => {
             setShowEditForm(false);

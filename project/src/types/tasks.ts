@@ -47,6 +47,10 @@ export interface Task {
   
   // Assignment
   assigned_to?: string; // worker UUID
+  worker?: {
+    first_name: string;
+    last_name: string;
+  } | null;
   
   // Scheduling
   scheduled_start?: string;
@@ -75,6 +79,10 @@ export interface Task {
   // Cost
   cost_estimate?: number;
   actual_cost?: number;
+
+  // Production traceability
+  crop_cycle_id?: string; // Link to crop cycle
+  campaign_id?: string; // Link to agricultural campaign
 
   // Work Unit Payment (NEW - for piece-work tracking)
   work_unit_id?: string; // Reference to work_units table
@@ -124,6 +132,11 @@ export interface ChecklistItem {
   completed: boolean;
   completed_at?: string;
   completed_by?: string;
+}
+
+export interface ChecklistUpdateResponse {
+  checklist: ChecklistItem[];
+  completion_percentage: number;
 }
 
 // =====================================================
@@ -246,6 +259,40 @@ export interface TaskDependency {
   depends_on_task_status?: TaskStatus;
 }
 
+export interface TaskDependencySummary {
+  id: string;
+  task_id: string;
+  title?: string;
+  status?: TaskStatus;
+  due_date?: string;
+  priority?: TaskPriority;
+  dependency_type?: DependencyType | null;
+  lag_days?: number | null;
+}
+
+export interface TaskDependenciesResponse {
+  depends_on: TaskDependencySummary[];
+  required_by: TaskDependencySummary[];
+}
+
+export interface TaskBlockedStatus {
+  blocked: boolean;
+  blockers: Array<{
+    id?: string;
+    title?: string;
+    status?: TaskStatus;
+  }>;
+}
+
+export interface TaskClockInResponse {
+  timeLog: TaskTimeLog;
+  task: Task;
+}
+
+export interface TaskClockOutResponse extends TaskTimeLog {
+  task?: Pick<Task, 'id' | 'organization_id'> | null;
+}
+
 // =====================================================
 // TASK EQUIPMENT
 // =====================================================
@@ -289,6 +336,8 @@ export interface TaskFilters {
   assigned_to?: string;
   farm_id?: string;
   parcel_id?: string;
+  crop_cycle_id?: string;
+  campaign_id?: string;
   date_from?: string;
   date_to?: string;
   search?: string;
@@ -309,6 +358,8 @@ export interface CreateTaskRequest {
   category_id?: string;
   parcel_id?: string;
   crop_id?: string;
+  crop_cycle_id?: string;
+  campaign_id?: string;
   assigned_to?: string;
   scheduled_start?: string;
   scheduled_end?: string;
@@ -320,6 +371,9 @@ export interface CreateTaskRequest {
   repeat_pattern?: RepeatPattern;
   cost_estimate?: number;
   notes?: string;
+  // Production traceability
+  crop_cycle_id?: string;
+  campaign_id?: string;
   // Work Unit Payment fields (for piece-work tracking)
   payment_type?: 'daily' | 'per_unit' | 'monthly' | 'metayage';
   work_unit_id?: string;
@@ -395,7 +449,9 @@ export interface CompleteHarvestTaskResponse {
     quantity: number;
     unit: string;
     harvest_task_id: string;
-    [key: string]: any;
+    notes?: string;
+    worker_id?: string;
+    worker_name?: string;
   };
 }
 
@@ -517,4 +573,3 @@ export function calculateTaskProgress(task: Task): number {
   
   return 0;
 }
-

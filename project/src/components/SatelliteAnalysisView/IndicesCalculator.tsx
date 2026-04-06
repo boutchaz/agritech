@@ -465,7 +465,7 @@ const IndicesCalculator = ({
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {getDisplayResults()!.indices.map((result: any) => {
+                {getDisplayResults()!.indices.map((result: { index: string }) => {
                   const vegIndex = result.index as VegetationIndexType;
                   const colors = getIndexColors(vegIndex);
                   return (

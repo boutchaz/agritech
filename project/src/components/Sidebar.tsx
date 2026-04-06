@@ -440,7 +440,7 @@ const Sidebar = ({
         className={cn(
           "fixed inset-y-0 z-50",
           isRTL ? "right-0 border-l" : "left-0 border-r",
-          "h-screen bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
+          "h-dvh bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex flex-col",
           "transform transition-all duration-300 ease-in-out",
           "hidden md:flex",
           isCollapsed

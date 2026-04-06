@@ -26,12 +26,11 @@ import { Input } from './ui/Input';
 import { NativeSelect } from './ui/NativeSelect';
 import { Label } from './ui/label';
 import {
-  Dialog,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { ResponsiveDialog } from './ui/responsive-dialog';
 import {
   Tabs,
   TabsContent,
@@ -396,7 +395,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                       </div>
                     ))}
                     {/* Ledger expenses */}
-                    {(profitabilityData?.ledgerExpenses || []).slice(0, 5).map((expense: any) => (
+                    {(profitabilityData?.ledgerExpenses || []).slice(0, 5).map((expense: { id: string; description?: string; account_name?: string; entry_date: string; entry_number?: string; debit?: number; credit?: number }) => (
                       <div key={expense.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -446,7 +445,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                       </div>
                     ))}
                     {/* Ledger revenues */}
-                    {(profitabilityData?.ledgerRevenues || []).slice(0, 5).map((revenue: any) => (
+                    {(profitabilityData?.ledgerRevenues || []).slice(0, 5).map((revenue: { id: string; description?: string; account_name?: string; entry_date: string; entry_number?: string; credit?: number; debit?: number }) => (
                       <div key={revenue.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -835,7 +834,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {journalEntries.map((entry: any) => (
+                        {journalEntries.map((entry: { id: string; entry_number: string; entry_date: string; description?: string; journal_items: Array<{ id: string; debit: number; credit: number; description?: string; accounts?: { code?: string; name?: string } }> }) => (
                           <div
                             key={entry.id}
                             className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
@@ -864,10 +863,10 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {formatCurrency(
-                                    entry.journal_items.reduce(
-                                      (sum: number, item: any) => sum + Number(item.debit),
-                                      0
-                                    )
+                                      entry.journal_items.reduce(
+                                       (sum: number, item) => sum + Number(item.debit),
+                                       0
+                                     )
                                   )}
                                 </span>
                                 {expandedJournalEntry === entry.id ? (
@@ -893,7 +892,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {entry.journal_items.map((item: any) => (
+                                     {entry.journal_items.map((item) => (
                                       <TableRow key={item.id} className="border-t border-gray-100 dark:border-gray-800">
                                         <TableCell className="py-2">
                                           <div>
@@ -1012,8 +1011,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
       )}
 
       {/* Add Cost Modal */}
-      <Dialog open={showAddCost} onOpenChange={setShowAddCost}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddCost} onOpenChange={setShowAddCost} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addCost.title')}</DialogTitle>
           </DialogHeader>
@@ -1096,12 +1094,10 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
               {addCostMutation.isPending ? t('profitability.addCost.adding') : t('profitability.addCost.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Add Revenue Modal */}
-      <Dialog open={showAddRevenue} onOpenChange={setShowAddRevenue}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddRevenue} onOpenChange={setShowAddRevenue} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addRevenue.title')}</DialogTitle>
           </DialogHeader>
@@ -1200,8 +1196,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
               {addRevenueMutation.isPending ? t('profitability.addRevenue.adding') : t('profitability.addRevenue.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 };

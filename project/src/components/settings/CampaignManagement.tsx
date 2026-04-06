@@ -11,6 +11,10 @@ import {
   Pause,
   AlertCircle,
   Leaf,
+  Trash2,
+  XCircle,
+  MoreHorizontal,
+  ExternalLink,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +24,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -36,8 +40,19 @@ import {
   useCampaignSummary,
   useCreateCampaign,
   useUpdateCampaign,
+  useUpdateCampaignStatus,
+  useDeleteCampaign,
   useFiscalYears,
 } from '@/hooks/useAgriculturalAccounting';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useNavigate } from '@tanstack/react-router';
 import type { AgriculturalCampaign, CampaignStatus, CampaignType } from '@/types/agricultural-accounting';
 
 const campaignSchema = z.object({
@@ -68,6 +83,12 @@ export function CampaignManagement() {
   const { data: fiscalYears = [] } = useFiscalYears();
   const createMutation = useCreateCampaign();
   const updateMutation = useUpdateCampaign();
+  const statusMutation = useUpdateCampaignStatus();
+  const deleteMutation = useDeleteCampaign();
+  const navigate = useNavigate();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{ title: string; description?: string; variant?: 'destructive' | 'default'; onConfirm: () => void }>({ title: '', onConfirm: () => {} });
 
   const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
@@ -218,18 +239,76 @@ export function CampaignManagement() {
           {campaigns.map((campaign) => {
             const summary = getSummaryForCampaign(campaign.id);
             return (
-              <Card key={campaign.id} className="hover:shadow-md transition-shadow">
+              <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate({ to: '/crop-cycles', search: { campaign_id: campaign.id } })}>
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                      <CardTitle className="text-lg flex items-center gap-1">
+                        {campaign.name}
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </CardTitle>
                       <CardDescription>
                         <code className="text-xs bg-muted px-1 rounded">{campaign.code}</code>
                       </CardDescription>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(campaign)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => handleOpenDialog(campaign)}>
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          {t('common.edit', 'Edit')}
+                        </DropdownMenuItem>
+                        {campaign.status === 'planned' && (
+                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'active' })}>
+                            <Play className="h-4 w-4 mr-2" />
+                            {t('campaigns.actions.activate', 'Activate')}
+                          </DropdownMenuItem>
+                        )}
+                        {campaign.status === 'active' && (
+                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'completed' })}>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            {t('campaigns.actions.complete', 'Complete')}
+                          </DropdownMenuItem>
+                        )}
+                        {(campaign.status === 'planned' || campaign.status === 'active') && (
+                          <DropdownMenuItem onClick={() => {
+                            setConfirmAction({
+                              title: t('campaigns.actions.cancelConfirm', 'Cancel this campaign?'),
+                              description: t('campaigns.actions.cancelDescription', 'This will mark the campaign as cancelled.'),
+                              onConfirm: () => statusMutation.mutate({ id: campaign.id, status: 'cancelled' }),
+                            });
+                            setConfirmOpen(true);
+                          }}>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            {t('campaigns.actions.cancel', 'Cancel')}
+                          </DropdownMenuItem>
+                        )}
+                        {campaign.status !== 'active' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setConfirmAction({
+                                  title: t('campaigns.actions.deleteConfirm', 'Delete this campaign?'),
+                                  description: t('campaigns.actions.deleteDescription', 'This action cannot be undone.'),
+                                  variant: 'destructive',
+                                  onConfirm: () => deleteMutation.mutate(campaign.id),
+                                });
+                                setConfirmOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('common.delete', 'Delete')}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -270,20 +349,17 @@ export function CampaignManagement() {
         </div>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCampaign
-                ? t('campaigns.edit.title', 'Edit Campaign')
-                : t('campaigns.create.title', 'Create Campaign')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCampaign
-                ? t('campaigns.edit.description', 'Update campaign details.')
-                : t('campaigns.create.description', 'Add a new agricultural campaign for production tracking.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingCampaign
+          ? t('campaigns.edit.title', 'Edit Campaign')
+          : t('campaigns.create.title', 'Create Campaign')}
+        description={editingCampaign
+          ? t('campaigns.edit.description', 'Update campaign details.')
+          : t('campaigns.create.description', 'Add a new agricultural campaign for production tracking.')}
+        size="lg"
+      >
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -396,8 +472,19 @@ export function CampaignManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={() => {
+          confirmAction.onConfirm();
+          setConfirmOpen(false);
+        }}
+      />
     </div>
   );
 }

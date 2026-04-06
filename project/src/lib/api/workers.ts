@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 import { requireOrganizationId } from './createCrudApi';
+import type { WorkRecord, MetayageSettlement } from '../../types/workers';
 
 export type WorkerType = 'fixed_salary' | 'daily_worker' | 'metayage';
 export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'harvest_share';
@@ -207,12 +208,12 @@ export const workersApi = {
     workerId: string,
     startDate?: string,
     endDate?: string,
-  ): Promise<any[]> {
+  ): Promise<WorkRecord[]> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    return apiClient.get<any[]>(
+    return apiClient.get<WorkRecord[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records${queryString}`,
       {},
       organizationId,
@@ -222,8 +223,8 @@ export const workersApi = {
   /**
    * Create a work record for a worker
    */
-  async createWorkRecord(organizationId: string, workerId: string, data: any): Promise<any> {
-    return apiClient.post<any>(
+  async createWorkRecord(organizationId: string, workerId: string, data: Partial<WorkRecord>): Promise<WorkRecord> {
+    return apiClient.post<WorkRecord>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records`,
       data,
       {},
@@ -238,9 +239,9 @@ export const workersApi = {
     organizationId: string,
     workerId: string,
     recordId: string,
-    data: any,
-  ): Promise<any> {
-    return apiClient.patch<any>(
+    data: Partial<WorkRecord>,
+  ): Promise<WorkRecord> {
+    return apiClient.patch<WorkRecord>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records/${recordId}`,
       data,
       {},
@@ -251,8 +252,8 @@ export const workersApi = {
   /**
    * Get métayage settlements for a worker
    */
-  async getMetayageSettlements(organizationId: string, workerId: string): Promise<any[]> {
-    return apiClient.get<any[]>(
+  async getMetayageSettlements(organizationId: string, workerId: string): Promise<MetayageSettlement[]> {
+    return apiClient.get<MetayageSettlement[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
       {},
       organizationId,
@@ -262,8 +263,8 @@ export const workersApi = {
   /**
    * Create a métayage settlement for a worker
    */
-  async createMetayageSettlement(organizationId: string, workerId: string, data: any): Promise<any> {
-    return apiClient.post<any>(
+  async createMetayageSettlement(organizationId: string, workerId: string, data: Partial<MetayageSettlement>): Promise<MetayageSettlement> {
+    return apiClient.post<MetayageSettlement>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
       data,
       {},

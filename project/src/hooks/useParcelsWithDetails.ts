@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { parcelsApi } from '@/lib/api/parcels';
 import { farmsApi } from '@/lib/api/farms';
+import type { Farm } from '@/lib/api/farms';
 
 export interface ParcelWithDetails {
   id: string;
@@ -47,7 +48,7 @@ export function useParcelsWithDetails() {
           currentOrganization.id
         );
 
-        const farms: any[] = Array.isArray(data) ? data : [];
+        const farms: Farm[] = Array.isArray(data) ? data : [];
 
         console.warn('Found farms:', farms?.length || 0);
 
@@ -56,7 +57,7 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        const farmIds = farms.map((f: any) => f.farm_id || f.id);
+        const farmIds = farms.map((farm) => farm.id);
         console.warn('Farm IDs:', farmIds);
 
         // Step 2: Get all parcels for these farms using API

@@ -47,8 +47,8 @@ const PreferencesSettings = () => {
   // Load user preferences from profile
   useEffect(() => {
     if (profile) {
-      const userLanguage = (profile as any).language || i18n.language || 'fr';
-      const userTimezone = (profile as any).timezone || 'Africa/Casablanca';
+      const userLanguage = profile.language || i18n.language || 'fr';
+      const userTimezone = profile.timezone || 'Africa/Casablanca';
 
       // Only set the state for display, don't change i18n language automatically
       // This allows users to keep their current language selection until they explicitly change it

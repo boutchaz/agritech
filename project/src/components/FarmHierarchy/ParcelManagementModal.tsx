@@ -35,14 +35,13 @@ import {
   CardTitle,
 } from "../ui/card";
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
 import { FormField } from "../ui/FormField";
 import { Input } from "../ui/Input";
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -318,7 +317,8 @@ const ParcelManagementModal = ({
     setValue("crop_type", parcel.crop_type || "");
     // Pre-select tree family when editing
     if (parcel.crop_category === 'trees' && parcel.crop_type) {
-      const family = Object.entries(TREE_CATEGORIES).find(([, types]) =>
+      const treeCategoryEntries: Array<[string, readonly string[]]> = Object.entries(TREE_CATEGORIES);
+      const family = treeCategoryEntries.find(([, types]) =>
         types.includes(parcel.crop_type!)
       )?.[0] ?? '';
       setTreeFamily(family);
@@ -337,15 +337,15 @@ const ParcelManagementModal = ({
     setValue("irrigation_type", parcel.irrigation_type || "");
     setValue(
       "irrigation_frequency",
-      (parcel as any).irrigation_frequency || "",
+      parcel.irrigation_frequency || "",
     );
     setValue(
       "water_quantity_per_session",
-      (parcel as any).water_quantity_per_session,
+      parcel.water_quantity_per_session,
     );
     setValue(
       "water_quantity_unit",
-      (parcel as any).water_quantity_unit || "m3",
+      parcel.water_quantity_unit || "m3",
     );
     setShowForm(true);
   };
@@ -378,8 +378,13 @@ const ParcelManagementModal = ({
 
   return (
     <>
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
+      <ResponsiveDialog
+        open={true}
+        onOpenChange={(open) => !open && onClose()}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
               {t("farmHierarchy.parcel.management")}
@@ -1016,8 +1021,7 @@ const ParcelManagementModal = ({
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Archive Parcel Confirmation Dialog */}
       <AlertDialog

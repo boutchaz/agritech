@@ -266,7 +266,7 @@ const CategorySection = ({ title, icon: Icon, description, accentColor, modules,
   description: string;
   accentColor: 'green' | 'amber';
   modules: OrganizationModule[];
-  subscription: any;
+  subscription: unknown;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onModuleClick: (module: OrganizationModule) => void; }) => {
   const { t } = useTranslation();
@@ -337,7 +337,7 @@ const CategorySection = ({ title, icon: Icon, description, accentColor, modules,
 // Activity Module Card (Agriculture / Élevage modules)
 // ============================================================================
 const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onClick }: { module: OrganizationModule;
-  subscription: any;
+  subscription: unknown;
   accentColor: 'green' | 'amber';
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onClick: () => void; }) => {
@@ -432,7 +432,7 @@ const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onCli
 // Functional Module Toggle Card (simpler, for the collapsible section)
 // ============================================================================
 const ModuleToggleCard = ({ module, subscription, onToggle, onClick }: { module: OrganizationModule;
-  subscription: any;
+  subscription: unknown;
   onToggle: (moduleId: string, currentActive: boolean) => Promise<void>;
   onClick: () => void; }) => {
   const moduleAvailable = isModuleAvailableForPlan(module, subscription);

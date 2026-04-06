@@ -22,6 +22,28 @@ const polar = new Polar({
   server: POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production',
 });
 
+type PolarProduct = NonNullable<Awaited<ReturnType<typeof polar.products.list>>['result']>['items'][number];
+
+function getErrorDetails(error: unknown): { message: string; body?: unknown } {
+  if (error instanceof Error) {
+    const errorWithBody = error as Error & { body?: unknown };
+    return {
+      message: error.message,
+      body: errorWithBody.body,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const errorRecord = error as Record<string, unknown>;
+    return {
+      message: typeof errorRecord.message === 'string' ? errorRecord.message : 'Unknown error',
+      body: errorRecord.body,
+    };
+  }
+
+  return { message: 'Unknown error' };
+}
+
 async function cleanupDuplicates() {
   console.log('🧹 Cleaning up duplicate Polar products...\n');
   console.log(`Organization ID: ${POLAR_ORGANIZATION_ID}\n`);
@@ -35,9 +57,9 @@ async function cleanupDuplicates() {
     console.log(`Found ${products.length} total products\n`);
 
     // Group products by plan_type
-    const grouped = new Map<string, any[]>();
+    const grouped = new Map<string, PolarProduct[]>();
     for (const product of products) {
-      const planType = product.metadata?.plan_type || 'unknown';
+      const planType = String(product.metadata?.plan_type ?? 'unknown');
       if (!grouped.has(planType)) {
         grouped.set(planType, []);
       }
@@ -63,8 +85,9 @@ async function cleanupDuplicates() {
               },
             });
             console.log(`   🗑️  Archived: ${product.name} (${product.id})`);
-          } catch (error: any) {
-            console.error(`   ❌ Failed to archive ${product.id}: ${error.message}`);
+          } catch (error: unknown) {
+            const { message } = getErrorDetails(error);
+            console.error(`   ❌ Failed to archive ${product.id}: ${message}`);
           }
         }
       } else {
@@ -73,10 +96,11 @@ async function cleanupDuplicates() {
     }
 
     console.log('\n✨ Cleanup complete!');
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    if (error.body) {
-      console.error('Body:', error.body);
+  } catch (error: unknown) {
+    const { message, body } = getErrorDetails(error);
+    console.error('❌ Error:', message);
+    if (body) {
+      console.error('Body:', body);
     }
   }
 }

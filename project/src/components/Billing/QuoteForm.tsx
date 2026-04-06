@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { useCreateQuote, useUpdateQuote, useQuote } from '@/hooks/useQuotes';
-import type { Quote } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote } from '@/types/quotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
@@ -28,7 +28,7 @@ import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
-import { calculateInvoiceTotals } from '@/lib/taxCalculations';
+import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/config';
@@ -58,7 +58,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
   });
 
   // Stock control setting (default: allow selling without stock)
-  const allowNegativeStock = (currentOrganization as any)?.accounting_settings?.allow_negative_stock ?? true;
+  const allowNegativeStock = currentOrganization?.accounting_settings?.allow_negative_stock ?? true;
   const { data: stockLevels = [] } = useFarmStockLevels();
   // Build a quick lookup: item_id → total_quantity
   const stockMap = React.useMemo(() => {
@@ -73,7 +73,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
 
   const isRTL = i18n.language === 'ar';
 
-  const [totals, setTotals] = useState<any>(null);
+  const [totals, setTotals] = useState<InvoiceTotals | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -163,7 +163,7 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
         customer_id: quoteWithItems.customer_id || '',
         quote_date: quoteWithItems.quote_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         valid_until: quoteWithItems.valid_until?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        items: quoteItems.length > 0 ? quoteItems.map((item: any) => ({
+        items: quoteItems.length > 0 ? quoteItems.map((item: Record<string, unknown>) => ({
           item_id: item.item_id || '',
           item_name: item.item_name || '',
           description: item.description || '',
@@ -298,20 +298,18 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "w-[95vw] max-w-6xl min-w-[min(95vw,980px)] max-h-[90vh] overflow-y-auto p-4 sm:p-6",
-          isRTL && "text-right"
-        )}
-        dir={isRTL ? 'rtl' : 'ltr'}
+    <>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={quote ? t('quotes.form.edit') : t('quotes.form.create')}
+        description={quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}
+        size="2xl"
+        className={cn('w-[95vw] min-w-[min(95vw,980px)] p-4 sm:p-6', isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
       >
-        <DialogHeader>
-          <DialogTitle>{quote ? t('quotes.form.edit') : t('quotes.form.create')}</DialogTitle>
-          <DialogDescription>{quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}</DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Header Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
@@ -835,8 +833,9 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
               {isEditMode ? t('quotes.form.updateQuote', 'Update Quote') : t('quotes.form.createQuote')}
             </Button>
           </div>
-        </form>
-      </DialogContent>
+          </form>
+        </div>
+      </ResponsiveDialog>
 
       {/* Quick Create Modals */}
       <QuickCreateCustomer
@@ -887,6 +886,6 @@ export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormPro
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </>
   );
 };

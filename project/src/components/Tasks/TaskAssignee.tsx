@@ -14,6 +14,14 @@ interface TaskAssigneeProps {
   farmId?: string;
 }
 
+interface WorkerSummary {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  worker_type?: string;
+}
+
 export default function TaskAssignee({
   taskId,
   organizationId,
@@ -42,26 +50,16 @@ export default function TaskAssignee({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showPicker]);
 
-  const filteredWorkers = workers.filter((w: any) => {
+  const filteredWorkers = workers.filter((w: WorkerSummary) => {
     const name = (w.first_name || '') + ' ' + (w.last_name || '') + ' ' + (w.name || '');
     return name.toLowerCase().includes(search.toLowerCase());
   });
 
-  const getWorkerName = (w: any) => {
+  const getWorkerName = (w: WorkerSummary) => {
     if (w.first_name || w.last_name) {
       return `${w.first_name || ''} ${w.last_name || ''}`.trim();
     }
     return w.name || 'Worker';
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .filter(Boolean)
-      .slice(0, 2)
-      .join('')
-      .toUpperCase();
   };
 
   const handleAssign = (workerId: string) => {
@@ -144,14 +142,13 @@ export default function TaskAssignee({
             <div className="p-2 border-b dark:border-gray-700">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t('tasks.detail.searchWorkers', 'Search workers...')}
-                  className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  autoFocus
-                />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t('tasks.detail.searchWorkers', 'Search workers...')}
+                    className="w-full pl-8 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 {search && (
                   <Button
                     size="icon"
@@ -191,7 +188,7 @@ export default function TaskAssignee({
                     </Button>
                   )}
 
-                  {filteredWorkers.map((worker: any) => {
+                  {filteredWorkers.map((worker: WorkerSummary) => {
                     const name = getWorkerName(worker);
                     const isCurrentAssignee = currentAssignee?.id === worker.id;
                     return (

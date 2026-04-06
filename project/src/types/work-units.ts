@@ -137,7 +137,7 @@ export interface PieceWorkRecordInsertDto {
   end_time?: string;
   break_duration?: number;
   notes?: string;
-  attachments?: any;
+  attachments?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
   created_by?: string;
 }
 
@@ -157,7 +157,7 @@ export interface PieceWorkRecordUpdateDto {
   end_time?: string;
   break_duration?: number;
   notes?: string;
-  attachments?: any;
+  attachments?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
 }
 
 // =====================================================

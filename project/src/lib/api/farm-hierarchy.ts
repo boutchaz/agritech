@@ -22,21 +22,49 @@ export interface UserFarmRole {
   is_active: boolean;
 }
 
+/** Raw farm shape from API before normalization (fields vary by endpoint version) */
+interface RawFarmApiResponse {
+  id?: string;
+  farm_id?: string;
+  name?: string;
+  farm_name?: string;
+  location?: string;
+  farm_location?: string;
+  size?: number;
+  farm_size?: number;
+  farm_type?: 'main' | 'sub';
+  parent_farm_id?: string | null;
+  hierarchy_level?: number;
+  manager_name?: string;
+  sub_farms_count?: number;
+  is_active?: boolean;
+  data?: RawFarmApiResponse[];
+  farms?: RawFarmApiResponse[];
+}
+
+/** Raw organization user response with nested role info */
+interface RawOrgUserResponse {
+  roles?: { name?: string } | null;
+  role?: { name?: string } | string | null;
+}
+
 export const farmHierarchyApi = {
   async getOrganizationFarms(organizationId: string): Promise<HierarchyFarm[]> {
-    const response = await apiClient.get<any>('/api/v1/farms', {}, organizationId);
-    const farms = Array.isArray(response) ? response : response?.data || response?.farms || [];
+    const response = await apiClient.get<RawFarmApiResponse | RawFarmApiResponse[]>('/api/v1/farms', {}, organizationId);
+    const rawFarms: RawFarmApiResponse[] = Array.isArray(response)
+      ? response
+      : response?.data || response?.farms || [];
 
-    return farms.map((farm: Record<string, unknown>) => ({
-      farm_id: farm.farm_id ? (farm.farm_id as string) : (farm.id as string),
-      farm_name: (farm.farm_name as string) || (farm.name as string) || '',
-      farm_location: (farm.farm_location as string) || (farm.location as string) || '',
-      farm_size: (farm.farm_size as number) || (farm.size as number) || 0,
-      farm_type: (farm.farm_type as 'main' | 'sub') || 'main',
-      parent_farm_id: (farm.parent_farm_id as string) || null,
-      hierarchy_level: (farm.hierarchy_level as number) || 1,
-      manager_name: (farm.manager_name as string) || 'No Manager',
-      sub_farms_count: (farm.sub_farms_count as number) || 0,
+    return rawFarms.map((farm) => ({
+      farm_id: farm.farm_id ?? farm.id ?? '',
+      farm_name: farm.farm_name ?? farm.name ?? '',
+      farm_location: farm.farm_location ?? farm.location ?? '',
+      farm_size: farm.farm_size ?? farm.size ?? 0,
+      farm_type: farm.farm_type ?? 'main',
+      parent_farm_id: farm.parent_farm_id ?? null,
+      hierarchy_level: farm.hierarchy_level ?? 1,
+      manager_name: farm.manager_name ?? 'No Manager',
+      sub_farms_count: farm.sub_farms_count ?? 0,
       is_active: farm.is_active === undefined ? true : Boolean(farm.is_active),
     }));
   },
@@ -55,13 +83,15 @@ export const farmHierarchyApi = {
     farms: HierarchyFarm[]
   ): Promise<UserFarmRole[]> {
     try {
-      const orgUser = await apiClient.get<any>(
+      const orgUser = await apiClient.get<RawOrgUserResponse>(
         `/api/v1/organization-users/${userId}`,
         {},
         organizationId,
       );
 
-      const roleName = orgUser?.roles?.name || orgUser?.role?.name || orgUser?.role;
+      const roleName = orgUser?.roles?.name
+        ?? (orgUser?.role && typeof orgUser.role === 'object' ? orgUser.role.name : undefined)
+        ?? (typeof orgUser?.role === 'string' ? orgUser.role : undefined);
       const isAdmin = roleName === 'admin' || roleName === 'organization_admin';
       const isManager = roleName === 'manager' || roleName === 'farm_manager';
       const isBasicUser = roleName === 'member' || roleName === 'viewer';

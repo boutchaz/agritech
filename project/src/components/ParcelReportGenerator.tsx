@@ -23,8 +23,8 @@ import { Button } from '@/components/ui/button';
 interface ParcelReportGeneratorProps {
   parcelId: string;
   parcelName: string;
-  parcelData: any;
-  searchParams?: any;
+  parcelData: Record<string, unknown>;
+  searchParams?: Record<string, unknown>;
 }
 
 const ParcelReportGenerator = ({
@@ -110,9 +110,9 @@ const ParcelReportGenerator = ({
       setShowTemplateSelector(false);
       setError(null);
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error('Error generating report:', err);
-      setError(err.message || 'Failed to generate report');
+      setError(err instanceof Error ? err.message : 'Failed to generate report');
     }
   });
 
@@ -170,9 +170,9 @@ const ParcelReportGenerator = ({
       }
 
       throw new Error('Aucun contenu de rapport disponible');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error downloading report:', err);
-      toast.error(err.message || 'Erreur lors du téléchargement du rapport');
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement du rapport');
     }
   };
 

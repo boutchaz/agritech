@@ -10,8 +10,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { storageApi } from '@/lib/api/storage';
 import { filesApi } from '@/lib/api/files';
 import { tasksApi } from '@/lib/api/tasks';
-import { FlaskRound, Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/Input';
@@ -162,7 +162,7 @@ export const ApplicationFormDialog = ({
        }
 
        return publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to upload image:', error);
       toast.error('Failed to upload image');
       return null;
@@ -240,7 +240,7 @@ export const ApplicationFormDialog = ({
           } else if (errorData.error) {
             errorMessage = errorData.error;
           } else if (Array.isArray(errorData.details) && errorData.details.length > 0) {
-            errorMessage = errorData.details.map((d: any) => d.message).join(', ');
+            errorMessage = errorData.details.map((d: { message?: string }) => d.message || '').join(', ');
           }
         } catch (_e) {
           // If parsing fails, use status text
@@ -328,7 +328,7 @@ export const ApplicationFormDialog = ({
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
       try {
-        const filters: any = {};
+        const filters: Record<string, string> = {};
         if (farmId) filters.farm_id = farmId;
         const result = await tasksApi.getAll(currentOrganization.id, filters);
         return result?.data || [];
@@ -342,7 +342,7 @@ export const ApplicationFormDialog = ({
   });
 
   // Get selected product for validation
-  const selectedProduct = products.find((p: any) => p.id === selectedProductId);
+  const selectedProduct = products.find((p: { id: string }) => p.id === selectedProductId);
   const availableStock = selectedProduct?.quantity || 0;
   const stockUnit = selectedProduct?.unit || '';
 
@@ -355,16 +355,33 @@ export const ApplicationFormDialog = ({
   const isFormValid = form.formState.isValid && isQuantityValid && isAreaValid && hasProduct && hasValidQuantity && hasValidArea;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FlaskRound className="h-5 w-5 text-green-600" />
-            {t('parcels.index.addApplication')}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={onSubmit} className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('parcels.index.addApplication')}
+      size="lg"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={mutation.isPending}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form="application-form-dialog-form"
+            disabled={mutation.isPending || !isFormValid}
+            title={!isFormValid ? 'Please fill all required fields correctly' : ''}
+          >
+            {mutation.isPending ? t('parcels.index.saving') : t('parcels.index.save')}
+          </Button>
+        </>
+      )}
+    >
+      <form id="application-form-dialog-form" onSubmit={onSubmit} className="space-y-4">
           {/* Product Selection */}
           <div className="space-y-2">
             <Label htmlFor="product_id">{t('parcels.index.product')}</Label>
@@ -395,7 +412,7 @@ export const ApplicationFormDialog = ({
                     <SelectValue placeholder={t('parcels.index.selectProduct')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {products.map((product: any) => (
+                    {products.map((product: { id: string; name: string; quantity?: number; unit?: string }) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name} ({product.quantity} {product.unit})
                       </SelectItem>
@@ -527,7 +544,7 @@ export const ApplicationFormDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{t('parcels.index.noTask') || 'Aucune tâche (ad-hoc)'}</SelectItem>
-                  {tasks.map((taskItem: any) => (
+                  {tasks.map((taskItem: { id: string; title: string }) => (
                     <SelectItem key={taskItem.id} value={taskItem.id}>
                       {taskItem.title}
                     </SelectItem>
@@ -603,7 +620,7 @@ export const ApplicationFormDialog = ({
                   >
                     <img
                       src={url}
-                      alt={`Application image ${index + 1}`}
+                      alt={`Application attachment ${index + 1}`}
                       className="w-full h-full object-cover"
                     />
                     <Button
@@ -627,25 +644,7 @@ export const ApplicationFormDialog = ({
             </p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={mutation.isPending}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || !isFormValid}
-              title={!isFormValid ? 'Please fill all required fields correctly' : ''}
-            >
-              {mutation.isPending ? t('parcels.index.saving') : t('parcels.index.save')}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </ResponsiveDialog>
   );
 };

@@ -138,9 +138,9 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
       // Play sound if enabled
       if (isSoundEnabled) {
         try {
-          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContext) {
-            const audioContext = new AudioContext();
+          const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          if (AudioContextCtor) {
+            const audioContext = new AudioContextCtor();
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 

@@ -13,11 +13,15 @@ import { PlanCalendarCard } from './PlanCalendarCard';
 import { StockAlertCard } from './StockAlertCard';
 import { FinancialCard } from './FinancialCard';
 
-export const cardRegistry: Record<string, React.ComponentType<{ data: any }>> = {
-  'recommendation-card': RecommendationCard,
-  'diagnostic-card': DiagnosticCard,
-  'farm-summary': FarmSummaryCard,
-  'plan-calendar': PlanCalendarCard,
-  'stock-alert': StockAlertCard,
-  'financial-snapshot': FinancialCard,
+type CardComponent = React.ComponentType<{ data: Record<string, unknown> }>;
+
+const rawRegistry: Record<string, CardComponent> = {
+  'recommendation-card': RecommendationCard as unknown as CardComponent,
+  'diagnostic-card': DiagnosticCard as unknown as CardComponent,
+  'farm-summary': FarmSummaryCard as unknown as CardComponent,
+  'plan-calendar': PlanCalendarCard as unknown as CardComponent,
+  'stock-alert': StockAlertCard as unknown as CardComponent,
+  'financial-snapshot': FinancialCard as unknown as CardComponent,
 };
+
+export const cardRegistry: Record<string, CardComponent> = rawRegistry;

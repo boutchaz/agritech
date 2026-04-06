@@ -4,11 +4,7 @@ import { getLocalDate, getLocalDateOffset } from "@/utils/date";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +39,7 @@ import { QuickCreateItem } from "../Billing/QuickCreateItem";
 import { useTranslation } from "react-i18next";
 import { SectionLoader } from '@/components/ui/loader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 // Invoice item schema
@@ -105,6 +102,7 @@ const getInvoiceSchema = (t: (key: string) => string) =>
     );
 
 type InvoiceFormData = z.infer<ReturnType<typeof getInvoiceSchema>>;
+type InvoiceFormInput = z.input<ReturnType<typeof getInvoiceSchema>>;
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -175,6 +173,8 @@ export const InvoiceForm = ({
       is_purchase_item: true,
     });
 
+  const invoiceSchema = getInvoiceSchema(t);
+
   const {
     register,
     control,
@@ -183,8 +183,8 @@ export const InvoiceForm = ({
     setValue,
     formState: { errors },
     reset,
-  } = useForm<InvoiceFormData>({
-    resolver: zodResolver(getInvoiceSchema(t)),
+  } = useForm<InvoiceFormInput, unknown, InvoiceFormData>({
+    resolver: zodResolver(invoiceSchema),
     defaultValues: {
       invoice_type: "sales",
       invoice_date: getLocalDate(),
@@ -311,7 +311,7 @@ export const InvoiceForm = ({
         parcel_id: existingInvoice.parcel_id || null,
         remarks: existingInvoice.remarks || "",
         items: existingInvoice.items?.map((item) => ({
-          item_id: (item as any).item_id || "",
+          item_id: item.item_id || "",
           item_name: item.item_name,
           description: item.description || "",
           quantity: item.quantity,
@@ -416,20 +416,18 @@ export const InvoiceForm = ({
     watchInvoiceType === "sales" ? revenueAccounts : expenseAccounts;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditMode
-              ? t("accountingModule.invoices.form.title.edit")
-              : t("accountingModule.invoices.form.title.create")}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditMode
-              ? t("accountingModule.invoices.form.description.edit")
-              : t("accountingModule.invoices.form.description.create")}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={handleClose}
+      title={isEditMode
+        ? t("accountingModule.invoices.form.title.edit")
+        : t("accountingModule.invoices.form.title.create")}
+      description={isEditMode
+        ? t("accountingModule.invoices.form.description.edit")
+        : t("accountingModule.invoices.form.description.create")}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         {isEditMode && isLoadingInvoice ? (
           <SectionLoader />
@@ -657,8 +655,8 @@ export const InvoiceForm = ({
               <div className="space-y-3 md:hidden">
                 {fields.map((field, index) => {
                   const itemTotal = calculateItemTotal(
-                    watchItems[index]?.quantity || 0,
-                    watchItems[index]?.rate || 0,
+                    Number(watchItems[index]?.quantity || 0),
+                    Number(watchItems[index]?.rate || 0),
                   );
                   return (
                     <div
@@ -1088,8 +1086,8 @@ export const InvoiceForm = ({
                         </TableCell>
                         <TableCell className="px-3 py-2 text-right font-medium">
                           {calculateItemTotal(
-                            watchItems[index]?.quantity || 0,
-                            watchItems[index]?.rate || 0,
+                            Number(watchItems[index]?.quantity || 0),
+                            Number(watchItems[index]?.rate || 0),
                           ).toFixed(2)}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-center">
@@ -1212,7 +1210,6 @@ export const InvoiceForm = ({
             </DialogFooter>
           </form>
         )}
-      </DialogContent>
 
       {/* Quick Create Item Modal */}
       <QuickCreateItem
@@ -1232,6 +1229,6 @@ export const InvoiceForm = ({
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

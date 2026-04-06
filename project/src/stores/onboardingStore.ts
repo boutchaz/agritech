@@ -3,6 +3,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { onboardingApi, type OnboardingState } from '@/lib/api/onboarding';
 import type { PlanType } from '@/lib/polar';
 
+interface OnboardingUserProfile {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  timezone?: string;
+  language?: string;
+}
+
+interface StoredOrganization {
+  name?: string;
+  slug?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+}
+
 const STORAGE_VERSION = 2;
 
 const getDefaultState = (userId: string, email: string): OnboardingState => ({
@@ -58,7 +74,7 @@ interface OnboardingStore extends OnboardingState {
   isRestored: boolean;
   isSaving: boolean;
   saveError: string | null;
-  initialize: (userId: string, email: string) => Promise<void>;
+  initialize: (userId: string, email: string, userProfile?: OnboardingUserProfile) => Promise<void>;
   persistState: (overrides?: Partial<Pick<OnboardingState, 'existingFarmId' | 'existingOrgId' | 'currentStep'>>) => Promise<void>;
   clearState: () => Promise<void>;
   updateProfileData: (data: Partial<OnboardingState['profileData']>) => void;
@@ -83,12 +99,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
       saveError: null,
 
       // Initialize store from backend API
-      initialize: async (userId: string, email: string, userProfile?: any) => {
+      initialize: async (userId: string, email: string, userProfile?: OnboardingUserProfile) => {
         try {
           // Check for organization from signup first
           const storedOrgId = localStorage.getItem('currentOrganizationId');
           const storedOrg = localStorage.getItem('currentOrganization');
-          let orgData: any = null;
+          let orgData: StoredOrganization | null = null;
 
           if (storedOrgId && storedOrg) {
             try {

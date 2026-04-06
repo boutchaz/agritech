@@ -2254,6 +2254,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   units_completed NUMERIC DEFAULT 0,
   rate_per_unit NUMERIC,
   forfait_amount NUMERIC,
+  crop_cycle_id UUID,
+  campaign_id UUID,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2273,6 +2275,8 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tasks_work_unit ON tasks(work_unit_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_type ON tasks(task_type);
+CREATE INDEX IF NOT EXISTS idx_tasks_crop_cycle ON tasks(crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_campaign ON tasks(campaign_id);
 
 -- Task Assignments (for multiple worker assignment)
 CREATE TABLE IF NOT EXISTS task_assignments (
@@ -5514,42 +5518,7 @@ CREATE TABLE IF NOT EXISTS weather_forecasts (
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_location ON weather_forecasts(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_target ON weather_forecasts(target_date);
 
--- RLS: weather_daily_data and weather_forecasts are location caches (same pattern as satellite_par_data)
-ALTER TABLE IF EXISTS weather_daily_data ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS weather_forecasts ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "read_weather_daily_data" ON weather_daily_data;
-CREATE POLICY "read_weather_daily_data" ON weather_daily_data
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "write_weather_daily_data" ON weather_daily_data;
-CREATE POLICY "write_weather_daily_data" ON weather_daily_data
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "update_weather_daily_data" ON weather_daily_data;
-CREATE POLICY "update_weather_daily_data" ON weather_daily_data
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "delete_weather_daily_data" ON weather_daily_data;
-CREATE POLICY "delete_weather_daily_data" ON weather_daily_data
-  FOR DELETE USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "read_weather_forecasts" ON weather_forecasts;
-CREATE POLICY "read_weather_forecasts" ON weather_forecasts
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "write_weather_forecasts" ON weather_forecasts;
-CREATE POLICY "write_weather_forecasts" ON weather_forecasts
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "update_weather_forecasts" ON weather_forecasts;
-CREATE POLICY "update_weather_forecasts" ON weather_forecasts
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "delete_weather_forecasts" ON weather_forecasts;
-CREATE POLICY "delete_weather_forecasts" ON weather_forecasts
-  FOR DELETE USING (auth.uid() IS NOT NULL);
-
+-- RLS: weather_daily_data and weather_forecasts are location caches (NO RLS, like satellite_par_data)
 -- RLS: weather_derived_data is org-scoped
 ALTER TABLE IF EXISTS weather_derived_data ENABLE ROW LEVEL SECURITY;
 
@@ -5709,33 +5678,6 @@ CREATE TRIGGER trg_crop_diseases_updated_at BEFORE UPDATE ON crop_diseases FOR E
 
 DROP TRIGGER IF EXISTS trg_crop_index_thresholds_updated_at ON crop_index_thresholds;
 CREATE TRIGGER trg_crop_index_thresholds_updated_at BEFORE UPDATE ON crop_index_thresholds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- RLS: agronomic reference tables (no org_id — shared read-only data, writable by service_role only)
-ALTER TABLE IF EXISTS phenological_stages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS crop_kc_coefficients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS crop_mineral_exports ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS crop_diseases ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS crop_index_thresholds ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "read_phenological_stages" ON phenological_stages;
-CREATE POLICY "read_phenological_stages" ON phenological_stages
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "read_crop_kc_coefficients" ON crop_kc_coefficients;
-CREATE POLICY "read_crop_kc_coefficients" ON crop_kc_coefficients
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "read_crop_mineral_exports" ON crop_mineral_exports;
-CREATE POLICY "read_crop_mineral_exports" ON crop_mineral_exports
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "read_crop_diseases" ON crop_diseases;
-CREATE POLICY "read_crop_diseases" ON crop_diseases
-  FOR SELECT USING (auth.uid() IS NOT NULL);
-
-DROP POLICY IF EXISTS "read_crop_index_thresholds" ON crop_index_thresholds;
-CREATE POLICY "read_crop_index_thresholds" ON crop_index_thresholds
-  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 -- Seed system crop types with agronomic data
 DO $$
@@ -6204,6 +6146,7 @@ CREATE TABLE IF NOT EXISTS public.plan_interventions (
   scheduled_date DATE,
   executed_at TIMESTAMPTZ,
   assigned_to UUID,                  -- FK to users/workers handled at app level
+  crop_cycle_id UUID,                -- Optional link to crop cycle for traceability
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -6223,6 +6166,7 @@ CREATE INDEX IF NOT EXISTS idx_plan_interventions_annual_plan_id ON public.plan_
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_parcel_id ON public.plan_interventions(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_organization_id ON public.plan_interventions(organization_id);
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_status_date ON public.plan_interventions(parcel_id, status, scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_plan_interventions_crop_cycle ON public.plan_interventions(crop_cycle_id);
 
 -- Crop AI References
 CREATE TABLE IF NOT EXISTS public.crop_ai_references (
@@ -17996,6 +17940,13 @@ ALTER TABLE stock_entries ADD CONSTRAINT fk_stock_entries_crop_cycle_id FOREIGN 
 
 -- Add foreign key constraint to stock_movements (deferred because crop_cycles table is created after stock_movements)
 ALTER TABLE stock_movements ADD CONSTRAINT fk_stock_movements_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+
+-- Add foreign key constraints to tasks (deferred because crop_cycles and agricultural_campaigns are created after tasks)
+ALTER TABLE tasks ADD CONSTRAINT fk_tasks_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
+ALTER TABLE tasks ADD CONSTRAINT fk_tasks_campaign_id FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
+
+-- Add foreign key constraint to plan_interventions (deferred because crop_cycles is created after plan_interventions)
+ALTER TABLE plan_interventions ADD CONSTRAINT fk_plan_interventions_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
 
 -- Crop Templates (global and per-organization crop configuration)
 CREATE TABLE IF NOT EXISTS crop_templates (

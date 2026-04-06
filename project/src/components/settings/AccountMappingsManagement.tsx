@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -205,9 +205,9 @@ export function AccountMappingsManagement() {
         toast.success(t('accountMappings.create.success', 'Account mapping created successfully'));
       }
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast.error(
-        error?.message ||
+        (error instanceof Error ? error.message : undefined) ||
         (editingMapping
           ? t('accountMappings.update.failed', 'Failed to update account mapping')
           : t('accountMappings.create.failed', 'Failed to create account mapping'))
@@ -250,8 +250,8 @@ export function AccountMappingsManagement() {
       toast.success(
         t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count })
       );
-    } catch (error: any) {
-      toast.error(error?.message || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
+    } catch (error: unknown) {
+      toast.error((error instanceof Error ? error.message : undefined) || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
     }
   };
 
@@ -482,20 +482,17 @@ export function AccountMappingsManagement() {
       )}
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingMapping
-                ? t('accountMappings.edit.title', 'Edit Account Mapping')
-                : t('accountMappings.create.title', 'Create Account Mapping')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingMapping
-                ? t('accountMappings.edit.description', 'Update the account mapping details.')
-                : t('accountMappings.create.description', 'Map a business event to a GL account.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingMapping
+          ? t('accountMappings.edit.title', 'Edit Account Mapping')
+          : t('accountMappings.create.title', 'Create Account Mapping')}
+        description={editingMapping
+          ? t('accountMappings.edit.description', 'Update the account mapping details.')
+          : t('accountMappings.create.description', 'Map a business event to a GL account.')}
+        size="md"
+      >
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Mapping Type */}
@@ -560,7 +557,7 @@ export function AccountMappingsManagement() {
                   <SelectValue placeholder={t('accountMappings.form.accountPlaceholder', 'Select account')} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {accounts.map((account: any) => (
+                  {accounts.map((account: { id: string; code: string; name: string }) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.code} - {account.name}
                     </SelectItem>
@@ -612,8 +609,7 @@ export function AccountMappingsManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingMapping} onOpenChange={() => setDeletingMapping(null)}>

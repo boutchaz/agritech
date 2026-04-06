@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { ParcelJournalEntry } from '../../types/profitability';
 
 const BASE_URL = '/api/v1/profitability';
 
@@ -354,14 +355,14 @@ export const profitabilityApi = {
     startDate: string,
     endDate: string,
     organizationId?: string,
-  ): Promise<any[]> {
+  ): Promise<ParcelJournalEntry[]> {
     const params = new URLSearchParams();
     params.append('start_date', startDate);
     params.append('end_date', endDate);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/parcel/${parcelId}/journal-entries?${queryString}`;
-    return apiClient.get<any[]>(url, {}, organizationId);
+    return apiClient.get<ParcelJournalEntry[]>(url, {}, organizationId);
   },
 
   /**

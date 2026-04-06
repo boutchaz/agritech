@@ -33,16 +33,10 @@ import {
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
 import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from './ui/dialog';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { ButtonLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 interface MapProps {
@@ -58,10 +52,10 @@ interface MapProps {
   sensors?: SensorData[];
   farmId?: string;
   enableDrawing?: boolean;
-  onParcelAdded?: (parcel: any) => void;
+  onParcelAdded?: (parcel: unknown) => void;
   selectedParcelId?: string | null;
   onParcelSelect?: (parcelId: string) => void;
-  parcels?: any[]; // Allow passing parcels as prop
+  parcels?: unknown[]; // Allow passing parcels as prop
   editingParcelId?: string | null;
   onBoundaryUpdated?: () => void;
 }
@@ -1367,7 +1361,11 @@ const MapComponent = ({
     <>
       {isFullScreen && <div className="fixed inset-0 z-40 bg-white" />}
       <div className={isFullScreen ? "fixed inset-0 z-50" : "space-y-4"}>
-        <div className={`relative w-full ${isFullScreen ? "h-full" : "h-96"}`}>
+        <div
+          className={`relative w-full ${
+            isFullScreen ? 'h-full' : 'h-[min(24rem,52dvh)] lg:h-96'
+          }`}
+        >
           <div
             ref={mapRef}
             className="w-full h-full"
@@ -1441,15 +1439,31 @@ const MapComponent = ({
             </div>
           )}
 
-          <Dialog open={isParcelFormDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              cleanupDrawingState();
-            }
-          }}>
-            <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-              <DialogHeader>
-                <DialogTitle className="text-gray-900 dark:text-white">{t('map.parcelDetails')} {parcelName}</DialogTitle>
-              </DialogHeader>
+          <ResponsiveDialog
+            open={isParcelFormDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                cleanupDrawingState();
+              }
+            }}
+            title={`${t('map.parcelDetails')} ${parcelName}`}
+            size="lg"
+            className="bg-white dark:bg-gray-800"
+            contentClassName="max-h-[90vh] overflow-y-auto"
+            footer={(
+              <>
+                <Button
+                  variant="outline"
+                  onClick={cleanupDrawingState}
+                >
+                  {t('map.cancel')}
+                </Button>
+                <Button variant="green" onClick={handleSaveParcel} disabled={isSavingParcel}>
+                  {t('map.save')}
+                </Button>
+              </>
+            )}
+          >
 
               <div className="space-y-6 py-4">
                 {/* Basic Information */}
@@ -1824,19 +1838,7 @@ const MapComponent = ({
                 </div>
               </div>
 
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={cleanupDrawingState}
-                >
-                  {t('map.cancel')}
-                </Button>
-                <Button variant="green" onClick={handleSaveParcel} disabled={isSavingParcel} >
-                  {t('map.save')}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </ResponsiveDialog>
 
           {/* Location and Search Controls */}
           <div className="absolute top-4 right-4 space-y-2 z-20">

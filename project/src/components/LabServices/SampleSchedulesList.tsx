@@ -5,7 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { SectionLoader } from '@/components/ui/loader';
 
 interface SampleSchedulesListProps {
-  schedules: any[];
+  schedules: Array<{
+    id: string;
+    next_collection_date: string;
+    service_type?: { name?: string };
+    farm?: { name?: string };
+    parcel?: { name?: string };
+    frequency?: string;
+  }>;
   isLoading: boolean;
 }
 

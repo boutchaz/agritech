@@ -1,6 +1,7 @@
 import { useDocumentTemplate } from '@/hooks/useDocumentTemplates';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -20,13 +21,17 @@ export function DocumentTemplatePreview({
 
   if (isLoading) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-5xl max-h-[90vh]">
+      <ResponsiveDialog
+        open={isOpen}
+        onOpenChange={onClose}
+        size="full"
+        className="max-w-5xl"
+        contentClassName="max-h-[90vh]"
+      >
           <div className="flex items-center justify-center h-96">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -44,8 +49,13 @@ export function DocumentTemplatePreview({
     (template.footer_enabled ? template.footer_height || 60 : 0);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="full"
+      className="max-w-5xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle>Preview: {template.name}</DialogTitle>
         </DialogHeader>
@@ -303,7 +313,6 @@ export function DocumentTemplatePreview({
             </p>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

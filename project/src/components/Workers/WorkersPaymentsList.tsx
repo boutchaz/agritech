@@ -7,11 +7,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatCurrency, getPaymentTypeLabel, getPaymentStatusLabel } from '@/types/payments';
+import type { PaymentRecord } from '@/types/payments';
 import { format } from 'date-fns';
 
 interface WorkersPaymentsListProps {
   organizationId: string;
 }
+
+type PaymentRow = PaymentRecord & { period_start?: string; period_end?: string };
 
 const WorkersPaymentsList = ({ organizationId }: WorkersPaymentsListProps) => {
   const { t, i18n } = useTranslation();
@@ -76,7 +79,7 @@ const WorkersPaymentsList = ({ organizationId }: WorkersPaymentsListProps) => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payments.map((payment: any) => (
+                {payments.map((payment: PaymentRow) => (
                   <TableRow key={payment.id} className="border-b border-gray-100 dark:border-gray-800">
                     <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
                       {payment.payment_date

@@ -6,17 +6,10 @@ import { Loader2, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -106,21 +99,18 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Edit className="mr-2 h-4 w-4" />
-          {t('dialogs.editCertification.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.editCertification.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.editCertification.description')}
-          </DialogDescription>
-        </DialogHeader>
-
+    <>
+      <Button onClick={() => setOpen(true)}>
+        <Edit className="mr-2 h-4 w-4" />
+        {t('dialogs.editCertification.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.editCertification.title')}
+        description={t('dialogs.editCertification.description')}
+        size="md"
+      >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
@@ -264,7 +254,7 @@ export function EditCertificationDialog({ certification }: EditCertificationDial
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

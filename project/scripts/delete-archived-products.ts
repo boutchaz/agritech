@@ -22,6 +22,28 @@ const polar = new Polar({
   server: POLAR_SERVER === 'sandbox' ? 'sandbox' : 'production',
 });
 
+type PolarProduct = NonNullable<Awaited<ReturnType<typeof polar.products.list>>['result']>['items'][number];
+
+function getErrorDetails(error: unknown): { message: string; body?: unknown } {
+  if (error instanceof Error) {
+    const errorWithBody = error as Error & { body?: unknown };
+    return {
+      message: error.message,
+      body: errorWithBody.body,
+    };
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const errorRecord = error as Record<string, unknown>;
+    return {
+      message: typeof errorRecord.message === 'string' ? errorRecord.message : 'Unknown error',
+      body: errorRecord.body,
+    };
+  }
+
+  return { message: 'Unknown error' };
+}
+
 async function deleteArchivedProducts() {
   console.log('🗑️  Deleting archived Polar products...\n');
   console.log(`Organization ID: ${POLAR_ORGANIZATION_ID}\n`);
@@ -34,8 +56,8 @@ async function deleteArchivedProducts() {
     const products = response.result?.items || [];
     console.log(`Found ${products.length} total products\n`);
 
-    const archived = products.filter((p: any) => p.isArchived);
-    const active = products.filter((p: any) => !p.isArchived);
+    const archived = products.filter((product: PolarProduct) => product.isArchived);
+    const active = products.filter((product: PolarProduct) => !product.isArchived);
 
     console.log(`Active products: ${active.length}`);
     console.log(`Archived products: ${archived.length}\n`);
@@ -53,8 +75,9 @@ async function deleteArchivedProducts() {
         // Since we can't delete, we'll just confirm it's archived
         console.log(`   ✅ Product is archived: ${product.name}`);
         console.log(`      ID: ${product.id}`);
-      } catch (error: any) {
-        console.error(`   ❌ Error: ${error.message}`);
+      } catch (error: unknown) {
+        const { message } = getErrorDetails(error);
+        console.error(`   ❌ Error: ${message}`);
       }
     }
 
@@ -66,10 +89,11 @@ async function deleteArchivedProducts() {
     console.log('\n✨ Note: Polar API may not support product deletion.');
     console.log('   Archived products are hidden from checkout but remain in the system.');
     console.log('   Contact Polar support if you need to permanently delete products.');
-  } catch (error: any) {
-    console.error('❌ Error:', error.message);
-    if (error.body) {
-      console.error('Body:', error.body);
+  } catch (error: unknown) {
+    const { message, body } = getErrorDetails(error);
+    console.error('❌ Error:', message);
+    if (body) {
+      console.error('Body:', body);
     }
   }
 }

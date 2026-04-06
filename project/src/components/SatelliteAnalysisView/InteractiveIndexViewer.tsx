@@ -65,6 +65,21 @@ interface InteractiveIndexViewerProps {
 }
 
 type VisualizationType = 'leaflet' | 'scatter';
+type ViewMode = 'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare';
+
+/** Optional build-time hint; should match backend `SATELLITE_PROVIDER` (gee | cdse | auto). */
+function satelliteLoadingBackendLabel(
+  t: (key: string) => string,
+): string {
+  const p = (
+    import.meta.env.VITE_SATELLITE_PROVIDER as string | undefined
+  )
+    ?.trim()
+    .toLowerCase();
+  if (p === 'gee') return t('heatmap.loading.connectingGee');
+  if (p === 'cdse') return t('heatmap.loading.connectingCdse');
+  return t('heatmap.loading.connectingGeneric');
+}
 
 // Color palette configurations
 export type ColorPalette = 'viridis' | 'red-green' | 'blue-red' | 'rainbow' | 'terrain' | 'green-red-inverted' | 'blue-red-inverted';
@@ -115,7 +130,7 @@ const InteractiveIndexViewer = ({
   const { t, i18n } = useTranslation('satellite');
 
   // View mode: single, multi-grid, multi-overlay, or temporal-compare
-  const [viewMode, setViewMode] = useState<'single' | 'multi-grid' | 'multi-overlay' | 'temporal-compare'>('single');
+  const [viewMode, setViewMode] = useState<ViewMode>('single');
 
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>('NIRv');
   const [selectedIndices, setSelectedIndices] = useState<VegetationIndexType[]>(['NIRv', 'EVI', 'NDRE']);
@@ -134,6 +149,7 @@ const InteractiveIndexViewer = ({
   const [rightTemporalData, setRightTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dateMismatch, setDateMismatch] = useState<{requested: string; actual: string} | null>(null);
+  const [sameActualDateWarning, setSameActualDateWarning] = useState(false);
 
   // Overlay opacity control (per index)
   const [overlayOpacity, setOverlayOpacity] = useState<Map<VegetationIndexType, number>>(
@@ -326,6 +342,7 @@ const InteractiveIndexViewer = ({
     setIsLoading(true);
     setError(null);
     setDateMismatch(null);
+    setSameActualDateWarning(false);
 
     try {
       const aoi = {
@@ -345,11 +362,16 @@ const InteractiveIndexViewer = ({
           satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
         ]);
 
-        if (leftResult.metadata?.requested_date && leftResult.date !== leftResult.metadata.requested_date) {
-          setDateMismatch({ requested: leftResult.metadata.requested_date, actual: leftResult.date });
-        } else if (rightResult.metadata?.requested_date && rightResult.date !== rightResult.metadata.requested_date) {
-          setDateMismatch({ requested: rightResult.metadata.requested_date, actual: rightResult.date });
+        const leftActualDate = leftResult.date;
+        const rightActualDate = rightResult.date;
+
+        if (leftActualDate !== selectedDate) {
+          setDateMismatch({ requested: selectedDate, actual: leftActualDate });
+        } else if (rightActualDate !== compareDate) {
+          setDateMismatch({ requested: compareDate, actual: rightActualDate });
         }
+
+        setSameActualDateWarning(leftActualDate === rightActualDate);
 
         setLeftTemporalData(leftResult);
         setRightTemporalData(rightResult);
@@ -436,8 +458,24 @@ const InteractiveIndexViewer = ({
     const { pixel_data, visualization, index } = data;
     return {
       tooltip: {
-        formatter: function (params: any) {
-          const [lon, lat, value] = params.data;
+        formatter: function (params) {
+          const pointParams = Array.isArray(params) ? params[0] : params;
+          const pointData = pointParams?.data;
+
+          if (
+            !Array.isArray(pointData)
+            || pointData.length < 3
+            || pointData[0] == null
+            || pointData[1] == null
+            || pointData[2] == null
+            || typeof pointData[0] !== 'number'
+            || typeof pointData[1] !== 'number'
+            || typeof pointData[2] !== 'number'
+          ) {
+            return '';
+          }
+
+          const [lon, lat, value] = pointData;
           return `<div class="p-2">
             <div class="font-bold text-slate-800">${index}: ${value.toFixed(3)}</div>
             <div class="text-xs text-slate-500">Lon: ${lon.toFixed(6)}</div>
@@ -468,6 +506,15 @@ const InteractiveIndexViewer = ({
     };
   };
 
+  const viewModes = [
+    { id: 'single' as const, label: t('satellite:heatmap.viewModes.single'), icon: Eye },
+    { id: 'multi-grid' as const, label: t('satellite:heatmap.viewModes.multiGrid'), icon: LayoutGrid },
+    { id: 'multi-overlay' as const, label: t('satellite:heatmap.viewModes.multiOverlay'), icon: Copy },
+    { id: 'temporal-compare' as const, label: t('satellite:heatmap.viewModes.temporalCompare'), icon: GitCompareArrows },
+  ] as const satisfies ReadonlyArray<{ id: ViewMode; label: string; icon: typeof Eye }>;
+
+  const stats = data?.statistics;
+
   const downloadData = () => {
     if (!data) return;
     const jsonData = JSON.stringify(data, null, 2);
@@ -497,16 +544,11 @@ const InteractiveIndexViewer = ({
             </CardHeader>
             <CardContent className="p-2">
               <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { id: 'single', label: t('satellite:heatmap.viewModes.single'), icon: Eye },
-                  { id: 'multi-grid', label: t('satellite:heatmap.viewModes.multiGrid'), icon: LayoutGrid },
-                  { id: 'multi-overlay', label: t('satellite:heatmap.viewModes.multiOverlay'), icon: Copy },
-                  { id: 'temporal-compare', label: t('satellite:heatmap.viewModes.temporalCompare'), icon: GitCompareArrows },
-                ].map((mode) => (
+                {viewModes.map((mode) => (
                   <button
                     type="button"
                     key={mode.id}
-                    onClick={() => setViewMode(mode.id as any)}
+                    onClick={() => setViewMode(mode.id)}
                     className={cn(
                       "flex flex-col items-center justify-center p-3 rounded-lg border transition-all gap-1.5",
                       viewMode === mode.id 
@@ -782,6 +824,20 @@ const InteractiveIndexViewer = ({
             </Alert>
           )}
 
+          {sameActualDateWarning && leftTemporalData && rightTemporalData && (
+            <Alert className="bg-orange-50 border-orange-200 text-orange-800">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-sm font-bold">{t('satellite:heatmap.warnings.sameActualDateTitle', 'Same satellite image detected')}</AlertTitle>
+              <AlertDescription className="text-xs">
+                <Trans
+                  i18nKey="satellite:heatmap.warnings.sameActualDateDescription"
+                  values={{ actual: leftTemporalData.date, date1: selectedDate, date2: compareDate }}
+                  components={{ strong: <strong /> }}
+                />
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!data && multiData.size === 0 && !leftTemporalData && !isLoading && (
             <div className="h-[600px] flex flex-col items-center justify-center text-slate-300 gap-4 bg-white rounded-xl border-2 border-dashed border-slate-100 shadow-sm">
               <div className="p-5 bg-slate-50 rounded-full shadow-inner">
@@ -800,8 +856,12 @@ const InteractiveIndexViewer = ({
                 <Loader className="w-8 h-8 text-emerald-600 animate-spin" />
               </div>
               <div className="text-center animate-pulse">
-                <p className="font-bold text-emerald-700 uppercase tracking-widest text-xs">Processing Imagery...</p>
-                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">Connecting to Copernicus Hub</p>
+                <p className="font-bold text-emerald-700 uppercase tracking-widest text-xs">
+                  {t('heatmap.loading.processingImagery')}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-tighter">
+                  {satelliteLoadingBackendLabel(t)}
+                </p>
               </div>
             </div>
           )}
@@ -853,13 +913,13 @@ const InteractiveIndexViewer = ({
 
               {/* Statistics Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-                {(data as any).statistics && [
-                  { label: t('satellite:heatmap.stats.mean'), value: (data as any).statistics.mean, icon: Activity, color: 'text-blue-600' },
-                  { label: t('satellite:heatmap.stats.median'), value: (data as any).statistics.median, icon: Minus, color: 'text-slate-600' },
-                  { label: t('satellite:heatmap.stats.p10'), value: (data as any).statistics.p10, icon: ArrowDown, color: 'text-rose-500' },
-                  { label: t('satellite:heatmap.stats.p90'), value: (data as any).statistics.p90, icon: ArrowUp, color: 'text-emerald-500' },
-                  { label: t('satellite:heatmap.stats.std'), value: (data as any).statistics.std, icon: BarChart4, color: 'text-purple-600' },
-                  { label: 'Pixels', value: (data as any).statistics.count, icon: LayoutGrid, color: 'text-amber-600', isCount: true },
+                {stats && [
+                  { label: t('satellite:heatmap.stats.mean'), value: stats.mean, icon: Activity, color: 'text-blue-600' },
+                  { label: t('satellite:heatmap.stats.median'), value: stats.median, icon: Minus, color: 'text-slate-600' },
+                  { label: t('satellite:heatmap.stats.p10'), value: stats.p10, icon: ArrowDown, color: 'text-rose-500' },
+                  { label: t('satellite:heatmap.stats.p90'), value: stats.p90, icon: ArrowUp, color: 'text-emerald-500' },
+                  { label: t('satellite:heatmap.stats.std'), value: stats.std, icon: BarChart4, color: 'text-purple-600' },
+                  { label: 'Pixels', value: stats.count, icon: LayoutGrid, color: 'text-amber-600', isCount: true },
                 ].map((stat) => (
                   <Card key={stat.label} className="border-slate-100 shadow-none bg-white">
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-1.5">
@@ -1013,6 +1073,9 @@ const InteractiveIndexViewer = ({
                       <div className="flex items-center gap-2">
                         <Badge className={cn(side.color, "text-white text-[9px] font-bold uppercase tracking-tighter px-1.5 h-5")}>{side.label}</Badge>
                         <span className="text-xs font-bold text-slate-700">{side.date}</span>
+                        {side.data.date !== side.date && (
+                          <span className="text-[10px] text-slate-400 ml-1">({side.data.date})</span>
+                        )}
                       </div>
                       <span className="text-[10px] font-bold text-slate-400">MEAN: {(side.data.statistics?.mean ?? 0).toFixed(3)}</span>
                     </CardHeader>
@@ -1051,8 +1114,18 @@ const InteractiveIndexViewer = ({
                     <TableHeader className="bg-slate-50/30">
                       <TableRow className="border-b-slate-100">
                         <TableHead className="text-[10px] font-bold uppercase tracking-wider pl-6">{t('satellite:heatmap.stats.statistic')}</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{selectedDate}</TableHead>
-                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{compareDate}</TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">
+                          {selectedDate}
+                          {leftTemporalData.date !== selectedDate && (
+                            <span className="text-[9px] text-slate-400 ml-1">({leftTemporalData.date})</span>
+                          )}
+                        </TableHead>
+                        <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">
+                          {compareDate}
+                          {rightTemporalData.date !== compareDate && (
+                            <span className="text-[9px] text-slate-400 ml-1">({rightTemporalData.date})</span>
+                          )}
+                        </TableHead>
                         <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider">{t('satellite:heatmap.stats.delta')}</TableHead>
                         <TableHead className="text-right text-[10px] font-bold uppercase tracking-wider pr-6">{t('satellite:heatmap.stats.variation')}</TableHead>
                       </TableRow>

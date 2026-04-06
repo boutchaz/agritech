@@ -630,7 +630,7 @@ const TasksList = ({
                             <div className="flex items-center gap-1 text-gray-500">
                               <ListChecks className="w-3.5 h-3.5" />
                               <span className="text-xs">
-                                {task.checklist.filter((item: any) => item.completed).length}/{task.checklist.length}
+                                {task.checklist.filter((item: { completed?: boolean }) => item.completed).length}/{task.checklist.length}
                               </span>
                             </div>
                           )}

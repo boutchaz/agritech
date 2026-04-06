@@ -74,7 +74,7 @@ export interface ReceptionBatch {
   maturity_level?: string | null;
   temperature?: number | null;
   moisture_content?: number | null;
-  defects?: Record<string, any> | null; // JSONB
+  defects?: Record<string, unknown> | null; // JSONB
   photos?: string[] | null; // Array of URLs
 
   // Personnel
@@ -158,7 +158,7 @@ export interface CreateReceptionBatchDto {
   maturity_level?: string;
   temperature?: number;
   moisture_content?: number;
-  defects?: Record<string, any>;
+  defects?: Record<string, unknown>;
   photos?: string[];
 
   received_by?: string;
@@ -177,7 +177,7 @@ export interface UpdateQualityControlDto {
   maturity_level?: string;
   temperature?: number;
   moisture_content?: number;
-  defects?: Record<string, any>;
+  defects?: Record<string, unknown>;
   photos?: string[];
   quality_checked_by?: string;
 }

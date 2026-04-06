@@ -27,6 +27,7 @@ export interface ChatMetadata {
   model: string;
   tokensUsed?: number;
   timestamp: string;
+  suggestions?: string[];
 }
 
 export interface ChatResponse {
@@ -135,7 +136,7 @@ export const chatApi = {
     dto: SendMessageDto,
     organizationId: string,
     onToken: (token: string) => void,
-    onComplete: (metadata: any) => void,
+    onComplete: (metadata: ChatMetadata) => void,
     onError: (error: Error) => void,
     signal?: AbortSignal,
   ): Promise<void> {

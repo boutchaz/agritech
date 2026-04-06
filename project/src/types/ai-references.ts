@@ -1430,3 +1430,19 @@ export interface PalmierDattierReference {
 }
 
 export type CropAIReference = OlivierReference | AgrumesReference | AvocatierReference | PalmierDattierReference;
+
+export type AIReferenceVarietiesResponse =
+  | OlivierReference['varietes']
+  | AgrumesReference['especes']
+  | AvocatierReference['varietes']
+  | PalmierDattierReference['varietes'];
+
+export type AIReferenceBbchResponse = OlivierReference['stades_bbch'];
+
+export type AIReferenceAlertsResponse =
+  | OlivierReference['alertes']
+  | AgrumesReference['alertes']
+  | AvocatierReference['alertes']
+  | PalmierDattierReference['alertes'];
+
+export type AIReferenceNpkFormulasResponse = Record<string, unknown>;

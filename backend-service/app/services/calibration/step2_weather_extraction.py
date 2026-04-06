@@ -12,6 +12,33 @@ def _to_float(value: object, default: float = 0.0) -> float:
     return default
 
 
+# Moroccan Mediterranean climate — season boundaries for drought detection
+_DRY_SEASON_MONTHS = {6, 7, 8, 9}
+_TRANSITION_MONTHS = {4, 5, 10}
+
+
+def _drought_threshold(month: int, crop_type: str) -> int:
+    """Drought streak (days) required to flag ``prolonged_drought``.
+
+    Morocco has a pronounced dry season (Jun-Sep) where 30+ rainless days are
+    normal.  Using a fixed 30-day threshold produces ~10 false positives per
+    parcel.  Season-aware thresholds eliminate most false alarms while still
+    catching genuinely anomalous dry spells.
+
+    TODO: Read these thresholds from referentiel seuils_meteo.secheresse
+    instead of hardcoding. Each crop's referentiel (DATA_OLIVIER, DATA_AGRUMES,
+    etc.) should define its own climate thresholds via a ``seuils_meteo`` section.
+    """
+    if crop_type == "palmier_dattier":
+        # Saharan / Errachidia climate — much drier baseline
+        return 90 if month in _DRY_SEASON_MONTHS else 45
+    if month in _DRY_SEASON_MONTHS:
+        return 60
+    if month in _TRANSITION_MONTHS:
+        return 30
+    return 20  # rainy season (Nov-Mar)
+
+
 def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
     if temp_min >= 7.2:
         return 0.0
@@ -28,8 +55,6 @@ def extract_weather_history(
     heat_threshold: float = 38.0,
     tupper: float | None = None,
 ) -> Step2Output:
-    _ = crop_type
-
     daily_rows: list[WeatherDay] = []
     monthly_precip: dict[str, float] = defaultdict(float)
     monthly_gdd: dict[str, float] = defaultdict(float)
@@ -91,7 +116,7 @@ def extract_weather_history(
             drought_streak += 1
         else:
             drought_streak = 0
-        if drought_streak == 30:
+        if drought_streak == _drought_threshold(current_date.month, crop_type):
             extremes.append(
                 ExtremeEvent(
                     date=current_date, event_type="prolonged_drought", severity="medium"

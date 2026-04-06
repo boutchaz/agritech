@@ -3,6 +3,7 @@
     "title": "Vegetation Index Time Series",
     "subtitle": "Historical trends for {{name}}",
     "subtitleFallback": "Historical trends for Parcel {{id}}",
+    "cacheVsHeatmapHint": "This chart reads stored index rows from the app database. The heatmap can show additional acquisition dates from the processing service — if a date appears there but not here, widen the range if needed and use \"Fetch from satellite\" to sync.",
     "dataPoints": "{{count}} points",
     "warnings": {
       "sparseData": "Limited data.",
@@ -49,7 +50,9 @@
     "actions": {
       "refreshCache": "Refresh cache",
       "fetchFromSatellite": "Fetch from satellite",
-      "launching": "Launching..."
+      "launching": "Launching...",
+      "selectAllIndices": "Select all",
+      "unselectAllIndices": "Clear all"
     },
     "indexDescriptions": {
       "NIRvP": "NIRvP — Photosynthetic productivity (NIRv × PAR)",
@@ -142,6 +145,12 @@
       "regenerate": "Regenerate",
       "loading": "Loading..."
     },
+    "loading": {
+      "processingImagery": "Processing imagery…",
+      "connectingGee": "Connecting to Google Earth Engine",
+      "connectingCdse": "Connecting to Copernicus Data Space",
+      "connectingGeneric": "Connecting to satellite data…"
+    },
     "multiGrid": {
       "title": "Index Comparison - {{date}}",
       "meanComparison": "Average Comparison",
@@ -165,6 +174,8 @@
     "warnings": {
       "dateMismatchTitle": "Different data date",
       "dateMismatchDescription": "No satellite image available for <strong>{{requested}}</strong>. Data from <strong>{{actual}}</strong> displayed instead.",
+      "sameActualDateTitle": "Same satellite image detected",
+      "sameActualDateDescription": "Both selected dates ({{date1}} and {{date2}}) resolved to the same satellite image from <strong>{{actual}}</strong>. The comparison shows identical data. Pick dates further apart for a meaningful comparison.",
       "noImagesForDate": "No satellite imagery available for {{date}}. Please select a different date from the calendar.",
       "cloudCoverageError": "Error processing cloud coverage. The selected date may have too much cloud cover.",
       "failedToGenerate": "Failed to generate interactive visualization",

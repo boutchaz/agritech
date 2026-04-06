@@ -6,11 +6,10 @@ import { useInventory, type InventoryItem } from '../../hooks/useInventory';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { localizeUnit } from '@/lib/utils/unit-localization';
 
 const StockAlertsWidget = () => {
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { data: inventory = [], isLoading } = useInventory();
 
   // Calculate stock alerts
@@ -147,7 +146,7 @@ const StockAlertsWidget = () => {
                     {item.quantity || 0}
                   </div>
                   <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                    {localizeUnit(item.unit, i18n.language) || t('dashboard.widgets.stock.units')}
+                    {item.unit || t('dashboard.widgets.stock.units')}
                   </div>
                 </div>
               </div>

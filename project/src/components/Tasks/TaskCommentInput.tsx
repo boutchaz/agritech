@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { useAddTaskComment } from '@/hooks/useTasks';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import type { TaskComment } from '@/types/tasks';
 
 interface MentionableUser {
   id: string;
@@ -56,11 +57,6 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
     return fullName.includes(mentionQuery.toLowerCase());
   }).slice(0, 8);
 
-  // Reset selected index when filtered list changes
-  useEffect(() => {
-    setSelectedMentionIndex(0);
-  }, [mentionQuery]);
-
   const handleTextChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const value = e.target.value;
@@ -81,6 +77,7 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
         ) {
           setShowMentions(true);
           setMentionQuery(textAfterAt);
+          setSelectedMentionIndex(0);
           setMentionStartIndex(lastAtIndex);
           return;
         }
@@ -89,6 +86,7 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
       setShowMentions(false);
       setMentionQuery('');
       setMentionStartIndex(-1);
+      setSelectedMentionIndex(0);
     },
     []
   );
@@ -156,11 +154,12 @@ export default function TaskCommentInput({ taskId, onCommentAdded }: TaskComment
   const handleSubmit = async () => {
     if (!text.trim()) return;
     try {
-      await addComment.mutateAsync({
+      const commentPayload = {
         task_id: taskId,
         comment: text.trim(),
         type: 'comment',
-      } as any);
+      } as Omit<TaskComment, 'id' | 'created_at' | 'updated_at'>;
+      await addComment.mutateAsync(commentPayload);
       setText('');
       onCommentAdded?.();
     } catch {

@@ -8,8 +8,8 @@ import type { ServiceCategory } from '@/hooks/useLabServices';
 import { OrderLabServiceDialog } from './OrderLabServiceDialog';
 
 interface LabServiceMarketplaceProps {
-  providers: any[];
-  serviceTypes: any[];
+  providers: Array<{ id: string; name: string; location?: string; turnaround_days?: number }>;
+  serviceTypes: Array<{ id: string; provider_id: string; category?: ServiceCategory; name: string; price?: number; currency?: string; turnaround_days?: number; description?: string }>;
   isLoading: boolean;
   selectedCategory?: ServiceCategory;
   onCategoryChange: (category: ServiceCategory | undefined) => void;
@@ -30,10 +30,10 @@ export function LabServiceMarketplace({
   selectedCategory,
   onCategoryChange,
 }: LabServiceMarketplaceProps) {
-  const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [selectedService, setSelectedService] = useState<LabServiceMarketplaceProps['serviceTypes'][number] | null>(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
 
-  const handleOrderService = (service: any) => {
+  const handleOrderService = (service: LabServiceMarketplaceProps['serviceTypes'][number]) => {
     setSelectedService(service);
     setOrderDialogOpen(true);
   };

@@ -67,6 +67,7 @@ export interface YieldPotential {
   method: string;
   reference_bracket: string;
   historical_average?: number | null;
+  unit?: string;
 }
 
 export interface ZoneSummary {
@@ -78,6 +79,15 @@ export interface ZoneClassification {
   zones_geojson: FeatureCollection;
   zone_summary: ZoneSummary[];
   spatial_pattern_type: string;
+}
+
+export interface CalibrationPercentilesResponse {
+  percentiles: Record<string, number>;
+}
+
+export interface CalibrationZonesResponse {
+  zones: string[];
+  distribution: Record<string, number>;
 }
 
 export interface HealthScore {

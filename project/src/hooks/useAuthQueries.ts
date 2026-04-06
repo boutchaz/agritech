@@ -6,6 +6,7 @@ import type { Database } from '../types/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 type Farm = Database['public']['Tables']['farms']['Row'];
+type Parcel = Database['public']['Tables']['parcels']['Row'];
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { trackLogout } from '../lib/analytics';
@@ -145,7 +146,7 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           try {
             const parcelsData = await parcelsApi.getAll({ organization_id: organizationId }, organizationId);
             if (Array.isArray(parcelsData)) {
-              parcelsByFarm = parcelsData.reduce((acc: Record<string, { totalArea: number }>, parcel: any) => {
+              parcelsByFarm = parcelsData.reduce((acc: Record<string, { totalArea: number }>, parcel) => {
                 const farmId = parcel.farm_id;
                 if (!farmId) return acc;
                 if (!acc[farmId]) {
@@ -162,7 +163,7 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           }
 
           // Map farm_id and farm_name to id and name for compatibility
-          return farmsData.map((farm: any) => {
+          return farmsData.map((farm) => {
             const farmId = farm.farm_id || farm.id;
             const parcelsData = parcelsByFarm[farmId];
             const farmSize = farm.farm_size ?? farm.size;

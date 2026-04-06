@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Timer,
   Banknote,
+  Loader2,
 } from 'lucide-react';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
@@ -27,6 +28,7 @@ import TaskWorklog from '@/components/Tasks/TaskWorklog';
 import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
+import type { TaskAssignment } from '@/lib/api/task-assignments';
 import { useCropsForTask, type Crop } from '@/hooks/useCrops';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +54,18 @@ import {
 } from '@/components/ui/radix-select';
 import { format, formatDistance } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
+import type { TaskComment } from '@/types/tasks';
+
+type HarvestUnit = CompleteHarvestTaskRequest['unit'];
+type HarvestQualityGrade = NonNullable<CompleteHarvestTaskRequest['quality_grade']>;
+type TaskCompletionPayload = Parameters<typeof tasksApi.complete>[2] & {
+  units_completed: number;
+  rate_per_unit: number;
+  worker_completions?: Array<{
+    worker_id: string;
+    units_completed: number;
+  }>;
+};
 
 function TaskDetailPage() {
   const { t, i18n } = useTranslation();
@@ -88,14 +102,23 @@ function TaskDetailPage() {
     if (!task) return taskAssignments;
     const primaryInAssignments = task.worker_id && taskAssignments.some(a => a.worker_id === task.worker_id);
     if (task.worker_id && !primaryInAssignments) {
-      const primaryWorker = {
+      const timestamp = task.updated_at || task.created_at || new Date().toISOString();
+      const primaryWorker: TaskAssignment = {
+        id: `primary-${task.worker_id}`,
+        task_id: task.id,
+        organization_id: task.organization_id || organizationId,
         worker_id: task.worker_id,
+        role: 'worker',
+        assigned_at: timestamp,
+        status: 'assigned',
+        created_at: timestamp,
+        updated_at: timestamp,
         worker: { id: task.worker_id, first_name: task.worker_name?.split(' ')[0] || '', last_name: task.worker_name?.split(' ').slice(1).join(' ') || '' },
-      } as any;
+      };
       return [primaryWorker, ...taskAssignments];
     }
     return taskAssignments;
-  }, [taskAssignments, task?.worker_id, task?.worker_name, task]);
+  }, [organizationId, taskAssignments, task]);
   const hasMultipleWorkers = allWorkers.length > 1;
 
   // Comments
@@ -116,7 +139,7 @@ function TaskDetailPage() {
       const sequence = String(Math.floor(Math.random() * 999) + 1).padStart(3, '0');
       setLotNumber(`${parcelCode}${farmCode}-${sequence}${year}`);
     }
-  }, [showHarvestForm, lotNumber, task?.parcel_id, task?.farm_id]);
+  }, [showHarvestForm, lotNumber, task]);
 
   const { data: crops = [] } = useCropsForTask({
     farmId: task?.farm_id,
@@ -145,6 +168,7 @@ function TaskDetailPage() {
   }, [crops, parcel, task?.parcel_id, task?.farm_id]);
 
   const initialCropId = task?.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
+  const firstAvailableCropId = availableCrops[0]?.id;
   const [harvestData, setHarvestData] = useState<Partial<CompleteHarvestTaskRequest>>({
     crop_id: initialCropId,
     harvest_date: new Date().toISOString().split('T')[0],
@@ -155,10 +179,10 @@ function TaskDetailPage() {
   });
 
   useEffect(() => {
-    if (!harvestData.crop_id && availableCrops.length > 0) {
-      setHarvestData(prev => ({ ...prev, crop_id: availableCrops[0].id }));
+    if (!harvestData.crop_id && firstAvailableCropId) {
+      setHarvestData(prev => ({ ...prev, crop_id: firstAvailableCropId }));
     }
-  }, [availableCrops.length]);
+  }, [firstAvailableCropId, harvestData.crop_id]);
 
   if (isLoading) {
     return <DetailPageSkeleton />;
@@ -202,8 +226,8 @@ function TaskDetailPage() {
       await tasksApi.start(taskOrganizationId, task.id);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.start', 'Failed to start task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.start', 'Failed to start task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -225,8 +249,8 @@ function TaskDetailPage() {
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.pause', 'Failed to pause task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.pause', 'Failed to pause task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -248,8 +272,8 @@ function TaskDetailPage() {
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.resume', 'Failed to resume task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.resume', 'Failed to resume task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -280,8 +304,8 @@ function TaskDetailPage() {
       await tasksApi.complete(taskOrganizationId, task.id, {});
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
-    } catch (err: any) {
-      setError(err.message || t('tasks.detail.errors.complete', 'Failed to complete task'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.complete', 'Failed to complete task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -316,19 +340,20 @@ function TaskDetailPage() {
         ? Object.values(workerUnits).reduce((s, v) => s + v, 0)
         : perUnitData.units_completed;
 
-      await tasksApi.complete(taskOrganizationId, task.id, {
+      const completionPayload: TaskCompletionPayload = {
         units_completed: totalUnits,
         rate_per_unit: perUnitData.rate_per_unit,
         actual_cost: totalUnits * perUnitData.rate_per_unit,
         notes: perUnitData.notes || undefined,
         ...(worker_completions ? { worker_completions } : {}),
-      } as any);
+      };
+      await tasksApi.complete(taskOrganizationId, task.id, completionPayload);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       navigate({ to: '/tasks', search: { editTaskId: undefined } });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsActionLoading(false);
     }
@@ -426,8 +451,8 @@ function TaskDetailPage() {
       } else {
         navigate({ to: '/tasks', search: { editTaskId: undefined } });
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsActionLoading(false);
     }
@@ -789,7 +814,7 @@ function TaskDetailPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="unit">Unité</Label>
-                  <Select value={harvestData.unit} onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as any })}>
+                  <Select value={harvestData.unit} onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}>
                     <SelectTrigger id="unit">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
@@ -806,7 +831,7 @@ function TaskDetailPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="quality_grade">Grade de qualité</Label>
-                  <Select value={harvestData.quality_grade} onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as any })}>
+                  <Select value={harvestData.quality_grade} onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}>
                     <SelectTrigger id="quality_grade">
                       <SelectValue placeholder="Sélectionner" />
                     </SelectTrigger>
@@ -832,8 +857,9 @@ function TaskDetailPage() {
 
                   {/* Rate per unit input */}
                   <div className="flex items-center gap-3">
-                    <label className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">Tarif par unité (MAD) :</label>
+                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">Tarif par unité (MAD) :</Label>
                     <Input
+                      id="harvest-rate-per-unit"
                       type="number"
                       min="0"
                       step="0.01"
@@ -963,7 +989,7 @@ function TaskDetailPage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment: any) => (
+                {comments.map((comment: TaskComment) => (
                   <div key={comment.id} className="flex gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                       <User className="w-4 h-4 text-blue-600" />

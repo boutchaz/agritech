@@ -2,10 +2,8 @@ import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
@@ -22,6 +20,7 @@ import { invoicesApi } from '@/lib/api/invoices';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 interface InvoiceDetailDialogProps {
@@ -123,17 +122,20 @@ export const InvoiceDetailDialog = ({
   if (!invoiceId) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-green-600" />
-            {t('dialogs.invoiceDetail.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('dialogs.invoiceDetail.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      title={t('dialogs.invoiceDetail.title')}
+      description={t('dialogs.invoiceDetail.description')}
+      size="3xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-green-600" />
+          {t('dialogs.invoiceDetail.title')}
+        </DialogTitle>
+      </DialogHeader>
 
         {isLoading && (
           <SectionLoader />
@@ -404,8 +406,7 @@ export const InvoiceDetailDialog = ({
             </DialogFooter>
           </div>
         )}
-      </DialogContent>
-          <ConfirmDialog
+      <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={confirmAction.title}
@@ -413,6 +414,6 @@ export const InvoiceDetailDialog = ({
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

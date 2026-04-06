@@ -6,16 +6,9 @@ import { Loader2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -101,21 +94,18 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          {t('dialogs.createCheck.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.createCheck.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.createCheck.description')}
-          </DialogDescription>
-        </DialogHeader>
-
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('dialogs.createCheck.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.createCheck.title')}
+        description={t('dialogs.createCheck.description')}
+        size="sm"
+      >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
@@ -246,7 +236,7 @@ export function CreateComplianceCheckDialog({ certificationId }: CreateComplianc
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

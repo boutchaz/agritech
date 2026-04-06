@@ -35,7 +35,30 @@ const HEATMAP_L1_TTL_MS = 5 * 60 * 1000; // 5 min in-memory
 const HEATMAP_DB_TTL_MS = 5 * 24 * 60 * 60 * 1000; // 5 days in DB (Copernicus/Sentinel-2 revisit period)
 const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000; // 10 min in-memory
 
-const CORE_INDICES = ["NIRv", "EVI", "NDRE", "NDMI"];
+/**
+ * Vegetation indices fetched from GEE via /indices/timeseries and cached in
+ * satellite_indices_data. Must match FastAPI TimeSeriesIndex names (MSAVI2 not MSAVI).
+ * NIRvP is omitted — derived with PAR and not persisted as its own index rows.
+ */
+export const CALIBRATION_SATELLITE_INDICES = [
+  "NDVI",
+  "NIRv",
+  "EVI",
+  "NDRE",
+  "NDMI",
+  "GCI",
+  "MSI",
+  "MSAVI2",
+  "OSAVI",
+  "SAVI",
+  "MNDWI",
+  "MCARI",
+  "TCARI",
+  "TCARI_OSAVI",
+] as const;
+
+/** Default list for parcel sync (UI warmup, full sync, calibration gap-fill). */
+export const CORE_INDICES: string[] = [...CALIBRATION_SATELLITE_INDICES];
 
 /** Convert a single coordinate pair from Web Mercator (EPSG:3857) to WGS84 if needed. */
 function toWgs84(x: number, y: number): [number, number] {

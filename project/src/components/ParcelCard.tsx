@@ -1,6 +1,6 @@
 import {  useMemo, useCallback, useState, lazy, Suspense  } from "react";
 import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
-import type { SensorData } from '../types';
+import type { Module, SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
 import { useRecommendations } from '../hooks/useRecommendations';
@@ -52,8 +52,15 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
   const { data: satelliteData, isLoading: satelliteLoading } = useLatestSatelliteIndices(parcel.id);
 
   // Memoize the module object to prevent infinite re-renders
-  const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
-  const { recommendations, loading, error } = useRecommendations(fruitTreesModule as any, sensorData);
+  const fruitTreesModule = useMemo<Module>(() => ({
+    id: 'fruit-trees',
+    name: 'Fruit Trees',
+    icon: 'trees',
+    active: true,
+    category: 'production',
+    description: 'Fruit tree module',
+  }), []);
+  const { recommendations, loading, error } = useRecommendations(fruitTreesModule, sensorData);
 
   // State for analysis tab selection
   const [analysisTab, setAnalysisTab] = useState<'soil' | 'plant' | 'water'>('soil');
@@ -63,19 +70,19 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
     parcel.id,
     'soil',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
   const { analyses: plantAnalyses, loading: plantLoading } = useAnalyses(
     parcel.id,
     'plant',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
   const { analyses: waterAnalyses, loading: waterLoading } = useAnalyses(
     parcel.id,
     'water',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
 
   const analysesLoading = soilLoading || plantLoading || waterLoading;
@@ -354,7 +361,13 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
               {/* Add Analysis Button */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900">
                 <Button variant="green"
-                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
+                  onClick={() =>
+                    navigate({
+                      to: '/parcels/$parcelId/analyse',
+                      params: { parcelId: parcel.id },
+                      search: { type: analysisTab, returnTo: 'stay', farmId: undefined },
+                    })
+                  }
                   className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md text-sm"
                 >
                   <Plus className="h-4 w-4" />
@@ -374,6 +387,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
                   <AnalysisCard
                     key={analysis.id}
                     analysis={analysis}
+                    viewMode="card"
                     onDelete={() => deleteAnalysis(analysis.id)}
                   />
                 ))}
@@ -385,7 +399,13 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
                   Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
                 <Button variant="green"
-                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
+                  onClick={() =>
+                    navigate({
+                      to: '/parcels/$parcelId/analyse',
+                      params: { parcelId: parcel.id },
+                      search: { type: analysisTab, returnTo: 'stay', farmId: undefined },
+                    })
+                  }
                   className="inline-flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-4 w-4" />

@@ -11,15 +11,12 @@ import type { Structure as ApiStructure, CreateStructureInput } from '../lib/api
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogFooter,
 } from './ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 // Use the API Structure type
@@ -914,7 +911,7 @@ const InfrastructureManagement = () => {
       )}
 
       {/* Add/Edit Structure Modal */}
-      <Dialog
+      <ResponsiveDialog
         open={showAddModal || !!editingStructure}
         onOpenChange={(open) => {
           if (!open) {
@@ -922,15 +919,32 @@ const InfrastructureManagement = () => {
             setEditingStructure(null);
           }
         }}
+        title={
+          <div className="flex items-center gap-3 text-gray-900 dark:text-white">
+            <Building2 className="w-6 h-6 text-green-600" />
+            <span>{editingStructure ? t('infrastructure.modal.editTitle') : t('infrastructure.modal.addTitle')}</span>
+          </div>
+        }
+        size="4xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+        footer={
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingStructure(null);
+              }}
+            >
+              {t('infrastructure.actions.cancel')}
+            </Button>
+            <Button variant="green" type="button" onClick={editingStructure ? handleUpdateStructure : handleAddStructure} >
+              {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
+            </Button>
+          </DialogFooter>
+        }
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
-              <Building2 className="w-6 h-6 text-green-600" />
-              <span>{editingStructure ? t('infrastructure.modal.editTitle') : t('infrastructure.modal.addTitle')}</span>
-            </DialogTitle>
-          </DialogHeader>
-
           <div className="space-y-6">
             {/* Structure Type - Highlighted Section */}
             <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
@@ -1161,24 +1175,7 @@ const InfrastructureManagement = () => {
               {renderStructureFields()}
             </div>
           </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowAddModal(false);
-                setEditingStructure(null);
-              }}
-            >
-              {t('infrastructure.actions.cancel')}
-            </Button>
-            <Button variant="green" type="button" onClick={editingStructure ? handleUpdateStructure : handleAddStructure} >
-              {editingStructure ? t('infrastructure.actions.update') : t('infrastructure.actions.addButton')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

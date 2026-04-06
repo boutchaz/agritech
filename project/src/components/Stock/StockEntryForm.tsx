@@ -3,24 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-} from '@/components/ui/drawer';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -122,7 +106,7 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
   });
 };
 
-type StockEntryFormData = any; // Will be inferred from dynamic schema
+type StockEntryFormData = z.input<ReturnType<typeof getStockEntrySchema>>;
 
 interface StockEntryFormProps {
   open: boolean;
@@ -143,7 +127,6 @@ export default function StockEntryForm({
 }: StockEntryFormProps) {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
-  const isMobile = useIsMobile();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
   const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
@@ -595,7 +578,7 @@ export default function StockEntryForm({
                           <Select
                             value={form.watch(`items.${index}.variant_id`) || ''}
                             onValueChange={(variantId) => {
-                              const selectedVariant = variants.find((variant) => variant.id === variantId);
+                              const selectedVariant = variants.find((variant) => variant.id === variantId) as (ProductVariant & { unit?: string | null }) | undefined;
                               form.setValue(`items.${index}.variant_id`, variantId, { shouldValidate: true });
                               if (selectedVariant?.unit) {
                                 form.setValue(`items.${index}.unit`, selectedVariant.unit, { shouldValidate: true });
@@ -738,38 +721,17 @@ export default function StockEntryForm({
         </form>
   );
 
-  // Render Drawer on mobile, Dialog on desktop
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>{headerContent}</DrawerTitle>
-            <DrawerDescription>{config.description}</DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-12rem)]">
-            {formContent}
-          </div>
-          <DrawerFooter className="flex-row justify-end gap-2">
-            {footerContent}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{headerContent}</DialogTitle>
-          <DialogDescription>{config.description}</DialogDescription>
-        </DialogHeader>
-        {formContent}
-        <DialogFooter className="pt-4 border-t">
-          {footerContent}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={headerContent}
+      description={config.description}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+      footer={<div className="flex w-full flex-row justify-end gap-2 border-t pt-4">{footerContent}</div>}
+    >
+      {formContent}
+    </ResponsiveDialog>
   );
 }

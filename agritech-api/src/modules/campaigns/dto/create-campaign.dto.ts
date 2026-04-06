@@ -1,94 +1,70 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsDate, IsUUID, IsOptional, IsEnum, IsNotEmpty, IsNumber, Min, IsArray } from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsEnum, IsNotEmpty, IsBoolean, IsUUID, MaxLength } from 'class-validator';
 
 export enum CampaignType {
-  PLANTING = 'planting',
-  HARVEST = 'harvest',
-  MAINTENANCE = 'maintenance',
-  IRRIGATION = 'irrigation',
-  FERTILIZATION = 'fertilization',
-  PEST_CONTROL = 'pest_control',
-  OTHER = 'other',
+  GENERAL = 'general',
+  RAINFED = 'rainfed',
+  IRRIGATED = 'irrigated',
+  GREENHOUSE = 'greenhouse',
 }
 
 export enum CampaignStatus {
   PLANNED = 'planned',
   ACTIVE = 'active',
-  PAUSED = 'paused',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
 }
 
 export class CreateCampaignDto {
-  @ApiProperty({ description: 'Organization ID' })
-  @IsUUID()
-  @IsNotEmpty()
-  organization_id: string;
-
-  @ApiProperty({ description: 'Campaign name' })
+  @ApiProperty({ description: 'Campaign name', example: 'Campagne Agricole 2025/2026' })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100)
   name: string;
 
-  @ApiProperty({ description: 'Campaign type', enum: CampaignType })
-  @IsEnum(CampaignType)
+  @ApiProperty({ description: 'Campaign code (unique per org)', example: 'CA2025-26' })
+  @IsString()
   @IsNotEmpty()
-  type: CampaignType;
+  @MaxLength(20)
+  code: string;
 
-  @ApiProperty({ description: 'Campaign description' })
+  @ApiPropertyOptional({ description: 'Campaign description' })
   @IsString()
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Start date' })
-  @IsDate()
-  @Type(() => Date)
-  @IsNotEmpty()
-  start_date: Date;
-
-  @ApiProperty({ description: 'End date' })
-  @IsDate()
-  @Type(() => Date)
-  @IsOptional()
-  end_date?: Date;
-
-  @ApiProperty({ description: 'Budget amount' })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  budget?: number;
-
-  @ApiProperty({ description: 'Currency code' })
+  @ApiProperty({ description: 'Start date (YYYY-MM-DD)', example: '2025-09-01' })
   @IsString()
-  @IsOptional()
-  currency?: string;
+  @IsNotEmpty()
+  start_date: string;
 
-  @ApiProperty({ description: 'Farm IDs involved in campaign' })
-  @IsArray()
-  @IsUUID('4', { each: true, message: 'Each farm ID must be a valid UUID' })
-  @IsOptional()
-  farm_ids?: string[];
+  @ApiProperty({ description: 'End date (YYYY-MM-DD)', example: '2026-08-31' })
+  @IsString()
+  @IsNotEmpty()
+  end_date: string;
 
-  @ApiProperty({ description: 'Parcel IDs involved in campaign' })
-  @IsArray()
-  @IsUUID('4', { each: true, message: 'Each parcel ID must be a valid UUID' })
+  @ApiPropertyOptional({ description: 'Campaign type', enum: CampaignType, default: CampaignType.GENERAL })
+  @IsEnum(CampaignType)
   @IsOptional()
-  parcel_ids?: string[];
+  campaign_type?: CampaignType;
 
-  @ApiProperty({ description: 'Campaign status', enum: CampaignStatus })
+  @ApiPropertyOptional({ description: 'Whether this is the current active campaign', default: false })
+  @IsBoolean()
+  @IsOptional()
+  is_current?: boolean;
+
+  @ApiPropertyOptional({ description: 'Primary fiscal year ID' })
+  @IsUUID()
+  @IsOptional()
+  primary_fiscal_year_id?: string;
+
+  @ApiPropertyOptional({ description: 'Secondary fiscal year ID (for campaigns spanning two fiscal years)' })
+  @IsUUID()
+  @IsOptional()
+  secondary_fiscal_year_id?: string;
+
+  @ApiPropertyOptional({ description: 'Campaign status', enum: CampaignStatus })
   @IsEnum(CampaignStatus)
   @IsOptional()
   status?: CampaignStatus;
-
-  @ApiProperty({ description: 'Priority level (1-5)' })
-  @IsNumber()
-  @Min(1)
-  @IsOptional()
-  priority?: number;
-
-  @ApiProperty({ description: 'Notes' })
-  @IsString()
-  @IsOptional()
-  notes?: string;
 }

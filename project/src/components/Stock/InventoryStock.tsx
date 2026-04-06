@@ -1,6 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { localizeUnit } from '@/lib/utils/unit-localization';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,6 +7,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { itemsApi } from '@/lib/api/items';
+import type { ItemStockLevelsResponse, ItemStockLevelWarehouse } from '@/types/items';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
@@ -25,8 +25,14 @@ interface InventoryStockLevel {
   total_value: number;
 }
 
+interface InventoryWarehouseStockLevel extends Pick<ItemStockLevelWarehouse, 'warehouse_id' | 'warehouse_name'> {
+  item_id: string;
+  total_quantity: number;
+  total_value: number;
+}
+
 export default function InventoryStock() {
-  const { t, i18n } = useTranslation('stock');
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -37,14 +43,14 @@ export default function InventoryStock() {
   const { data: warehouses = [] } = useWarehouses();
 
   // Fetch stock levels using NestJS API
-  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery({
+  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['inventory-stock-levels', currentOrganization?.id, selectedWarehouse],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
 
        try {
          // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
-         const filters: any = {};
+          const filters = {} as Record<string, never>;
          // Note: The API returns data grouped by item_id with warehouse details
          // We need to transform it to match the expected format
          const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
@@ -57,12 +63,12 @@ export default function InventoryStock() {
   });
 
   // Transform stock levels data to match the expected format
-  const stockLevels = React.useMemo(() => {
-    const result: any[] = [];
+  const stockLevels = React.useMemo<InventoryWarehouseStockLevel[]>(() => {
+    const result: InventoryWarehouseStockLevel[] = [];
 
-    Object.entries(stockLevelsData).forEach(([itemId, itemStock]: [string, any]) => {
+    Object.entries(stockLevelsData).forEach(([itemId, itemStock]) => {
       if (itemStock.warehouses && Array.isArray(itemStock.warehouses)) {
-        itemStock.warehouses.forEach((wh: any) => {
+        itemStock.warehouses.forEach((wh) => {
           // Filter by selected warehouse if not 'all'
           if (selectedWarehouse !== 'all' && wh.warehouse_id !== selectedWarehouse) {
             return;
@@ -86,21 +92,21 @@ export default function InventoryStock() {
   const inventoryData = React.useMemo(() => {
     const itemMap = new Map(items.map(item => [item.id, item]));
     const stockMap = new Map(
-      (stockLevels as any[]).map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
+      stockLevels.map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
     );
 
     const result: InventoryStockLevel[] = [];
 
     // If we have stock data, show items with stock
     if (stockLevels.length > 0) {
-      (stockLevels as any[]).forEach(stock => {
+      stockLevels.forEach(stock => {
         const item = itemMap.get(stock.item_id);
         if (item) {
           result.push({
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: stock.warehouse_id,
             warehouse_name: stock.warehouse_name,
@@ -118,7 +124,7 @@ export default function InventoryStock() {
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: warehouse.id,
             warehouse_name: warehouse.name,
@@ -246,7 +252,7 @@ export default function InventoryStock() {
                     {row.warehouse_name}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    {row.total_quantity.toFixed(3)} {localizeUnit(row.default_unit, i18n.language)}
+                    {row.total_quantity.toFixed(3)} {row.default_unit}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {formatCurrency(row.total_value)}
@@ -284,4 +290,3 @@ export default function InventoryStock() {
     </div>
   );
 }
-

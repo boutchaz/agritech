@@ -13,7 +13,10 @@ import {
   AnnualPlanWithInterventions,
 } from "../annual-plan/annual-plan.service";
 import { DatabaseService } from "../database/database.service";
-import { SatelliteCacheService } from "../satellite-indices/satellite-cache.service";
+import {
+  CALIBRATION_SATELLITE_INDICES,
+  SatelliteCacheService,
+} from "../satellite-indices/satellite-cache.service";
 import { SatelliteProxyService } from "../satellite-indices/satellite-proxy.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { NotificationsGateway } from "../notifications/notifications.gateway";
@@ -135,6 +138,9 @@ interface ParcelContext {
   variety: string | null;
   plantingYear: number | null;
   plantCount: number | null;
+  area: number | null;
+  areaUnit: string | null;
+  densityPerHectare: number | null;
   irrigationType: string | null;
   waterSource: string | null;
   irrigationFrequency: string | null;
@@ -995,6 +1001,8 @@ export class CalibrationService {
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
       plant_count: parcel.plantCount,
+      area_hectares: this.toHectares(parcel.area, parcel.areaUnit),
+      density_per_hectare: parcel.densityPerHectare,
       irrigation_frequency:
         dto.irrigation_frequency ?? parcel.irrigationFrequency,
       volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
@@ -1304,10 +1312,28 @@ export class CalibrationService {
 
     let satelliteImages = initialSatelliteImages;
 
-    if (satelliteImages.length === 0) {
+    const missingSatelliteIndices =
+      await this.getMissingSatelliteIndexNames(
+        parcelId,
+        organizationId,
+        calibrationDataStart,
+        CALIBRATION_SATELLITE_INDICES,
+      );
+
+    const needsSatelliteSync =
+      satelliteImages.length === 0 || missingSatelliteIndices.length > 0;
+
+    if (needsSatelliteSync) {
       emitProgress(2, "satellite_sync", "Synchronisation des images satellite...");
+      const indicesToSync =
+        satelliteImages.length === 0
+          ? [...CALIBRATION_SATELLITE_INDICES]
+          : missingSatelliteIndices;
+
       this.logger.log(
-        `No satellite data for parcel ${parcelId}, auto-syncing from satellite service`,
+        satelliteImages.length === 0
+          ? `No satellite rows for parcel ${parcelId}, syncing ${indicesToSync.length} indices from GEE`
+          : `Parcel ${parcelId} missing ${missingSatelliteIndices.length} index series (${missingSatelliteIndices.join(", ")}), syncing from GEE`,
       );
 
       const syncResult =
@@ -1316,15 +1342,15 @@ export class CalibrationService {
           organizationId,
           undefined,
           {
-            startDate: getCalibrationLookbackDate(parcel.plantingYear),
+            startDate: calibrationDataStart,
             endDate: new Date().toISOString().split("T")[0],
-            indices: ["NDVI", "NDRE", "NDMI", "EVI", "NIRv"],
+            indices: indicesToSync,
             authToken,
           },
         );
 
       this.logger.log(
-        `Auto-sync completed for parcel ${parcelId}: ${syncResult.totalPoints} total points`,
+        `Satellite sync for parcel ${parcelId}: ${syncResult.totalPoints} total points persisted`,
       );
 
       satelliteImages = await this.fetchSatelliteImages(
@@ -1474,6 +1500,8 @@ export class CalibrationService {
       planting_year: parcel.plantingYear,
       planting_system: parcel.system,
       plant_count: parcel.plantCount,
+      area_hectares: this.toHectares(parcel.area, parcel.areaUnit),
+      density_per_hectare: parcel.densityPerHectare,
       irrigation_frequency:
         dto.irrigation_frequency ?? parcel.irrigationFrequency,
       volume_per_tree_liters: dto.volume_per_tree_liters ?? null,
@@ -2019,6 +2047,7 @@ export class CalibrationService {
     const ALLOWED_STATUSES = [
       "completed",
       "calibrated",
+      "awaiting_validation",
       "awaiting_nutrition_option",
       "active",
     ];
@@ -2050,7 +2079,11 @@ export class CalibrationService {
     }
 
     const record = data as CalibrationRecord;
+    const profileOutput = this.toJsonObject(
+      (this.toJsonObject(record.profile_snapshot) as Record<string, unknown>)?.output,
+    );
     const output = {
+      ...profileOutput,
       ...this.toJsonObject(record.baseline_data),
       ...this.toJsonObject(record.diagnostic_data),
       anomalies: record.anomalies_data,
@@ -2309,15 +2342,16 @@ export class CalibrationService {
       existingCalibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase !== "calibrated") {
+    const VALIDATABLE_PHASES = new Set(["calibrated", "active", "awaiting_nutrition_option", "awaiting_data", "ready_calibration", "calibrating"]);
+    if (!VALIDATABLE_PHASES.has(parcel.aiPhase)) {
       throw new BadRequestException(
-        `Calibration can only be validated in awaiting_validation phase (current: ${parcel.aiPhase})`,
+        `Calibration can only be validated when calibration data exists (current: ${parcel.aiPhase})`,
       );
     }
 
-    if (existingCalibration.status !== "awaiting_validation" && existingCalibration.status !== "completed") {
+    if (existingCalibration.status === "failed" || existingCalibration.status === "in_progress" || existingCalibration.status === "provisioning") {
       throw new BadRequestException(
-        "Only awaiting_validation calibrations can be validated",
+        `Calibration cannot be validated in ${existingCalibration.status} status`,
       );
     }
 
@@ -2374,12 +2408,19 @@ export class CalibrationService {
         `Calibration ${calibrationId} confidence ${confidenceScoreAtValidation} below threshold ${MINIMUM_CONFIDENCE_FOR_ACTIVE} — parcel stays in observation-only mode`,
       );
 
-      await this.stateMachine.transitionPhase(
+      const ensuredPhase = await this.ensureCalibratedPhase(
         existingCalibration.parcel_id,
-        "calibrated",
-        "active",
+        parcel.aiPhase as AiPhase,
         organizationId,
       );
+      if (ensuredPhase !== "active") {
+        await this.stateMachine.transitionPhase(
+          existingCalibration.parcel_id,
+          "calibrated",
+          "active",
+          organizationId,
+        );
+      }
 
       await supabase
         .from("parcels")
@@ -2415,12 +2456,19 @@ export class CalibrationService {
       } as CalibrationRecord;
     }
 
-    await this.stateMachine.transitionPhase(
+    const ensuredPhase = await this.ensureCalibratedPhase(
       existingCalibration.parcel_id,
-      "calibrated",
-      "awaiting_nutrition_option",
+      parcel.aiPhase as AiPhase,
       organizationId,
     );
+    if (ensuredPhase === "calibrated") {
+      await this.stateMachine.transitionPhase(
+        existingCalibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    }
 
     return updatedCalibration as CalibrationRecord;
   }
@@ -2463,7 +2511,23 @@ export class CalibrationService {
       calibration.parcel_id,
       organizationId,
     );
-    if (parcel.aiPhase === "calibrated") {
+    if (parcel.aiPhase === "active") {
+      // Already active — just update the nutrition option, skip phase transitions
+    } else if (parcel.aiPhase === "calibrated") {
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrated",
+        "awaiting_nutrition_option",
+        organizationId,
+      );
+    } else if (parcel.aiPhase === "calibrating") {
+      // Calibration completed but phase stuck at calibrating — advance through
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "calibrating",
+        "calibrated",
+        organizationId,
+      );
       await this.stateMachine.transitionPhase(
         calibration.parcel_id,
         "calibrated",
@@ -2506,12 +2570,14 @@ export class CalibrationService {
       );
     }
 
-    await this.stateMachine.transitionPhase(
-      calibration.parcel_id,
-      "awaiting_nutrition_option",
-      "active",
-      organizationId,
-    );
+    if (parcel.aiPhase !== "active") {
+      await this.stateMachine.transitionPhase(
+        calibration.parcel_id,
+        "awaiting_nutrition_option",
+        "active",
+        organizationId,
+      );
+    }
 
     setImmediate(() => {
       this.generateAnnualPlan(
@@ -2707,12 +2773,27 @@ export class CalibrationService {
     currentPhase: AiPhase,
     organizationId: string,
   ): Promise<void> {
-    let phase = currentPhase;
+    if (currentPhase === "calibrating") return;
+    let phase: AiPhase = currentPhase;
     if (phase === "awaiting_data") {
       await this.stateMachine.transitionPhase(parcelId, "awaiting_data", "ready_calibration", organizationId);
       phase = "ready_calibration" as AiPhase;
     }
     await this.stateMachine.transitionPhase(parcelId, phase, "calibrating", organizationId);
+  }
+
+  private async ensureCalibratedPhase(
+    parcelId: string,
+    currentPhase: AiPhase,
+    organizationId: string,
+  ): Promise<AiPhase> {
+    if (currentPhase === "calibrated") return "calibrated";
+    if (currentPhase === "awaiting_nutrition_option") return currentPhase;
+    if (currentPhase === "active") return currentPhase;
+
+    await this.transitionToCalibrating(parcelId, currentPhase, organizationId);
+    await this.stateMachine.transitionPhase(parcelId, "calibrating", "calibrated", organizationId);
+    return "calibrated";
   }
 
   private buildObservationModeContext(confidenceScore: number | null): {
@@ -2803,7 +2884,7 @@ export class CalibrationService {
     const { data: parcel, error } = await supabase
       .from("parcels")
       .select(
-        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, langue, farms(organization_id)",
+        "id, crop_type, planting_system, planting_year, variety, ai_phase, boundary, organization_id, plant_count, irrigation_type, water_source, irrigation_frequency, water_quantity_per_session, langue, area, area_unit, density_per_hectare, farms(organization_id)",
       )
       .eq("id", parcelId)
       .single();
@@ -2842,6 +2923,10 @@ export class CalibrationService {
       plantingYear:
         typeof parcel.planting_year === "number" ? parcel.planting_year : null,
       plantCount: this.toNumber(parcel.plant_count),
+      area: this.toNumber(parcel.area),
+      areaUnit:
+        typeof parcel.area_unit === "string" ? parcel.area_unit : null,
+      densityPerHectare: this.toNumber(parcel.density_per_hectare),
       irrigationType:
         typeof parcel.irrigation_type === "string"
           ? parcel.irrigation_type
@@ -2984,6 +3069,43 @@ export class CalibrationService {
       }
       return values;
     }, []);
+  }
+
+  /**
+   * Returns index names that have no rows in satellite_indices_data for this parcel
+   * in the calibration window (so GEE was never synced for them).
+   */
+  private async getMissingSatelliteIndexNames(
+    parcelId: string,
+    organizationId: string,
+    sinceDate: string,
+    required: readonly string[],
+  ): Promise<string[]> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("satellite_indices_data")
+      .select("index_name")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId)
+      .gte("date", sinceDate);
+
+    if (error) {
+      this.logger.warn(
+        `getMissingSatelliteIndexNames query failed for ${parcelId}: ${error.message}; will sync all indices`,
+      );
+      return [...required];
+    }
+
+    if (!data?.length) {
+      return [...required];
+    }
+
+    const present = new Set(
+      data
+        .map((row: { index_name: string }) => row.index_name)
+        .filter(Boolean),
+    );
+    return required.filter((name) => !present.has(name));
   }
 
   private async fetchSatelliteImages(
@@ -3632,6 +3754,21 @@ export class CalibrationService {
     }
 
     return null;
+  }
+
+  private toHectares(
+    area: number | null,
+    areaUnit: string | null,
+  ): number | null {
+    const value = this.toNumber(area);
+    if (value === null || value <= 0) {
+      return null;
+    }
+    const unit = (areaUnit ?? "").toLowerCase();
+    if (unit === "m2" || unit === "m²" || unit === "sqm" || unit === "square meters") {
+      return value / 10_000;
+    }
+    return value;
   }
 
   async getIrrigationRecommendation(

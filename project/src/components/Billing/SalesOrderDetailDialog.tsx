@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -27,6 +25,7 @@ import { useSalesOrder, useConvertOrderToInvoice, useIssueStock } from '@/hooks/
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -182,26 +181,22 @@ export const SalesOrderDetailDialog = ({
 
   if (isDetailLoading || !resolvedSalesOrder) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
           <SectionLoader className="py-10" />
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Failed to load sales order details.
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -268,8 +263,7 @@ export const SalesOrderDetailDialog = ({
   const remainingToInvoice = Math.max(0, Number(so.grand_total) - Number(so.invoiced_amount));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,900px)] max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -654,7 +648,6 @@ export const SalesOrderDetailDialog = ({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

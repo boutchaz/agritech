@@ -104,7 +104,17 @@ const FarmHierarchyTree = ({
       const rootFarms: FarmNode[] = [];
 
       // First pass: create all nodes
-      (data || []).forEach((farm: any) => {
+      (data || []).forEach((farm: {
+        farm_id: string;
+        farm_name: string;
+        farm_type?: string;
+        parent_farm_id?: string;
+        hierarchy_level?: number;
+        manager_name?: string;
+        sub_farms_count?: number;
+        farm_size?: number;
+        is_active?: boolean;
+      }) => {
         farmMap.set(farm.farm_id, {
           farm_id: farm.farm_id,
           farm_name: farm.farm_name,
@@ -121,7 +131,7 @@ const FarmHierarchyTree = ({
       });
 
       // Second pass: build tree structure
-      (data || []).forEach((farm: any) => {
+      (data || []).forEach((farm: { farm_id: string; parent_farm_id?: string }) => {
         const node = farmMap.get(farm.farm_id)!;
 
         if (farm.parent_farm_id) {
@@ -184,7 +194,7 @@ const FarmHierarchyTree = ({
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
       reset();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error creating farm:', error);
     }
   });

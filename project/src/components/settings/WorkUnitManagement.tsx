@@ -27,9 +27,10 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { workUnitsApi } from '@/lib/api/work-units';
@@ -517,8 +518,12 @@ export function WorkUnitManagement() {
       </div>
 
       {/* Create/Edit Dialog - Redesigned Modal */}
-      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-slate-900">
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={handleCloseDialog}
+        size="2xl"
+        className="rounded-[2.5rem] border-none shadow-2xl p-0 overflow-hidden bg-white dark:bg-slate-900"
+      >
           <DialogHeader className="p-8 pb-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
             <div className="flex items-center gap-4">
               <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
@@ -663,8 +668,7 @@ export function WorkUnitManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

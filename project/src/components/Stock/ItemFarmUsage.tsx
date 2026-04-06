@@ -3,12 +3,28 @@ import { Building2, MapPin, Calendar, ExternalLink, Activity } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { useItemFarmUsage } from '@/hooks/useItemFarmUsage';
 import { useTranslation } from 'react-i18next';
-import { localizeUnit } from '@/lib/utils/unit-localization';
 
 interface ItemFarmUsageProps {
   item_id: string;
   unit?: string;
   showDetails?: boolean;
+}
+
+const UNIT_LABELS: Record<string, Record<string, string>> = {
+  LITER:  { fr: 'litre',     en: 'liter',    ar: 'لتر'   },
+  KG:     { fr: 'kg',        en: 'kg',        ar: 'كغ'    },
+  G:      { fr: 'g',         en: 'g',         ar: 'غ'     },
+  TON:    { fr: 'tonne',     en: 'ton',       ar: 'طن'    },
+  UNIT:   { fr: 'unité',     en: 'unit',      ar: 'وحدة'  },
+  BOX:    { fr: 'boîte',     en: 'box',       ar: 'صندوق' },
+  BAG:    { fr: 'sac',       en: 'bag',       ar: 'كيس'   },
+  BOTTLE: { fr: 'bouteille', en: 'bottle',    ar: 'زجاجة' },
+};
+
+function localizeUnit(unit: string | undefined, lang: string): string {
+  if (!unit) return '';
+  const key = unit.toUpperCase();
+  return UNIT_LABELS[key]?.[lang] ?? unit.toLowerCase();
 }
 
 export default function ItemFarmUsage({ item_id, unit, showDetails = true }: ItemFarmUsageProps) {

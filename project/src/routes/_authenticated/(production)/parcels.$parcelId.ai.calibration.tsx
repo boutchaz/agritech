@@ -90,7 +90,7 @@ import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
@@ -98,6 +98,11 @@ import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  confidenceToFraction,
+  confidenceValueToPercent,
+  formatConfidencePercent,
+} from '@/lib/calibration-confidence';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -278,21 +283,12 @@ const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
   return null;
 };
 
-/**
- * Normalize confidence score to 0-1 range.
- * Handles both decimal (0.4) and percentage (40) formats from the API.
- */
-function normalizeConfidenceScore(score: number): number {
-  if (score > 1) {
-    return score / 100;
-  }
-  return score;
-}
-
 const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
   const health = output.step8?.health_score;
   const confidence = output.confidence;
-  const normalizedConfidence = confidence ? normalizeConfidenceScore(confidence.normalized_score) : 0;
+  const confidencePct = confidence
+    ? (confidenceValueToPercent(confidence.normalized_score) ?? 0)
+    : 0;
   const yieldPotential = output.step6?.yield_potential;
   const alternance = output.step6?.alternance;
   const zones = output.step7?.zone_summary;
@@ -338,13 +334,13 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {(normalizedConfidence * 100).toFixed(0)}%
+                {confidencePct}%
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all"
-                style={{ width: `${normalizedConfidence * 100}%` }}
+                style={{ width: `${confidencePct}%` }}
               />
             </div>
           </div>
@@ -356,16 +352,17 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
             </span>
           </div>
 
+          {yieldPotential && (
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
             <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Yield Potential</div>
             <div className="flex items-baseline space-x-1">
               <span className="text-xl font-bold text-gray-900 dark:text-white">
                 {yieldPotential.minimum} – {yieldPotential.maximum}
               </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">t/ha</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{yieldPotential.unit ?? 't/ha'}</span>
             </div>
             <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Method: {yieldPotential.method.replace(/_/g, ' ')} · Bracket: {yieldPotential.reference_bracket.replace(/_/g, ' ')}
+              Method: {(yieldPotential.method ?? '').replace(/_/g, ' ')} · Bracket: {(yieldPotential.reference_bracket ?? '').replace(/_/g, ' ')}
             </div>
             {yieldPotential.historical_average != null && (
               <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -379,14 +376,15 @@ const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: s
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 
-      {zones.length > 1 && (
+      {(zones?.length ?? 0) > 1 && (
         <div>
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('calibrationZones.zoneDistribution')}</div>
           <div className="flex items-center space-x-2">
-            {zones.map((zone) => (
+            {(zones ?? []).map((zone) => (
               <div
                 key={zone.class_name}
                 className="flex-1 text-center"
@@ -496,7 +494,7 @@ const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => 
   );
 };
 
-const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
+const PhenologyTimeline = ({ dates }: { dates: Record<string, string> | undefined }) => {
   const stages = [
     { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
     { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
@@ -510,7 +508,7 @@ const PhenologyTimeline = ({ dates }: { dates: Record<string, string> }) => {
       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Phenological Timeline</h4>
       <div className="flex items-center justify-between">
         {stages.map((stage, i) => {
-          const dateStr = dates[stage.key];
+          const dateStr = dates?.[stage.key];
           return (
             <div key={stage.key} className="flex flex-col items-center text-center flex-1">
               <div className="flex items-center w-full">
@@ -669,7 +667,7 @@ const AnomalyList = ({
                       {formatDate(anomaly.date)}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                      {anomaly.anomaly_type.replace(/_/g, ' ')}
+                      {(anomaly.anomaly_type ?? '').replace(/_/g, ' ')}
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
                       {anomaly.severity}
@@ -728,7 +726,7 @@ const AnomalyList = ({
                 <Thermometer className={`w-4 h-4 ${sev.text}`} />
                 <span className="text-sm text-gray-900 dark:text-white">{formatDate(event.date)}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                  {event.event_type.replace(/_/g, ' ')}
+                  {(event.event_type ?? '').replace(/_/g, ' ')}
                 </span>
                 <span className={`text-xs font-medium ${sev.text}`}>{event.severity}</span>
               </div>
@@ -763,7 +761,7 @@ const RecommendationsList = ({ recommendations }: { recommendations: Recommendat
           >
             <div className="flex items-center gap-2 flex-wrap mb-1.5">
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                {recommendation.type.replace(/_/g, ' ')}
+                {(recommendation.type ?? '').replace(/_/g, ' ')}
               </span>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
                 {severity}
@@ -839,7 +837,8 @@ function getRunSatelliteImages(report: Record<string, unknown> | null | undefine
 
 const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
   report?: Record<string, unknown> | null; }) => {
-  const flags = output?.metadata?.data_quality_flags;
+  const flagsRaw = output?.metadata?.data_quality_flags;
+  const flags = Array.isArray(flagsRaw) ? flagsRaw : [];
   const conf = output.confidence;
   const step1 = output.step1;
 
@@ -854,7 +853,7 @@ const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
     : null;
   const retainedImageCount = satelliteImages.length > 0
     ? Math.max(0, satelliteImages.length - (step1.filtered_image_count ?? 0))
-    : step1.index_time_series?.NDVI?.filter((point) => !point.interpolated).length ?? 0;
+    : (step1.index_time_series?.NDVI?.filter((point) => !point.interpolated) ?? []).length;
   const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
   const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && (step1.filtered_image_count ?? 0) === 0;
 
@@ -1030,7 +1029,7 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
                 <div className="text-right">
                   <div className="text-xs text-gray-400 dark:text-gray-500">Confidence</div>
                   <div className="text-sm font-bold text-gray-900 dark:text-white">
-                    {(normalizeConfidenceScore(record.confidence_score) * 100).toFixed(0)}%
+                    {formatConfidencePercent(record.confidence_score)}
                   </div>
                 </div>
               )}
@@ -1214,15 +1213,20 @@ const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onR
   );
 };
 
-const NutritionOptionSelector = ({ parcelId, calibrationId }: {
+const NutritionOptionSelector = ({ parcelId, calibrationId, disabled }: {
   parcelId: string;
   calibrationId: string;
+  disabled?: boolean;
 }) => {
   const { data: suggestion, isLoading: isSuggestionLoading } = useNutritionSuggestion(parcelId);
   const { mutate: confirm, isPending: isConfirming } = useConfirmNutritionOption(parcelId);
   const [selectedOption, setSelectedOption] = useState<NutritionOption | null>(null);
 
   const effectiveSelection = selectedOption ?? suggestion?.suggested_option ?? null;
+  // The backend handles all phase transitions in confirmNutritionOption —
+  // don't gate on specific phases here. If the selector is rendered, the
+  // user should be able to confirm.
+  const canConfirmNutrition = !disabled;
 
   if (isSuggestionLoading) {
     return (
@@ -1263,7 +1267,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3 mb-5 min-w-0">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-5 min-w-0">
         {options.map((opt) => {
           const alt = suggestion.alternatives.find((a) => a.option === opt);
           const isEligible = alt?.eligible ?? true;
@@ -1284,7 +1288,7 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
                   }
                 }}
                 disabled={!isEligible || isConfirming}
-                color="blue"
+                color="indigo"
                 badge={isSuggested ? 'Recommended' : undefined}
                 descriptionClassName="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-4 break-words"
                 footer={
@@ -1306,12 +1310,18 @@ const NutritionOptionSelector = ({ parcelId, calibrationId }: {
         })}
       </div>
 
-      <div className="flex items-center space-x-3">
+      {canConfirmNutrition && (
+        <p className="text-sm text-blue-800 dark:text-blue-200 mb-3 rounded-lg bg-white/60 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/50 px-3 py-2">
+          Choose an option above (highlight updates when you tap a card), then confirm to finish activation.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="blue"
           type="button"
-          disabled={!effectiveSelection || isConfirming}
+          disabled={!effectiveSelection || isConfirming || !canConfirmNutrition}
           onClick={() => {
-            if (effectiveSelection) {
+            if (effectiveSelection && canConfirmNutrition) {
               confirm({ calibrationId, option: effectiveSelection });
             }
           }}
@@ -1535,8 +1545,11 @@ const AICalibrationPage = () => {
   const hasV2Report = v2Output !== null;
   const missingPlantingYear = parcelData !== null && parcelData !== undefined && !parcelData.planting_year;
 
-  const isCalibrating = phase === 'calibrating' || calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
-  const calibrationCompletedButPhaseStuck = (phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress';
+  const calibrationActuallyRunning = calibration?.status === 'in_progress' || calibration?.status === 'provisioning';
+  const isCalibrating = calibrationActuallyRunning || (phase === 'calibrating' && !calibration && !hasV2Report);
+  const calibrationCompletedButPhaseStuck =
+    ((phase === 'unknown' || !phase) && hasV2Report && calibration?.status !== 'failed' && calibration?.status !== 'in_progress') ||
+    (phase === 'calibrating' && !calibrationActuallyRunning && hasV2Report && (calibration?.status === 'completed' || calibration?.status === 'validated'));
   const isBusy = isCalibrating;
   const isFailed = calibration?.status === 'failed';
   const isWizardPhase =
@@ -1544,7 +1557,7 @@ const AICalibrationPage = () => {
     phase === 'ready_calibration' ||
     ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
-  const isObservationOnly = phase === 'active' && (reportData?.calibration?.confidence_score ?? 1) < 0.25;
+  const isObservationOnly = phase === 'active' && parcelData?.ai_observation_only === true;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
 
   const handleOpenPartialRecalibration = () => {
@@ -1609,6 +1622,34 @@ const AICalibrationPage = () => {
 
       {phase && <PhaseBanner phase={phase} />}
 
+      {!isCalibrating &&
+        (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'calibrating' || calibrationCompletedButPhaseStuck) &&
+        reportData?.calibration?.id && (
+        <div className="space-y-4" data-testid="calibration-action-panels">
+          {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && calibration?.status !== 'validated' && hasV2Report && v2Output && (
+            <ValidationPanel
+              calibrationId={reportData.calibration.id}
+              parcelId={parcelId}
+              healthScore={v2Output.step8.health_score.total}
+              confidence={
+                confidenceToFraction(v2Output.confidence.normalized_score) ?? 0
+              }
+              onReCalibrate={handleOpenFullRecalibrationWizard}
+            />
+          )}
+          {(phase === 'awaiting_nutrition_option' ||
+            calibration?.status === 'validated' ||
+            calibrationCompletedButPhaseStuck) &&
+            parcelData?.ai_phase !== 'active' && (
+          <NutritionOptionSelector
+            parcelId={parcelId}
+            calibrationId={reportData.calibration.id}
+            disabled={calibrationActuallyRunning}
+          />
+          )}
+        </div>
+      )}
+
       {hasV2Report && reportData?.report && typeof reportData.report === 'object' && (
         <CalibrationRunInputsPanel
           report={reportData.report as Record<string, unknown>}
@@ -1623,30 +1664,42 @@ const AICalibrationPage = () => {
         <CalibrationReviewSection parcelId={parcelId} />
       )}
 
-      <Dialog open={isPartialWizardOpen} onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}>
-        <DialogContent
-          className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0"
-          data-testid="calibration-partial-recalibration-dialog"
-        >
-          <div className="p-4 sm:p-6">
+      <ResponsiveDialog
+        open={isPartialWizardOpen}
+        onOpenChange={(open) => (open ? setIsPartialWizardOpen(true) : handleClosePartialRecalibration())}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[92vh] overflow-y-auto p-0"
+      >
+        <div data-testid="calibration-partial-recalibration-dialog">
+          <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
             <RecalibrationWizard
               parcelId={parcelId}
               baselineData={reportData}
-              confidenceScore={v2Output?.confidence.normalized_score ? normalizeConfidenceScore(v2Output.confidence.normalized_score) : undefined}
+              confidenceScore={
+                v2Output?.confidence.normalized_score != null
+                  ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
+                    undefined)
+                  : undefined
+              }
               onClose={handleCancelPartialRecalibration}
               onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
             />
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveDialog>
 
-      <Dialog open={isFullWizardOpen} onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}>
-        <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0">
-          <div className="p-4 sm:p-6">
+      <ResponsiveDialog
+        open={isFullWizardOpen}
+        onOpenChange={(open) => (open ? setIsFullWizardOpen(true) : handleCloseFullWizard())}
+        size="4xl"
+        className="p-0"
+        contentClassName="max-h-[92vh] overflow-y-auto p-0"
+      >
+          <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
             <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {phase === 'active' && !isAnnualEligibilityLoading && canShowAnnualBanner && (
         <div
@@ -1785,23 +1838,6 @@ const AICalibrationPage = () => {
         >
           <CalibrationHistoryList records={historyRecords} />
         </CollapsibleSection>
-      )}
-
-      {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && hasV2Report && v2Output && reportData?.calibration?.id && (
-        <ValidationPanel
-          calibrationId={reportData.calibration.id}
-          parcelId={parcelId}
-          healthScore={v2Output.step8.health_score.total}
-          confidence={normalizeConfidenceScore(v2Output.confidence.normalized_score)}
-          onReCalibrate={handleOpenFullRecalibrationWizard}
-        />
-      )}
-
-      {!isCalibrating && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || calibrationCompletedButPhaseStuck) && reportData?.calibration?.id && (
-        <NutritionOptionSelector
-          parcelId={parcelId}
-          calibrationId={reportData.calibration.id}
-        />
       )}
 
       {isFailed && !isCalibrating && (

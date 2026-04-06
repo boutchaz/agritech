@@ -9,6 +9,7 @@ import type {
   CropCycleAllocation,
   CropCyclePnL,
   CampaignSummary,
+  CampaignStatus,
   CropCycleStage,
   HarvestEvent,
   HarvestEventStats,
@@ -140,6 +141,14 @@ export const campaignsApi = {
   async update(input: UpdateCampaignInput): Promise<AgriculturalCampaign> {
     const { id, ...updates } = input;
     return apiClient.patch<AgriculturalCampaign>(`/api/v1/campaigns/${id}`, updates);
+  },
+
+  async updateStatus(id: string, status: CampaignStatus): Promise<AgriculturalCampaign> {
+    return apiClient.patch<AgriculturalCampaign>(`/api/v1/campaigns/${id}/status`, { status });
+  },
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete<void>(`/api/v1/campaigns/${id}`);
   },
 
   async getSummary(organizationId: string): Promise<CampaignSummary[]> {

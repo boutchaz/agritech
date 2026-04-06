@@ -39,7 +39,7 @@ import {
   getDateRangeLastNDays,
   DEFAULT_CLOUD_COVERAGE
 } from '../../lib/satellite-api';
-import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
+import { satelliteIndicesApi, type SatelliteIndex } from '../../lib/api/satellite-indices';
 import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
@@ -63,8 +63,23 @@ const formatTooltipValue = (value: number) => {
   return value?.toFixed(3) ?? 'N/A';
 };
 
+/** YYYY-MM-DD in the user's local calendar (avoids UTC-only "today" cutting off local acquisitions). */
+function localCalendarISODate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
+const CustomTooltip = ({ active, payload, label, showTemperature, t }: {
+  active?: boolean;
+  payload?: Array<{ dataKey?: string; name?: string; value: number; color?: string }>;
+  label?: string;
+  showTemperature?: boolean;
+  t: (key: string, fallback?: string) => string;
+}) => {
   if (active && payload && payload.length) {
     return (
       <Card className="shadow-xl border-slate-200 min-w-[200px] overflow-hidden">
@@ -76,7 +91,7 @@ const CustomTooltip = ({ active, payload, label, showTemperature, t }: any) => {
         </div>
         <CardContent className="p-3 space-y-2">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          {payload.map((entry: any) => {
+          {payload.map((entry) => {
             const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             if (isTemp && !showTemperature) return null;
             
@@ -186,7 +201,7 @@ const TimeSeriesChart = ({
     } catch (_e) {}
     return getDateRangeLastNDays(730).start_date;
   });
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => localCalendarISODate());
 
   const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -214,6 +229,29 @@ const TimeSeriesChart = ({
       }
     };
   }, []);
+
+  // Heatmap uses live available-dates + engine; timeseries reads cached rows. Extend end date to the
+  // latest stored acquisition so newer synced dates are not excluded when "today" lags the catalog.
+  useEffect(() => {
+    if (!organizationId || !parcelId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await satelliteIndicesApi.getAll(
+          { parcel_id: parcelId, page: 1, limit: 1 },
+          organizationId,
+        );
+        const latest = rows[0]?.date?.split('T')[0];
+        if (cancelled || !latest) return;
+        setEndDate((prev) => (latest > prev ? latest : prev));
+      } catch {
+        /* ignore — chart still works with current end date */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationId, parcelId]);
 
   const getIndexColor = (index: TimeSeriesIndexType): string => {
     const colors: Record<string, string> = {
@@ -250,7 +288,7 @@ const TimeSeriesChart = ({
     queryKey: ['satellite-indices-cache', parcelId, selectedIndices, startDate, endDate],
     queryFn: async () => {
       if (!organizationId || !parcelId || !startDate || !endDate) return {};
-      const result: Record<string, any[]> = {};
+      const result: Record<string, (SatelliteIndex | { date: string; index_value: number; mean_value: number })[]> = {};
       const derivedIndices = ['NIRvP', 'TCARI_OSAVI'];
       const cachedIndices = selectedIndices.filter(i => !derivedIndices.includes(i));
       const onDemandIndices = selectedIndices.filter(i => derivedIndices.includes(i));
@@ -306,7 +344,7 @@ const TimeSeriesChart = ({
         else indicesToSync.add(index);
       }
 
-      const syncEndDate = new Date().toISOString().split('T')[0];
+      const syncEndDate = localCalendarISODate();
       const syncResponse = await satelliteApi.startTimeSeriesSync({
         parcel_id: parcelId,
         farm_id: farmId,
@@ -410,23 +448,10 @@ const TimeSeriesChart = ({
         .filter((point): point is { date: string; value: number } => point !== null)
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-      const temporallyFilteredPoints = validPoints.filter((point, pointIndex, points) => {
-        const neighbors: number[] = [];
-        let offset = 1;
-        while (neighbors.length < 3 && (pointIndex - offset >= 0 || pointIndex + offset < points.length)) {
-          if (pointIndex - offset >= 0) neighbors.push(points[pointIndex - offset].value);
-          if (neighbors.length < 3 && pointIndex + offset < points.length) neighbors.push(points[pointIndex + offset].value);
-          offset += 1;
-        }
-        if (neighbors.length < 2) return true;
-        const neighborMean = neighbors.reduce((sum, value) => sum + value, 0) / neighbors.length;
-        const neighborVariance = neighbors.reduce((sum, value) => sum + Math.pow(value - neighborMean, 2), 0) / neighbors.length;
-        const neighborStd = Math.sqrt(neighborVariance);
-        const difference = Math.abs(point.value - neighborMean);
-        return neighborStd === 0 ? difference <= 1e-6 : difference <= 3 * neighborStd;
-      });
+      // Show all valid cache points. A previous 3σ neighbor filter dropped real acquisitions (e.g. new
+      // scene after a gap), which made the chart disagree with the heatmap date picker.
 
-      for (const point of temporallyFilteredPoints) {
+      for (const point of validPoints) {
         const existing: MultiIndexData = dateMap.get(point.date) || { date: point.date };
         existing[index] = point.value;
         dateMap.set(point.date, existing);
@@ -449,14 +474,24 @@ const TimeSeriesChart = ({
   }, [cachedData, selectedIndices, weatherData, showTemperature, isValidIndexValue, startDate, endDate]);
 
   const toggleIndex = (index: TimeSeriesIndexType) => {
-    setSelectedIndices(prev => {
+    setSelectedIndices((prev) => {
       if (prev.includes(index)) {
-        if (prev.length === 1) return prev;
-        return prev.filter(i => i !== index);
+        return prev.filter((i) => i !== index);
       }
       return [...prev, index];
     });
   };
+
+  const selectAllVegetationIndices = useCallback(() => {
+    setSelectedIndices([...TIME_SERIES_INDICES]);
+  }, []);
+
+  const clearAllVegetationIndices = useCallback(() => {
+    setSelectedIndices([]);
+  }, []);
+
+  const brushPreviewIndex = (selectedIndices[0] ??
+    TIME_SERIES_INDICES[0]) as TimeSeriesIndexType;
 
   const calculateStatistics = (index: TimeSeriesIndexType): IndexStats | null => {
     const values = chartData.map(d => d[index] as number).filter(v => typeof v === 'number' && !isNaN(v));
@@ -495,7 +530,11 @@ const TimeSeriesChart = ({
   const dataIsSparse = stats.total > 0 && stats.total < 10;
   const isLoading = isLoadingCache || isSyncing;
   const emptyIndices = selectedIndices.filter(index => (stats.perIndexCount[index] || 0) === 0);
-  const showNoDataWarning = !isLoading && cachedData !== undefined && emptyIndices.length === selectedIndices.length;
+  const showNoDataWarning =
+    selectedIndices.length > 0 &&
+    !isLoading &&
+    cachedData !== undefined &&
+    emptyIndices.length === selectedIndices.length;
 
   return (
     <TooltipProvider>
@@ -516,6 +555,9 @@ const TimeSeriesChart = ({
                   {t('timeSeries.dataPoints', { count: stats.total })}
                 </Badge>
               )}
+            </p>
+            <p className="text-xs text-slate-400 pl-1 max-w-3xl leading-relaxed">
+              {t('timeSeries.cacheVsHeatmapHint')}
             </p>
           </div>
 
@@ -686,8 +728,8 @@ const TimeSeriesChart = ({
                           <LineChart>
                             <Line
                               type="monotone"
-                              dataKey={selectedIndices[0]}
-                              stroke={getIndexColor(selectedIndices[0])}
+                              dataKey={brushPreviewIndex}
+                              stroke={getIndexColor(brushPreviewIndex)}
                               strokeWidth={1}
                               dot={false}
                             />
@@ -771,7 +813,7 @@ const TimeSeriesChart = ({
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed italic">
-                      {getIndexDescription(index)}
+                      {getIndexDescription(vegIndex)}
                     </p>
                   </CardContent>
                 </Card>
@@ -783,11 +825,38 @@ const TimeSeriesChart = ({
           <div className="lg:col-span-4 space-y-6">
             {/* Index Selection Card */}
             <Card className="border-slate-200 shadow-sm overflow-hidden">
-              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3">
-                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5" />
-                  {t('timeSeries.labels.vegetationIndices')}
-                </CardTitle>
+              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3 space-y-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                    {t('timeSeries.labels.vegetationIndices')}
+                  </CardTitle>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide"
+                      onClick={selectAllVegetationIndices}
+                    >
+                      {t('timeSeries.actions.selectAllIndices', 'Select all')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                      onClick={clearAllVegetationIndices}
+                    >
+                      {t('timeSeries.actions.unselectAllIndices', 'Clear all')}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[10px] font-medium text-slate-500">
+                  {t('timeSeries.labels.indicesSelected', {
+                    count: selectedIndices.length,
+                  })}
+                </p>
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[280px]">
@@ -796,6 +865,7 @@ const TimeSeriesChart = ({
                       const isSelected = selectedIndices.includes(vegIndex);
                       return (
                         <button
+                          type="button"
                           key={vegIndex}
                           onClick={() => toggleIndex(vegIndex)}
                           className={cn(

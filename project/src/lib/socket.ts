@@ -14,7 +14,7 @@ export interface NotificationData {
   type: string;
   title: string;
   message?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   is_read: boolean;
   created_at: string;
   read_at?: string;
@@ -22,7 +22,7 @@ export interface NotificationData {
 
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
-type SocketEventHandler = (data: any) => void;
+type SocketEventHandler = (data: unknown) => void;
 
 class SocketManager {
   private socket: Socket | null = null;
@@ -116,15 +116,15 @@ class SocketManager {
       this.emit('notification:read-all', data);
     });
 
-    this.socket.on('calibration:phase-changed', (data: any) => {
+    this.socket.on('calibration:phase-changed', (data: unknown) => {
       this.emit('calibration:phase-changed', data);
     });
 
-    this.socket.on('calibration:failed', (data: any) => {
+    this.socket.on('calibration:failed', (data: unknown) => {
       this.emit('calibration:failed', data);
     });
 
-    this.socket.on('calibration:progress', (data: any) => {
+    this.socket.on('calibration:progress', (data: unknown) => {
       this.emit('calibration:progress', data);
     });
   }
@@ -170,7 +170,7 @@ class SocketManager {
     this.eventHandlers.get(event)?.delete(handler);
   }
 
-  private emit(event: string, data: any): void {
+  private emit(event: string, data: unknown): void {
     this.eventHandlers.get(event)?.forEach((handler) => {
       try {
         handler(data);

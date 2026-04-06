@@ -81,8 +81,8 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   // TanStack Query hooks
   const { data: profile, isLoading: profileLoading, isError: profileError } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading, isError: orgsError } = useUserOrganizations(user?.id);
-  const { data: farms = [] } = useOrganizationFarms(currentOrganization?.id);
-  useSubscription(currentOrganization);
+  const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
+  const { isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -106,10 +106,9 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
 
   // Don't wait for subscription or farms on onboarding page
   const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
-  // NOTE: farmsLoading and subscriptionLoading are intentionally excluded — both hit NestJS
-  // and can take 5-7s on retry if the backend is slow. Farms and subscription load in the
-  // background; subscription blocking is handled by _authenticated.tsx.
-  const loading = authLoading || profileLoading || orgsLoading || waitingForOrganization;
+  const loading = authLoading || profileLoading || orgsLoading ||
+    (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
+    waitingForOrganization;
 
 
   // Calculate onboarding state - only redirect when we have POSITIVE evidence onboarding is incomplete.

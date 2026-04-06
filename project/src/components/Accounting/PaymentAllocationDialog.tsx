@@ -1,12 +1,5 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -14,6 +7,7 @@ import type { Payment } from '@/hooks/useAccountingPayments';
 import { useAllocatePayment } from '@/hooks/useAccountingPayments';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface PaymentAllocationDialogProps {
   payment: Payment;
@@ -103,14 +97,13 @@ export const PaymentAllocationDialog = ({
   const isSubmitting = allocatePayment.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.paymentAllocation.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.paymentAllocation.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('dialogs.paymentAllocation.title')}
+      description={t('dialogs.paymentAllocation.description')}
+      size="2xl"
+    >
 
         {isLoading ? (
           <div className="flex items-center justify-center py-10">
@@ -228,7 +221,6 @@ export const PaymentAllocationDialog = ({
             </div>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

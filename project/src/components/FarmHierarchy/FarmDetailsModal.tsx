@@ -13,8 +13,6 @@ import {
   Layers
 } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -22,6 +20,7 @@ import {
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 interface FarmDetailsModalProps {
@@ -63,17 +62,20 @@ const FarmDetailsModal = ({
 
   if (isLoading || !farm) {
     return (
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-3xl">
+      <ResponsiveDialog open={true} onOpenChange={(open) => !open && onClose()} size="3xl">
           <SectionLoader />
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+    <ResponsiveDialog
+      open={true}
+      onOpenChange={(open) => !open && onClose()}
+      size="3xl"
+      className="p-0"
+      contentClassName="max-h-[90vh]"
+    >
         {/* Header with gradient */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white flex-shrink-0">
           <DialogHeader className="space-y-4">
@@ -269,8 +271,7 @@ const FarmDetailsModal = ({
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 

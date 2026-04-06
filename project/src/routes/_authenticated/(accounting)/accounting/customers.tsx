@@ -15,11 +15,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   useCustomers,
@@ -33,6 +29,7 @@ import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { PageLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 
 // Zod schema for customer form validation
@@ -119,7 +116,7 @@ function CustomersPage() {
         tax_id: customer.tax_id || '',
         payment_terms: customer.payment_terms || '',
         credit_limit: customer.credit_limit?.toString() || '',
-        customer_type: (customer.customer_type as any) || '',
+        customer_type: (customer.customer_type || '') as '' | 'individual' | 'business' | 'government' | 'other',
         notes: customer.notes || '',
       });
     } else {
@@ -187,9 +184,9 @@ function CustomersPage() {
       }
 
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Parse database constraint errors and set field-specific errors
-      if (error?.message?.includes('customer_type_check')) {
+      if (error instanceof Error && error.message.includes('customer_type_check')) {
         form.setError('customer_type', {
           type: 'manual',
           message: 'Invalid customer type. Must be one of: individual, business, government, or other',
@@ -340,16 +337,16 @@ function CustomersPage() {
           </div>
 
           {/* Add/Edit Dialog */}
-          <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingCustomer ? t('accountingModule.customers.editCustomer', 'Edit Customer') : t('accountingModule.customers.addNewCustomer', 'Add New Customer')}</DialogTitle>
-                <DialogDescription>
-                  {editingCustomer
-                    ? t('accountingModule.customers.updateInfo', 'Update customer information')
-                    : t('accountingModule.customers.addForInvoices', 'Add a new customer for sales invoices')}
-                </DialogDescription>
-              </DialogHeader>
+          <ResponsiveDialog
+            open={isDialogOpen}
+            onOpenChange={handleCloseDialog}
+            title={editingCustomer ? t('accountingModule.customers.editCustomer', 'Edit Customer') : t('accountingModule.customers.addNewCustomer', 'Add New Customer')}
+            description={editingCustomer
+              ? t('accountingModule.customers.updateInfo', 'Update customer information')
+              : t('accountingModule.customers.addForInvoices', 'Add a new customer for sales invoices')}
+            size="2xl"
+            contentClassName="max-h-[90vh] overflow-y-auto"
+          >
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
@@ -562,8 +559,7 @@ function CustomersPage() {
                   </Button>
                 </DialogFooter>
               </form>
-            </DialogContent>
-          </Dialog>
+          </ResponsiveDialog>
         </div>
           <ConfirmDialog
         open={confirmOpen}

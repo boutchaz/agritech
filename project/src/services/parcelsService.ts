@@ -22,6 +22,9 @@ export interface Parcel {
   rootstock?: string;
   soil_type?: string;
   irrigation_type?: string;
+  irrigation_frequency?: string;
+  water_quantity_per_session?: number;
+  water_quantity_unit?: string;
   boundary?: number[][];
   calculated_area?: number;
   perimeter?: number;
@@ -94,7 +97,9 @@ class ParcelsService {
       {},
       organizationId
     );
-    return (result as any)?.data || (result as any)?.parcels || [];
+    type ListResponse = { data?: Parcel[]; parcels?: Parcel[] };
+    const resp = result as unknown as ListResponse;
+    return resp.data || resp.parcels || [];
   }
 
   async createParcel(data: {
@@ -111,10 +116,13 @@ class ParcelsService {
     density_per_hectare?: number;
     plant_count?: number;
     planting_date?: string;
-    planting_year?: number;
-    rootstock?: string;
-    soil_type?: string;
-    irrigation_type?: string;
+      planting_year?: number;
+      rootstock?: string;
+      soil_type?: string;
+      irrigation_type?: string;
+      irrigation_frequency?: string;
+      water_quantity_per_session?: number;
+      water_quantity_unit?: string;
   }): Promise<Parcel> {
     const organizationId = getCurrentOrganizationId();
     return apiClient.post<Parcel>(
@@ -144,6 +152,9 @@ class ParcelsService {
       rootstock?: string;
       soil_type?: string;
       irrigation_type?: string;
+      irrigation_frequency?: string;
+      water_quantity_per_session?: number;
+      water_quantity_unit?: string;
     }
   ): Promise<Parcel> {
     const organizationId = getCurrentOrganizationId();
@@ -196,4 +207,3 @@ class ParcelsService {
 }
 
 export const parcelsService = new ParcelsService();
-

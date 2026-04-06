@@ -1,12 +1,14 @@
-
 import { AIStatusBadge } from './AIStatusBadge';
 import type { AICalibration } from '@/lib/api/ai-calibration';
+import { confidenceValueToPercent } from '@/lib/calibration-confidence';
 
 interface CalibrationCardProps {
   calibration: AICalibration;
 }
 
 export const CalibrationCard = ({ calibration }: CalibrationCardProps) => {
+  const confidencePct = confidenceValueToPercent(calibration.confidence_score);
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
       <div className="flex justify-between items-start mb-4">
@@ -23,12 +25,12 @@ export const CalibrationCard = ({ calibration }: CalibrationCardProps) => {
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4">
           <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Confidence Score</div>
           <div className="text-3xl font-bold text-gray-900 dark:text-white">
-            {(calibration.confidence_score * 100).toFixed(1)}%
+            {confidencePct != null ? `${confidencePct}%` : '—'}
           </div>
           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-3">
             <div
               className="bg-green-600 h-2 rounded-full"
-              style={{ width: `${calibration.confidence_score * 100}%` }}
+              style={{ width: `${confidencePct ?? 0}%` }}
             ></div>
           </div>
         </div>

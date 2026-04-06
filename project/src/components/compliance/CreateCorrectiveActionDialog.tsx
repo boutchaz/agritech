@@ -6,14 +6,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -122,20 +115,18 @@ export function CreateCorrectiveActionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          {t('dialogs.createAction.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.createAction.title')}</DialogTitle>
-          <DialogDescription>
-            {t('dialogs.createAction.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('dialogs.createAction.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.createAction.title')}
+        description={t('dialogs.createAction.description')}
+        size="lg"
+      >
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
@@ -275,7 +266,7 @@ export function CreateCorrectiveActionDialog({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

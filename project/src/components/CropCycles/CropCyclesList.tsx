@@ -29,14 +29,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Card,
   CardContent,
@@ -109,7 +103,11 @@ const cropCycleSchema = z.object({
 
 type CropCycleFormData = z.infer<typeof cropCycleSchema>;
 
-export function CropCyclesList() {
+interface CropCyclesListProps {
+  initialCampaignId?: string;
+}
+
+export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) {
   const { hasRole, currentOrganization } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -118,7 +116,7 @@ export function CropCyclesList() {
   const [editingCycle, setEditingCycle] = useState<CropCycle | null>(null);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
 
-  const [filterCampaignId, setFilterCampaignId] = useState<string>("");
+  const [filterCampaignId, setFilterCampaignId] = useState<string>(initialCampaignId || "");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterCycleType, setFilterCycleType] = useState<string>("");
   const [filterSeason, setFilterSeason] = useState<string>("");
@@ -133,7 +131,7 @@ export function CropCyclesList() {
     "farm_manager",
     "farm_worker",
   ]);
-  const currencySymbol = (currentOrganization as any)?.currency_symbol || DEFAULT_CURRENCY;
+  const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
   const { data: cropCycles = [], isLoading } = useCropCycles({
     campaign_id: filterCampaignId || undefined,
@@ -395,7 +393,7 @@ export function CropCyclesList() {
         let cropId = data.crop_id;
         if (!cropId && data.crop_type && data.farm_id) {
           const matchingCrop = existingCrops.find(
-            (crop: any) =>
+            (crop: { id: string; name?: string; crop_type?: string }) =>
               crop.name?.toLowerCase().includes(data.crop_type.toLowerCase()) ||
               crop.crop_type?.toLowerCase() === data.crop_type.toLowerCase(),
           );
@@ -1078,23 +1076,21 @@ export function CropCyclesList() {
         </Card>
       )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCycle
-                ? t("cropCycles.edit.title", "Edit Crop Cycle")
-                : t("cropCycles.create.title", "Create Crop Cycle")}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCycle
-                ? t("cropCycles.edit.description", "Update crop cycle details.")
-                : t(
-                    "cropCycles.create.description",
-                    "Start tracking a new production cycle.",
-                  )}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingCycle
+          ? t("cropCycles.edit.title", "Edit Crop Cycle")
+          : t("cropCycles.create.title", "Create Crop Cycle")}
+        description={editingCycle
+          ? t("cropCycles.edit.description", "Update crop cycle details.")
+          : t(
+              "cropCycles.create.description",
+              "Start tracking a new production cycle.",
+            )}
+        size="xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           {overlapWarning && (
             <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-3 text-sm">
               {overlapWarning}
@@ -1463,8 +1459,7 @@ export function CropCyclesList() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 }

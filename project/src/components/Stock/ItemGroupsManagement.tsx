@@ -23,13 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/radix-select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -646,26 +640,23 @@ export default function ItemGroupsManagement() {
       </Card>
 
        {/* Create/Edit Dialog */}
-       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-         <DialogContent>
-           <DialogHeader>
-             <DialogTitle>
-               {editingGroup
-                 ? t('items.itemGroup.edit')
-                 : defaultParentId
-                   ? t('items.itemGroup.addSubGroup')
-                   : t('items.itemGroup.createNew')}
-             </DialogTitle>
-             <DialogDescription>
-               {editingGroup
-                 ? t('items.itemGroup.editDescription')
-                 : defaultParentId
-                   ? t('items.itemGroup.addSubGroupDescription', {
-                       parent: groupNameById.get(defaultParentId) || '',
-                     })
-                   : t('items.itemGroup.description')}
-             </DialogDescription>
-           </DialogHeader>
+       <ResponsiveDialog
+         open={showDialog}
+         onOpenChange={setShowDialog}
+         title={editingGroup
+           ? t('items.itemGroup.edit')
+           : defaultParentId
+             ? t('items.itemGroup.addSubGroup')
+             : t('items.itemGroup.createNew')}
+         description={editingGroup
+           ? t('items.itemGroup.editDescription')
+           : defaultParentId
+             ? t('items.itemGroup.addSubGroupDescription', {
+                 parent: groupNameById.get(defaultParentId) || '',
+               })
+             : t('items.itemGroup.description')}
+         size="lg"
+       >
            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
              <div>
                <Label htmlFor="name">{t('items.itemGroup.name')} *</Label>
@@ -767,8 +758,7 @@ export default function ItemGroupsManagement() {
                </Button>
              </div>
            </form>
-         </DialogContent>
-       </Dialog>
+       </ResponsiveDialog>
 
        {/* Delete Confirmation Dialog */}
        <AlertDialog

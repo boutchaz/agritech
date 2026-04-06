@@ -4,6 +4,7 @@ import { Clock, Play, Square, Loader2, User } from 'lucide-react';
 import { useTaskTimeLogs, useClockIn, useClockOut } from '@/hooks/useTasks';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import type { TaskTimeLog } from '@/types/tasks';
 import { format, formatDistance } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
 
@@ -19,6 +20,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
   const { data: timeLogs = [], isLoading } = useTaskTimeLogs(taskId);
   const clockIn = useClockIn();
   const clockOut = useClockOut();
+  const typedTimeLogs = timeLogs as TaskTimeLog[];
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -29,8 +31,8 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
   };
 
   const activeLog = useMemo(() => {
-    return timeLogs.find((log: any) => !log.end_time);
-  }, [timeLogs]);
+    return typedTimeLogs.find((log) => !log.end_time);
+  }, [typedTimeLogs]);
 
   // Tick every second when there's an active session
   useEffect(() => {
@@ -59,14 +61,14 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
   const totalStats = useMemo(() => {
     let totalHours = 0;
     let sessionCount = 0;
-    for (const log of timeLogs) {
+    for (const log of typedTimeLogs) {
       sessionCount++;
-      if ((log as any).total_hours) {
-        totalHours += (log as any).total_hours;
+      if (log.total_hours) {
+        totalHours += log.total_hours;
       }
     }
     return { totalHours, sessionCount };
-  }, [timeLogs]);
+  }, [typedTimeLogs]);
 
   const handleClockIn = () => {
     clockIn.mutate({
@@ -132,7 +134,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
           )}
 
           {/* Summary */}
-          {timeLogs.length > 0 && (
+          {typedTimeLogs.length > 0 && (
             <div className="border-t dark:border-gray-700 pt-3">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('tasks.detail.totalTime', 'Total: {{time}} across {{count}} sessions', {
@@ -144,9 +146,9 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
           )}
 
           {/* Time Log History */}
-          {timeLogs.length > 0 && (
+          {typedTimeLogs.length > 0 && (
             <div className="space-y-2">
-              {timeLogs.map((log: any) => {
+              {typedTimeLogs.map((log) => {
                 const isActive = !log.end_time;
                 return (
                   <div
@@ -191,7 +193,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
           )}
 
           {/* Empty state */}
-          {timeLogs.length === 0 && !activeLog && (
+          {typedTimeLogs.length === 0 && !activeLog && (
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
               {t('tasks.detail.noTimeLogs', 'No time logs recorded yet.')}
             </p>

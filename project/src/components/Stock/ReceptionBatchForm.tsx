@@ -4,12 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -93,7 +92,7 @@ interface ReceptionBatchFormProps {
   onOpenChange: (open: boolean) => void;
   defaultHarvestId?: string;
   defaultParcelId?: string;
-  batchToEdit?: any;
+  batchToEdit?: Record<string, unknown>;
 }
 
 export default function ReceptionBatchForm({
@@ -329,7 +328,7 @@ export default function ReceptionBatchForm({
               moisture_content: data.moisture_content,
             },
            });
-         } catch (_qcError: any) {
+         } catch (_qcError: unknown) {
            // Quality control error but don't fail the entire operation
            toast.warning(t('receptionBatches.form.toast.createdWithQualityWarning'));
          }
@@ -338,14 +337,19 @@ export default function ReceptionBatchForm({
       toast.success(isEditMode ? t('receptionBatches.form.toast.updated') : t('receptionBatches.form.toast.created'));
       onOpenChange(false);
       form.reset();
-    } catch (error: any) {
-      toast.error(`${t(isEditMode ? 'receptionBatches.form.toast.updateError' : 'receptionBatches.form.toast.createError')}: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`${t(isEditMode ? 'receptionBatches.form.toast.updateError' : 'receptionBatches.form.toast.createError')}: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="3xl"
+      className="p-0"
+      contentClassName="max-h-[90vh] overflow-y-auto p-0"
+    >
         <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-t-lg">
           <DialogTitle className="flex items-center gap-3 text-xl font-semibold">
             <div className="p-2 bg-white/20 rounded-lg">
@@ -823,7 +827,6 @@ export default function ReceptionBatchForm({
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

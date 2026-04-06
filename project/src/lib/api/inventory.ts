@@ -7,7 +7,6 @@ export interface InventoryProductVariant {
   name: string;
   quantity: number;
   unit: string | null;
-  base_quantity: number;
 }
 
 export interface InventoryProduct {

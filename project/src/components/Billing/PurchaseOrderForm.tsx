@@ -2,13 +2,7 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -328,15 +322,15 @@ export const PurchaseOrderForm = ({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-5xl min-w-[min(95vw,980px)] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? 'Update purchase order details and line items' : 'Create a new purchase order for supplier'}
-          </DialogDescription>
-        </DialogHeader>
-
+    <>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}
+        description={isEditMode ? 'Update purchase order details and line items' : 'Create a new purchase order for supplier'}
+        size="4xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Supplier & Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -597,7 +591,7 @@ export const PurchaseOrderForm = ({
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </ResponsiveDialog>
 
       {/* Quick Create Item Modal */}
       <QuickCreateItem
@@ -613,6 +607,6 @@ export const PurchaseOrderForm = ({
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </>
   );
 };

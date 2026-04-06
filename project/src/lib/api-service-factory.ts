@@ -7,7 +7,7 @@
 
 import { apiClient } from './api-client';
 import { OrganizationRequiredError } from './errors';
-import type { useQuery } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 
 /**
  * Generic API service options
@@ -31,7 +31,7 @@ export interface ApiServiceOptions {
   /**
    * Transform function for API responses
    */
-  transform?: <T>(data: any) => T;
+  transform?: <T>(data: unknown) => T;
 }
 
 /**
@@ -57,7 +57,7 @@ export interface PaginatedResponse<T> {
 /**
  * API service method options
  */
-export interface ServiceMethodOptions<T = any> {
+export interface ServiceMethodOptions<T = unknown> {
   /**
    * Whether to include organization ID in request
    */
@@ -66,7 +66,7 @@ export interface ServiceMethodOptions<T = any> {
   /**
    * Transform function for the response
    */
-  transform?: (data: any) => T;
+  transform?: (data: unknown) => T;
 
   /**
    * Query key for React Query
@@ -77,8 +77,8 @@ export interface ServiceMethodOptions<T = any> {
 /**
  * Create a typed API service
  */
-export function createApiService<T extends Record<string, any>>(options: ApiServiceOptions) {
-  const { baseUrl, entityName, requireOrganization = true } = options;
+export function createApiService<T extends Record<string, unknown>>(options: ApiServiceOptions) {
+  const { baseUrl, entityName: _entityName, requireOrganization = true } = options;
 
   /**
    * Generic GET request wrapper
@@ -102,7 +102,7 @@ export function createApiService<T extends Record<string, any>>(options: ApiServ
   /**
    * Generic POST request wrapper
    */
-  async function post<R = T, D = any>(
+  async function post<R = T, D = unknown>(
     endpoint: string,
     data: D,
     methodOptions: ServiceMethodOptions<R> = {},
@@ -123,7 +123,7 @@ export function createApiService<T extends Record<string, any>>(options: ApiServ
   /**
    * Generic PATCH request wrapper
    */
-  async function patch<R = T, D = any>(
+  async function patch<R = T, D = unknown>(
     endpoint: string,
     data: D,
     methodOptions: ServiceMethodOptions<R> = {},
@@ -150,7 +150,7 @@ export function createApiService<T extends Record<string, any>>(options: ApiServ
     organizationId?: string
   ): Promise<R> {
     const { transform } = methodOptions;
-    const includeOrg = methodOptions.includeOrg ?? requireOrganization;
+    const includeOrg = methodOptions.includeOrganization ?? requireOrganization;
 
     const result = await apiClient.delete<R>(
       endpoint,
@@ -170,31 +170,31 @@ export function createApiService<T extends Record<string, any>>(options: ApiServ
      * Get all entities (paginated)
      */
     getAll: (organizationId?: string) =>
-      get<PaginatedResponse<T>>(baseUrl, { organizationId }),
+      get<PaginatedResponse<T>>(baseUrl, {}, organizationId),
 
     /**
      * Get single entity by ID
      */
     getById: (id: string, organizationId?: string) =>
-      get<T>(`${baseUrl}/${id}`, { organizationId }),
+      get<T>(`${baseUrl}/${id}`, {}, organizationId),
 
     /**
      * Create new entity
      */
     create: (data: Partial<T>, organizationId?: string) =>
-      post<T>(baseUrl, data, { organizationId }),
+      post<T>(baseUrl, data, {}, organizationId),
 
     /**
      * Update entity by ID
      */
     update: (id: string, data: Partial<T>, organizationId?: string) =>
-      post<T>(`${baseUrl}/${id}`, data, { organizationId }),
+      post<T>(`${baseUrl}/${id}`, data, {}, organizationId),
 
     /**
      * Delete entity by ID
      */
-    delete: (id: string, organizationId?: string) =>
-      del<void>(`${baseUrl}/${id}`, { organizationId }),
+    deleteById: (id: string, organizationId?: string) =>
+      del<void>(`${baseUrl}/${id}`, {}, organizationId),
 
     /**
      * Custom GET request
@@ -239,7 +239,7 @@ export function createQueryHook<T, R = T>(
 /**
  * Helper to create a React Query mutation hook from API service
  */
-export function createMutationHook<T, D = any, R = T>(
+export function createMutationHook<T, D = unknown, R = T>(
   mutationFn: (data: D, organizationId?: string) => Promise<R>,
   options?: {
     onSuccess?: (data: R, variables: D) => void;
@@ -247,13 +247,13 @@ export function createMutationHook<T, D = any, R = T>(
     invalidateQueries?: () => string[][];
   }
 ) {
-  return (queryClient: any, getCurrentOrganization: () => string | null) => ({
+  return (_queryClient: QueryClient, getCurrentOrganization: () => string | null) => ({
     mutationFn: async (data: D) => {
       const organizationId = getCurrentOrganization();
       if (!organizationId && options?.invalidateQueries) {
         throw new OrganizationRequiredError();
       }
-      return mutationFn(data, organizationId);
+      return mutationFn(data, organizationId ?? undefined);
     },
     onSuccess: options?.onSuccess,
     onError: options?.onError,

@@ -22,6 +22,18 @@ interface StatisticsCalculatorProps {
   boundary?: number[][];
 }
 
+interface RawStatisticsValue {
+  mean?: number;
+  min?: number;
+  max?: number;
+  std?: number;
+  median?: number;
+  p25?: number;
+  p75?: number;
+  p98?: number;
+  pixel_count?: number;
+}
+
 const StatisticsCalculator = ({
   parcelId,
   parcelName,
@@ -87,7 +99,7 @@ const StatisticsCalculator = ({
   const buildStatsFromCache = useCallback((): ParcelStatisticsResponse | null => {
     if (!cachedStats || cachedStats.length === 0) return null;
 
-    const statistics: Record<string, any> = {};
+    const statistics: ParcelStatisticsResponse['statistics'] = {} as ParcelStatisticsResponse['statistics'];
     for (const item of cachedStats) {
       if (!statistics[item.index_name]) {
         statistics[item.index_name] = {
@@ -214,7 +226,7 @@ const StatisticsCalculator = ({
 
       // Transform statistics to our expected format and save to cache
       for (const [index, stats] of Object.entries(result.statistics || {})) {
-        const typedStats = stats as any;
+        const typedStats = stats as RawStatisticsValue;
         formattedResult.statistics[index as VegetationIndexType] = {
           mean: typedStats.mean || 0,
           min: typedStats.min || 0,

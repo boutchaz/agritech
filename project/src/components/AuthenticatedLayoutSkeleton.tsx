@@ -23,11 +23,11 @@ export function AuthenticatedLayoutSkeleton() {
 
   return (
     <div className={isDark ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <div className="h-dvh min-h-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
         {/* ===== SIDEBAR SKELETON ===== */}
         <div
           className={cn(
-            'fixed inset-y-0 z-50 h-screen bg-white dark:bg-slate-900 flex-col hidden md:flex',
+            'fixed inset-y-0 z-50 h-dvh bg-white dark:bg-slate-900 flex-col hidden md:flex',
             'transform transition-all duration-300 ease-in-out',
             isRTL ? 'right-0 border-l' : 'left-0 border-r',
             'border-slate-200 dark:border-slate-800',
@@ -118,10 +118,13 @@ export function AuthenticatedLayoutSkeleton() {
 
         {/* ===== MAIN CONTENT AREA ===== */}
         <div
-          className="flex flex-col h-screen transition-all duration-300 ease-in-out"
+          className="flex min-h-0 flex-col h-dvh transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
-          <main className="flex-1 min-h-0 overflow-y-auto bg-slate-50/90 dark:bg-slate-900/80 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0">
+          <main
+            data-main-scroll
+            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]"
+          >
             {/* ===== PAGE HEADER SKELETON ===== */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm">
               {/* Mobile header */}

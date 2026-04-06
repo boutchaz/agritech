@@ -54,7 +54,7 @@ const NeuralField = ({ progress }: { progress: number }) => {
 const NeuralOrchard = ({ progress }: { progress: number }) => {
   const treeCount = 60;
   const treePositions = useMemo(() => {
-    const temp = [];
+    const temp: [number, number, number][] = [];
     for (let i = 0; i < treeCount; i++) {
       temp.push([
         (Math.random() - 0.5) * 20,
@@ -68,7 +68,7 @@ const NeuralOrchard = ({ progress }: { progress: number }) => {
   return (
     <group>
       {treePositions.map((pos, treeIdx) => (
-        <group key={"tree-" + treeIdx} position={pos as any}>
+        <group key={"tree-" + treeIdx} position={pos}>
           {/* Trunk - simple line for tech look */}
           <mesh position={[0, 0.5, 0]}>
             <cylinderGeometry args={[0.01, 0.02, 1, 4]} />

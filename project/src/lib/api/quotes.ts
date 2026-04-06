@@ -1,88 +1,28 @@
 import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
+import type {
+  Quote,
+  QuoteFilters,
+  PaginatedQuoteQuery,
+  PaginatedResponse,
+  UpdateQuoteStatusInput,
+  QuoteItemInput,
+  CreateQuoteInput,
+  UpdateQuoteInput,
+} from '@/types/quotes';
 
 const BASE_URL = '/api/v1/quotes';
 
-export interface Quote {
-  id: string;
-  organization_id: string;
-  customer_id: string;
-  quote_number: string;
-  quote_date: string;
-  valid_until: string;
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
-  subtotal: number;
-  tax_total: number;
-  grand_total: number;
-  payment_terms?: string;
-  delivery_terms?: string;
-  terms_and_conditions?: string;
-  notes?: string;
-  reference_number?: string;
-  created_at: string;
-  updated_at: string;
-  items?: QuoteItemInput[];
-}
-
-export interface QuoteFilters {
-  status?: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
-  customer_id?: string;
-  customer_name?: string;
-  quote_number?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  page?: number;
-  pageSize?: number;
-}
-
-export interface PaginatedQuoteQuery {
-  page?: number;
-  pageSize?: number;
-  sortBy?: string;
-  sortDir?: 'asc' | 'desc';
-  search?: string;
-  status?: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
-  dateFrom?: string;
-  dateTo?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export interface UpdateQuoteStatusInput {
-  status: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'converted' | 'cancelled';
-  remarks?: string;
-}
-
-export interface QuoteItemInput {
-  line_number?: number;
-  item_id?: string;
-  item_name: string;
-  description?: string;
-  quantity: number;
-  unit_price: number;
-  account_id: string;
-  tax_id?: string | null;
-}
-
-export interface CreateQuoteInput {
-  customer_id: string;
-  quote_date: string;
-  valid_until: string;
-  items: QuoteItemInput[];
-  payment_terms?: string;
-  delivery_terms?: string;
-  terms_and_conditions?: string;
-  notes?: string;
-  reference_number?: string;
-}
-
-export type UpdateQuoteInput = Partial<CreateQuoteInput>;
+export type {
+  Quote,
+  QuoteFilters,
+  PaginatedQuoteQuery,
+  PaginatedResponse,
+  UpdateQuoteStatusInput,
+  QuoteItemInput,
+  CreateQuoteInput,
+  UpdateQuoteInput,
+} from '@/types/quotes';
 
 // Transform frontend input to API format
 function transformQuoteForApi(data: CreateQuoteInput) {

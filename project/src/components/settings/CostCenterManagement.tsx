@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -410,20 +410,17 @@ export function CostCenterManagement() {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCostCenter
-                ? t('costCenters.edit.title', 'Edit Cost Center')
-                : t('costCenters.create.title', 'Create Cost Center')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingCostCenter
-                ? t('costCenters.edit.description', 'Update the cost center details.')
-                : t('costCenters.create.description', 'Add a new cost center for expense tracking.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingCostCenter
+          ? t('costCenters.edit.title', 'Edit Cost Center')
+          : t('costCenters.create.title', 'Create Cost Center')}
+        description={editingCostCenter
+          ? t('costCenters.edit.description', 'Update the cost center details.')
+          : t('costCenters.create.description', 'Add a new cost center for expense tracking.')}
+        size="md"
+      >
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/* Code */}
@@ -576,8 +573,7 @@ export function CostCenterManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deletingCostCenter} onOpenChange={() => setDeletingCostCenter(null)}>

@@ -44,6 +44,17 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+type HarvestUnit = CompleteHarvestTaskRequest['unit'];
+type HarvestQualityGrade = NonNullable<CompleteHarvestTaskRequest['quality_grade']>;
+type TaskCompletionPayload = Parameters<typeof tasksApi.complete>[2] & {
+  units_completed: number;
+  rate_per_unit: number;
+  worker_completions?: Array<{
+    worker_id: string;
+    units_completed: number;
+  }>;
+};
+
 interface TaskDetailDialogProps {
   task: TaskSummary | Task;
   organizationId: string;
@@ -68,7 +79,6 @@ const TaskDetailDialog = ({
 
   // Per-unit completion form
   const isPerUnitTask = task.payment_type === 'per_unit';
-  const _isForfaitTask = task.payment_type === 'forfait';
   const [showPerUnitForm, setShowPerUnitForm] = useState(false);
   const [perUnitData, setPerUnitData] = useState({
     units_completed: task.units_required || 0,
@@ -132,6 +142,7 @@ const TaskDetailDialog = ({
   // Harvest completion form data
   // Auto-initialize crop_id with virtual crop from parcel if available and no crop_id in task
   const initialCropId = task.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
+  const firstAvailableCropId = availableCrops[0]?.id;
   const [harvestData, setHarvestData] = useState<Partial<CompleteHarvestTaskRequest>>({
     crop_id: initialCropId,
     harvest_date: new Date().toISOString().split('T')[0],
@@ -143,10 +154,10 @@ const TaskDetailDialog = ({
 
   // Update crop_id when availableCrops changes (e.g., when parcel loads)
   useEffect(() => {
-    if (!harvestData.crop_id && availableCrops.length > 0) {
-      setHarvestData(prev => ({ ...prev, crop_id: availableCrops[0].id }));
+    if (!harvestData.crop_id && firstAvailableCropId) {
+      setHarvestData(prev => ({ ...prev, crop_id: firstAvailableCropId }));
     }
-  }, [availableCrops.length]); // Only depend on length to avoid infinite loops
+  }, [firstAvailableCropId, harvestData.crop_id]);
 
   const isHarvestingTask = task.task_type === 'harvesting';
   const canStart = task.status === 'pending' || task.status === 'assigned';
@@ -167,8 +178,8 @@ const TaskDetailDialog = ({
         },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du démarrage de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du démarrage de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -184,8 +195,8 @@ const TaskDetailDialog = ({
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la pause de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la pause de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -201,8 +212,8 @@ const TaskDetailDialog = ({
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la reprise de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la reprise de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -227,8 +238,8 @@ const TaskDetailDialog = ({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -257,18 +268,19 @@ const TaskDetailDialog = ({
         : perUnitData.units_completed;
 
       const totalCost = totalUnits * perUnitData.rate_per_unit;
-      await tasksApi.complete(organizationId, task.id, {
+      const completionPayload: TaskCompletionPayload = {
         units_completed: totalUnits,
         rate_per_unit: perUnitData.rate_per_unit,
         actual_cost: totalCost,
         notes: perUnitData.notes || undefined,
         ...(worker_completions ? { worker_completions } : {}),
-      } as any);
+      };
+      await tasksApi.complete(organizationId, task.id, completionPayload);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -354,8 +366,8 @@ const TaskDetailDialog = ({
       } else {
         onClose();
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsLoading(false);
     }
@@ -432,7 +444,7 @@ const TaskDetailDialog = ({
               </p>
             </div>
 
-            {task.farm_name && (
+            {'farm_name' in task && task.farm_name && (
               <div className="space-y-1">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Ferme</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
@@ -452,7 +464,7 @@ const TaskDetailDialog = ({
               </div>
             )}
 
-            {task.worker_name && (
+            {'worker_name' in task && task.worker_name && (
               <div className="space-y-1">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Assigné à</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
@@ -760,7 +772,7 @@ const TaskDetailDialog = ({
                   <Label htmlFor="unit">Unité</Label>
                   <Select
                     value={harvestData.unit}
-                    onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as any })}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}
                   >
                     <SelectTrigger id="unit">
                       <SelectValue placeholder="Sélectionner" />
@@ -780,7 +792,7 @@ const TaskDetailDialog = ({
                   <Label htmlFor="quality_grade">Grade de qualité</Label>
                   <Select
                     value={harvestData.quality_grade}
-                    onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as any })}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}
                   >
                     <SelectTrigger id="quality_grade">
                       <SelectValue placeholder="Sélectionner" />

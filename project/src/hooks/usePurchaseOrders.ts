@@ -30,12 +30,21 @@ export interface PurchaseOrder {
   created_by: string | null;
 }
 
+type PurchaseOrderApiShape = Partial<PurchaseOrderWithItems> & Record<string, unknown>;
+
 /**
  * Normalize API response to ensure consistent field names
  */
-function normalizePurchaseOrder(po: any): PurchaseOrder {
+function normalizePurchaseOrder(po: PurchaseOrderApiShape): PurchaseOrder {
   return {
-    ...po,
+    id: String(po.id ?? ''),
+    organization_id: String(po.organization_id ?? ''),
+    order_number: String(po.order_number ?? ''),
+    order_date: String(po.order_date ?? ''),
+    expected_delivery_date: (po.expected_delivery_date as string | null | undefined) ?? null,
+    supplier_id: (po.supplier_id as string | null | undefined) ?? null,
+    supplier_name: String(po.supplier_name ?? ''),
+    supplier_contact: (po.supplier_contact as string | null | undefined) ?? null,
     // Map total_amount to grand_total for UI compatibility
     grand_total: Number(po.grand_total ?? po.total_amount ?? 0),
     total_amount: Number(po.total_amount ?? po.grand_total ?? 0),
@@ -43,7 +52,16 @@ function normalizePurchaseOrder(po: any): PurchaseOrder {
     tax_amount: Number(po.tax_amount ?? 0),
     billed_amount: Number(po.billed_amount ?? 0),
     // Default currency if not set
-    currency_code: po.currency_code || 'MAD',
+    currency_code: typeof po.currency_code === 'string' ? po.currency_code : 'MAD',
+    status: (po.status as PurchaseOrder['status'] | undefined) ?? 'draft',
+    notes: (po.notes as string | null | undefined) ?? null,
+    terms_and_conditions: (po.terms_and_conditions as string | null | undefined) ?? null,
+    stock_entry_id: (po.stock_entry_id as string | null | undefined) ?? null,
+    stock_received: Boolean(po.stock_received),
+    stock_received_date: (po.stock_received_date as string | null | undefined) ?? null,
+    created_at: String(po.created_at ?? ''),
+    updated_at: String(po.updated_at ?? ''),
+    created_by: (po.created_by as string | null | undefined) ?? null,
   };
 }
 
@@ -90,10 +108,10 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
         status: status,
         page: 1,
         pageSize: 100,
-      }, currentOrganization.id);
+      }, currentOrganization.id) as PurchaseOrderApiShape[] | { data?: PurchaseOrderApiShape[] };
 
       const purchaseOrders = Array.isArray(response) ? response : (response?.data || []);
-      return purchaseOrders.map((po: any) => normalizePurchaseOrder(po)) as PurchaseOrderWithItems[];
+      return purchaseOrders.map((po: unknown) => normalizePurchaseOrder(po as PurchaseOrderApiShape)) as PurchaseOrderWithItems[];
     },
     enabled: !!currentOrganization?.id,
   });
@@ -113,7 +131,7 @@ export function usePaginatedPurchaseOrders(query: PaginatedPurchaseOrderQuery) {
       const rawData = Array.isArray(response.data) ? response.data : [];
       return {
         ...response,
-        data: rawData.map((po: unknown) => normalizePurchaseOrder(po)) as PurchaseOrder[],
+        data: rawData.map((po: unknown) => normalizePurchaseOrder(po as PurchaseOrderApiShape)) as PurchaseOrder[],
       };
     },
     enabled: !!currentOrganization?.id,
@@ -132,7 +150,7 @@ export function usePurchaseOrder(poId: string | null) {
       if (!currentOrganization?.id) throw new Error('No organization selected');
 
       const data = await purchaseOrdersApi.getPurchaseOrder(poId, currentOrganization.id);
-      return normalizePurchaseOrder(data) as PurchaseOrderWithItems;
+      return normalizePurchaseOrder(data as PurchaseOrderApiShape) as PurchaseOrderWithItems;
     },
     enabled: !!poId && !!currentOrganization?.id,
   });
@@ -250,7 +268,7 @@ export function useUpdatePurchaseOrder() {
       }
 
       // Build the update payload (only fields supported by the backend)
-      const updatePayload: any = {
+      const updatePayload: Record<string, unknown> = {
         ...updates,
       };
 

@@ -1,4 +1,4 @@
-import {  useState, useEffect, useRef, useCallback  } from "react";
+import { useState, useCallback } from 'react';
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -33,12 +33,21 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedFarmId, setSelectedFarmId] = useState<string>(search.farmId || "");
   const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
-  // Track if we're currently syncing to prevent loops
-  const isSyncingRef = useRef(false);
+  /** Farm filter: URL is the only source of truth (avoids navigate ↔ state sync loops). */
+  const selectedFarmId = search.farmId ?? '';
+  const setFarmFilter = useCallback(
+    (farmId: string) => {
+      void navigate({
+        to: '/parcels',
+        search: { farmId: farmId || undefined },
+        replace: true,
+      });
+    },
+    [navigate],
+  );
 
   // React Query hooks
   const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
@@ -59,53 +68,6 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
 
 
-
-  // Sync URL search params to state (URL is source of truth)
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (isSyncingRef.current) return;
-
-    isSyncingRef.current = true;
-
-    const urlFarmId = search.farmId || "";
-
-    if (urlFarmId !== selectedFarmId) {
-      setSelectedFarmId(urlFarmId);
-    }
-
-    isSyncingRef.current = false;
-
-  }, [search.farmId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  // Update URL when state changes (state changes trigger URL update)
-  useEffect(() => {
-    if (isSyncingRef.current) return;
-
-    const newSearch: { farmId: string | undefined } = {
-      farmId: undefined
-    };
-    const currentFarmId = search.farmId || "";
-
-    if (selectedFarmId !== "") {
-      newSearch.farmId = selectedFarmId;
-    }
-
-    // Only navigate if something actually changed
-    const farmChanged = currentFarmId !== selectedFarmId;
-
-    if (farmChanged) {
-      isSyncingRef.current = true;
-      navigate({
-        to: '/parcels',
-        search: newSearch,
-        replace: true,
-      }).then(() => {
-        isSyncingRef.current = false;
-      });
-    }
-
-  }, [selectedFarmId, search.farmId, navigate]);
 
   // Farms and parcels are loaded automatically via React Query hooks
   // No manual fetching needed
@@ -163,7 +125,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
               <select
                 data-tour="parcel-filters"
                 value={selectedFarmId}
-                onChange={(e) => setSelectedFarmId(e.target.value)}
+                onChange={(e) => setFarmFilter(e.target.value)}
                 className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
               >
                 <option value="">{t('parcels.allFarms')}</option>
@@ -223,7 +185,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                       <div
                         key={farm.id}
                         className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-green-500 transition-colors cursor-pointer"
-                        onClick={() => setSelectedFarmId(farm.id)}
+                        onClick={() => setFarmFilter(farm.id)}
                       >
                         <div className="flex items-center space-x-2 mb-2">
                           <TreePine className="h-5 w-5 text-green-600" />

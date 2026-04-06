@@ -23,7 +23,7 @@ export interface SatelliteIndex {
   image_source?: string;
   geotiff_url?: string;
   geotiff_expires_at?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
   // Legacy fields for backward compatibility
@@ -63,7 +63,7 @@ export interface CreateSatelliteIndexInput {
   geotiff_url?: string;
   geotiff_expires_at?: string;
   processing_job_id?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   // Legacy single value field
   index_value?: number;
 }
@@ -88,10 +88,8 @@ export const satelliteIndicesApi = {
     const response = await apiClient.get<SatelliteIndex[] | { data: SatelliteIndex[] }>(url, {}, organizationId);
 
     // Handle both array and { data: [...] } response formats
-    if (Array.isArray(response)) {
-      return response;
-    }
-    return (response as any).data || [];
+    const result = response as unknown as SatelliteIndex[] | { data: SatelliteIndex[] };
+    return Array.isArray(result) ? result : result.data || [];
   },
 
   /**

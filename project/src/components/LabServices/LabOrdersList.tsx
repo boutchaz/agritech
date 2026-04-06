@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { SectionLoader } from '@/components/ui/loader';
 
 interface LabOrdersListProps {
-  orders: any[];
+  orders: Array<{ id: string; status: string; service_type?: { name?: string }; provider?: { name?: string }; created_at?: string }>;
   isLoading: boolean;
 }
 
-const statusConfig: Record<string, { label: string; variant: any }> = {
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
   pending: { label: 'En attente', variant: 'outline' },
   sample_collected: { label: 'Échantillon collecté', variant: 'secondary' },
   sent_to_lab: { label: 'Envoyé au labo', variant: 'default' },

@@ -65,7 +65,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
       if (!line) continue;
 
       const values = line.split(',').map(v => v.trim());
-      const row: any = {};
+      const row: Record<string, string | undefined> = {};
 
       headers.forEach((header, index) => {
         row[header] = values[index];
@@ -98,8 +98,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
         }
 
         data.push(analysis);
-      } catch (err: any) {
-        newErrors.push(`Ligne ${i + 1}: ${err.message}`);
+      } catch (err: unknown) {
+        newErrors.push(`Ligne ${i + 1}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
       }
     }
 
@@ -121,8 +121,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
         const text = e.target?.result as string;
         const parsed = parseCSV(text);
         setParsedData(parsed);
-      } catch (err: any) {
-        setErrors([err.message]);
+      } catch (err: unknown) {
+        setErrors([err instanceof Error ? err.message : 'Erreur inconnue']);
       }
     };
     reader.readAsText(uploadedFile);
@@ -188,8 +188,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
           setShowModal(false);
         }, 2000);
       }
-    } catch (err: any) {
-      setErrors([...errors, err.message]);
+    } catch (err: unknown) {
+      setErrors([...errors, err instanceof Error ? err.message : 'Erreur inconnue']);
     } finally {
       setImporting(false);
     }

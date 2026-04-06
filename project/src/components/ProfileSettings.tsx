@@ -153,9 +153,9 @@ const ProfileSettings = () => {
       setShowPasswordChange(false);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error changing password:', err);
-      setError(err.message || t('profile.errors.passwordChangeError'));
+      setError(err instanceof Error ? err.message : t('profile.errors.passwordChangeError'));
     } finally {
       setChangingPassword(false);
     }

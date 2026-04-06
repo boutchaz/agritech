@@ -28,7 +28,7 @@ function SetPasswordPage() {
   useEffect(() => {
     // Check if user needs to set password
     if (!user) {
-      navigate({ to: '/login' });
+      navigate({ to: '/login', search: { redirect: '/dashboard' } });
       return;
     }
 
@@ -103,9 +103,9 @@ function SetPasswordPage() {
 
       // Redirect to dashboard
       navigate({ to: '/dashboard' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting password:', err);
-      setError(err.message || 'Une erreur est survenue lors de la configuration du mot de passe');
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la configuration du mot de passe');
     } finally {
       setLoading(false);
     }

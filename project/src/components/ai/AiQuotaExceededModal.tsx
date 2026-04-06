@@ -1,12 +1,11 @@
-import {  useEffect, useState  } from "react";
+import { useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
 import { Zap, Key, AlertTriangle } from 'lucide-react';
@@ -34,8 +33,7 @@ export function AiQuotaExceededModal({
     : '';
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent>
+    <ResponsiveDialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()} size="lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-orange-500" />
@@ -71,8 +69,7 @@ export function AiQuotaExceededModal({
             {t('ai.quota.byokAction', 'Add Your Own Key')}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
@@ -87,8 +84,10 @@ export function useAiQuotaError() {
     resetDate?: string;
   }>({ open: false });
 
-  const handleError = (error: any) => {
-    const data = error?.response?.data || error;
+  const handleError = (error: unknown) => {
+    const data = typeof error === 'object' && error !== null && 'response' in error
+      ? (error as { response?: { data?: Record<string, unknown> } }).response?.data || error
+      : error;
     if (data?.error === 'AI_QUOTA_EXCEEDED' || data?.message?.includes?.('AI quota exceeded')) {
       setQuotaError({
         open: true,

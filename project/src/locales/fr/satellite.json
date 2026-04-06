@@ -3,6 +3,7 @@
     "title": "Séries temporelles d'indices de végétation",
     "subtitle": "Tendances historiques pour {{name}}",
     "subtitleFallback": "Tendances historiques pour Parcelle {{id}}",
+    "cacheVsHeatmapHint": "Ce graphique lit les indices enregistrés en base. La carte thermique peut interroger le moteur pour d'autres dates — si une date y apparaît mais pas ici, élargissez la plage si besoin et utilisez « Récupérer depuis satellite » pour synchroniser.",
     "dataPoints": "{{count}} points",
     "warnings": {
       "sparseData": "Données limitées.",
@@ -49,7 +50,9 @@
     "actions": {
       "refreshCache": "Actualiser le cache",
       "fetchFromSatellite": "Récupérer depuis satellite",
-      "launching": "Lancement..."
+      "launching": "Lancement...",
+      "selectAllIndices": "Tout sélectionner",
+      "unselectAllIndices": "Tout désélectionner"
     },
     "indexDescriptions": {
       "NIRvP": "NIRvP — Productivité photosynthétique (NIRv × PAR)",
@@ -142,6 +145,12 @@
       "regenerate": "Régénérer",
       "loading": "Chargement..."
     },
+    "loading": {
+      "processingImagery": "Traitement des images…",
+      "connectingGee": "Connexion à Google Earth Engine",
+      "connectingCdse": "Connexion à Copernicus Data Space",
+      "connectingGeneric": "Connexion au service de données satellite…"
+    },
     "multiGrid": {
       "title": "Comparaison des Indices - {{date}}",
       "meanComparison": "Comparaison des Moyennes",
@@ -165,6 +174,8 @@
     "warnings": {
       "dateMismatchTitle": "Date de données différente",
       "dateMismatchDescription": "Aucune image satellite disponible pour le <strong>{{requested}}</strong>. Données du <strong>{{actual}}</strong> affichées à la place.",
+      "sameActualDateTitle": "Même image satellite détectée",
+      "sameActualDateDescription": "Les deux dates sélectionnées ({{date1}} et {{date2}}) correspondent à la même image satellite du <strong>{{actual}}</strong>. La comparaison affiche des données identiques. Choisissez des dates plus éloignées pour une comparaison pertinente.",
       "noImagesForDate": "Aucune image satellite disponible pour le {{date}}. Veuillez sélectionner une autre date dans le calendrier.",
       "cloudCoverageError": "Erreur lors du traitement de la couverture nuageuse. La date sélectionnée a peut-être trop de couverture nuageuse.",
       "failedToGenerate": "Échec de la génération de la visualisation interactive",

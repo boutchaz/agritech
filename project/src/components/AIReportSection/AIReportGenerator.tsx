@@ -69,7 +69,7 @@ const PendingJobsBanner = ({ onSelectJob }: { onSelectJob: (jobId: string) => vo
 interface AIReportGeneratorProps {
   parcelId: string;
   parcelName: string;
-  searchParams?: any;
+  searchParams?: Record<string, unknown>;
 }
 
 export const AIReportGenerator = ({

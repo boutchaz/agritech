@@ -28,36 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/radix-select';
-import { localizeUnit } from '@/lib/utils/unit-localization';
-import type { InventoryProductVariant } from '../../lib/api/inventory';
-
-/**
- * Greedy allocation: given a total in base units, distribute across variants
- * smallest container first (1L before 5L). Returns one entry per used variant.
- */
-function allocateVariants(
-  neededBase: number,
-  variants: InventoryProductVariant[],
-): Array<{ variant_id: string; variant_name: string; quantity: number; unit: string | null }> {
-  const sorted = [...variants]
-    .filter((v) => v.quantity > 0 && v.base_quantity > 0)
-    .sort((a, b) => a.base_quantity - b.base_quantity);
-
-  let remaining = neededBase;
-  const result: Array<{ variant_id: string; variant_name: string; quantity: number; unit: string | null }> = [];
-
-  for (const v of sorted) {
-    const availableBase = v.quantity * v.base_quantity;
-    const takeBase = Math.min(remaining, availableBase);
-    if (takeBase > 0.0001) {
-      const takeUnits = Math.round((takeBase / v.base_quantity) * 1000) / 1000;
-      result.push({ variant_id: v.id, variant_name: v.name, quantity: takeUnits, unit: v.unit });
-      remaining -= takeBase;
-    }
-    if (remaining < 0.0001) break;
-  }
-  return result;
-}
 
 interface TaskFormProps {
   task?: Task | null;
@@ -85,9 +55,16 @@ const createTaskFormSchema = (t: (key: string) => string) => z.object({
   rate_per_unit: z.number().optional(),
   forfait_amount: z.number().optional(),
   crop_id: z.string(),
+  crop_cycle_id: z.string(),
+  campaign_id: z.string(),
 });
 
 type TaskFormData = z.infer<ReturnType<typeof createTaskFormSchema>>;
+type SelectChangeEvent = React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+
+const createSelectEvent = (name: keyof TaskFormData, value: string): SelectChangeEvent => {
+  return { target: { name, value } } as SelectChangeEvent;
+};
 
 // Helper to format date for input (YYYY-MM-DD)
 const formatDateForInput = (dateStr: string | null | undefined): string => {
@@ -111,8 +88,10 @@ const TaskForm = ({
   onClose,
   onSuccess,
 }: TaskFormProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
+  const taskWithForfaitAmount = task as (Task & { forfait_amount?: number }) | null | undefined;
+  const taskForfaitAmount = taskWithForfaitAmount?.forfait_amount;
   const today = new Date().toISOString().split('T')[0];
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -127,8 +106,6 @@ const TaskForm = ({
   const [plannedItems, setPlannedItems] = useState<Array<{ product_id: string; variant_id?: string; quantity: number }>>([]);
   // For optional-stock task types, user must explicitly enable stock access
   const [stockEnabled, setStockEnabled] = useState(false);
-  // For smart-allocation mode: total quantity in base unit per product
-  const [totalByProduct, setTotalByProduct] = useState<Record<string, number>>({});
 
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
@@ -136,15 +113,7 @@ const TaskForm = ({
   const syncAssignments = useSyncTaskAssignments();
   const { handleFormError } = useFormErrors<TaskFormData>();
 
-  const {
-    register,
-    handleSubmit: rhfHandleSubmit,
-    reset,
-    setError,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<TaskFormData>({
+  const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
     defaultValues: {
       title: task?.title || '',
@@ -162,10 +131,21 @@ const TaskForm = ({
       work_unit_id: task?.work_unit_id || '',
       units_required: task?.units_required,
       rate_per_unit: task?.rate_per_unit,
-      forfait_amount: task?.forfait_amount,
+      forfait_amount: taskForfaitAmount,
       crop_id: '',
+      crop_cycle_id: task?.crop_cycle_id || '',
+      campaign_id: task?.campaign_id || '',
     },
   });
+
+  const {
+    register,
+    reset,
+    setError,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form;
 
   const formData = watch();
 
@@ -187,12 +167,14 @@ const TaskForm = ({
         work_unit_id: task.work_unit_id || '',
         units_required: task.units_required,
         rate_per_unit: task.rate_per_unit,
-        forfait_amount: task.forfait_amount,
+        forfait_amount: taskForfaitAmount,
         crop_id: '',
+        crop_cycle_id: task?.crop_cycle_id || '',
+        campaign_id: task?.campaign_id || '',
       });
       setSelectedWorkerIds(task.assigned_to ? [task.assigned_to] : []);
     }
-  }, [task, reset]);
+  }, [task, reset, taskForfaitAmount]);
 
   // Fetch workers - include all workers if no farm is selected, or filter by farm
   // Pass undefined (not null) when no farm is selected to get all workers
@@ -242,6 +224,44 @@ const TaskForm = ({
     return parcels.find((p: Parcel) => p.id === formData.parcel_id);
   }, [parcels, formData.parcel_id]);
 
+  // Fetch active crop cycles for selected parcel (auto-suggest)
+  const { data: parcelCropCycles = [] } = useQuery({
+    queryKey: ['crop-cycles-for-parcel', organizationId, formData.parcel_id],
+    queryFn: async () => {
+      if (!organizationId || !formData.parcel_id) return [];
+      const { cropCyclesApi } = await import('@/lib/api/agricultural-accounting');
+      const cycles = await cropCyclesApi.getAll(organizationId, {
+        parcel_id: formData.parcel_id,
+        status: 'planned', // will also get growing etc. via backend filter
+      });
+      // Filter active statuses client-side for safety
+      return cycles.filter((c: { status: string }) =>
+        ['planned', 'land_prep', 'growing', 'harvesting'].includes(c.status)
+      );
+    },
+    enabled: !!organizationId && !!formData.parcel_id,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Auto-suggest crop cycle when parcel changes
+  useEffect(() => {
+    if (!formData.parcel_id) {
+      setValue('crop_cycle_id', '');
+      setValue('campaign_id', '');
+      return;
+    }
+    if (parcelCropCycles.length === 1 && !task) {
+      // Auto-fill if exactly one active cycle and creating new task
+      const cycle = parcelCropCycles[0];
+      setValue('crop_cycle_id', cycle.id);
+      setValue('campaign_id', cycle.campaign_id || '');
+    } else if (parcelCropCycles.length === 0) {
+      setValue('crop_cycle_id', '');
+      setValue('campaign_id', '');
+    }
+    // If multiple, don't auto-fill — let user choose
+  }, [formData.parcel_id, parcelCropCycles, task, setValue]);
+
   useEffect(() => {
     if (!task && selectedParcel && formData.parcel_id) {
       if (selectedParcel.crop_type && formData.task_type) {
@@ -262,7 +282,7 @@ const TaskForm = ({
       setStockEnabled(false);
       setPlannedItems([]);
     }
-  }, [formData.task_type, isAlwaysStockType, isOptionalStockType]);
+  }, [isAlwaysStockType, isOptionalStockType]);
 
   const onSubmit = async (data: TaskFormData) => {
     if (data.due_date < data.scheduled_start) {
@@ -290,7 +310,7 @@ const TaskForm = ({
             }
             return [key, value];
           }
-          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id', 'crop_id', 'category_id'].includes(key)) {
+          if (value === '' && ['assigned_to', 'parcel_id', 'farm_id', 'notes', 'description', 'work_unit_id', 'crop_id', 'category_id', 'crop_cycle_id', 'campaign_id'].includes(key)) {
             return [key, undefined];
           }
           return [key, value];
@@ -306,24 +326,7 @@ const TaskForm = ({
 
       // Add planned items for stock-consuming task types (always or optional with toggle enabled)
       if (plannedItems.length > 0 && showProductSection) {
-        const expanded: Array<{ product_id: string; variant_id?: string; quantity: number }> = [];
-        for (const item of plannedItems) {
-          if (!item.product_id) continue;
-          const prod = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
-          const isSmartMode =
-            (prod?.variants?.length ?? 0) > 0 && prod!.variants.every((v) => v.base_quantity > 1);
-          if (isSmartMode) {
-            const total = totalByProduct[item.product_id] ?? 0;
-            if (total > 0) {
-              allocateVariants(total, prod!.variants).forEach((a) =>
-                expanded.push({ product_id: item.product_id, variant_id: a.variant_id, quantity: a.quantity }),
-              );
-            }
-          } else if (item.quantity > 0) {
-            expanded.push(item);
-          }
-        }
-        cleanedData.planned_items = expanded;
+        cleanedData.planned_items = plannedItems.filter(item => item.product_id && item.quantity > 0);
       }
       if (task) {
         await updateTask.mutateAsync({
@@ -399,7 +402,7 @@ const TaskForm = ({
           </Button>
         </div>
 
-        <form onSubmit={rhfHandleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('tasks.form.titleLabel')}</Label>
@@ -422,7 +425,7 @@ const TaskForm = ({
               <Select
                 value={formData.task_type}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'task_type', value } } as any;
+                  const event = createSelectEvent('task_type', value);
                   register('task_type').onChange(event);
                 }}
               >
@@ -447,7 +450,7 @@ const TaskForm = ({
               <Select
                 value={formData.priority}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'priority', value } } as any;
+                  const event = createSelectEvent('priority', value);
                   register('priority').onChange(event);
                 }}
               >
@@ -488,7 +491,7 @@ const TaskForm = ({
               <Select
                 value={formData.farm_id}
                 onValueChange={(value) => {
-                  const event = { target: { name: 'farm_id', value } } as any;
+                  const event = createSelectEvent('farm_id', value);
                   register('farm_id').onChange(event);
                 }}
               >
@@ -518,7 +521,7 @@ const TaskForm = ({
                 value={formData.parcel_id || '__none__'}
                 onValueChange={(value) => {
                   const newValue = value === '__none__' ? '' : value;
-                  const event = { target: { name: 'parcel_id', value: newValue } } as any;
+                  const event = createSelectEvent('parcel_id', newValue);
                   register('parcel_id').onChange(event);
                 }}
                 disabled={!formData.farm_id}
@@ -551,7 +554,7 @@ const TaskForm = ({
                 <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 px-2 py-1 rounded">
                   🌱 {t('tasks.form.parcelCropInfo', { crop: selectedParcel.crop_type || t('tasks.form.parcelCropUndefined') })}
                   {selectedParcel.variety && ` | ${t('tasks.form.parcelVarietyInfo', { variety: selectedParcel.variety })}`}
-                  {selectedParcel.tree_count && ` | ${t('tasks.form.parcelTreeCount', { count: selectedParcel.tree_count })}`}
+                  {('tree_count' in selectedParcel && typeof selectedParcel.tree_count === 'number') && ` | ${t('tasks.form.parcelTreeCount', { count: selectedParcel.tree_count })}`}
                 </div>
               )}
               {formData.task_type === 'harvesting' && !formData.parcel_id && (
@@ -563,6 +566,41 @@ const TaskForm = ({
                 <p className="text-red-600 text-sm mt-1">{errors.parcel_id.message}</p>
               )}
             </div>
+
+            {/* Crop Cycle (optional, auto-suggested) */}
+            {formData.parcel_id && parcelCropCycles.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="crop_cycle_id" className="flex items-center gap-2">
+                  🌱 {t('tasks.form.cropCycleLabel', 'Crop Cycle')}
+                  <span className="text-xs text-muted-foreground">({t('common.optional', 'optional')})</span>
+                </Label>
+                <Select
+                  value={formData.crop_cycle_id || '__none__'}
+                  onValueChange={(value) => {
+                    const cycleId = value === '__none__' ? '' : value;
+                    setValue('crop_cycle_id', cycleId);
+                    // Auto-set campaign from cycle
+                    const cycle = parcelCropCycles.find((c: { id: string }) => c.id === cycleId);
+                    setValue('campaign_id', cycle?.campaign_id || '');
+                  }}
+                >
+                  <SelectTrigger id="crop_cycle_id">
+                    <SelectValue placeholder={t('tasks.form.cropCyclePlaceholder', 'Select crop cycle...')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">{t('tasks.form.cropCycleNone', 'No cycle')}</SelectItem>
+                    {parcelCropCycles.map((cycle: { id: string; cycle_name?: string; cycle_code: string; crop_type: string; status: string }) => (
+                      <SelectItem key={cycle.id} value={cycle.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{cycle.cycle_name || cycle.cycle_code}</span>
+                          <span className="text-xs text-muted-foreground">{cycle.crop_type}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {/* Assigned To - Multiple Workers */}
@@ -713,7 +751,7 @@ const TaskForm = ({
             {selectedWorkerIds.length > 0 &&
               workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.fixedSalaryNote') }} />
+                <p className="text-sm text-blue-700 dark:text-blue-300">{t('tasks.form.fixedSalaryNote')}</p>
               </div>
             )}
 
@@ -759,7 +797,7 @@ const TaskForm = ({
                     value={formData.work_unit_id || '__none__'}
                     onValueChange={(value) => {
                       const newValue = value === '__none__' ? '' : value;
-                      const event = { target: { name: 'work_unit_id', value: newValue } } as any;
+                      const event = createSelectEvent('work_unit_id', newValue);
                       register('work_unit_id').onChange(event);
                     }}
                   >
@@ -856,7 +894,7 @@ const TaskForm = ({
           {/* Optional stock toggle for task types that may or may not need products */}
           {isOptionalStockType && (
             <div className="border-t pt-4">
-              <label className="flex items-center gap-3 cursor-pointer select-none">
+              <div className="flex items-center gap-3 cursor-pointer select-none">
                 <Checkbox
                   id="stock-enabled"
                   checked={stockEnabled}
@@ -866,14 +904,14 @@ const TaskForm = ({
                   }}
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="stock-enabled" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
                     {t('tasks.form.enableStockAccess')}
-                  </span>
+                  </Label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {t('tasks.form.enableStockAccessHint')}
                   </p>
                 </div>
-              </label>
+              </div>
             </div>
           )}
 
@@ -910,23 +948,11 @@ const TaskForm = ({
                   {plannedItems.map((item, index) => {
                     const selectedProd = availableProducts.find((p: InventoryProduct) => p.id === item.product_id);
                     const hasVariants = (selectedProd?.variants?.length ?? 0) > 0;
-                    // Smart mode: all variants have a meaningful base_quantity (> 1), so we can auto-allocate
-                    const isSmartMode = hasVariants && selectedProd!.variants.every((v) => v.base_quantity > 1);
-                    const selectedVariant = hasVariants && !isSmartMode
+                    const selectedVariant = hasVariants
                       ? selectedProd!.variants.find((v) => v.id === item.variant_id)
                       : undefined;
-                    const unitLabel = localizeUnit(selectedVariant?.unit ?? selectedProd?.unit, i18n.language);
+                    const unitLabel = selectedVariant?.unit ?? selectedProd?.unit ?? '';
                     const availableStock = selectedVariant?.quantity ?? selectedProd?.quantity ?? 0;
-
-                    // Smart mode state
-                    const totalBase = isSmartMode ? (totalByProduct[item.product_id] ?? 0) : 0;
-                    const totalAvailableBase = isSmartMode
-                      ? selectedProd!.variants.reduce((s, v) => s + v.quantity * v.base_quantity, 0)
-                      : 0;
-                    const allocation = isSmartMode && totalBase > 0
-                      ? allocateVariants(totalBase, selectedProd!.variants)
-                      : [];
-
                     return (
                       <div key={item.product_id} className="flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                         <div className="flex items-end gap-3">
@@ -938,9 +964,6 @@ const TaskForm = ({
                                 const newItems = [...plannedItems];
                                 newItems[index] = { product_id: value === '__none__' ? '' : value, variant_id: undefined, quantity: 0 };
                                 setPlannedItems(newItems);
-                                if (value && value !== '__none__') {
-                                  setTotalByProduct((prev) => ({ ...prev, [value]: 0 }));
-                                }
                               }}
                             >
                               <SelectTrigger>
@@ -950,81 +973,47 @@ const TaskForm = ({
                                 <SelectItem value="__none__">{t('tasks.form.productSelectDefault')}</SelectItem>
                                 {availableProducts.map((product: InventoryProduct) => (
                                   <SelectItem key={product.id} value={product.id}>
-                                    {product.name} ({product.quantity} {localizeUnit(product.unit, i18n.language)})
+                                    {product.name} ({product.quantity} {product.unit})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-
-                          {/* Normal mode: quantity input */}
-                          {!isSmartMode && (
-                            <div className="w-32 space-y-1">
-                              <Label className="text-xs">
-                                {t('tasks.form.quantityLabel')} {unitLabel ? `(${unitLabel})` : ''}
-                              </Label>
-                              <Input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={item.quantity || ''}
-                                onChange={(e) => {
-                                  const newItems = [...plannedItems];
-                                  newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
-                                  setPlannedItems(newItems);
-                                }}
-                                placeholder="0"
-                              />
-                              {item.quantity > 0 && item.quantity > availableStock && (
-                                <p className="text-xs text-red-500">
-                                  {t('tasks.form.exceedsStock', { available: availableStock })}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Smart mode: total quantity input (base unit) */}
-                          {isSmartMode && (
-                            <div className="w-36 space-y-1">
-                              <Label className="text-xs">
-                                {t('tasks.form.quantityLabel')} ({localizeUnit(selectedProd!.unit, i18n.language)})
-                              </Label>
-                              <Input
-                                type="number"
-                                min="0.01"
-                                step="0.01"
-                                value={totalBase || ''}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value) || 0;
-                                  setTotalByProduct((prev) => ({ ...prev, [item.product_id]: val }));
-                                }}
-                                placeholder="0"
-                              />
-                              {totalBase > 0 && totalBase > totalAvailableBase && (
-                                <p className="text-xs text-red-500">
-                                  {t('tasks.form.exceedsStock', { available: parseFloat(totalAvailableBase.toFixed(3)) })}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
+                          <div className="w-32 space-y-1">
+                            <Label className="text-xs">
+                              {t('tasks.form.quantityLabel')} {unitLabel ? `(${unitLabel})` : ''}
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0.01"
+                              step="0.01"
+                              value={item.quantity || ''}
+                              onChange={(e) => {
+                                const newItems = [...plannedItems];
+                                newItems[index] = { ...newItems[index], quantity: parseFloat(e.target.value) || 0 };
+                                setPlannedItems(newItems);
+                              }}
+                              placeholder="0"
+                            />
+                            {item.quantity > 0 && item.quantity > availableStock && (
+                              <p className="text-xs text-red-500">
+                                {t('tasks.form.exceedsStock', { available: availableStock })}
+                              </p>
+                            )}
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              const pid = item.product_id;
                               setPlannedItems(plannedItems.filter((_, i) => i !== index));
-                              if (pid) setTotalByProduct((prev) => { const next = { ...prev }; delete next[pid]; return next; });
                             }}
                             className="text-red-500 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-
-                        {/* Normal mode: manual variant selector */}
-                        {hasVariants && !isSmartMode && (
+                        {hasVariants && (
                           <div className="pl-0 space-y-1">
                             <Label className="text-xs text-muted-foreground">{t('tasks.form.variantLabel', 'Format / conditionnement')}</Label>
                             <Select
@@ -1042,43 +1031,11 @@ const TaskForm = ({
                                 <SelectItem value="__none__">{t('tasks.form.variantSelectDefault', 'Sans format spécifique')}</SelectItem>
                                 {selectedProd!.variants.map((v) => (
                                   <SelectItem key={v.id} value={v.id}>
-                                    {v.name} ({v.quantity} {localizeUnit(v.unit ?? selectedProd!.unit, i18n.language)})
+                                    {v.name} ({v.quantity} {v.unit ?? selectedProd!.unit})
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
-                        )}
-
-                        {/* Smart mode: auto-allocation preview */}
-                        {isSmartMode && totalBase > 0 && (
-                          <div className="pl-0 space-y-1">
-                            <Label className="text-xs text-muted-foreground">
-                              {t('tasks.form.variantAllocation', 'Répartition automatique')}
-                            </Label>
-                            <div className="space-y-1">
-                              {allocation.length > 0 ? (
-                                allocation.map((a) => (
-                                  <div key={a.variant_id} className="flex items-center justify-between text-xs bg-white dark:bg-gray-800 px-2 py-1 rounded border">
-                                    <span className="text-gray-700 dark:text-gray-300">{a.variant_name}</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">
-                                      {a.quantity} {localizeUnit(a.unit ?? selectedProd!.unit, i18n.language)}
-                                    </span>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-xs text-amber-600 dark:text-amber-400">
-                                  {t('tasks.form.noStockForAllocation', 'Aucun stock disponible pour cette quantité')}
-                                </p>
-                              )}
-                              {totalBase > totalAvailableBase && allocation.length > 0 && (
-                                <p className="text-xs text-amber-600 dark:text-amber-400">
-                                  {t('tasks.form.partialAllocation', 'Stock insuffisant — seulement {{available}} disponibles', {
-                                    available: parseFloat(totalAvailableBase.toFixed(3)),
-                                  })}
-                                </p>
-                              )}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -1089,7 +1046,7 @@ const TaskForm = ({
 
               {plannedItems.length > 0 && (
                 <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-sm text-green-700 dark:text-green-300" dangerouslySetInnerHTML={{ __html: t('tasks.form.stockDeductionNote') }} />
+                  <p className="text-sm text-green-700 dark:text-green-300">{t('tasks.form.stockDeductionNote')}</p>
                 </div>
               )}
             </div>
@@ -1132,4 +1089,3 @@ const TaskForm = ({
 };
 
 export default TaskForm;
-

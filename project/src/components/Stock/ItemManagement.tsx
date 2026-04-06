@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/radix-select';
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
@@ -65,12 +64,13 @@ import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, ProductVariant } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -86,7 +86,7 @@ const itemFormSchema = z.object({
   is_sales_item: z.boolean().optional(),
   is_purchase_item: z.boolean().optional(),
   is_stock_item: z.boolean().optional(),
-  images: z.array(z.any()).optional(),
+  images: z.array(z.string()).optional(),
   website_description: z.string().optional(),
   marketplace_category_slug: z.string().optional(),
   show_in_website: z.boolean().optional(),
@@ -98,9 +98,9 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const productVariantSchema = z.object({
   variant_name: z.string().min(1, 'Variant name is required'),
   variant_sku: z.string().optional(),
-  unit_id: z.preprocess(
-    (val) => (val === '' ? undefined : val),
-    z.string().uuid('Invalid unit ID').optional()
+  unit_id: z.string().optional().refine(
+    (value) => !value || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
+    'Invalid unit ID'
   ),
   quantity: z.number().min(0, 'Quantity must be non-negative').optional(),
   min_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
@@ -128,13 +128,6 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
-
   const [groupName, setGroupName] = useState('');
   const [groupCode, setGroupCode] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
@@ -160,8 +153,8 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       setGroupDescription('');
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      toast.error(`Failed to create item group: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to create item group: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -435,14 +428,14 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{item ? t('items.editItem') : t('items.createItem')}</DialogTitle>
-          <DialogDescription>
-            {item ? t('items.updateItemDescription') : t('items.createItemDescription')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={item ? t('items.editItem') : t('items.createItem')}
+      description={item ? t('items.updateItemDescription') : t('items.createItemDescription')}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -926,13 +919,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
              </Button>
            </div>
         </form>
-        <ItemGroupForm
-          open={showGroupForm}
-          onOpenChange={setShowGroupForm}
-          onSuccess={handleGroupCreated}
-        />
-      </DialogContent>
-    </Dialog>
+      <ItemGroupForm
+        open={showGroupForm}
+        onOpenChange={setShowGroupForm}
+        onSuccess={handleGroupCreated}
+      />
+    </ResponsiveDialog>
   );
 }
 
@@ -1059,8 +1051,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
         is_active: true,
         notes: '',
       });
-    } catch (error: any) {
-      toast.error(`Failed to save variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to save variant: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1072,8 +1064,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     try {
       await deleteVariant.mutateAsync(variant.id);
       toast.success(t('items.variants.deleted', 'Variant deleted'));
-    } catch (error: any) {
-      toast.error(`Failed to delete variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete variant: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1093,16 +1085,14 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t('items.variants.title', 'Variants')} - {item?.item_name}
-          </DialogTitle>
-          <DialogDescription>
-            {t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`${t('items.variants.title', 'Variants')} - ${item?.item_name ?? ''}`}
+      description={t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <div className="space-y-6">
           <form id="variant-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1362,8 +1352,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
@@ -1386,10 +1375,10 @@ export default function ItemManagement() {
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   // Fetch stock levels for items with farm context
-  const { data: stockLevels = {} } = useQuery({
+  const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['items-stock-levels', currentOrganization?.id, selectedFarm],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
@@ -1498,8 +1487,8 @@ export default function ItemManagement() {
       toast.success(t('items.itemDeleted'));
       setShowDeleteDialog(false);
       setItemToDelete(null);
-    } catch (error: any) {
-      toast.error(`Failed to delete item: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete item: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
@@ -1546,11 +1535,11 @@ export default function ItemManagement() {
                 <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500">
                   <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
                 </SelectTrigger>
-                <SelectContent>
+                  <SelectContent>
                   <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
                   {farms.map((farm) => {
-                    const farmId = (farm as any).farm_id || farm.id;
-                    const farmName = (farm as any).farm_name || farm.name;
+                    const farmId = farm.id;
+                    const farmName = farm.name;
                     return (
                       <SelectItem key={farmId} value={farmId}>
                         {farmName}
@@ -1562,8 +1551,11 @@ export default function ItemManagement() {
             </div>
 
             {/* Low Stock Filter */}
-            <div className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                 onClick={() => setLowStockOnly(!lowStockOnly)}>
+            <button
+              type="button"
+              className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+              onClick={() => setLowStockOnly(!lowStockOnly)}
+            >
               <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 <AlertTriangle className={`w-4 h-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
                 <span className={`text-sm font-medium transition-colors ${lowStockOnly ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
@@ -1575,7 +1567,7 @@ export default function ItemManagement() {
                 onCheckedChange={setLowStockOnly}
                 className="pointer-events-none"
               />
-            </div>
+            </button>
           </div>
         </CardContent>
       </Card>
@@ -1625,19 +1617,7 @@ export default function ItemManagement() {
                 </TableRow>
               ) : (
                 filteredItems.map((item) => {
-                  const stockLevel = (stockLevels as Record<string, {
-                    total_quantity: number;
-                    total_value: number;
-                    is_low_stock?: boolean;
-                    warehouses?: Array<{
-                      warehouse_id: string;
-                      warehouse_name: string;
-                      farm_id: string | null;
-                      farm_name: string | null;
-                      quantity: number;
-                      value: number;
-                    }>;
-                  }>)[item.id];
+                  const stockLevel = stockLevels[item.id];
                   const isLowStock = stockLevel?.is_low_stock || 
                     (item.minimum_stock_level && stockLevel && 
                      stockLevel.total_quantity < item.minimum_stock_level);
@@ -1661,7 +1641,7 @@ export default function ItemManagement() {
                         {item.item_name}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {(item.item_group as any)?.name || '-'}
+                        {item.item_group?.name || '-'}
                       </TableCell>
                       <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                         {item.default_unit}
@@ -1779,14 +1759,14 @@ export default function ItemManagement() {
 
       {/* Item Details Dialog */}
       {selectedItemForDetails && (
-        <Dialog open={!!selectedItemForDetails} onOpenChange={(open) => !open && setSelectedItemForDetails(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedItemForDetails.item_name}</DialogTitle>
-              <DialogDescription>
-                {t('items.itemDetails', 'Item Details and Stock Information')}
-              </DialogDescription>
-            </DialogHeader>
+        <ResponsiveDialog
+          open={!!selectedItemForDetails}
+          onOpenChange={(open) => !open && setSelectedItemForDetails(null)}
+          title={selectedItemForDetails.item_name}
+          description={t('items.itemDetails', 'Item Details and Stock Information')}
+          size="4xl"
+          contentClassName="max-h-[90vh] overflow-y-auto"
+        >
             <div className="space-y-6 mt-4">
               {/* Stock Levels by Farm */}
               <div>
@@ -1800,8 +1780,7 @@ export default function ItemManagement() {
                 <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+        </ResponsiveDialog>
       )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

@@ -78,7 +78,7 @@ export const Validators = {
    * @throws {AuthenticationError} if user is not authenticated
    */
   requireAuthenticated(user: unknown): asserts user is { id: string } {
-    if (!user || typeof (user as any).id !== 'string') {
+    if (!user || typeof (user as Record<string, unknown>).id !== 'string') {
       throw new AuthenticationError();
     }
   },

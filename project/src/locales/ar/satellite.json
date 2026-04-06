@@ -3,6 +3,7 @@
     "title": "السلاسل الزمنية لمؤشرات الغطاء النباتي",
     "subtitle": "الاتجاهات التاريخية لـ {{name}}",
     "subtitleFallback": "الاتجاهات التاريخية للقطعة {{id}}",
+    "cacheVsHeatmapHint": "يعرض هذا المخطط القيم المخزّنة في قاعدة البيانات. خريطة الحرارة يمكنها طلب تواريخ إضافية من خدمة المعالجة — إذا ظهرت تاريخ في الخريطة وليس هنا، وسّع النطاق عند الحاجة واستخدم « استرجاع من القمر الصناعي » للمزامنة.",
     "dataPoints": "{{count}} نقطة",
     "warnings": {
       "sparseData": "بيانات محدودة.",
@@ -49,7 +50,9 @@
     "actions": {
       "refreshCache": "تحديث ذاكرة التخزين المؤقت",
       "fetchFromSatellite": "استرجاع من القمر الصناعي",
-      "launching": "جارٍ الإطلاق..."
+      "launching": "جارٍ الإطلاق...",
+      "selectAllIndices": "تحديد الكل",
+      "unselectAllIndices": "إلغاء التحديد"
     },
     "indexDescriptions": {
       "NIRvP": "NIRvP — الإنتاجية الضوئية (NIRv × PAR)",
@@ -142,6 +145,12 @@
       "regenerate": "إعادة الإنشاء",
       "loading": "جارٍ التحميل..."
     },
+    "loading": {
+      "processingImagery": "جارٍ معالجة الصور…",
+      "connectingGee": "الاتصال بـ Google Earth Engine",
+      "connectingCdse": "الاتصال بـ Copernicus Data Space",
+      "connectingGeneric": "الاتصال بخدمة بيانات الأقمار الصناعية…"
+    },
     "multiGrid": {
       "title": "مقارنة المؤشرات - {{date}}",
       "meanComparison": "مقارنة المتوسطات",
@@ -165,6 +174,8 @@
     "warnings": {
       "dateMismatchTitle": "تاريخ بيانات مختلف",
       "dateMismatchDescription": "لا توجد صورة قمر صناعي متاحة لـ <strong>{{requested}}</strong>. بيانات <strong>{{actual}}</strong> معروضة بدلاً من ذلك.",
+      "sameActualDateTitle": "تم اكتشاف نفس صورة القمر الصناعي",
+      "sameActualDateDescription": "التاريخان المحددان ({{date1}} و {{date2}}) يعودان إلى نفس صورة القمر الصناعي بتاريخ <strong>{{actual}}</strong>. المقارنة تعرض بيانات متطابقة. اختر تواريخ أبعد بعضها للحصول على مقارنة ذات معنى.",
       "noImagesForDate": "لا توجد صور قمر صناعي متاحة لـ {{date}}. يرجى اختيار تاريخ آخر من التقويم.",
       "cloudCoverageError": "خطأ في معالجة الغطاء السحابي. قد يكون للتاريخ المحدد تغطية سحابية عالية.",
       "failedToGenerate": "فشل إنشاء التصور التفاعلي",

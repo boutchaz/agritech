@@ -11,14 +11,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { StatusDot } from '@/components/ui/status-dot';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import {
   Select,
@@ -70,23 +63,19 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
   }, {} as Record<string, ComplianceRequirementDto[]>);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full" variant="secondary">
-          <ClipboardList className="mr-2 h-4 w-4" />
-          {t('dialogs.checklist.button')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            {t('dialogs.checklist.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('dialogs.checklist.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button className="w-full" variant="secondary" onClick={() => setOpen(true)}>
+        <ClipboardList className="mr-2 h-4 w-4" />
+        {t('dialogs.checklist.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.checklist.title')}
+        description={t('dialogs.checklist.description')}
+        size="xl"
+        contentClassName="max-h-[85vh] overflow-y-auto"
+      >
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-3">
@@ -197,8 +186,8 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
             )}
           </ScrollArea>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }
 

@@ -2,8 +2,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertTriangle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { localizeUnit } from '@/lib/utils/unit-localization';
 
 interface StockAlertItem {
   item_name: string;
@@ -17,7 +15,6 @@ interface StockAlertData {
 }
 
 export function StockAlertCard({ data }: { data: StockAlertData }) {
-  const { i18n } = useTranslation();
   return (
     <Card className="my-2 border-l-4 border-l-orange-500">
       <CardContent className="p-3 space-y-2">
@@ -30,7 +27,7 @@ export function StockAlertCard({ data }: { data: StockAlertData }) {
           <div key={item.item_name} className="flex items-center justify-between text-sm">
             <span>{item.item_name}</span>
             <span className="text-xs text-destructive font-medium">
-              {item.current_quantity}/{item.min_quantity} {localizeUnit(item.unit, i18n.language)}
+              {item.current_quantity}/{item.min_quantity} {item.unit}
             </span>
           </div>
         ))}

@@ -16,12 +16,12 @@ export interface OrganizationModule {
   description: string;
   required_plan: 'essential' | 'professional' | 'enterprise' | null;
   is_active: boolean;
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
 }
 
 export interface UpdateModuleInput {
   is_active?: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }
 
 const getBaseUrl = (organizationId: string) =>
@@ -31,7 +31,7 @@ export const modulesApi = {
   /**
    * Get all modules for an organization
    */
-  async getAll(filters?: undefined, organizationId?: string): Promise<OrganizationModule[]> {
+  async getAll(_filters?: undefined, organizationId?: string): Promise<OrganizationModule[]> {
     requireOrganizationId(organizationId, 'modulesApi.getAll');
     return apiClient.get<OrganizationModule[]>(getBaseUrl(organizationId));
   },
