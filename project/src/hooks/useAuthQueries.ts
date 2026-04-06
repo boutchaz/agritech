@@ -6,7 +6,6 @@ import type { Database } from '../types/database.types';
 
 type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 type Farm = Database['public']['Tables']['farms']['Row'];
-type Parcel = Database['public']['Tables']['parcels']['Row'];
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { trackLogout } from '../lib/analytics';
@@ -271,9 +270,19 @@ export const useSignOut = () => {
     onSuccess: () => {
       // Clear all auth-related queries
       queryClient.removeQueries({ queryKey: ['auth'] });
-      // Clear localStorage
       localStorage.removeItem('currentOrganization');
       localStorage.removeItem('currentFarm');
+
+      const userId = useAuthStore.getState().user?.id;
+      const tourKeyPrefix = userId ? `agritech_${userId}_` : 'agritech_';
+      const legacyTourKeys = ['agritech_completed_tours', 'agritech_dismissed_tours', 'agritech_tours_last_sync'];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(tourKeyPrefix) || legacyTourKeys.includes(key)) {
+          localStorage.removeItem(key);
+          i--;
+        }
+      }
     },
   });
 };

@@ -10,7 +10,6 @@ import { useExperienceLevel } from '@/contexts/ExperienceLevelContext';
 import {
   tourPreferencesApi,
   retryTourApiCall,
-  TOUR_API_CONFIG,
   type TourId as ApiTourId
 } from '@/lib/api/tour-preferences';
 
@@ -50,10 +49,16 @@ interface TourContextValue {
 
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
-// LocalStorage keys for fallback/offline support
-const TOUR_STORAGE_KEY = 'agritech_completed_tours';
-const DISMISSED_TOURS_KEY = 'agritech_dismissed_tours';
-const LAST_SYNC_KEY = 'agritech_tours_last_sync';
+// LocalStorage keys for fallback/offline support — scoped per user to prevent
+// cross-user contamination when logging out/in on the same browser.
+const tourStorageKey = (userId: string) => `agritech_${userId}_completed_tours`;
+const dismissedStorageKey = (userId: string) => `agritech_${userId}_dismissed_tours`;
+const lastSyncStorageKey = (userId: string) => `agritech_${userId}_tours_last_sync`;
+
+// Keep legacy keys for cleanup on first load
+const LEGACY_TOUR_STORAGE_KEY = 'agritech_completed_tours';
+const LEGACY_DISMISSED_TOURS_KEY = 'agritech_dismissed_tours';
+const LEGACY_LAST_SYNC_KEY = 'agritech_tours_last_sync';
 
 const TOUR_ROUTES: Record<TourId, string> = {
   'welcome': '/dashboard',
@@ -775,11 +780,12 @@ interface TourProviderProps {
   children: React.ReactNode;
 }
 
-// Helper functions for localStorage fallback
-const getLocalStorageTours = (): { completed: TourId[]; dismissed: TourId[] } => {
+const getLocalStorageTours = (userId: string | null | undefined): { completed: TourId[]; dismissed: TourId[] } => {
   try {
-    const completed = localStorage.getItem(TOUR_STORAGE_KEY);
-    const dismissed = localStorage.getItem(DISMISSED_TOURS_KEY);
+    const key = userId ? tourStorageKey(userId) : LEGACY_TOUR_STORAGE_KEY;
+    const dKey = userId ? dismissedStorageKey(userId) : LEGACY_DISMISSED_TOURS_KEY;
+    const completed = localStorage.getItem(key);
+    const dismissed = localStorage.getItem(dKey);
     return {
       completed: completed ? JSON.parse(completed) : [],
       dismissed: dismissed ? JSON.parse(dismissed) : [],
@@ -790,23 +796,16 @@ const getLocalStorageTours = (): { completed: TourId[]; dismissed: TourId[] } =>
   }
 };
 
-const setLocalStorageTours = (completed: TourId[], dismissed: TourId[]) => {
+const setLocalStorageTours = (userId: string | null | undefined, completed: TourId[], dismissed: TourId[]) => {
   try {
-    localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(completed));
-    localStorage.setItem(DISMISSED_TOURS_KEY, JSON.stringify(dismissed));
-    localStorage.setItem(LAST_SYNC_KEY, Date.now().toString());
+    const key = userId ? tourStorageKey(userId) : LEGACY_TOUR_STORAGE_KEY;
+    const dKey = userId ? dismissedStorageKey(userId) : LEGACY_DISMISSED_TOURS_KEY;
+    const syncKey = userId ? lastSyncStorageKey(userId) : LEGACY_LAST_SYNC_KEY;
+    localStorage.setItem(key, JSON.stringify(completed));
+    localStorage.setItem(dKey, JSON.stringify(dismissed));
+    localStorage.setItem(syncKey, Date.now().toString());
   } catch {
     console.error('[TourContext] Failed to write to localStorage');
-  }
-};
-
-const _isStale = (): boolean => {
-  try {
-    const lastSync = localStorage.getItem(LAST_SYNC_KEY);
-    if (!lastSync) return true;
-    return Date.now() - parseInt(lastSync, 10) > TOUR_API_CONFIG.staleTimeMs;
-  } catch {
-    return true;
   }
 };
 
@@ -849,7 +848,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
 
   const loadTourPreferences = useCallback(async () => {
     if (!user) {
-      const local = getLocalStorageTours();
+      const local = getLocalStorageTours(null);
       setTourState(prev => ({
         ...prev,
         completedTours: local.completed,
@@ -891,7 +890,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
         lastSyncError: null,
       }));
 
-      setLocalStorageTours(
+      setLocalStorageTours(user?.id,
         preferences.completed_tours as TourId[],
         preferences.dismissed_tours as TourId[]
       );
@@ -907,7 +906,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
         return;
       }
 
-      const local = getLocalStorageTours();
+      const local = getLocalStorageTours(user?.id);
       setTourState(prev => ({
         ...prev,
         completedTours: local.completed,
@@ -931,7 +930,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     const mutationVersion = ++mutationVersionRef.current;
 
     // Always update localStorage immediately for responsiveness
-    setLocalStorageTours(tours, tourState.dismissedTours);
+    setLocalStorageTours(user?.id, tours, tourState.dismissedTours);
 
     if (!user) {
       return true; // No user, localStorage-only mode
@@ -986,7 +985,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     const mutationVersion = ++mutationVersionRef.current;
 
     // Always update localStorage immediately for responsiveness
-    setLocalStorageTours(tourState.completedTours, tours);
+    setLocalStorageTours(user?.id, tourState.completedTours, tours);
 
     if (!user) {
       return true; // No user, localStorage-only mode
@@ -1157,7 +1156,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     endTour();
 
     // Update localStorage for immediate fallback
-    setLocalStorageTours(tourState.completedTours, newDismissed);
+    setLocalStorageTours(user?.id, tourState.completedTours, newDismissed);
 
     if (user) {
       try {
@@ -1180,7 +1179,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
         }));
 
         // Update localStorage with backend data
-        setLocalStorageTours(
+        setLocalStorageTours(user?.id,
           result.completed_tours as TourId[],
           result.dismissed_tours as TourId[]
         );
@@ -1280,7 +1279,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     }));
 
     // Update localStorage immediately
-    setLocalStorageTours(newCompletedTours, newDismissedTours);
+    setLocalStorageTours(user?.id, newCompletedTours, newDismissedTours);
 
     if (user) {
       try {
@@ -1301,7 +1300,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
           lastSyncError: null,
         }));
 
-        setLocalStorageTours(
+        setLocalStorageTours(user?.id,
           result.completed_tours as TourId[],
           result.dismissed_tours as TourId[]
         );
@@ -1338,7 +1337,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
     }));
 
     // Clear localStorage immediately
-    setLocalStorageTours([], []);
+    setLocalStorageTours(user?.id, [], []);
 
     if (user) {
       try {
@@ -1359,7 +1358,7 @@ export const TourProvider = ({ children }: TourProviderProps) => {
           lastSyncError: null,
         }));
 
-        setLocalStorageTours(
+        setLocalStorageTours(user?.id,
           result.completed_tours as TourId[],
           result.dismissed_tours as TourId[]
         );
