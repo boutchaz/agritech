@@ -1238,7 +1238,8 @@ export const TourProvider = ({ children }: TourProviderProps) => {
       setTourState(prev => {
         const nextIndex = prev.stepIndex + 1;
         if (nextIndex >= size) {
-          return { ...prev, currentTour: null, isRunning: false, stepIndex: 0 };
+          void saveCompletedToursRef.current(prev.currentTour ? [...prev.completedTours, prev.currentTour] : prev.completedTours);
+          return { ...prev, completedTours: prev.currentTour ? [...prev.completedTours, prev.currentTour] : prev.completedTours, currentTour: null, isRunning: false, stepIndex: 0 };
         }
         return { ...prev, stepIndex: nextIndex };
       });
