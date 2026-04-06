@@ -14,10 +14,12 @@ interface Level4TemporalProps {
 export function Level4Temporal({ data }: Level4TemporalProps) {
   const { t } = useTranslation('ai');
 
+  // Chronological order must match backend step4 (_temporal_order_valid):
+  // dormancy_exit < plateau_start <= peak < decline_start < dormancy_entry
   const timelineEvents = [
     { key: 'dormancy_exit', label: t('calibrationReview.level4.dormancyExit'), date: data.phenology_timeline.dormancy_exit },
-    { key: 'peak', label: t('calibrationReview.level4.peak'), date: data.phenology_timeline.peak },
     { key: 'plateau_start', label: t('calibrationReview.level4.plateauStart'), date: data.phenology_timeline.plateau_start },
+    { key: 'peak', label: t('calibrationReview.level4.peak'), date: data.phenology_timeline.peak },
     { key: 'decline_start', label: t('calibrationReview.level4.declineStart'), date: data.phenology_timeline.decline_start },
     { key: 'dormancy_entry', label: t('calibrationReview.level4.dormancyEntry'), date: data.phenology_timeline.dormancy_entry },
   ];

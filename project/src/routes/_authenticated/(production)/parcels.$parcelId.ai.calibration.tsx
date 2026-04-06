@@ -494,21 +494,54 @@ const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => 
   );
 };
 
-const PhenologyTimeline = ({ dates }: { dates: Record<string, string> | undefined }) => {
+/** Parse step4 mean_dates values (ISO string or date-only) in local calendar to avoid UTC shift. */
+function parsePhenologyDateValue(raw: unknown): Date | null {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      const d = Number(m[3]);
+      const dt = new Date(y, mo - 1, d);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    }
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof raw === 'object' && raw !== null && 'year' in raw && 'month' in raw && 'day' in raw) {
+    const o = raw as { year: number; month: number; day: number };
+    const dt = new Date(o.year, o.month - 1, o.day);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+  }
+  return null;
+}
+
+const PhenologyTimeline = ({
+  dates,
+}: {
+  dates: Record<string, string | unknown> | undefined;
+}) => {
+  const { t, i18n } = useTranslation('ai');
+
+  // Same chronological order as backend step4_phenology_detection._temporal_order_valid
   const stages = [
-    { key: 'dormancy_exit', label: 'Dormancy Exit', icon: <Zap className="w-3 h-3" /> },
-    { key: 'peak', label: 'Peak', icon: <TrendingUp className="w-3 h-3" /> },
-    { key: 'plateau_start', label: 'Plateau', icon: <Activity className="w-3 h-3" /> },
-    { key: 'decline_start', label: 'Decline', icon: <AlertTriangle className="w-3 h-3" /> },
-    { key: 'dormancy_entry', label: 'Dormancy', icon: <Calendar className="w-3 h-3" /> },
+    { key: 'dormancy_exit', labelKey: 'calibrationReview.level4.dormancyExit', icon: <Zap className="w-3 h-3" /> },
+    { key: 'plateau_start', labelKey: 'calibrationReview.level4.plateauStart', icon: <Activity className="w-3 h-3" /> },
+    { key: 'peak', labelKey: 'calibrationReview.level4.peak', icon: <TrendingUp className="w-3 h-3" /> },
+    { key: 'decline_start', labelKey: 'calibrationReview.level4.declineStart', icon: <AlertTriangle className="w-3 h-3" /> },
+    { key: 'dormancy_entry', labelKey: 'calibrationReview.level4.dormancyEntry', icon: <Calendar className="w-3 h-3" /> },
   ];
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Phenological Timeline</h4>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        {t('calibrationReview.level4.phenologyTimeline')}
+      </h4>
       <div className="flex items-center justify-between">
         {stages.map((stage, i) => {
-          const dateStr = dates?.[stage.key];
+          const raw = dates?.[stage.key];
+          const dt = parsePhenologyDateValue(raw);
           return (
             <div key={stage.key} className="flex flex-col items-center text-center flex-1">
               <div className="flex items-center w-full">
@@ -518,10 +551,16 @@ const PhenologyTimeline = ({ dates }: { dates: Record<string, string> | undefine
                 </div>
                 {i < stages.length - 1 && <div className="flex-1 h-0.5 bg-green-300 dark:bg-green-700" />}
               </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">{stage.label}</span>
-              {dateStr && (
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">
+                {t(stage.labelKey)}
+              </span>
+              {dt ? (
                 <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {dt.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+                </span>
+              ) : (
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {t('calibrationReview.level4.pending')}
                 </span>
               )}
             </div>
@@ -626,7 +665,9 @@ const DetailedAnalysis = ({ output, t }: { output: CalibrationOutput; t: (key: s
           </p>
         </div>
       )}
-      <PhenologyTimeline dates={step4?.mean_dates as unknown as Record<string, string>} />
+      <PhenologyTimeline
+        dates={step4?.mean_dates as unknown as Record<string, string | unknown> | undefined}
+      />
 
       {step2?.monthly_aggregates && step2.monthly_aggregates.length > 0 && (
         <MonthlyWeatherChart aggregates={step2.monthly_aggregates} />
