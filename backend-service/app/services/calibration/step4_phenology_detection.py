@@ -8,8 +8,10 @@ from typing import Any
 import numpy as np
 
 from .referential_utils import (
+    DEFAULT_PERIODS,
     get_cycle_months_from_stades_bbch,
     get_index_key_from_referential,
+    get_phenology_periods_from_stades_bbch,
     group_points_by_cycle_year,
 )
 from .types import PhenologyDates, Step1Output, Step2Output, Step4Output
@@ -29,10 +31,184 @@ def _day_of_year_to_date(year: int, day_of_year: int) -> date:
     return base.fromordinal(base.toordinal() + max(0, day_of_year - 1))
 
 
-def _find_stages_for_year(points: list[tuple[date, float]]) -> dict[str, date]:
+def _indices_in_months(dates: list[date], months: set[int]) -> list[int]:
+    return [i for i, d in enumerate(dates) if d.month in months]
+
+
+def _values_at_indices(values: list[float], indices: list[int]) -> list[float]:
+    return [values[i] for i in indices if 0 <= i < len(values)]
+
+
+def _find_constrained_stages_for_year(
+    points: list[tuple[date, float]],
+    phenology_periods: dict[str, set[int]],
+) -> dict[str, date]:
     sorted_points = sorted(points, key=lambda item: item[0])
     dates = [item[0] for item in sorted_points]
     values = _safe_smooth([item[1] for item in sorted_points])
+
+    if len(dates) < 5:
+        return _fallback_stages(dates, values)
+
+    dormancy_months = phenology_periods.get("dormancy", set())
+    active_months = (
+        phenology_periods.get("growth", set())
+        | phenology_periods.get("flowering", set())
+        | phenology_periods.get("maturation", set())
+    )
+
+    dormancy_indices = _indices_in_months(dates, dormancy_months)
+    active_indices = _indices_in_months(dates, active_months)
+
+    dormancy_values = _values_at_indices(values, dormancy_indices)
+    active_values = _values_at_indices(values, active_indices)
+
+    if not dormancy_values:
+        dormancy_baseline = float(np.min(values))
+    else:
+        dormancy_baseline = float(np.min(dormancy_values))
+
+    if not active_values:
+        peak_idx = int(np.argmax(values))
+    else:
+        peak_idx = active_indices[int(np.argmax(active_values))]
+
+    peak_value = values[peak_idx]
+    amplitude = peak_value - dormancy_baseline
+
+    if amplitude <= 0:
+        return _fallback_stages(dates, values)
+
+    plateau_threshold = 0.95 * peak_value
+    dormancy_exit_threshold = dormancy_baseline + 0.15 * amplitude
+    dormancy_entry_threshold = dormancy_baseline + 0.20 * amplitude
+
+    dormancy_exit_idx = _find_dormancy_exit(
+        dates, values, dormancy_months, active_months, dormancy_exit_threshold
+    )
+
+    plateau_start_idx = _find_plateau_start(values, peak_idx, plateau_threshold)
+
+    decline_start_idx = _find_decline_start(values, peak_idx, plateau_threshold)
+
+    dormancy_entry_idx = _find_dormancy_entry(
+        dates,
+        values,
+        decline_start_idx,
+        dormancy_months,
+        dormancy_entry_threshold,
+        peak_idx,
+    )
+
+    stages = _build_result(
+        dates,
+        dormancy_exit_idx,
+        peak_idx,
+        plateau_start_idx,
+        decline_start_idx,
+        dormancy_entry_idx,
+    )
+
+    if _temporal_order_valid(stages):
+        return stages
+
+    return _fallback_stages(dates, values)
+
+
+def _find_dormancy_exit(
+    dates: list[date],
+    values: list[float],
+    dormancy_months: set[int],
+    active_months: set[int],
+    threshold: float,
+) -> int:
+    last_dormancy_idx = 0
+    for i, d in enumerate(dates):
+        if d.month in dormancy_months:
+            last_dormancy_idx = i
+
+    for i in range(last_dormancy_idx + 1, len(values)):
+        if dates[i].month not in active_months:
+            continue
+        if values[i] >= threshold:
+            return i
+
+    for i in range(last_dormancy_idx + 1, len(values)):
+        if values[i] > values[max(0, i - 1)]:
+            return i
+
+    return 0
+
+
+def _find_plateau_start(values: list[float], peak_idx: int, threshold: float) -> int:
+    for i in range(peak_idx - 1, -1, -1):
+        if values[i] < threshold:
+            return i + 1
+    return 0
+
+
+def _find_decline_start(values: list[float], peak_idx: int, threshold: float) -> int:
+    for i in range(peak_idx + 1, len(values)):
+        if values[i] < threshold:
+            return i
+    return peak_idx
+
+
+def _find_dormancy_entry(
+    dates: list[date],
+    values: list[float],
+    decline_start_idx: int,
+    dormancy_months: set[int],
+    threshold: float,
+    peak_idx: int,
+) -> int:
+    for i in range(decline_start_idx + 1, len(values)):
+        if dates[i].month in dormancy_months and values[i] <= threshold:
+            return i
+
+    tail = values[decline_start_idx:]
+    if tail:
+        return decline_start_idx + int(np.argmin(tail))
+
+    return len(values) - 1
+
+
+def _build_result(
+    dates: list[date],
+    dormancy_exit_idx: int,
+    peak_idx: int,
+    plateau_start_idx: int,
+    decline_start_idx: int,
+    dormancy_entry_idx: int,
+) -> dict[str, date]:
+    return {
+        "dormancy_exit": dates[dormancy_exit_idx],
+        "peak": dates[peak_idx],
+        "plateau_start": dates[plateau_start_idx],
+        "decline_start": dates[decline_start_idx],
+        "dormancy_entry": dates[dormancy_entry_idx],
+    }
+
+
+def _temporal_order_valid(stages: dict[str, date]) -> bool:
+    return (
+        stages["dormancy_exit"] < stages["plateau_start"]
+        and stages["plateau_start"] <= stages["peak"]
+        and stages["peak"] < stages["decline_start"]
+        and stages["decline_start"] < stages["dormancy_entry"]
+    )
+
+
+def _fallback_stages(dates: list[date], values: list[float]) -> dict[str, date]:
+    if not dates:
+        today = date.today()
+        return {
+            "dormancy_exit": today,
+            "peak": today,
+            "plateau_start": today,
+            "decline_start": today,
+            "dormancy_entry": today,
+        }
 
     min_idx = int(np.argmin(values))
     max_idx = int(np.argmax(values))
@@ -97,7 +273,6 @@ def detect_phenology(
     planting_system: str | None = None,
     reference_data: dict[str, Any] | None = None,
 ) -> Step4Output:
-    # Resolve index from referential when available (e.g. systemes[system].indice_cle)
     resolved_index = index_key
     if reference_data and planting_system:
         ref_index = get_index_key_from_referential(reference_data, planting_system)
@@ -108,10 +283,15 @@ def detect_phenology(
     fallback = satellite_data.index_time_series.get("NDVI", [])
     series = preferred if preferred else fallback
 
-    # Build (date, value) list for grouping
     points_list: list[tuple[date, float]] = [
         (point.date, point.value) for point in series
     ]
+
+    phenology_periods = DEFAULT_PERIODS
+    if reference_data:
+        ref_periods = get_phenology_periods_from_stades_bbch(reference_data)
+        if ref_periods:
+            phenology_periods = ref_periods
 
     cycle_months = None
     if reference_data:
@@ -131,7 +311,9 @@ def detect_phenology(
     for year, points in grouped.items():
         if len(points) < 5:
             continue
-        yearly_stages[year] = _find_stages_for_year(points)
+        yearly_stages[year] = _find_constrained_stages_for_year(
+            points, phenology_periods
+        )
 
     if not yearly_stages:
         fallback_date = date.today()

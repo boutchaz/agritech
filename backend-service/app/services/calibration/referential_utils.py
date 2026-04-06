@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+# Default phenology period months when no referential stades_bbch is available.
+# Used by both step3 (percentile calculation) and step4 (phenology detection).
+DEFAULT_PERIODS: dict[str, set[int]] = {
+    "dormancy": {12, 1, 2},
+    "growth": {3, 4, 5},
+    "flowering": {6, 7},
+    "maturation": {8, 9, 10, 11},
+}
+
 # French month codes in referential (Dec, Jan, Fev, ...) -> month number 1-12
 FRENCH_MONTH_TO_NUM: dict[str, int] = {
     "jan": 1,
@@ -133,7 +142,9 @@ def get_satellite_thresholds_from_referential(
     alerte = index_seuils.get("alerte")
     result: dict[str, Any] = {}
     if optimal is not None:
-        result["optimal"] = list(optimal) if isinstance(optimal, (list, tuple)) else optimal
+        result["optimal"] = (
+            list(optimal) if isinstance(optimal, (list, tuple)) else optimal
+        )
     if vigilance is not None and isinstance(vigilance, (int, float)):
         result["vigilance"] = float(vigilance)
     if alerte is not None and isinstance(alerte, (int, float)):
@@ -240,7 +251,12 @@ def get_phenology_periods_from_stades_bbch(
         else:
             maturation_months.update(months)
 
-    if not dormancy_months and not growth_months and not flowering_months and not maturation_months:
+    if (
+        not dormancy_months
+        and not growth_months
+        and not flowering_months
+        and not maturation_months
+    ):
         return None
 
     result: dict[str, set[int]] = {}
@@ -275,3 +291,36 @@ def group_points_by_cycle_year(
             continue
         grouped[cy].append(item)
     return dict(grouped)
+
+
+def get_stages_gdd_ranges_from_stades_bbch(
+    reference_data: dict[str, Any],
+) -> dict[str, tuple[float, float]]:
+    """Extract GDD ranges from stades_bbch[].gdd_cumul per BBCH stage code.
+
+    Returns { "00": (0, 30), "65": (900, 1000), ... } mapping stage code
+    to (gdd_min, gdd_max).  Missing or unparseable entries are skipped.
+    """
+    stades = reference_data.get("stades_bbch")
+    if not isinstance(stades, list):
+        return {}
+
+    ranges: dict[str, tuple[float, float]] = {}
+    for stage in stades:
+        if not isinstance(stage, dict):
+            continue
+        code = stage.get("code")
+        if not isinstance(code, str):
+            continue
+        gdd_cumul = stage.get("gdd_cumul")
+        if gdd_cumul is None:
+            continue
+        if isinstance(gdd_cumul, (int, float)):
+            ranges[code] = (float(gdd_cumul), float(gdd_cumul))
+        elif (
+            isinstance(gdd_cumul, list)
+            and len(gdd_cumul) == 2
+            and all(isinstance(v, (int, float)) for v in gdd_cumul)
+        ):
+            ranges[code] = (float(gdd_cumul[0]), float(gdd_cumul[1]))
+    return ranges
