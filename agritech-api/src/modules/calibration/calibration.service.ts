@@ -34,6 +34,10 @@ import {
   type CalibrationReviewView,
   type CalibrationSnapshotInput,
 } from "./calibration-review.adapter";
+import {
+  CALIBRATION_HISTORY_DEFAULT_LIMIT,
+  CALIBRATION_HISTORY_MAX_LIMIT,
+} from "./calibration.constants";
 
 /**
  * Calibration satellite lookback depth depends on tree age, per spec.
@@ -87,6 +91,25 @@ function getCalibrationLookbackDate(plantingYear: number | null): string {
   }
 
   return start.toISOString().split("T")[0];
+}
+
+/** Must match `calibrating` outgoing edges in `CalibrationStateMachine`. */
+const CALIBRATING_RECOVERY_TARGETS: ReadonlySet<string> = new Set([
+  "calibrated",
+  "awaiting_data",
+  "ready_calibration",
+  "awaiting_nutrition_option",
+  "active",
+]);
+
+function resolveCalibratingRecoveryPhase(profileSnapshot: unknown): AiPhase {
+  const snap = profileSnapshot as Record<string, unknown> | null | undefined;
+  const recovery = snap?.recovery as Record<string, unknown> | undefined;
+  const raw = recovery?.previous_ai_phase;
+  if (typeof raw === "string" && CALIBRATING_RECOVERY_TARGETS.has(raw)) {
+    return raw as AiPhase;
+  }
+  return "ready_calibration";
 }
 
 const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
@@ -400,13 +423,91 @@ export class CalibrationService {
     );
   }
 
+  /**
+   * Clears stuck `calibrating` state: marks all `in_progress` calibration rows failed
+   * and moves the parcel back to the phase captured at last start (or `ready_calibration`).
+   */
+  private async recoverFromStuckCalibratingIfNeeded(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: stuckRows, error: listError } = await supabase
+      .from("calibrations")
+      .select("profile_snapshot, started_at")
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("status", "in_progress")
+      .order("started_at", { ascending: false });
+
+    if (listError) {
+      this.logger.warn(
+        `[recoverFromStuckCalibratingIfNeeded] list in_progress failed: ${listError.message}`,
+      );
+    }
+
+    const stuckList = stuckRows ?? [];
+    const targetPhase = resolveCalibratingRecoveryPhase(
+      stuckList[0]?.profile_snapshot,
+    );
+
+    const nowIso = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("calibrations")
+      .update({
+        status: "failed",
+        completed_at: nowIso,
+        updated_at: nowIso,
+        error_message:
+          "Abandoned: superseded by a new calibration start (stuck or duplicate run)",
+      })
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("status", "in_progress");
+
+    if (updateError) {
+      this.logger.warn(
+        `[recoverFromStuckCalibratingIfNeeded] expire in_progress failed: ${updateError.message}`,
+      );
+    }
+
+    try {
+      await this.stateMachine.transitionPhase(
+        parcelId,
+        "calibrating",
+        targetPhase,
+        organizationId,
+      );
+    } catch (err) {
+      const msg = err instanceof BadRequestException ? err.message : "";
+      if (msg.includes('not in "calibrating"')) {
+        this.logger.warn(
+          `[recoverFromStuckCalibratingIfNeeded] parcel ${parcelId}: phase already left calibrating (concurrent update)`,
+        );
+        return;
+      }
+      throw err;
+    }
+
+    this.logger.warn(
+      `[recoverFromStuckCalibratingIfNeeded] parcel ${parcelId}: calibrating -> ${targetPhase}; ${stuckList.length} stale run(s) marked failed`,
+    );
+  }
+
   async startCalibration(
     parcelId: string,
     organizationId: string,
     dto: StartCalibrationDto,
     options?: { skipReadinessCheck?: boolean; authToken?: string },
   ): Promise<CalibrationRecord> {
-    const parcel = await this.getParcelContext(parcelId, organizationId);
+    let parcel = await this.getParcelContext(parcelId, organizationId);
+
+    if (parcel.aiPhase === "calibrating") {
+      await this.recoverFromStuckCalibratingIfNeeded(parcelId, organizationId);
+      parcel = await this.getParcelContext(parcelId, organizationId);
+    }
+
     const previousPhase = parcel.aiPhase as
       | "awaiting_data"
       | "ready_calibration"
@@ -564,7 +665,13 @@ export class CalibrationService {
       );
     }
 
-    const parcel = await this.getParcelContext(parcelId, organizationId);
+    let parcel = await this.getParcelContext(parcelId, organizationId);
+
+    if (parcel.aiPhase === "calibrating") {
+      await this.recoverFromStuckCalibratingIfNeeded(parcelId, organizationId);
+      parcel = await this.getParcelContext(parcelId, organizationId);
+    }
+
     const previousPhase = parcel.aiPhase as
       | "awaiting_data"
       | "ready_calibration"
@@ -1895,7 +2002,7 @@ export class CalibrationService {
   async getCalibrationHistory(
     parcelId: string,
     organizationId: string,
-    limit: number = 5,
+    limit: number = CALIBRATION_HISTORY_DEFAULT_LIMIT,
   ): Promise<
     Array<{
       id: string;
@@ -1912,6 +2019,10 @@ export class CalibrationService {
     }>
   > {
     const supabase = this.databaseService.getAdminClient();
+    const safeLimit = Math.min(
+      CALIBRATION_HISTORY_MAX_LIMIT,
+      Math.max(1, Math.floor(Number(limit)) || CALIBRATION_HISTORY_DEFAULT_LIMIT),
+    );
     const { data, error } = await supabase
       .from("calibrations")
       .select(
@@ -1920,7 +2031,7 @@ export class CalibrationService {
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
 
     if (error) {
       this.logger.error(
@@ -1937,7 +2048,7 @@ export class CalibrationService {
   async getRecalibrationHistory(
     parcelId: string,
     organizationId: string,
-    limit: number = 5,
+    limit: number = CALIBRATION_HISTORY_DEFAULT_LIMIT,
   ): Promise<
     Array<{
       id: string;
@@ -1954,6 +2065,10 @@ export class CalibrationService {
     }>
   > {
     const supabase = this.databaseService.getAdminClient();
+    const safeLimit = Math.min(
+      CALIBRATION_HISTORY_MAX_LIMIT,
+      Math.max(1, Math.floor(Number(limit)) || CALIBRATION_HISTORY_DEFAULT_LIMIT),
+    );
     const { data, error } = await supabase
       .from("calibrations")
       .select(
@@ -1963,7 +2078,7 @@ export class CalibrationService {
       .eq("organization_id", organizationId)
       .in("type", ["F2_partial"])
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
 
     if (error) {
       this.logger.error(
@@ -2092,7 +2207,11 @@ export class CalibrationService {
       anomalies: record.anomalies_data,
       scores: this.toJsonObject(record.scores_detail),
     };
-    const history = await this.getCalibrationHistory(parcelId, organizationId, 5);
+    const history = await this.getCalibrationHistory(
+      parcelId,
+      organizationId,
+      CALIBRATION_HISTORY_DEFAULT_LIMIT,
+    );
 
     const { data: parcelRow, error: parcelError } = await supabase
       .from("parcels")

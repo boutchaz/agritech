@@ -409,14 +409,41 @@ describe('Calibration V2 integration', () => {
     });
   });
 
-  it('startCalibration rejects concurrent calibration when ai_phase is calibrating', async () => {
-    setupV2StatefulMock('calibrating');
+  it('startCalibration recovers stuck calibrating phase and starts a new run', async () => {
+    const state = setupV2StatefulMock('calibrating', {
+      profile_snapshot: {
+        version: 'v2',
+        recovery: { previous_ai_phase: 'active' },
+        validation: { validated: false, validated_at: null },
+      },
+    });
 
-    await expect(calibrationService.startCalibration(parcelId, organizationId, {})).rejects.toThrow(
-      BadRequestException,
+    mockStateMachine.transitionPhase.mockImplementation(async (pid, _from, to, orgId) => {
+      if (pid === parcelId && orgId === organizationId) {
+        state.parcel.ai_phase = to;
+      }
+    });
+
+    mockSatelliteProxyService.proxy.mockImplementation(
+      buildV2SatelliteProxyImplementation(v2OutputFixture),
     );
-    await expect(calibrationService.startCalibration(parcelId, organizationId, {})).rejects.toThrow(
-      'already in progress',
+
+    const result = await calibrationService.startCalibration(parcelId, organizationId, {}, {
+      skipReadinessCheck: true,
+    });
+
+    expect(result.status).toBe('in_progress');
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'calibrating',
+      'active',
+      organizationId,
+    );
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'active',
+      'calibrating',
+      organizationId,
     );
   });
 
@@ -721,6 +748,12 @@ describe('Calibration V2 integration', () => {
           updated_at: new Date().toISOString(),
         });
       }
+      if (pendingUpdate && column === 'status' && value === 'in_progress') {
+        Object.assign(calibrationState, pendingUpdate, {
+          updated_at: new Date().toISOString(),
+        });
+        pendingUpdate = null;
+      }
       return query;
     });
     query.order.mockReturnValue(query);
@@ -740,7 +773,7 @@ describe('Calibration V2 integration', () => {
     });
     query.maybeSingle.mockImplementation(async () => mockQueryResult(calibrationState));
 
-    setupThenableMock(query, [{ id: calibrationId }]);
+    setupThenableMock(query, [calibrationState]);
     return query;
   }
 

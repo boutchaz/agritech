@@ -12,6 +12,7 @@ import {
   CalibrationReviewView,
   CalibrationSnapshotInput,
 } from "./calibration-review.adapter";
+import { CALIBRATION_HISTORY_DEFAULT_LIMIT } from "./calibration.constants";
 
 type JsonObject = Record<string, unknown>;
 
@@ -97,7 +98,7 @@ export class CalibrationExportService {
       .eq("parcel_id", record.parcel_id)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(CALIBRATION_HISTORY_DEFAULT_LIMIT);
 
     if (historyError) {
       throw new BadRequestException(

@@ -214,7 +214,7 @@ export function Level4Temporal({ data, step1, plantingYear }: Level4TemporalProp
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.calibration_history.slice(0, 5).map((history) => (
+                  {data.calibration_history.map((history) => (
                     <TableRow key={history.id}>
                       <TableCell className="text-xs">{new Date(history.date).toLocaleDateString()}</TableCell>
                       <TableCell className="text-xs capitalize">{history.phase_age.replace(/_/g, ' ')}</TableCell>
