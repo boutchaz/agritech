@@ -7,7 +7,9 @@ from .referential_utils import (
     CROP_TYPE_TO_REFERENTIAL_JSON,
     FALLBACK_GDD_TBASE,
     FALLBACK_GDD_TUPPER,
+    OliveStadesBbchGddContext,
     get_gdd_tbase_tupper,
+    parse_olive_stades_bbch_gdd_context,
 )
 
 # Snapshot of thresholds from referential JSON (or fallbacks) at import — for callers
@@ -91,20 +93,22 @@ def _build_nirv_lookup(nirv_series: list[dict[str, Any]]) -> dict[str, float]:
 def _compute_nirv_baseline(
     nirv_lookup: dict[str, float],
     rows: list[dict[str, Any]],
+    baseline_months: set[int] | None = None,
 ) -> float | None:
-    """Compute winter NIRv baseline (mean of Dec-Jan values)."""
-    winter_values: list[float] = []
+    """Mean NIRv on dates whose month is in *baseline_months* (default December–January)."""
+    months = baseline_months if baseline_months else {12, 1}
+    samples: list[float] = []
     for row in rows:
         d = _parse_row_date(row)
         if d is None:
             continue
-        if d.month in (12, 1):
+        if d.month in months:
             v = nirv_lookup.get(d.isoformat())
             if v is not None:
-                winter_values.append(v)
-    if not winter_values:
+                samples.append(v)
+    if not samples:
         return None
-    return sum(winter_values) / len(winter_values)
+    return sum(samples) / len(samples)
 
 
 def compute_olive_gdd_two_phase(
@@ -127,6 +131,12 @@ def compute_olive_gdd_two_phase(
       2. NIRv shows ≥ 20 % rise above winter baseline (or NIRv unavailable
          for that date → temperature-only fallback).
 
+    When ``reference_data['stades_bbch']`` is present:
+      - NIRv baseline uses stage **00** ``mois`` (dormancy window), else December–January.
+      - GDD accrues only on calendar months listed in any BBCH stage ``mois``.
+      - Season cumulative GDD (resets with chill in early November) may not exceed the
+        referential **maximum** ``gdd_cumul`` upper bound for that calendar month.
+
     The chill accumulator resets every November (new dormancy cycle).
     """
     if tbase is None or tupper is None:
@@ -138,11 +148,19 @@ def compute_olive_gdd_two_phase(
     if tupper is None:
         tupper = FALLBACK_GDD_TUPPER["olivier"]
 
+    bbch_ctx: OliveStadesBbchGddContext | None = parse_olive_stades_bbch_gdd_context(
+        reference_data
+    )
+    baseline_months = set(bbch_ctx.baseline_months) if bbch_ctx else None
+
     nirv_lookup = _build_nirv_lookup(nirv_series)
-    nirv_baseline = _compute_nirv_baseline(nirv_lookup, rows)
+    nirv_baseline = _compute_nirv_baseline(
+        nirv_lookup, rows, baseline_months=baseline_months
+    )
 
     cumulative_chill = 0.0
     chill_satisfied = False
+    season_cumulative_gdd = 0.0
     result: list[dict[str, Any]] = []
 
     for row in rows:
@@ -160,6 +178,7 @@ def compute_olive_gdd_two_phase(
         if d is not None and d.month == _CHILL_SEASON_RESET_MONTH and d.day <= 7:
             cumulative_chill = 0.0
             chill_satisfied = False
+            season_cumulative_gdd = 0.0
 
         # Phase 1 — accumulate chill during dormancy months.
         if d is not None and d.month in _CHILL_MONTHS:
@@ -180,12 +199,21 @@ def compute_olive_gdd_two_phase(
                 if nirv_val is not None:
                     nirv_ok = nirv_val >= nirv_baseline * 1.20
 
+            daily = 0.0
             if temp_ok and nirv_ok:
-                copied["gdd_olivier"] = round(
-                    compute_daily_gdd(tmax, tmin, tbase, tupper), 4
-                )
-            else:
-                copied["gdd_olivier"] = 0.0
+                daily = compute_daily_gdd(tmax, tmin, tbase, tupper)
+
+            if bbch_ctx is not None and d is not None:
+                if d.month not in bbch_ctx.allowed_gdd_months:
+                    daily = 0.0
+                else:
+                    cap = bbch_ctx.month_max_gdd.get(d.month)
+                    if cap is not None and daily > 0.0:
+                        if season_cumulative_gdd + daily > cap + 1e-6:
+                            daily = 0.0
+
+            season_cumulative_gdd += daily
+            copied["gdd_olivier"] = round(daily, 4)
         else:
             copied["gdd_olivier"] = 0.0
 

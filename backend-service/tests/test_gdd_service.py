@@ -245,3 +245,113 @@ def test_precompute_gdd_rows_olive_uses_two_phase() -> None:
     assert count == 3
     # Two-phase model should produce GDD on the spring day
     assert result[-1]["gdd_olivier"] == 9.5
+
+
+def _olive_bbch_ref_tight_calendar() -> dict:
+    """Minimal stades_bbch: dormancy Dec–Jan, February only for active GDD months."""
+    return {
+        "stades_bbch": [
+            {
+                "code": "00",
+                "nom": "Dormance",
+                "mois": ["Dec", "Jan"],
+                "gdd_cumul": [0, 30],
+            },
+            {
+                "code": "01",
+                "nom": "Fev",
+                "mois": ["Feb"],
+                "gdd_cumul": [30, 80],
+            },
+        ],
+    }
+
+
+def test_olive_bbch_allowed_months_block_march() -> None:
+    """With stades_bbch, GDD accrues only on months listed in any stage."""
+    rows = []
+    for day in range(1, 8):
+        rows.append(_make_weather_row(f"2024-12-{day:02d}", 8.0, 0.0))
+    rows.append(_make_weather_row("2025-03-15", 22.0, 12.0))
+
+    result = compute_olive_gdd_two_phase(
+        rows,
+        chill_threshold=10,
+        nirv_series=[],
+        reference_data=_olive_bbch_ref_tight_calendar(),
+    )
+    assert result[-1]["gdd_olivier"] == 0.0
+
+
+def test_olive_bbch_month_max_gdd_caps_seasonal_accrual() -> None:
+    """Per-month BBCH max(gdd_cumul hi) caps season cumulative for that month."""
+    ref = {
+        "stades_bbch": [
+            {
+                "code": "00",
+                "nom": "Dormance",
+                "mois": ["Dec", "Jan"],
+                "gdd_cumul": [0, 30],
+            },
+            {
+                "code": "09",
+                "nom": "Mar",
+                "mois": ["Mar"],
+                "gdd_cumul": [0, 15],
+            },
+        ],
+    }
+    rows = []
+    for day in range(1, 8):
+        rows.append(_make_weather_row(f"2024-12-{day:02d}", 8.0, 0.0))
+    rows.append(_make_weather_row("2025-03-10", 22.0, 12.0))
+    rows.append(_make_weather_row("2025-03-20", 22.0, 12.0))
+
+    result = compute_olive_gdd_two_phase(
+        rows,
+        chill_threshold=10,
+        nirv_series=[],
+        reference_data=ref,
+    )
+    assert result[-2]["gdd_olivier"] == 9.5
+    assert result[-1]["gdd_olivier"] == 0.0
+
+
+def test_olive_bbch_baseline_months_from_phase_00_only() -> None:
+    """NIRv baseline uses stage 00 mois, not hardcoded Dec–Jan when 00 differs."""
+    ref = {
+        "stades_bbch": [
+            {
+                "code": "00",
+                "nom": "Dormance",
+                "mois": ["Nov"],
+                "gdd_cumul": [0, 10],
+            },
+            {
+                "code": "01",
+                "nom": "Winter2",
+                "mois": ["Dec", "Jan", "Feb", "Mar"],
+                "gdd_cumul": [10, 200],
+            },
+        ],
+    }
+    rows = [
+        _make_weather_row("2024-11-15", 8.0, 0.0),
+        _make_weather_row("2024-11-20", 8.0, 0.0),
+    ]
+    nirv_series = [
+        {"date": "2024-11-15", "value": 0.10},
+        {"date": "2024-11-20", "value": 0.10},
+    ]
+    for day in range(1, 8):
+        rows.append(_make_weather_row(f"2024-12-{day:02d}", 8.0, 0.0))
+    rows.append(_make_weather_row("2025-03-15", 22.0, 12.0))
+    nirv_series.append({"date": "2025-03-15", "value": 0.13})
+
+    result = compute_olive_gdd_two_phase(
+        rows,
+        chill_threshold=10,
+        nirv_series=nirv_series,
+        reference_data=ref,
+    )
+    assert result[-1]["gdd_olivier"] == 9.5

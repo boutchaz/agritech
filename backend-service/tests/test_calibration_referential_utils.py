@@ -15,12 +15,15 @@ from app.services.calibration.referential_utils import (
     get_phenology_periods_from_stades_bbch,
     get_satellite_thresholds_from_referential,
     group_points_by_cycle_year,
+    parse_olive_stades_bbch_gdd_context,
 )
 
 
 def test_french_month_to_num() -> None:
     assert french_month_to_num("Dec") == 12
     assert french_month_to_num("Jan") == 1
+    assert french_month_to_num("Feb") == 2
+    assert french_month_to_num("Jun") == 6
     assert french_month_to_num("Fev") == 2
     assert french_month_to_num("Mar") == 3
     assert french_month_to_num("Avr") == 4
@@ -165,3 +168,32 @@ def test_get_gdd_tbase_tupper_embedded_reference_overrides_file() -> None:
 
 def test_get_gdd_tbase_tupper_unknown_crop() -> None:
     assert get_gdd_tbase_tupper("ble", None) == (None, None)
+
+
+def test_parse_olive_stades_bbch_gdd_context_baseline_and_caps() -> None:
+    ref = {
+        "stades_bbch": [
+            {
+                "code": "00",
+                "nom": "Dormance",
+                "mois": ["Dec", "Jan"],
+                "gdd_cumul": [0, 30],
+            },
+            {
+                "code": "09",
+                "nom": "Feuilles",
+                "mois": ["Mar"],
+                "gdd_cumul": [0, 15],
+            },
+        ],
+    }
+    ctx = parse_olive_stades_bbch_gdd_context(ref)
+    assert ctx is not None
+    assert ctx.baseline_months == frozenset({12, 1})
+    assert 3 in ctx.allowed_gdd_months
+    assert ctx.month_max_gdd[3] == 15
+
+
+def test_parse_olive_stades_bbch_gdd_context_missing_returns_none() -> None:
+    assert parse_olive_stades_bbch_gdd_context({}) is None
+    assert parse_olive_stades_bbch_gdd_context({"stades_bbch": []}) is None

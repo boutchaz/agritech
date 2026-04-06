@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -57,11 +58,126 @@ FRENCH_MONTH_TO_NUM: dict[str, int] = {
     "dec": 12,
 }
 
+# English abbreviations used in some referential JSON (e.g. Feb, Jun).
+_EXTRA_MONTH_CODES: dict[str, int] = {
+    "feb": 2,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+}
+
 
 def french_month_to_num(code: str) -> int:
-    """Convert referential French month code to 1-12. Case-insensitive."""
+    """Convert referential month code (FR or EN) to 1-12. Case-insensitive."""
     normalized = code.strip().lower() if isinstance(code, str) else ""
-    return FRENCH_MONTH_TO_NUM.get(normalized, 1)
+    if normalized in FRENCH_MONTH_TO_NUM:
+        return FRENCH_MONTH_TO_NUM[normalized]
+    if normalized in _EXTRA_MONTH_CODES:
+        return _EXTRA_MONTH_CODES[normalized]
+    return 1
+
+
+def _months_from_stade_mois(mois: Any) -> set[int]:
+    if isinstance(mois, list):
+        return {french_month_to_num(str(m)) for m in mois if m is not None}
+    if isinstance(mois, str):
+        return {french_month_to_num(mois)}
+    return set()
+
+
+def _normalize_bbch_code(code: Any) -> str | None:
+    if isinstance(code, int):
+        return f"{code:02d}"
+    if isinstance(code, str):
+        s = code.strip()
+        if s.isdigit():
+            return f"{int(s):02d}"
+        return s
+    return None
+
+
+def _parse_stage_gdd_interval(stage: dict[str, Any]) -> tuple[float, float] | None:
+    raw = stage.get("gdd_cumul")
+    if isinstance(raw, (int, float)):
+        x = float(raw)
+        return (x, x)
+    if (
+        isinstance(raw, list)
+        and len(raw) == 2
+        and all(isinstance(v, (int, float)) for v in raw)
+    ):
+        return (float(raw[0]), float(raw[1]))
+    return None
+
+
+@dataclass(frozen=True)
+class OliveStadesBbchGddContext:
+    """Olive GDD precompute driven by ``stades_bbch`` (see :func:`parse_olive_stades_bbch_gdd_context`)."""
+
+    baseline_months: frozenset[int]
+    allowed_gdd_months: frozenset[int]
+    month_max_gdd: dict[int, float]
+
+
+def parse_olive_stades_bbch_gdd_context(
+    reference_data: dict[str, Any] | None,
+) -> OliveStadesBbchGddContext | None:
+    """Build BBCH-driven rules from ``reference_data['stades_bbch']`` (list order preserved).
+
+    - **baseline_months**: months of stage code ``00`` (dormancy) for NIRv baseline (+20 % gate).
+    - **allowed_gdd_months**: union of all stage ``mois`` — thermal GDD only accrues on these months.
+    - **month_max_gdd**: per calendar month, maximum ``gdd_cumul`` upper bound among stages that
+      include that month — accrual is blocked if season cumulative would exceed that cap (soft
+      alignment with referential BBCH ceilings; no lower bound so early-season carry-over works).
+
+    Returns ``None`` if ``stades_bbch`` is missing or empty (legacy behaviour).
+    """
+    if not reference_data:
+        return None
+    stades = reference_data.get("stades_bbch")
+    if not isinstance(stades, list) or len(stades) == 0:
+        return None
+
+    baseline_months: set[int] = set()
+    allowed: set[int] = set()
+    bands_by_month: dict[int, list[tuple[float, float]]] = {}
+
+    for stage in stades:
+        if not isinstance(stage, dict):
+            continue
+        code = _normalize_bbch_code(stage.get("code"))
+        months = _months_from_stade_mois(stage.get("mois"))
+        if not months:
+            continue
+        allowed |= months
+        if code == "00":
+            baseline_months |= months
+        interval = _parse_stage_gdd_interval(stage)
+        if interval is None:
+            continue
+        lo, hi = interval
+        for m in months:
+            bands_by_month.setdefault(m, []).append((lo, hi))
+
+    if not allowed:
+        return None
+
+    if not baseline_months:
+        baseline_months = {12, 1}
+
+    month_max_gdd: dict[int, float] = {}
+    for m, bands in bands_by_month.items():
+        if bands:
+            month_max_gdd[m] = max(b[1] for b in bands)
+
+    return OliveStadesBbchGddContext(
+        baseline_months=frozenset(baseline_months),
+        allowed_gdd_months=frozenset(allowed),
+        month_max_gdd=month_max_gdd,
+    )
 
 
 def get_cycle_months_from_stades_bbch(

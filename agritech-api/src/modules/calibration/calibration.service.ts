@@ -1472,6 +1472,7 @@ export class CalibrationService {
             variety: parcel.variety,
             chill_threshold: chillThreshold,
             nirv_series: nirvSeries,
+            reference_data: referenceData ?? undefined,
             rows: weatherRows.map((row) => ({ ...row })),
           },
           organizationId,
