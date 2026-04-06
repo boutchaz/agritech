@@ -167,6 +167,7 @@ def run_calibration_pipeline(
     adjustment = get_threshold_adjustment(
         maturity_phase,
         planting_year=calibration_input.planting_year,
+        reference_data=calibration_input.reference_data,
     )
 
     step1 = extract_satellite_history(

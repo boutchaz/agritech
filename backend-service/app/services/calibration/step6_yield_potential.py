@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime
-import re
 from typing import Any
 
+from .referential_utils import (
+    get_phase_boundaries_from_reference,
+    span_for_rendement_key,
+)
 from .types import (
     AlternanceInfo,
     MaturityPhase,
@@ -11,30 +14,6 @@ from .types import (
     Step6Output,
     YieldPotential,
 )
-
-
-def _parse_age_bracket(key: str) -> tuple[int, int] | None:
-    # Format: "0-5_ans" or "5-10_ans"
-    range_match = re.match(r"^(\d+)-(\d+)_ans$", key)
-    if range_match:
-        return int(range_match.group(1)), int(range_match.group(2))
-
-    # Format: "ans_3_5" or "ans_11_20" (referentiel format)
-    ans_match = re.match(r"^ans_(\d+)_(\d+)$", key)
-    if ans_match:
-        return int(ans_match.group(1)), int(ans_match.group(2))
-
-    # Format: "plus_50_ans"
-    plus_match = re.match(r"^plus_(\d+)_ans$", key)
-    if plus_match:
-        return int(plus_match.group(1)), 200
-
-    # Format: "ans_40_plus"
-    ans_plus_match = re.match(r"^ans_(\d+)_plus$", key)
-    if ans_plus_match:
-        return int(ans_plus_match.group(1)), 200
-
-    return None
 
 
 def _extract_reference_range(value: Any) -> tuple[float, float]:
@@ -62,27 +41,31 @@ def _historical_average(harvest_records: list[dict[str, Any]]) -> float | None:
 def _resolve_bracket(
     age: int,
     rendement_map: dict[str, Any],
+    reference_data: dict[str, Any],
 ) -> tuple[str, tuple[float, float]]:
-    selected_label = "unknown"
-    selected_range = (0.0, 0.0)
+    boundaries = get_phase_boundaries_from_reference(reference_data)
+    best: tuple[str, tuple[float, float], int] | None = None
 
     for key, raw_value in rendement_map.items():
-        parsed = _parse_age_bracket(key)
-        if not parsed:
+        span = span_for_rendement_key(str(key), boundaries)
+        if span is None:
             continue
-        start, end = parsed
-        if age < start or age > end:
+        lo, hi = span
+        if age < lo or age >= hi:
             continue
-        selected_label = key
-        selected_range = _extract_reference_range(raw_value)
-        break
+        width = hi - lo
+        pair = _extract_reference_range(raw_value)
+        if best is None or width < best[2]:
+            best = (key, pair, width)
 
-    if selected_label == "unknown" and rendement_map:
+    if best is not None:
+        return best[0], best[1]
+
+    if rendement_map:
         key = next(iter(rendement_map.keys()))
-        selected_label = key
-        selected_range = _extract_reference_range(rendement_map[key])
+        return key, _extract_reference_range(rendement_map[key])
 
-    return selected_label, selected_range
+    return "unknown", (0.0, 0.0)
 
 
 def _round_yearly_means(yearly_means: dict[int, float]) -> dict[int, float]:
@@ -237,7 +220,7 @@ def calculate_yield_potential(
             if isinstance(candidate, dict):
                 rendement_map = candidate
 
-    bracket, (min_ref, max_ref) = _resolve_bracket(age, rendement_map)
+    bracket, (min_ref, max_ref) = _resolve_bracket(age, rendement_map, reference_data)
     historical_avg = _historical_average(harvest_records)
 
     convert = lambda v: _kg_per_tree_to_t_per_ha(

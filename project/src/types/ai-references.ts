@@ -58,6 +58,13 @@ interface ReferenceMetadata<C extends CropType> {
 }
 
 interface YieldByAge {
+  /** Maturity-phase keys (aligned with referential ``phases_maturite_ans`` / calibration engine). */
+  readonly juvenile?: RendementKgArbreValue;
+  readonly entree_production?: RendementKgArbreValue;
+  readonly pleine_production?: RendementKgArbreValue;
+  readonly maturite_avancee?: RendementKgArbreValue;
+  readonly senescence?: RendementKgArbreValue;
+  /** @deprecated Legacy tranche keys — prefer phase ids above. */
   readonly '3-4_ans'?: RendementKgArbreValue;
   readonly '3-5_ans'?: RendementKgArbreValue;
   readonly '5-7_ans'?: RendementKgArbreValue;
@@ -68,6 +75,11 @@ interface YieldByAge {
   readonly '21-40_ans'?: RendementKgArbreValue;
   readonly plus_20_ans?: RendementKgArbreValue;
   readonly plus_40_ans?: RendementKgArbreValue;
+  readonly ans_3_5?: RendementKgArbreValue;
+  readonly ans_6_10?: RendementKgArbreValue;
+  readonly ans_11_20?: RendementKgArbreValue;
+  readonly ans_21_40?: RendementKgArbreValue;
+  readonly ans_40_plus?: RendementKgArbreValue;
 }
 
 interface MonthPlanEntry {
@@ -83,7 +95,7 @@ interface MonthPlanEntry {
 
 export type CropType = 'olivier' | 'agrumes' | 'avocatier' | 'palmier_dattier';
 
-interface OlivierMetadata extends ReferenceMetadata<'olivier'> {}
+type OlivierMetadata = ReferenceMetadata<'olivier'>;
 
 interface OlivierSensibilites {
   readonly oeil_paon: string;
@@ -624,7 +636,7 @@ interface AgrumesPhenologicalStage {
   readonly coef_nirvp: number;
 }
 
-interface AgrumesNutritionOption extends NutritionOptionBase {}
+type AgrumesNutritionOption = NutritionOptionBase;
 
 interface AgrumesExportProfile {
   readonly N: NumericRange;

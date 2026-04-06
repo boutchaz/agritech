@@ -12,11 +12,15 @@ from app.services.calibration.referential_utils import (
     get_cycle_months_from_stades_bbch,
     get_gdd_tbase_tupper,
     get_index_key_from_referential,
+    get_phase_boundaries_from_reference,
     get_phenology_periods_from_stades_bbch,
     get_satellite_thresholds_from_referential,
     group_points_by_cycle_year,
+    parse_legacy_rendement_key_to_half_open,
     parse_olive_stades_bbch_gdd_context,
+    span_for_rendement_key,
 )
+from app.services.calibration.types import MaturityPhase
 
 
 def test_french_month_to_num() -> None:
@@ -197,3 +201,31 @@ def test_parse_olive_stades_bbch_gdd_context_baseline_and_caps() -> None:
 def test_parse_olive_stades_bbch_gdd_context_missing_returns_none() -> None:
     assert parse_olive_stades_bbch_gdd_context({}) is None
     assert parse_olive_stades_bbch_gdd_context({"stades_bbch": []}) is None
+
+
+def test_get_phase_boundaries_from_reference_defaults() -> None:
+    b = get_phase_boundaries_from_reference({})
+    assert b[MaturityPhase.JUVENILE] == (0, 5)
+    assert b[MaturityPhase.SENESCENCE] == (60, 200)
+
+
+def test_get_phase_boundaries_from_reference_partial_override() -> None:
+    b = get_phase_boundaries_from_reference(
+        {
+            "phases_maturite_ans": {
+                "juvenile": [0, 7],
+                "entree_production": [7, 12],
+            }
+        }
+    )
+    assert b[MaturityPhase.JUVENILE] == (0, 7)
+    assert b[MaturityPhase.ENTREE_PRODUCTION] == (7, 12)
+    assert b[MaturityPhase.PLEINE_PRODUCTION] == (10, 40)
+
+
+def test_parse_legacy_rendement_key_and_phase_span() -> None:
+    assert parse_legacy_rendement_key_to_half_open("6-10_ans") == (6, 11)
+    assert parse_legacy_rendement_key_to_half_open("ans_3_5") == (3, 6)
+    boundaries = get_phase_boundaries_from_reference({})
+    assert span_for_rendement_key("pleine_production", boundaries) == (10, 40)
+    assert span_for_rendement_key("21-40_ans", boundaries) == (21, 41)

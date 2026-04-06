@@ -10,8 +10,31 @@
       "ranges": "Always [min, max] arrays — never single number when a range exists",
       "doses": "Always {value: number, unit: string} — never freetext",
       "conditions": "Always list of {field, operator, value} objects",
-      "nulls": "null = not applicable. Use 0 only for a real zero value."
+      "nulls": "null = not applicable. Use 0 only for a real zero value.",
+      "phases_maturite": "phases_maturite_ans maps phase id -> [min_age, max_age) in years. rendement_kg_arbre uses the same phase ids as keys (juvenile, entree_production, pleine_production, maturite_avancee, senescence) with [min_kg, max_kg] per tree."
     }
+  },
+  "phases_maturite_ans": {
+    "juvenile": [
+      0,
+      5
+    ],
+    "entree_production": [
+      5,
+      10
+    ],
+    "pleine_production": [
+      10,
+      40
+    ],
+    "maturite_avancee": [
+      40,
+      60
+    ],
+    "senescence": [
+      60,
+      200
+    ]
   },
   "varietes": [
     {
@@ -45,23 +68,23 @@
       ],
       "duree_vie_economique_ans": null,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           2,
           5
         ],
-        "ans_6_10": [
+        "entree_production": [
           10,
           25
         ],
-        "ans_11_20": [
+        "pleine_production": [
           30,
           50
         ],
-        "ans_21_40": [
+        "maturite_avancee": [
           40,
           70
         ],
-        "ans_40_plus": [
+        "senescence": [
           30,
           50
         ]
@@ -98,23 +121,23 @@
       ],
       "duree_vie_economique_ans": null,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           3,
           8
         ],
-        "ans_6_10": [
+        "entree_production": [
           15,
           35
         ],
-        "ans_11_20": [
+        "pleine_production": [
           40,
           60
         ],
-        "ans_21_40": [
+        "maturite_avancee": [
           50,
           80
         ],
-        "ans_40_plus": [
+        "senescence": [
           40,
           60
         ]
@@ -151,23 +174,23 @@
       ],
       "duree_vie_economique_ans": null,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           5,
           12
         ],
-        "ans_6_10": [
+        "entree_production": [
           25,
           45
         ],
-        "ans_11_20": [
+        "pleine_production": [
           45,
           65
         ],
-        "ans_21_40": [
+        "maturite_avancee": [
           50,
           70
         ],
-        "ans_40_plus": [
+        "senescence": [
           40,
           55
         ]
@@ -203,20 +226,20 @@
       ],
       "duree_vie_economique_ans": 15,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           3,
           6
         ],
-        "ans_6_10": [
+        "entree_production": [
           6,
           10
         ],
-        "ans_11_20": [
+        "pleine_production": [
           8,
           12
         ],
-        "ans_21_40": null,
-        "ans_40_plus": null
+        "maturite_avancee": null,
+        "senescence": null
       },
       "note_rendement": "Declin economique apres 15 ans — arrachage recommande"
     },
@@ -250,20 +273,20 @@
       ],
       "duree_vie_economique_ans": 18,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           4,
           7
         ],
-        "ans_6_10": [
+        "entree_production": [
           7,
           12
         ],
-        "ans_11_20": [
+        "pleine_production": [
           10,
           15
         ],
-        "ans_21_40": null,
-        "ans_40_plus": null
+        "maturite_avancee": null,
+        "senescence": null
       },
       "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
     },
@@ -297,20 +320,20 @@
       ],
       "duree_vie_economique_ans": 18,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           3,
           5
         ],
-        "ans_6_10": [
+        "entree_production": [
           5,
           9
         ],
-        "ans_11_20": [
+        "pleine_production": [
           7,
           11
         ],
-        "ans_21_40": null,
-        "ans_40_plus": null
+        "maturite_avancee": null,
+        "senescence": null
       },
       "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
     },
@@ -344,23 +367,23 @@
       ],
       "duree_vie_economique_ans": null,
       "rendement_kg_arbre": {
-        "ans_3_5": [
+        "juvenile": [
           5,
           12
         ],
-        "ans_6_10": [
+        "entree_production": [
           25,
           45
         ],
-        "ans_11_20": [
+        "pleine_production": [
           40,
           60
         ],
-        "ans_21_40": [
+        "maturite_avancee": [
           45,
           65
         ],
-        "ans_40_plus": [
+        "senescence": [
           35,
           50
         ]

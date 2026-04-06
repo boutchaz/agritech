@@ -7,6 +7,28 @@
     "famille": "Arecaceae",
     "pays": "Maroc"
   },
+  "phases_maturite_ans": {
+    "juvenile": [
+      0,
+      5
+    ],
+    "entree_production": [
+      5,
+      10
+    ],
+    "pleine_production": [
+      10,
+      40
+    ],
+    "maturite_avancee": [
+      40,
+      60
+    ],
+    "senescence": [
+      60,
+      200
+    ]
+  },
   "gdd": {
     "tbase_c": 18.0,
     "plafond_c": 45.0,

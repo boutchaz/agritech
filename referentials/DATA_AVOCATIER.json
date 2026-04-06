@@ -6,6 +6,28 @@
     "nom_scientifique": "Persea americana Mill.",
     "pays": "Maroc"
   },
+  "phases_maturite_ans": {
+    "juvenile": [
+      0,
+      5
+    ],
+    "entree_production": [
+      5,
+      10
+    ],
+    "pleine_production": [
+      10,
+      40
+    ],
+    "maturite_avancee": [
+      40,
+      60
+    ],
+    "senescence": [
+      60,
+      200
+    ]
+  },
   "gdd": {
     "tbase_c": 10.0,
     "plafond_c": 33.0,
@@ -42,23 +64,23 @@
       "froid_min_C": -3,
       "salinite": "sensible",
       "rendement_kg_arbre": {
-        "3-4_ans": [
+        "juvenile": [
           5,
           15
         ],
-        "5-7_ans": [
+        "entree_production": [
           30,
           60
         ],
-        "8-12_ans": [
+        "pleine_production": [
           80,
           150
         ],
-        "13-20_ans": [
+        "maturite_avancee": [
           120,
           200
         ],
-        "plus_20_ans": [
+        "senescence": [
           100,
           180
         ]
@@ -91,23 +113,23 @@
       "froid_min_C": -4,
       "salinite": "sensible",
       "rendement_kg_arbre": {
-        "3-4_ans": [
+        "juvenile": [
           5,
           10
         ],
-        "5-7_ans": [
+        "entree_production": [
           25,
           50
         ],
-        "8-12_ans": [
+        "pleine_production": [
           60,
           120
         ],
-        "13-20_ans": [
+        "maturite_avancee": [
           100,
           180
         ],
-        "plus_20_ans": [
+        "senescence": [
           80,
           150
         ]
@@ -138,23 +160,23 @@
       "froid_min_C": -5,
       "salinite": "moyenne",
       "rendement_kg_arbre": {
-        "3-4_ans": [
+        "juvenile": [
           3,
           8
         ],
-        "5-7_ans": [
+        "entree_production": [
           20,
           40
         ],
-        "8-12_ans": [
+        "pleine_production": [
           50,
           100
         ],
-        "13-20_ans": [
+        "maturite_avancee": [
           80,
           140
         ],
-        "plus_20_ans": [
+        "senescence": [
           70,
           120
         ]
@@ -212,23 +234,23 @@
       "froid_min_C": -2,
       "salinite": "sensible",
       "rendement_kg_arbre": {
-        "3-4_ans": [
+        "juvenile": [
           8,
           20
         ],
-        "5-7_ans": [
+        "entree_production": [
           40,
           80
         ],
-        "8-12_ans": [
+        "pleine_production": [
           100,
           180
         ],
-        "13-20_ans": [
+        "maturite_avancee": [
           150,
           250
         ],
-        "plus_20_ans": [
+        "senescence": [
           130,
           220
         ]
@@ -313,23 +335,23 @@
       "froid_min_C": -3,
       "salinite": "sensible",
       "rendement_kg_arbre": {
-        "3-4_ans": [
+        "juvenile": [
           8,
           18
         ],
-        "5-7_ans": [
+        "entree_production": [
           40,
           75
         ],
-        "8-12_ans": [
+        "pleine_production": [
           90,
           170
         ],
-        "13-20_ans": [
+        "maturite_avancee": [
           140,
           230
         ],
-        "plus_20_ans": [
+        "senescence": [
           120,
           200
         ]

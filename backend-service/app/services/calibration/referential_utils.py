@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+from .types import MaturityPhase
 
 # Crop type (API / calibration_input) → referentials/DATA_*.json
 CROP_TYPE_TO_REFERENTIAL_JSON: dict[str, str] = {
@@ -560,3 +563,92 @@ def get_gdd_tbase_tupper(
 def clear_gdd_referential_cache() -> None:
     """Clear LRU cache (for tests that swap referential files)."""
     _load_gdd_from_referential_file.cache_clear()
+
+
+# --- Maturity phase age spans (half-open: age in [start, end) years) -----------------
+
+DEFAULT_MATURITY_PHASE_BOUNDARIES: dict[MaturityPhase, tuple[int, int]] = {
+    MaturityPhase.JUVENILE: (0, 5),
+    MaturityPhase.ENTREE_PRODUCTION: (5, 10),
+    MaturityPhase.PLEINE_PRODUCTION: (10, 40),
+    MaturityPhase.MATURITE_AVANCEE: (40, 60),
+    MaturityPhase.SENESCENCE: (60, 200),
+}
+
+_MATURITY_PHASE_BY_YIELD_KEY: dict[str, MaturityPhase] = {
+    MaturityPhase.JUVENILE.value: MaturityPhase.JUVENILE,
+    MaturityPhase.ENTREE_PRODUCTION.value: MaturityPhase.ENTREE_PRODUCTION,
+    MaturityPhase.PLEINE_PRODUCTION.value: MaturityPhase.PLEINE_PRODUCTION,
+    MaturityPhase.MATURITE_AVANCEE.value: MaturityPhase.MATURITE_AVANCEE,
+    MaturityPhase.SENESCENCE.value: MaturityPhase.SENESCENCE,
+}
+
+
+def get_phase_boundaries_from_reference(
+    reference_data: dict[str, Any],
+) -> dict[MaturityPhase, tuple[int, int]]:
+    """Load ``phases_maturite_ans`` from referential; merge with defaults for missing phases."""
+    out: dict[MaturityPhase, tuple[int, int]] = dict(DEFAULT_MATURITY_PHASE_BOUNDARIES)
+    raw = reference_data.get("phases_maturite_ans")
+    if not isinstance(raw, dict):
+        return out
+    for key, val in raw.items():
+        phase = _MATURITY_PHASE_BY_YIELD_KEY.get(str(key).strip())
+        if phase is None:
+            continue
+        if isinstance(val, (list, tuple)) and len(val) >= 2:
+            start = int(val[0])
+            end = int(val[1])
+            out[phase] = (start, end)
+    return out
+
+
+def parse_legacy_rendement_key_to_half_open(key: str) -> tuple[int, int] | None:
+    """Map legacy ``rendement_kg_arbre`` keys to half-open age span [lo, hi)."""
+
+    range_match = re.match(r"^(\d+)-(\d+)_ans$", key)
+    if range_match:
+        lo, hi_inclusive = int(range_match.group(1)), int(range_match.group(2))
+        return lo, hi_inclusive + 1
+
+    ans_match = re.match(r"^ans_(\d+)_(\d+)$", key)
+    if ans_match:
+        lo, hi_inclusive = int(ans_match.group(1)), int(ans_match.group(2))
+        return lo, hi_inclusive + 1
+
+    plus_match = re.match(r"^plus_(\d+)_ans$", key)
+    if plus_match:
+        return int(plus_match.group(1)), 200
+
+    ans_plus_match = re.match(r"^ans_(\d+)_plus$", key)
+    if ans_plus_match:
+        return int(ans_plus_match.group(1)), 200
+
+    return None
+
+
+def span_for_rendement_key(
+    key: str,
+    boundaries: dict[MaturityPhase, tuple[int, int]],
+) -> tuple[int, int] | None:
+    """Age span for a ``rendement_kg_arbre`` key (phase name or legacy pattern)."""
+    stripped = key.strip()
+    phase = _MATURITY_PHASE_BY_YIELD_KEY.get(stripped)
+    if phase is not None:
+        return boundaries.get(phase)
+    return parse_legacy_rendement_key_to_half_open(stripped)
+
+
+def iter_yield_curve_age_brackets(
+    yield_by_age: dict[str, Any],
+    boundaries: dict[MaturityPhase, tuple[int, int]],
+) -> list[tuple[int, int, Any]]:
+    """(start, end, value) per yield key, sorted by start (half-open spans)."""
+    rows: list[tuple[int, int, Any]] = []
+    for key, value in yield_by_age.items():
+        span = span_for_rendement_key(str(key), boundaries)
+        if span is None:
+            continue
+        lo, hi = span
+        rows.append((lo, hi, value))
+    return sorted(rows, key=lambda item: (item[0], item[1]))
