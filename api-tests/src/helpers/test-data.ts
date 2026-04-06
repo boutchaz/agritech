@@ -138,4 +138,70 @@ export const testData = {
     ],
     ...overrides,
   }),
+
+  campaign: (overrides = {}) => ({
+    name: `Test Campaign ${ts()}`,
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date(Date.now() + 180 * 86400000).toISOString().split('T')[0],
+    status: 'planned',
+    ...overrides,
+  }),
+
+  biologicalAsset: (overrides = {}) => ({
+    name: `Test Biological Asset ${ts()}`,
+    asset_type: 'livestock',
+    quantity: 10,
+    unit_cost: 500,
+    ...overrides,
+  }),
+
+  soilAnalysis: (overrides = {}) => ({
+    sample_date: new Date().toISOString().split('T')[0],
+    ph: 7.2,
+    organic_matter: 2.5,
+    nitrogen: 30,
+    phosphorus: 20,
+    potassium: 40,
+    ...overrides,
+  }),
+
+  analysis: (overrides = {}) => ({
+    analysis_date: new Date().toISOString().split('T')[0],
+    type: 'soil',
+    status: 'pending',
+    ...overrides,
+  }),
+
+  pestReport: (overrides = {}) => ({
+    pest_type: 'aphids',
+    severity: 'low',
+    affected_area_percent: 10,
+    observation_date: new Date().toISOString().split('T')[0],
+    ...overrides,
+  }),
+
+  certification: (overrides = {}) => ({
+    name: `Test Certification ${ts()}`,
+    certifying_body: 'Test Body',
+    issue_date: new Date().toISOString().split('T')[0],
+    expiry_date: new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+    status: 'active',
+    ...overrides,
+  }),
+
+  complianceCheck: (overrides = {}) => ({
+    title: `Test Compliance Check ${ts()}`,
+    status: 'pending',
+    due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+    ...overrides,
+  }),
+
+  marketplaceListing: (overrides = {}) => ({
+    title: `Test Listing ${ts()}`,
+    description: 'Integration test listing',
+    price: 100,
+    unit: 'kg',
+    category: 'vegetables',
+    ...overrides,
+  }),
 };

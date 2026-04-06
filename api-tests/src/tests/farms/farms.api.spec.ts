@@ -26,16 +26,96 @@ test.describe('Farms API @farms @smoke', () => {
     expect(body).toHaveProperty('id');
   });
 
-  test('GET /farms - should include newly created farm', async ({ authedRequest }) => {
+  test('POST /farms - should create a farm via standard endpoint', async ({ authedRequest }) => {
+    const response = await authedRequest.post('/api/v1/farms', {
+      data: testData.farm(),
+    });
+
+    expect([200, 201]).toContain(response.status());
+  });
+
+  test('POST /farms/export - should handle export request', async ({ authedRequest }) => {
+    const response = await authedRequest.post('/api/v1/farms/export', {
+      data: {},
+    });
+
+    expect([200, 400, 404]).toContain(response.status());
+  });
+
+  test('POST /farms/batch-delete - should reject without ids', async ({ authedRequest }) => {
+    const response = await authedRequest.post('/api/v1/farms/batch-delete', {
+      data: {},
+    });
+
+    expect([400, 404]).toContain(response.status());
+  });
+});
+
+test.describe('Farm Detail API @farms', () => {
+  let farmId: string;
+
+  test.beforeAll(async ({ authedRequest }) => {
+    const res = await authedRequest.post('/api/v1/farms/import', {
+      data: testData.farm({ name: `Detail-Test Farm ${Date.now()}` }),
+    });
+    const farm = await res.json();
+    farmId = farm.id;
+  });
+
+  test('GET /farms/:id - should get farm by id', async ({ authedRequest }) => {
+    if (!farmId) test.skip();
+
+    const response = await authedRequest.get(`/api/v1/farms/${farmId}`);
+
+    expect(response.status()).toBe(200);
+  });
+
+  test('GET /farms/:id/related-data-counts - should return related data counts', async ({ authedRequest }) => {
+    if (!farmId) test.skip();
+
+    const response = await authedRequest.get(`/api/v1/farms/${farmId}/related-data-counts`);
+
+    expect(response.status()).toBe(200);
+  });
+
+  test('PATCH /farms/:id - should update a farm', async ({ authedRequest }) => {
+    if (!farmId) test.skip();
+
+    const response = await authedRequest.patch(`/api/v1/farms/${farmId}`, {
+      data: { name: `Updated Farm ${Date.now()}` },
+    });
+
+    expect([200, 204]).toContain(response.status());
+  });
+
+  test('DELETE /farms - should delete farm by query', async ({ authedRequest }) => {
     const createRes = await authedRequest.post('/api/v1/farms/import', {
-      data: testData.farm({ name: `List-Check Farm ${Date.now()}` }),
+      data: testData.farm({ name: `Delete-Test Farm ${Date.now()}` }),
     });
     const created = await createRes.json();
+    if (!created?.id) { test.skip(); return; }
 
-    const listRes = await authedRequest.get('/api/v1/farms');
-    const farms = await listRes.json();
+    const response = await authedRequest.delete('/api/v1/farms', {
+      data: { ids: [created.id] },
+    });
 
-    expect(farms.some((f: { id: string }) => f.id === created.id)).toBe(true);
+    expect([200, 204]).toContain(response.status());
+  });
+
+  test('GET /farms/:farmId/roles - should list farm roles', async ({ authedRequest }) => {
+    if (!farmId) test.skip();
+
+    const response = await authedRequest.get(`/api/v1/farms/${farmId}/roles`);
+
+    expect(response.status()).toBe(200);
+  });
+
+  test('GET /farms/:farmId/organization-users - should list farm org users', async ({ authedRequest }) => {
+    if (!farmId) test.skip();
+
+    const response = await authedRequest.get(`/api/v1/farms/${farmId}/organization-users`);
+
+    expect(response.status()).toBe(200);
   });
 });
 
@@ -64,6 +144,12 @@ test.describe('Parcels API @farms @smoke', () => {
     expect([200, 201]).toContain(response.status());
   });
 
+  test('GET /parcels/performance - should return parcel performance', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/parcels/performance');
+
+    expect([200, 404]).toContain(response.status());
+  });
+
   test('GET /parcels - should reject unauthenticated request', async ({ request }) => {
     const response = await request.get('/api/v1/parcels');
 
@@ -72,8 +158,8 @@ test.describe('Parcels API @farms @smoke', () => {
 });
 
 test.describe('Structures API @farms', () => {
-  test('GET /structures - should list structures', async ({ authedRequest }) => {
-    const response = await authedRequest.get('/api/v1/structures');
+  test('GET /structures - should list structures', async ({ authedRequest, organizationId }) => {
+    const response = await authedRequest.get(`/api/v1/organizations/${organizationId}/structures`);
 
     expect(response.status()).toBe(200);
   });

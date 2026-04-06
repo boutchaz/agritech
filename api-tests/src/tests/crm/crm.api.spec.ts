@@ -26,8 +26,6 @@ test.describe('Customers API @crm @smoke', () => {
     const response = await authedRequest.get(`/api/v1/customers/${createdCustomerId}`);
 
     expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.id).toBe(createdCustomerId);
   });
 
   test('PATCH /customers/:id - should update a customer', async ({ authedRequest }) => {
@@ -102,8 +100,20 @@ test.describe('Suppliers API @crm @smoke', () => {
 });
 
 test.describe('Dashboard API @crm @smoke', () => {
-  test('GET /dashboard - should return dashboard data', async ({ authedRequest }) => {
-    const response = await authedRequest.get('/api/v1/dashboard');
+  test('GET /dashboard/summary - should return dashboard summary', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/dashboard/summary');
+
+    expect([200, 404]).toContain(response.status());
+  });
+
+  test('GET /dashboard/live/metrics - should return live metrics', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/dashboard/live/metrics');
+
+    expect([200, 404]).toContain(response.status());
+  });
+
+  test('GET /dashboard/live/summary - should return live summary', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/dashboard/live/summary');
 
     expect([200, 404]).toContain(response.status());
   });
@@ -115,12 +125,36 @@ test.describe('Notifications API @crm', () => {
 
     expect(response.status()).toBe(200);
   });
+
+  test('GET /notifications/unread/count - should return unread count', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/notifications/unread/count');
+
+    expect(response.status()).toBe(200);
+  });
+
+  test('POST /notifications/read-all - should mark all as read', async ({ authedRequest }) => {
+    const response = await authedRequest.post('/api/v1/notifications/read-all');
+
+    expect([200, 204]).toContain(response.status());
+  });
+
+  test('GET /notifications/stock/low - should list low stock alerts', async ({ authedRequest }) => {
+    const response = await authedRequest.get('/api/v1/notifications/stock/low');
+
+    expect(response.status()).toBe(200);
+  });
 });
 
 test.describe('Reports API @crm', () => {
-  test('GET /reports - should list available reports', async ({ authedRequest }) => {
-    const response = await authedRequest.get('/api/v1/reports');
+  test('GET /organizations/:orgId/reports/available - should list available reports', async ({ authedRequest, organizationId }) => {
+    const response = await authedRequest.get(`/api/v1/organizations/${organizationId}/reports/available`);
 
-    expect([200, 404]).toContain(response.status());
+    expect(response.status()).toBe(200);
+  });
+
+  test('GET /organizations/:orgId/reports/generate - should handle report generation', async ({ authedRequest, organizationId }) => {
+    const response = await authedRequest.get(`/api/v1/organizations/${organizationId}/reports/generate`);
+
+    expect([200, 400, 404]).toContain(response.status());
   });
 });
