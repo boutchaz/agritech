@@ -2094,6 +2094,24 @@ export class CalibrationService {
     };
     const history = await this.getCalibrationHistory(parcelId, organizationId, 5);
 
+    const { data: parcelRow, error: parcelError } = await supabase
+      .from("parcels")
+      .select("planting_year")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (parcelError) {
+      this.logger.warn(
+        `Failed to fetch parcel planting_year for review: ${parcelError.message}`,
+      );
+    }
+
+    const plantingYear =
+      parcelRow && typeof (parcelRow as { planting_year?: unknown }).planting_year === "number"
+        ? (parcelRow as { planting_year: number }).planting_year
+        : null;
+
     const snapshotInput: CalibrationSnapshotInput = {
       calibration_id: record.id,
       parcel_id: record.parcel_id,
@@ -2104,6 +2122,7 @@ export class CalibrationService {
       status: record.status,
       parcel_phase: record.phase_age ?? "unknown",
       organization_id: record.organization_id,
+      planting_year: plantingYear,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,

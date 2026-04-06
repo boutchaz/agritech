@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -27,6 +27,8 @@ import type {
   MonthlyWeatherAggregate,
   ExtremeEvent,
   ConfidenceComponent,
+  Step1Output,
+  Step4Output,
 } from '@/types/calibration-output';
 import type { CalibrationPhase } from '@/lib/api/calibration-output';
 import {
@@ -97,6 +99,18 @@ import { CalibrationReviewSection } from '@/components/calibration/review/Calibr
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
+import {
+  defaultPhenologyYear,
+  eligiblePhenologyYearsFromStep4,
+  parsePhenologyDateValue,
+} from '@/lib/calibration-phenology-years';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   confidenceToFraction,
@@ -494,35 +508,37 @@ const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => 
   );
 };
 
-/** Parse step4 mean_dates values (ISO string or date-only) in local calendar to avoid UTC shift. */
-function parsePhenologyDateValue(raw: unknown): Date | null {
-  if (raw == null) return null;
-  if (typeof raw === 'string') {
-    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw.trim());
-    if (m) {
-      const y = Number(m[1]);
-      const mo = Number(m[2]);
-      const d = Number(m[3]);
-      const dt = new Date(y, mo - 1, d);
-      return Number.isNaN(dt.getTime()) ? null : dt;
-    }
-    const parsed = new Date(raw);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-  if (typeof raw === 'object' && raw !== null && 'year' in raw && 'month' in raw && 'day' in raw) {
-    const o = raw as { year: number; month: number; day: number };
-    const dt = new Date(o.year, o.month - 1, o.day);
-    return Number.isNaN(dt.getTime()) ? null : dt;
-  }
-  return null;
-}
-
 const PhenologyTimeline = ({
-  dates,
+  step4,
+  step1,
+  plantingYear,
 }: {
-  dates: Record<string, string | unknown> | undefined;
+  step4: Step4Output | undefined;
+  step1: Step1Output | undefined;
+  plantingYear: number | null | undefined;
 }) => {
   const { t, i18n } = useTranslation('ai');
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+
+  const eligible = useMemo(
+    () => eligiblePhenologyYearsFromStep4(step4, step1, plantingYear),
+    [step4, step1, plantingYear],
+  );
+
+  const effectiveYear =
+    selectedYear != null && eligible.includes(selectedYear)
+      ? selectedYear
+      : defaultPhenologyYear(eligible);
+
+  const dates = useMemo(() => {
+    if (effectiveYear != null && step4?.yearly_stages?.[String(effectiveYear)]) {
+      return step4.yearly_stages[String(effectiveYear)] as unknown as Record<
+        string,
+        string | unknown
+      >;
+    }
+    return step4?.mean_dates as unknown as Record<string, string | unknown> | undefined;
+  }, [effectiveYear, step4]);
 
   // Same chronological order as backend step4_phenology_detection._temporal_order_valid
   const stages = [
@@ -535,9 +551,44 @@ const PhenologyTimeline = ({
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-        {t('calibrationReview.level4.phenologyTimeline')}
-      </h4>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          {t('calibrationReview.level4.phenologyTimeline')}
+        </h4>
+        {eligible.length > 0 && (
+          <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px]">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {t('calibrationReview.level4.phenologyCampaignYear')}
+            </span>
+            <Select
+              value={effectiveYear != null ? String(effectiveYear) : undefined}
+              onValueChange={(v) => setSelectedYear(parseInt(v, 10))}
+            >
+              <SelectTrigger
+                className="h-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700"
+                data-testid="phenology-year-select"
+              >
+                <SelectValue placeholder={t('calibrationReview.level4.pending')} />
+              </SelectTrigger>
+              <SelectContent>
+                {eligible.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-snug">
+              {t('calibrationReview.level4.phenologyCampaignYearHint')}
+            </p>
+          </div>
+        )}
+      </div>
+      {eligible.length === 0 && step4?.mean_dates && (
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          {t('calibrationReview.level4.phenologyMeanAcrossYears')}
+        </p>
+      )}
       <div className="flex items-center justify-between">
         {stages.map((stage, i) => {
           const raw = dates?.[stage.key];
@@ -597,7 +648,15 @@ const MonthlyWeatherChart = ({ aggregates }: { aggregates: MonthlyWeatherAggrega
   );
 };
 
-const DetailedAnalysis = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
+const DetailedAnalysis = ({
+  output,
+  t,
+  plantingYear,
+}: {
+  output: CalibrationOutput;
+  t: (key: string) => string;
+  plantingYear?: number | null;
+}) => {
   const step1 = output.step1;
   const step2 = output.step2;
   const step3 = output.step3;
@@ -665,9 +724,7 @@ const DetailedAnalysis = ({ output, t }: { output: CalibrationOutput; t: (key: s
           </p>
         </div>
       )}
-      <PhenologyTimeline
-        dates={step4?.mean_dates as unknown as Record<string, string | unknown> | undefined}
-      />
+      <PhenologyTimeline step4={step4} step1={step1} plantingYear={plantingYear ?? null} />
 
       {step2?.monthly_aggregates && step2.monthly_aggregates.length > 0 && (
         <MonthlyWeatherChart aggregates={step2.monthly_aggregates} />
@@ -1082,10 +1139,19 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
   );
 };
 
-const CalibrationReport = ({ output, report, t, phase }: { output: CalibrationOutput;
+const CalibrationReport = ({
+  output,
+  report,
+  t,
+  phase,
+  plantingYear,
+}: {
+  output: CalibrationOutput;
   report?: Record<string, unknown> | null;
   t: (key: string) => string;
-  phase?: string; }) => {
+  phase?: string;
+  plantingYear?: number | null;
+}) => {
   const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
 
   return (
@@ -1118,7 +1184,7 @@ const CalibrationReport = ({ output, report, t, phase }: { output: CalibrationOu
         icon={<BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
         defaultOpen={false}
       >
-        <DetailedAnalysis output={output} t={t} />
+        <DetailedAnalysis output={output} t={t} plantingYear={plantingYear} />
       </CollapsibleSection>
 
       <CollapsibleSection
@@ -1863,6 +1929,7 @@ const AICalibrationPage = () => {
             : null}
           t={t}
           phase={isObservationOnly ? 'observation' : phase}
+          plantingYear={parcelData?.planting_year ?? null}
         />
       )}
 

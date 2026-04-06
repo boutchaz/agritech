@@ -12,6 +12,7 @@ import type {
   Level3Biophysical,
   Level4Temporal,
   Level5QualityAudit,
+  PhenologyYearStages,
 } from "./dto/calibration-review.dto";
 
 export * from "./dto/calibration-review.dto";
@@ -30,6 +31,7 @@ export class CalibrationReviewAdapter {
       parcel_id: input.parcel_id,
       generated_at: input.generated_at,
       schema_version: "calibration-review/v1",
+      planting_year: input.planting_year ?? null,
       output: this.asRecord(input.output),
       level1_decision: this.buildLevel1Decision(input),
       level2_diagnostic: this.buildLevel2Diagnostic(input),
@@ -219,6 +221,7 @@ export class CalibrationReviewAdapter {
         inter_annual_variability: this.mapNumericRecord(
           step4.inter_annual_variability_days ?? step4.inter_annual_variability,
         ),
+        yearly_stages: this.mapPhenologyYearlyStages(step4),
       },
       calibration_history: Array.isArray(input.calibration_history)
         ? input.calibration_history.map((item) => ({
@@ -361,6 +364,29 @@ export class CalibrationReviewAdapter {
         overall: "partial",
       },
     };
+  }
+
+  private mapPhenologyYearlyStages(step4: JsonRecord): Record<string, PhenologyYearStages> | undefined {
+    const raw = step4.yearly_stages;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return undefined;
+    }
+    const entries = Object.entries(raw as Record<string, unknown>);
+    if (entries.length === 0) {
+      return undefined;
+    }
+    const out: Record<string, PhenologyYearStages> = {};
+    for (const [yearKey, val] of entries) {
+      const d = this.asRecord(val);
+      out[yearKey] = {
+        dormancy_exit: this.asString(d.dormancy_exit) ?? "",
+        peak: this.asString(d.peak) ?? "",
+        plateau_start: this.asString(d.plateau_start) ?? "",
+        decline_start: this.asString(d.decline_start) ?? "",
+        dormancy_entry: this.asString(d.dormancy_entry) ?? "",
+      };
+    }
+    return out;
   }
 
   private getOutput(input: CalibrationSnapshotInput): JsonRecord {

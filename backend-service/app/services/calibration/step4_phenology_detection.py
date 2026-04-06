@@ -325,6 +325,7 @@ def detect_phenology(
                 decline_start=fallback_date,
                 dormancy_entry=fallback_date,
             ),
+            yearly_stages={},
             inter_annual_variability_days={
                 "dormancy_exit": 0.0,
                 "peak": 0.0,
@@ -378,6 +379,16 @@ def detect_phenology(
         else:
             gdd_correlation[stage] = 0.0
 
+    yearly_stages_out: dict[str, PhenologyDates] = {}
+    for y, stages in sorted(yearly_stages.items()):
+        yearly_stages_out[str(y)] = PhenologyDates(
+            dormancy_exit=stages["dormancy_exit"],
+            peak=stages["peak"],
+            plateau_start=stages["plateau_start"],
+            decline_start=stages["decline_start"],
+            dormancy_entry=stages["dormancy_entry"],
+        )
+
     return Step4Output(
         mean_dates=PhenologyDates(
             dormancy_exit=mean_dates["dormancy_exit"],
@@ -386,6 +397,7 @@ def detect_phenology(
             decline_start=mean_dates["decline_start"],
             dormancy_entry=mean_dates["dormancy_entry"],
         ),
+        yearly_stages=yearly_stages_out,
         inter_annual_variability_days=variability,
         gdd_correlation=gdd_correlation,
         referential_cycle_used=referential_cycle_used,

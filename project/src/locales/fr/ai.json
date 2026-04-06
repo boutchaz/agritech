@@ -299,7 +299,10 @@
       "plateauStart": "Début de plateau",
       "declineStart": "Début de déclin",
       "dormancyEntry": "Entrée en dormance",
-      "pending": "En attente"
+      "pending": "En attente",
+      "phenologyCampaignYear": "Année de campagne",
+      "phenologyCampaignYearHint": "Années avec phénologie détectée et images satellite (depuis l’année de plantation si renseignée).",
+      "phenologyMeanAcrossYears": "Moyenne calendaire (pluriannuelle)"
     },
     "level5": {
       "title": "5. Qualité des données — Audit",

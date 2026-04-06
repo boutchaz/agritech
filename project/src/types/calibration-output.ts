@@ -143,8 +143,11 @@ export interface Step3Output {
 
 export interface Step4Output {
   mean_dates: PhenologyDates;
+  /** Cycle year string (e.g. "2024") → dates detected for that year */
+  yearly_stages?: Record<string, PhenologyDates>;
   inter_annual_variability_days: Record<string, number>;
   gdd_correlation: Record<string, number>;
+  referential_cycle_used?: boolean | null;
 }
 
 export interface Step5Output {

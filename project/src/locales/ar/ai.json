@@ -299,7 +299,10 @@
       "plateauStart": "بداية الهضبة",
       "declineStart": "بداية الانخفاض",
       "dormancyEntry": "دخول السكون",
-      "pending": "قيد الانتظار"
+      "pending": "قيد الانتظار",
+      "phenologyCampaignYear": "سنة الموسم",
+      "phenologyCampaignYearHint": "سنوات بها مراحل فينولوجية مكتشفة وتغطية أقمار صناعية (من سنة الزراعة عند توفرها).",
+      "phenologyMeanAcrossYears": "متوسط تقويمي (متعدد السنوات)"
     },
     "level5": {
       "title": "5. جودة البيانات — التدقيق",

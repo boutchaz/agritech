@@ -99,6 +99,10 @@ def test_step4_detects_main_phenology_dates() -> None:
     assert output.mean_dates.peak is not None
     assert output.mean_dates.dormancy_exit is not None
     assert output.mean_dates.decline_start is not None
+    assert output.yearly_stages, "per-year stages should be exposed for UI year selector"
+    assert all(
+        len(str(y)) == 4 and y.isdigit() for y in output.yearly_stages.keys()
+    )
 
 
 def test_step4_variability_is_reasonable_for_stable_curve() -> None:

@@ -203,6 +203,10 @@ class Step3Output(BaseModel):
 
 class Step4Output(BaseModel):
     mean_dates: PhenologyDates
+    yearly_stages: dict[str, PhenologyDates] = Field(
+        default_factory=dict,
+        description='Per cycle-year phenology dates (keys = cycle year, e.g. "2024").',
+    )
     inter_annual_variability_days: dict[str, float]
     gdd_correlation: dict[str, float]
     referential_cycle_used: bool | None = None

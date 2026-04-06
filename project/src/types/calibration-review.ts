@@ -81,6 +81,14 @@ export interface Level2Diagnostic {
     | null;
 }
 
+export interface PhenologyYearStages {
+  dormancy_exit: string;
+  peak: string;
+  plateau_start: string;
+  decline_start: string;
+  dormancy_entry: string;
+}
+
 export interface Level3Biophysical {
   indices: {
     NIRv: IndexTimePoint[];
@@ -120,6 +128,7 @@ export interface Level4Temporal {
     decline_start: string;
     dormancy_entry: string;
     inter_annual_variability: Record<string, number>;
+    yearly_stages?: Record<string, PhenologyYearStages>;
   };
   calibration_history: Array<{
     id: string;
@@ -187,6 +196,7 @@ export interface CalibrationReviewView {
   parcel_id: string;
   generated_at: string;
   schema_version: 'calibration-review/v1';
+  planting_year?: number | null;
   output: Record<string, unknown>;
   level1_decision: Level1Decision;
   level2_diagnostic: Level2Diagnostic;
@@ -210,6 +220,7 @@ export interface CalibrationSnapshotInput {
   status: string;
   parcel_phase: string;
   organization_id: string;
+  planting_year?: number | null;
   calibration_history: Array<{
     id: string;
     date: string;
