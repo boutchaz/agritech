@@ -5374,6 +5374,7 @@
     "parcelCounter": "{{current}} من {{total}} قطعة",
     "maximizeModule": "عظّم وحدتك",
     "assignDescription": "خصص قطعاً لهذه الوحدة للحصول على بيانات وتوصيات محددة.",
+    "selectFarmHint": "اختر مزرعة من الشريط العلوي لتحميل القطع والبيانات لهذه الوحدة.",
     "errors": {
       "noFarmSelected": "لم يتم اختيار مزرعة",
       "noOrgSelected": "لم يتم اختيار منظمة",

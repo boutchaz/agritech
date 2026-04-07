@@ -5801,6 +5801,7 @@
     "parcelCounter": "{{current}} of {{total}} parcels",
     "maximizeModule": "Maximize your module",
     "assignDescription": "Assign parcels to this module to get specific data and recommendations.",
+    "selectFarmHint": "Select a farm from the header to load parcels and data for this module.",
     "errors": {
       "noFarmSelected": "No farm selected",
       "noOrgSelected": "No organization selected",

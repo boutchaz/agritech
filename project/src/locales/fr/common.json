@@ -5620,6 +5620,7 @@
     "parcelCounter": "{{current}} sur {{total}} parcelles",
     "maximizeModule": "Maximisez votre module",
     "assignDescription": "Assignez des parcelles à ce module pour obtenir des données et recommandations spécifiques.",
+    "selectFarmHint": "Sélectionnez une ferme dans l'en-tête pour charger les parcelles et les données de ce module.",
     "errors": {
       "noFarmSelected": "Aucune ferme sélectionnée",
       "noOrgSelected": "Aucune organisation sélectionnée",

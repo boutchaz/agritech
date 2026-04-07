@@ -117,6 +117,14 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
 
   const [filterCampaignId, setFilterCampaignId] = useState<string>(initialCampaignId || "");
+
+  // Sync filterCampaignId when initialCampaignId changes (e.g., URL navigation)
+  useEffect(() => {
+    if (initialCampaignId !== undefined) {
+      setFilterCampaignId(initialCampaignId || "");
+    }
+  }, [initialCampaignId]);
+
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterCycleType, setFilterCycleType] = useState<string>("");
   const [filterSeason, setFilterSeason] = useState<string>("");

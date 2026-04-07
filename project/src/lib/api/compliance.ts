@@ -9,10 +9,14 @@ export enum CertificationType {
   HACCP = 'HACCP',
   ISO9001 = 'ISO9001',
   ISO14001 = 'ISO14001',
+  ISO22000 = 'ISO22000',
   ORGANIC = 'Organic',
   FAIRTRADE = 'FairTrade',
   RAINFOREST = 'Rainforest',
   USDA_ORGANIC = 'USDA_Organic',
+  MAROC_LABEL = 'Maroc_Label',
+  BRC_FOOD_SAFETY = 'BRC_Food_Safety',
+  IFS_FOOD = 'IFS_Food',
 }
 
 export enum CertificationStatus {
@@ -20,6 +24,7 @@ export enum CertificationStatus {
   EXPIRED = 'expired',
   PENDING_RENEWAL = 'pending_renewal',
   SUSPENDED = 'suspended',
+  PENDING = 'pending',
 }
 
 export enum ComplianceCheckType {

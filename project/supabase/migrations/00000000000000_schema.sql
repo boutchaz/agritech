@@ -22212,19 +22212,24 @@ CREATE TABLE IF NOT EXISTS certifications (
     'HACCP',
     'ISO9001',
     'ISO14001',
+    'ISO22000',
     'Organic',
     'FairTrade',
     'Rainforest',
-    'USDA_Organic'
+    'USDA_Organic',
+    'Maroc_Label',
+    'BRC_Food_Safety',
+    'IFS_Food'
   )),
   certification_number TEXT NOT NULL,
-  issued_date DATE NOT NULL,
-  expiry_date DATE NOT NULL,
+  issued_date DATE,
+  expiry_date DATE,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN (
     'active',
     'expired',
     'pending_renewal',
-    'suspended'
+    'suspended',
+    'pending'
   )),
   issuing_body TEXT NOT NULL,
   scope TEXT,
@@ -22242,7 +22247,7 @@ CREATE INDEX IF NOT EXISTS idx_certifications_expiry ON certifications(expiry_da
 
 COMMENT ON TABLE certifications IS 'Organization certifications and compliance credentials';
 COMMENT ON COLUMN certifications.organization_id IS 'Organization that holds the certification';
-COMMENT ON COLUMN certifications.certification_type IS 'Type of certification (GlobalGAP, HACCP, ISO9001, etc.)';
+COMMENT ON COLUMN certifications.certification_type IS 'Type of certification (GlobalGAP, HACCP, ISO9001, ISO14001, ISO22000, Organic, FairTrade, Rainforest, USDA_Organic, Maroc_Label, BRC_Food_Safety, IFS_Food)';
 COMMENT ON COLUMN certifications.certification_number IS 'Unique certification number/code';
 COMMENT ON COLUMN certifications.issued_date IS 'Date certification was issued';
 COMMENT ON COLUMN certifications.expiry_date IS 'Date certification expires';
@@ -22399,10 +22404,14 @@ CREATE TABLE IF NOT EXISTS compliance_requirements (
     'HACCP',
     'ISO9001',
     'ISO14001',
+    'ISO22000',
     'Organic',
     'FairTrade',
     'Rainforest',
-    'USDA_Organic'
+    'USDA_Organic',
+    'Maroc_Label',
+    'BRC_Food_Safety',
+    'IFS_Food'
   )),
   requirement_code TEXT NOT NULL,
   requirement_description TEXT NOT NULL,

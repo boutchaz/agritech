@@ -327,10 +327,20 @@ export class DemoDataService {
       const complianceChecks = await this.createDemoComplianceChecks(
         organizationId,
         certifications,
-        userId,
       );
       this.logger.log(
         `✅ Created ${complianceChecks.length} demo compliance checks`,
+      );
+
+      // 31b. Seed Corrective Actions (linked to compliance checks)
+      const correctiveActions = await this.createDemoCorrectiveActions(
+        organizationId,
+        certifications,
+        complianceChecks,
+        userId,
+      );
+      this.logger.log(
+        `✅ Created ${correctiveActions.length} demo corrective actions`,
       );
 
       // 32. Seed Crop Cycles (linked to campaigns)
@@ -1785,6 +1795,108 @@ export class DemoDataService {
         notes: "Facture fournisseur en attente - Semences (PO-2024-002)",
         created_by: userId,
       },
+
+      // === Additional invoices for aged receivables/payables reports ===
+      // Sales invoice 45 days overdue (1-30 -> 31-60 bucket)
+      {
+        organization_id: organizationId,
+        invoice_number: "FAC-2024-005",
+        invoice_date: new Date(now.getTime() - 75 * 86400000).toISOString().split('T')[0],
+        invoice_type: "sales",
+        party_id: customers[0]?.id,
+        party_name: customers[0]?.name || "Client Demo",
+        party_type: "customer",
+        subtotal: 25000,
+        tax_total: 5000,
+        grand_total: 30000,
+        paid_amount: 10000,
+        outstanding_amount: 20000,
+        currency_code: "MAD",
+        status: "partially_paid",
+        due_date: new Date(now.getTime() - 45 * 86400000).toISOString().split('T')[0],
+        notes: "Facture partiellement payée - Vente agrumes lot 3",
+        created_by: userId,
+      },
+      // Sales invoice 80 days overdue (61-90 bucket)
+      {
+        organization_id: organizationId,
+        invoice_number: "FAC-2024-006",
+        invoice_date: new Date(now.getTime() - 120 * 86400000).toISOString().split('T')[0],
+        invoice_type: "sales",
+        party_id: customers[1]?.id || customers[0]?.id,
+        party_name: customers[1]?.name || customers[0]?.name || "Client Demo 2",
+        party_type: "customer",
+        subtotal: 18000,
+        tax_total: 3600,
+        grand_total: 21600,
+        paid_amount: 0,
+        outstanding_amount: 21600,
+        currency_code: "MAD",
+        status: "overdue",
+        due_date: new Date(now.getTime() - 80 * 86400000).toISOString().split('T')[0],
+        notes: "Facture impayée - Relance envoyée",
+        created_by: userId,
+      },
+      // Sales invoice 100+ days overdue (over-90 bucket)
+      {
+        organization_id: organizationId,
+        invoice_number: "FAC-2024-007",
+        invoice_date: new Date(now.getTime() - 150 * 86400000).toISOString().split('T')[0],
+        invoice_type: "sales",
+        party_id: customers[2]?.id || customers[0]?.id,
+        party_name: customers[2]?.name || customers[0]?.name || "Client Demo 3",
+        party_type: "customer",
+        subtotal: 35000,
+        tax_total: 7000,
+        grand_total: 42000,
+        paid_amount: 15000,
+        outstanding_amount: 27000,
+        currency_code: "MAD",
+        status: "overdue",
+        due_date: new Date(now.getTime() - 105 * 86400000).toISOString().split('T')[0],
+        notes: "Facture en contentieux - Mise en demeure",
+        created_by: userId,
+      },
+      // Purchase invoice 35 days overdue (31-60 bucket)
+      {
+        organization_id: organizationId,
+        invoice_number: "FACF-2024-003",
+        invoice_date: new Date(now.getTime() - 65 * 86400000).toISOString().split('T')[0],
+        invoice_type: "purchase",
+        party_id: suppliers[0]?.id,
+        party_name: suppliers[0]?.name || "Fournisseur Demo",
+        party_type: "supplier",
+        subtotal: 15000,
+        tax_total: 3000,
+        grand_total: 18000,
+        paid_amount: 0,
+        outstanding_amount: 18000,
+        currency_code: "MAD",
+        status: "submitted",
+        due_date: new Date(now.getTime() - 35 * 86400000).toISOString().split('T')[0],
+        notes: "Facture fournisseur engrais en retard",
+        created_by: userId,
+      },
+      // Purchase invoice 70 days overdue (61-90 bucket)
+      {
+        organization_id: organizationId,
+        invoice_number: "FACF-2024-004",
+        invoice_date: new Date(now.getTime() - 100 * 86400000).toISOString().split('T')[0],
+        invoice_type: "purchase",
+        party_id: suppliers[1]?.id || suppliers[0]?.id,
+        party_name: suppliers[1]?.name || suppliers[0]?.name || "Fournisseur Demo 2",
+        party_type: "supplier",
+        subtotal: 22000,
+        tax_total: 4400,
+        grand_total: 26400,
+        paid_amount: 8000,
+        outstanding_amount: 18400,
+        currency_code: "MAD",
+        status: "partially_paid",
+        due_date: new Date(now.getTime() - 70 * 86400000).toISOString().split('T')[0],
+        notes: "Facture fournisseur phytosanitaires - partiellement payée",
+        created_by: userId,
+      },
     ];
 
     const { data: createdInvoices, error } = await client
@@ -2291,212 +2403,750 @@ export class DemoDataService {
     const client = this.databaseService.getAdminClient();
 
     const now = new Date();
-    const lastMonth = new Date(now);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
-    const twoMonthsAgo = new Date(now);
-    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    const currentYear = now.getFullYear();
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+
+    // Helper to create date offsets
+    const monthsAgo = (m: number) => {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - m);
+      return fmt(d);
+    };
 
     // Get accounts for journal entries
     const { data: accounts } = await client
-      .from("accounts")
-      .select("id, code, name, account_type")
-      .eq("organization_id", organizationId)
-      .eq("is_active", true);
+      .from('accounts')
+      .select('id, code, name, account_type, account_subtype, is_group')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
 
     if (!accounts || accounts.length === 0) {
-      this.logger.warn("No accounts found for journal entries");
+      this.logger.warn('No accounts found for journal entries');
       return [];
     }
 
-    // Find relevant accounts
-    const cashAccount = accounts.find(
-      (a) =>
-        a.code?.startsWith("514") || a.name?.toLowerCase().includes("caisse"),
-    );
-    const bankAccount = accounts.find(
-      (a) =>
-        a.code?.startsWith("511") || a.name?.toLowerCase().includes("banque"),
-    );
-    const salesAccount = accounts.find(
-      (a) => a.code?.startsWith("711") || a.account_type === "Income",
-    );
-    const expenseAccount = accounts.find(
-      (a) => a.code?.startsWith("61") || a.account_type === "Expense",
-    );
-    const supplierAccount = accounts.find(
-      (a) =>
-        a.code?.startsWith("441") ||
-        a.name?.toLowerCase().includes("fournisseur"),
-    );
-    const customerAccount = accounts.find(
-      (a) =>
-        a.code?.startsWith("342") || a.name?.toLowerCase().includes("client"),
-    );
+    // Helper to find account by code prefix
+    const acct = (codePrefix: string) => accounts.find((a) => a.code?.startsWith(codePrefix));
+    const acctByType = (type: string) => accounts.find((a) => a.account_type === type && !a.is_group);
 
-    // Use first available accounts if specific ones not found
-    const defaultAsset =
-      accounts.find((a) => a.account_type === "Asset") || accounts[0];
-    const defaultLiability =
-      accounts.find((a) => a.account_type === "Liability") || accounts[1];
-    const defaultIncome =
-      salesAccount ||
-      accounts.find((a) => a.account_type === "Income") ||
-      accounts[2];
-    const defaultExpense =
-      expenseAccount ||
-      accounts.find((a) => a.account_type === "Expense") ||
-      accounts[3];
+    // Chart of accounts references (Moroccan CGNC)
+    const bank        = acct('5141') || acct('514');                       // Banque
+    const caisse      = acct('5161') || acct('516');                       // Caisse
+    const caisseFerme = acct('5162');                                      // Caisse ferme
+    const clients     = acct('3421') || acct('3420') || acct('342');       // Clients
+    const fournisseurs = acct('4411') || acct('4410') || acct('441');      // Fournisseurs
+    const cnss        = acct('4430');                                      // CNSS
+    const salaires    = acct('4431');                                      // Rémunérations dues
+    const tva_due     = acct('4455');                                      // TVA due
+    const tva_ded     = acct('4456');                                      // TVA déductible
+    const terrains    = acct('2310');                                      // Terrains
+    const batiments   = acct('2321');                                      // Bâtiments
+    const tracteurs   = acct('2331');                                      // Tracteurs
+    const irrigation  = acct('2332');                                      // Irrigation
+    const transport   = acct('2340');                                      // Transport
+    const plantations = acct('2362');                                      // Plantations
+    const amortBat    = acct('2832');                                      // Amort. bâtiments
+    const amortMat    = acct('2834');                                      // Amort. matériel
+    const semences    = acct('3110');                                      // Stock semences
+    const engrais     = acct('3111');                                      // Stock engrais
+    const phyto       = acct('3112');                                      // Stock phyto
+    const recoltes    = acct('3510');                                      // Récoltes
+    const achSemences = acct('6110');                                      // Achats semences
+    const achEngrais  = acct('6111');                                      // Achats engrais
+    const achPhyto    = acct('6112');                                      // Achats phyto
+    const eau         = acct('6121');                                      // Eau irrigation
+    const carburant   = acct('6124');                                      // Carburants
+    const electricite = acct('6167');                                      // Électricité
+    const salOuvriers = acct('6174');                                      // Salaires ouvriers
+    const salAdmin    = acct('6175');                                      // Salaires admin
+    const chSociales  = acct('6176');                                      // Charges sociales
+    const ventesRecoltes = acct('7111');                                   // Ventes récoltes
+    const ventesFruits   = acct('7112');                                   // Ventes fruits/légumes
+    const ventesHuile    = acct('7113');                                   // Ventes huile olive
+    const autresProduits = acct('7580');                                   // Autres produits
+    const capital     = acct('1100');                                      // Capital social
+    const reportNouv  = acct('1190');                                      // Report à nouveau
+    const resultat    = acct('1200');                                      // Résultat exercice
 
-    const journalEntries = [
+    // Fallbacks
+    const defaultAsset   = bank || acctByType('asset') || accounts[0];
+    const defaultExpense = achEngrais || acctByType('expense') || accounts[3];
+    const defaultIncome  = ventesRecoltes || acctByType('revenue') || accounts[2];
+
+    // ============================================================
+    // COMPREHENSIVE JOURNAL ENTRIES - Full agricultural year
+    // ============================================================
+    const entries = [
+      // --- OPENING BALANCE (beginning of fiscal year) ---
       {
-        organization_id: organizationId,
-        entry_number: "JE-2024-001",
-        entry_date: twoMonthsAgo.toISOString().split("T")[0],
-        entry_type: "revenue",
-        description: "Vente de produits agricoles - Huile d'olive",
-        total_debit: 17700,
-        total_credit: 17700,
-        status: "posted",
-        created_by: userId,
+        entry_number: 'JE-OUV-001',
+        entry_date: `${currentYear}-01-01`,
+        entry_type: 'opening',
+        description: 'Bilan d\'ouverture - Capital et actifs initiaux',
+        total_debit: 2850000,
+        total_credit: 2850000,
+        status: 'posted',
+        items: [
+          { account: terrains,     debit: 1200000, credit: 0, desc: 'Terrains agricoles - valeur d\'ouverture' },
+          { account: batiments,    debit: 450000,  credit: 0, desc: 'Bâtiments agricoles' },
+          { account: tracteurs,    debit: 380000,  credit: 0, desc: 'Tracteurs et machines' },
+          { account: irrigation,   debit: 120000,  credit: 0, desc: 'Système irrigation goutte-à-goutte' },
+          { account: transport,    debit: 85000,   credit: 0, desc: 'Véhicules de transport' },
+          { account: plantations,  debit: 250000,  credit: 0, desc: 'Plantations permanentes (oliviers, agrumes)' },
+          { account: bank,         debit: 185000,  credit: 0, desc: 'Solde bancaire initial' },
+          { account: caisse,       debit: 30000,   credit: 0, desc: 'Solde caisse' },
+          { account: caisseFerme,  debit: 15000,   credit: 0, desc: 'Caisse ferme' },
+          { account: engrais,      debit: 35000,   credit: 0, desc: 'Stock engrais en début d\'année' },
+          { account: semences,     debit: 20000,   credit: 0, desc: 'Stock semences' },
+          { account: phyto,        debit: 15000,   credit: 0, desc: 'Stock phytosanitaires' },
+          { account: amortBat,     debit: 0,       credit: 90000,  desc: 'Amortissements cumulés bâtiments' },
+          { account: amortMat,     debit: 0,       credit: 145000, desc: 'Amortissements cumulés matériel' },
+          { account: capital,      debit: 0,       credit: 2200000, desc: 'Capital social' },
+          { account: reportNouv,   debit: 0,       credit: 350000,  desc: 'Report à nouveau (bénéfices antérieurs)' },
+          { account: fournisseurs, debit: 0,       credit: 65000,   desc: 'Dettes fournisseurs en début d\'année' },
+        ],
+      },
+
+      // --- JANUARY: Preparation season ---
+      {
+        entry_number: 'JE-JAN-001',
+        entry_date: `${currentYear}-01-15`,
+        entry_type: 'expense',
+        description: 'Achat engrais NPK pour préparation sols - Campagne agrumes',
+        total_debit: 42000,
+        total_credit: 42000,
+        status: 'posted',
+        items: [
+          { account: achEngrais,   debit: 35000, credit: 0, desc: 'Engrais NPK 15-15-15 (1400kg)' },
+          { account: tva_ded,      debit: 7000,  credit: 0, desc: 'TVA déductible 20%' },
+          { account: fournisseurs, debit: 0,      credit: 42000, desc: 'Fournisseur AgriMaroc' },
+        ],
       },
       {
-        organization_id: organizationId,
-        entry_number: "JE-2024-002",
-        entry_date: lastMonth.toISOString().split("T")[0],
-        entry_type: "expense",
-        description: "Achat d'engrais et intrants agricoles",
-        total_debit: 14750,
-        total_credit: 14750,
-        status: "posted",
-        created_by: userId,
+        entry_number: 'JE-JAN-002',
+        entry_date: `${currentYear}-01-25`,
+        entry_type: 'expense',
+        description: 'Salaires ouvriers agricoles - Janvier',
+        total_debit: 36000,
+        total_credit: 36000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers,  debit: 28000, credit: 0, desc: 'Salaires 8 ouvriers' },
+          { account: chSociales,   debit: 8000,  credit: 0, desc: 'Charges sociales CNSS' },
+          { account: bank,         debit: 0,     credit: 28000, desc: 'Virement salaires' },
+          { account: cnss,         debit: 0,     credit: 8000,  desc: 'CNSS à payer' },
+        ],
       },
       {
-        organization_id: organizationId,
-        entry_number: "JE-2024-003",
-        entry_date: lastMonth.toISOString().split("T")[0],
-        entry_type: "expense",
-        description: "Charges de main d'œuvre - Récolte",
-        total_debit: 8500,
-        total_credit: 8500,
-        status: "posted",
-        created_by: userId,
+        entry_number: 'JE-JAN-003',
+        entry_date: `${currentYear}-01-31`,
+        entry_type: 'expense',
+        description: 'Charges fixes - Janvier (eau, électricité, carburant)',
+        total_debit: 18500,
+        total_credit: 18500,
+        status: 'posted',
+        items: [
+          { account: eau,          debit: 8500,  credit: 0, desc: 'Eau irrigation (pompage)' },
+          { account: electricite,  debit: 4200,  credit: 0, desc: 'Électricité station pompage' },
+          { account: carburant,    debit: 5800,  credit: 0, desc: 'Gasoil tracteurs' },
+          { account: bank,         debit: 0,     credit: 18500, desc: 'Paiement charges fixes' },
+        ],
+      },
+
+      // --- FEBRUARY: Citrus season continues ---
+      {
+        entry_number: 'JE-FEV-001',
+        entry_date: `${currentYear}-02-10`,
+        entry_type: 'revenue',
+        description: 'Vente clémentines IGP Berkane - Export UE (lot 1)',
+        total_debit: 96000,
+        total_credit: 96000,
+        status: 'posted',
+        items: [
+          { account: clients,      debit: 96000, credit: 0, desc: 'Client Primeur Europe SARL' },
+          { account: ventesFruits, debit: 0,     credit: 80000, desc: 'Vente 40T clémentines @ 2 MAD/kg' },
+          { account: tva_due,      debit: 0,     credit: 16000, desc: 'TVA collectée 20%' },
+        ],
       },
       {
-        organization_id: organizationId,
-        entry_number: "JE-2024-004",
-        entry_date: now.toISOString().split("T")[0],
-        entry_type: "transfer",
-        description: "Virement interne caisse vers banque",
-        total_debit: 5000,
-        total_credit: 5000,
-        status: "draft",
-        created_by: userId,
+        entry_number: 'JE-FEV-002',
+        entry_date: `${currentYear}-02-15`,
+        entry_type: 'receipt',
+        description: 'Encaissement vente clémentines (lot 1)',
+        total_debit: 96000,
+        total_credit: 96000,
+        status: 'posted',
+        items: [
+          { account: bank,    debit: 96000, credit: 0, desc: 'Virement reçu Primeur Europe' },
+          { account: clients, debit: 0,     credit: 96000, desc: 'Lettrage facture clémentines' },
+        ],
+      },
+      {
+        entry_number: 'JE-FEV-003',
+        entry_date: `${currentYear}-02-20`,
+        entry_type: 'expense',
+        description: 'Paiement fournisseur engrais (facture janvier)',
+        total_debit: 42000,
+        total_credit: 42000,
+        status: 'posted',
+        items: [
+          { account: fournisseurs, debit: 42000, credit: 0, desc: 'Règlement AgriMaroc' },
+          { account: bank,         debit: 0,     credit: 42000, desc: 'Virement fournisseur' },
+        ],
+      },
+      {
+        entry_number: 'JE-FEV-004',
+        entry_date: `${currentYear}-02-25`,
+        entry_type: 'expense',
+        description: 'Salaires et charges - Février',
+        total_debit: 38000,
+        total_credit: 38000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 29000, credit: 0, desc: 'Salaires ouvriers' },
+          { account: chSociales,  debit: 9000,  credit: 0, desc: 'Charges sociales' },
+          { account: bank,        debit: 0,     credit: 29000, desc: 'Virement salaires' },
+          { account: cnss,        debit: 0,     credit: 9000,  desc: 'CNSS à payer' },
+        ],
+      },
+
+      // --- MARCH: Spring planting ---
+      {
+        entry_number: 'JE-MAR-001',
+        entry_date: `${currentYear}-03-05`,
+        entry_type: 'expense',
+        description: 'Achat semences tomates Marmande pour campagne été',
+        total_debit: 24000,
+        total_credit: 24000,
+        status: 'posted',
+        items: [
+          { account: achSemences,  debit: 20000, credit: 0, desc: 'Semences tomates certifiées (200kg)' },
+          { account: tva_ded,      debit: 4000,  credit: 0, desc: 'TVA déductible' },
+          { account: bank,         debit: 0,     credit: 24000, desc: 'Paiement Semencier du Sud' },
+        ],
+      },
+      {
+        entry_number: 'JE-MAR-002',
+        entry_date: `${currentYear}-03-15`,
+        entry_type: 'expense',
+        description: 'Achat produits phytosanitaires - Traitement préventif olives',
+        total_debit: 18000,
+        total_credit: 18000,
+        status: 'posted',
+        items: [
+          { account: achPhyto,     debit: 15000, credit: 0, desc: 'Fongicides + insecticides bio' },
+          { account: tva_ded,      debit: 3000,  credit: 0, desc: 'TVA déductible' },
+          { account: fournisseurs, debit: 0,     credit: 18000, desc: 'PhytoMaroc' },
+        ],
+      },
+      {
+        entry_number: 'JE-MAR-003',
+        entry_date: `${currentYear}-03-25`,
+        entry_type: 'expense',
+        description: 'Salaires et charges - Mars (période plantation)',
+        total_debit: 45000,
+        total_credit: 45000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 35000, credit: 0, desc: 'Salaires (10 ouvriers, heures sup plantation)' },
+          { account: chSociales,  debit: 10000, credit: 0, desc: 'Charges sociales' },
+          { account: bank,        debit: 0,     credit: 35000, desc: 'Virement salaires' },
+          { account: cnss,        debit: 0,     credit: 10000, desc: 'CNSS' },
+        ],
+      },
+      {
+        entry_number: 'JE-MAR-004',
+        entry_date: `${currentYear}-03-31`,
+        entry_type: 'expense',
+        description: 'Charges fixes - Mars',
+        total_debit: 19800,
+        total_credit: 19800,
+        status: 'posted',
+        items: [
+          { account: eau,         debit: 9500,  credit: 0, desc: 'Eau irrigation' },
+          { account: electricite, debit: 4500,  credit: 0, desc: 'Électricité' },
+          { account: carburant,   debit: 5800,  credit: 0, desc: 'Gasoil' },
+          { account: bank,        debit: 0,     credit: 19800, desc: 'Charges fixes mars' },
+        ],
+      },
+
+      // --- APRIL: Growing season begins ---
+      {
+        entry_number: 'JE-AVR-001',
+        entry_date: `${currentYear}-04-10`,
+        entry_type: 'expense',
+        description: 'Engrais foliaire et traitement printanier agrumes',
+        total_debit: 28800,
+        total_credit: 28800,
+        status: 'posted',
+        items: [
+          { account: achEngrais, debit: 24000, credit: 0, desc: 'Engrais foliaire agrumes' },
+          { account: tva_ded,    debit: 4800,  credit: 0, desc: 'TVA déductible' },
+          { account: bank,       debit: 0,     credit: 28800, desc: 'Paiement comptant' },
+        ],
+      },
+      {
+        entry_number: 'JE-AVR-002',
+        entry_date: `${currentYear}-04-20`,
+        entry_type: 'expense',
+        description: 'Salaires personnel administratif - Avril',
+        total_debit: 22000,
+        total_credit: 22000,
+        status: 'posted',
+        items: [
+          { account: salAdmin,   debit: 18000, credit: 0, desc: 'Salaire responsable + comptable' },
+          { account: chSociales, debit: 4000,  credit: 0, desc: 'Charges sociales admin' },
+          { account: bank,       debit: 0,     credit: 22000, desc: 'Virements salaires admin' },
+        ],
+      },
+      {
+        entry_number: 'JE-AVR-003',
+        entry_date: `${currentYear}-04-25`,
+        entry_type: 'expense',
+        description: 'Salaires ouvriers et charges - Avril',
+        total_debit: 42000,
+        total_credit: 42000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 32000, credit: 0, desc: 'Salaires ouvriers (entretien + irrigation)' },
+          { account: chSociales,  debit: 10000, credit: 0, desc: 'CNSS' },
+          { account: bank,        debit: 0,     credit: 32000, desc: 'Virement salaires' },
+          { account: cnss,        debit: 0,     credit: 10000, desc: 'CNSS à payer' },
+        ],
+      },
+
+      // --- MAY-JUNE: Harvest haricots + growing season ---
+      {
+        entry_number: 'JE-MAI-001',
+        entry_date: `${currentYear}-05-15`,
+        entry_type: 'revenue',
+        description: 'Vente haricots verts export France (contrat)',
+        total_debit: 51000,
+        total_credit: 51000,
+        status: 'posted',
+        items: [
+          { account: clients,        debit: 51000, credit: 0, desc: 'Export Légumes Frais SARL' },
+          { account: ventesRecoltes, debit: 0,     credit: 42500, desc: 'Vente 8.5T haricots verts' },
+          { account: tva_due,        debit: 0,     credit: 8500,  desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-MAI-002',
+        entry_date: `${currentYear}-05-25`,
+        entry_type: 'expense',
+        description: 'Charges fixes + salaires Mai',
+        total_debit: 58000,
+        total_credit: 58000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 30000, credit: 0, desc: 'Salaires ouvriers' },
+          { account: chSociales,  debit: 8000,  credit: 0, desc: 'CNSS' },
+          { account: eau,         debit: 11000, credit: 0, desc: 'Eau irrigation (été)' },
+          { account: electricite, debit: 4500,  credit: 0, desc: 'Électricité' },
+          { account: carburant,   debit: 4500,  credit: 0, desc: 'Gasoil' },
+          { account: bank,        debit: 0,     credit: 50000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 8000,  desc: 'CNSS' },
+        ],
+      },
+      {
+        entry_number: 'JE-JUN-001',
+        entry_date: `${currentYear}-06-10`,
+        entry_type: 'receipt',
+        description: 'Encaissement vente haricots',
+        total_debit: 51000,
+        total_credit: 51000,
+        status: 'posted',
+        items: [
+          { account: bank,    debit: 51000, credit: 0, desc: 'Virement reçu export haricots' },
+          { account: clients, debit: 0,     credit: 51000, desc: 'Lettrage' },
+        ],
+      },
+      {
+        entry_number: 'JE-JUN-002',
+        entry_date: `${currentYear}-06-20`,
+        entry_type: 'depreciation',
+        description: 'Amortissements semestriels S1',
+        total_debit: 32000,
+        total_credit: 32000,
+        status: 'posted',
+        items: [
+          { account: defaultExpense, debit: 12000, credit: 0, desc: 'Dotation amort. bâtiments (S1)' },
+          { account: defaultExpense, debit: 20000, credit: 0, desc: 'Dotation amort. matériel (S1)' },
+          { account: amortBat,       debit: 0,     credit: 12000, desc: 'Amort. cumulés bâtiments' },
+          { account: amortMat,       debit: 0,     credit: 20000, desc: 'Amort. cumulés matériel' },
+        ],
+      },
+      {
+        entry_number: 'JE-JUN-003',
+        entry_date: `${currentYear}-06-25`,
+        entry_type: 'expense',
+        description: 'Salaires et charges - Juin',
+        total_debit: 56000,
+        total_credit: 56000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 32000, credit: 0, desc: 'Salaires ouvriers' },
+          { account: salAdmin,    debit: 18000, credit: 0, desc: 'Salaires admin' },
+          { account: chSociales,  debit: 6000,  credit: 0, desc: 'Charges sociales' },
+          { account: bank,        debit: 0,     credit: 50000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 6000,  desc: 'CNSS' },
+        ],
+      },
+
+      // --- JULY-AUGUST: Tomato harvest peak ---
+      {
+        entry_number: 'JE-JUL-001',
+        entry_date: `${currentYear}-07-10`,
+        entry_type: 'revenue',
+        description: 'Vente tomates Marmande - Marché local (lot 1)',
+        total_debit: 72000,
+        total_credit: 72000,
+        status: 'posted',
+        items: [
+          { account: bank,         debit: 72000, credit: 0, desc: 'Paiement comptant marché de gros Meknès' },
+          { account: ventesFruits, debit: 0,     credit: 60000, desc: 'Vente 20T tomates @ 3 MAD/kg' },
+          { account: tva_due,      debit: 0,     credit: 12000, desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-JUL-002',
+        entry_date: `${currentYear}-07-25`,
+        entry_type: 'expense',
+        description: 'Charges été - Juillet (irrigation intensive)',
+        total_debit: 65000,
+        total_credit: 65000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 35000, credit: 0, desc: 'Salaires (12 ouvriers, récolte)' },
+          { account: chSociales,  debit: 8000,  credit: 0, desc: 'CNSS' },
+          { account: eau,         debit: 14000, credit: 0, desc: 'Eau irrigation été (pic)' },
+          { account: electricite, debit: 3500,  credit: 0, desc: 'Électricité pompage' },
+          { account: carburant,   debit: 4500,  credit: 0, desc: 'Gasoil' },
+          { account: bank,        debit: 0,     credit: 57000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 8000,  desc: 'CNSS' },
+        ],
+      },
+      {
+        entry_number: 'JE-AOU-001',
+        entry_date: `${currentYear}-08-05`,
+        entry_type: 'revenue',
+        description: 'Vente tomates (lot 2) + avocats',
+        total_debit: 132000,
+        total_credit: 132000,
+        status: 'posted',
+        items: [
+          { account: clients,      debit: 132000, credit: 0, desc: 'Clients divers' },
+          { account: ventesFruits, debit: 0,      credit: 85000, desc: 'Vente 15T tomates + 5T avocats' },
+          { account: ventesRecoltes, debit: 0,    credit: 25000, desc: 'Vente récoltes diverses' },
+          { account: tva_due,      debit: 0,      credit: 22000, desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-AOU-002',
+        entry_date: `${currentYear}-08-20`,
+        entry_type: 'receipt',
+        description: 'Encaissement clients août',
+        total_debit: 132000,
+        total_credit: 132000,
+        status: 'posted',
+        items: [
+          { account: bank,    debit: 132000, credit: 0, desc: 'Virements reçus clients' },
+          { account: clients, debit: 0,      credit: 132000, desc: 'Lettrage factures' },
+        ],
+      },
+      {
+        entry_number: 'JE-AOU-003',
+        entry_date: `${currentYear}-08-25`,
+        entry_type: 'expense',
+        description: 'Salaires et charges - Août',
+        total_debit: 68000,
+        total_credit: 68000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 38000, credit: 0, desc: 'Salaires 12 ouvriers (récolte intensive)' },
+          { account: salAdmin,    debit: 18000, credit: 0, desc: 'Salaires admin' },
+          { account: chSociales,  debit: 12000, credit: 0, desc: 'Charges sociales' },
+          { account: bank,        debit: 0,     credit: 56000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 12000, desc: 'CNSS' },
+        ],
+      },
+
+      // --- SEPTEMBER: Tomato season ends, olive prep ---
+      {
+        entry_number: 'JE-SEP-001',
+        entry_date: `${currentYear}-09-10`,
+        entry_type: 'revenue',
+        description: 'Vente fin de saison tomates + grenades',
+        total_debit: 54000,
+        total_credit: 54000,
+        status: 'posted',
+        items: [
+          { account: bank,         debit: 54000, credit: 0, desc: 'Paiement comptant' },
+          { account: ventesFruits, debit: 0,     credit: 45000, desc: 'Vente 10T tomates + 3T grenades' },
+          { account: tva_due,      debit: 0,     credit: 9000,  desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-SEP-002',
+        entry_date: `${currentYear}-09-25`,
+        entry_type: 'expense',
+        description: 'Charges Septembre + préparation olives',
+        total_debit: 52000,
+        total_credit: 52000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 30000, credit: 0, desc: 'Salaires ouvriers' },
+          { account: chSociales,  debit: 8000,  credit: 0, desc: 'CNSS' },
+          { account: eau,         debit: 7000,  credit: 0, desc: 'Eau' },
+          { account: carburant,   debit: 4000,  credit: 0, desc: 'Gasoil' },
+          { account: electricite, debit: 3000,  credit: 0, desc: 'Électricité' },
+          { account: bank,        debit: 0,     credit: 44000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 8000,  desc: 'CNSS' },
+        ],
+      },
+
+      // --- OCTOBER: Olive harvest begins ---
+      {
+        entry_number: 'JE-OCT-001',
+        entry_date: `${currentYear}-10-10`,
+        entry_type: 'expense',
+        description: 'Achat matériel récolte olives + filets',
+        total_debit: 15600,
+        total_credit: 15600,
+        status: 'posted',
+        items: [
+          { account: defaultExpense, debit: 13000, credit: 0, desc: 'Filets + peignes + caisses récolte' },
+          { account: tva_ded,        debit: 2600,  credit: 0, desc: 'TVA déductible' },
+          { account: caisse,         debit: 0,     credit: 15600, desc: 'Paiement caisse' },
+        ],
+      },
+      {
+        entry_number: 'JE-OCT-002',
+        entry_date: `${currentYear}-10-25`,
+        entry_type: 'expense',
+        description: 'Salaires Octobre (recrutement saisonnier récolte olives)',
+        total_debit: 55000,
+        total_credit: 55000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 42000, credit: 0, desc: 'Salaires 15 ouvriers (saisonniers)' },
+          { account: chSociales,  debit: 13000, credit: 0, desc: 'CNSS' },
+          { account: bank,        debit: 0,     credit: 42000, desc: 'Virement salaires' },
+          { account: cnss,        debit: 0,     credit: 13000, desc: 'CNSS à payer' },
+        ],
+      },
+
+      // --- NOVEMBER: Olive + citrus sales ---
+      {
+        entry_number: 'JE-NOV-001',
+        entry_date: `${currentYear}-11-10`,
+        entry_type: 'revenue',
+        description: 'Vente huile d\'olive extra vierge - Pression à froid',
+        total_debit: 189600,
+        total_credit: 189600,
+        status: 'posted',
+        items: [
+          { account: clients,     debit: 189600, credit: 0, desc: 'Clients export + local' },
+          { account: ventesHuile, debit: 0,      credit: 158000, desc: 'Vente 5000L huile olive EV @ 31.6 MAD/L' },
+          { account: tva_due,     debit: 0,      credit: 31600,  desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-NOV-002',
+        entry_date: `${currentYear}-11-20`,
+        entry_type: 'revenue',
+        description: 'Vente clémentines début saison',
+        total_debit: 48000,
+        total_credit: 48000,
+        status: 'posted',
+        items: [
+          { account: clients,      debit: 48000, credit: 0, desc: 'Client Primeur Maroc' },
+          { account: ventesFruits, debit: 0,     credit: 40000, desc: 'Vente 16T clémentines' },
+          { account: tva_due,      debit: 0,     credit: 8000,  desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-NOV-003',
+        entry_date: `${currentYear}-11-25`,
+        entry_type: 'expense',
+        description: 'Charges Novembre',
+        total_debit: 62000,
+        total_credit: 62000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 40000, credit: 0, desc: 'Salaires (récolte olive intense)' },
+          { account: chSociales,  debit: 12000, credit: 0, desc: 'CNSS' },
+          { account: eau,         debit: 5000,  credit: 0, desc: 'Eau' },
+          { account: carburant,   debit: 5000,  credit: 0, desc: 'Gasoil (transport récolte)' },
+          { account: bank,        debit: 0,     credit: 50000, desc: 'Virements' },
+          { account: cnss,        debit: 0,     credit: 12000, desc: 'CNSS' },
+        ],
+      },
+
+      // --- DECEMBER: Year-end ---
+      {
+        entry_number: 'JE-DEC-001',
+        entry_date: `${currentYear}-12-05`,
+        entry_type: 'receipt',
+        description: 'Encaissement clients Novembre (huile + clémentines)',
+        total_debit: 237600,
+        total_credit: 237600,
+        status: 'posted',
+        items: [
+          { account: bank,    debit: 237600, credit: 0, desc: 'Virements reçus clients' },
+          { account: clients, debit: 0,      credit: 237600, desc: 'Lettrage factures Nov' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-002',
+        entry_date: `${currentYear}-12-15`,
+        entry_type: 'revenue',
+        description: 'Vente clémentines lot 2 + oranges Navel',
+        total_debit: 84000,
+        total_credit: 84000,
+        status: 'posted',
+        items: [
+          { account: bank,         debit: 84000, credit: 0, desc: 'Paiement comptant' },
+          { account: ventesFruits, debit: 0,     credit: 70000, desc: 'Vente 25T clémentines + 10T oranges' },
+          { account: tva_due,      debit: 0,     credit: 14000, desc: 'TVA collectée' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-003',
+        entry_date: `${currentYear}-12-20`,
+        entry_type: 'revenue',
+        description: 'Subvention PMV (Plan Maroc Vert) - Aide irrigation',
+        total_debit: 35000,
+        total_credit: 35000,
+        status: 'posted',
+        items: [
+          { account: bank,           debit: 35000, credit: 0, desc: 'Virement ministère agriculture' },
+          { account: autresProduits, debit: 0,     credit: 35000, desc: 'Subvention irrigation localisée' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-004',
+        entry_date: `${currentYear}-12-25`,
+        entry_type: 'expense',
+        description: 'Salaires et charges - Décembre',
+        total_debit: 58000,
+        total_credit: 58000,
+        status: 'posted',
+        items: [
+          { account: salOuvriers, debit: 32000, credit: 0, desc: 'Salaires ouvriers' },
+          { account: salAdmin,    debit: 18000, credit: 0, desc: 'Salaires admin' },
+          { account: chSociales,  debit: 8000,  credit: 0, desc: 'Charges sociales' },
+          { account: bank,        debit: 0,     credit: 50000, desc: 'Virements salaires' },
+          { account: cnss,        debit: 0,     credit: 8000,  desc: 'CNSS' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-005',
+        entry_date: `${currentYear}-12-28`,
+        entry_type: 'depreciation',
+        description: 'Amortissements semestriels S2',
+        total_debit: 32000,
+        total_credit: 32000,
+        status: 'posted',
+        items: [
+          { account: defaultExpense, debit: 12000, credit: 0, desc: 'Dotation amort. bâtiments (S2)' },
+          { account: defaultExpense, debit: 20000, credit: 0, desc: 'Dotation amort. matériel (S2)' },
+          { account: amortBat,       debit: 0,     credit: 12000, desc: 'Amort. cumulés bâtiments' },
+          { account: amortMat,       debit: 0,     credit: 20000, desc: 'Amort. cumulés matériel' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-006',
+        entry_date: `${currentYear}-12-30`,
+        entry_type: 'expense',
+        description: 'Charges fixes Décembre',
+        total_debit: 16000,
+        total_credit: 16000,
+        status: 'posted',
+        items: [
+          { account: eau,         debit: 5000, credit: 0, desc: 'Eau' },
+          { account: electricite, debit: 4000, credit: 0, desc: 'Électricité' },
+          { account: carburant,   debit: 4000, credit: 0, desc: 'Gasoil' },
+          { account: defaultExpense, debit: 3000, credit: 0, desc: 'Entretien matériel' },
+          { account: bank,        debit: 0,    credit: 16000, desc: 'Paiement charges' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-007',
+        entry_date: `${currentYear}-12-31`,
+        entry_type: 'payment',
+        description: 'Paiement CNSS cumulé T4',
+        total_debit: 33000,
+        total_credit: 33000,
+        status: 'posted',
+        items: [
+          { account: cnss, debit: 33000, credit: 0, desc: 'Règlement CNSS T4' },
+          { account: bank, debit: 0,     credit: 33000, desc: 'Virement CNSS' },
+        ],
+      },
+      {
+        entry_number: 'JE-DEC-008',
+        entry_date: `${currentYear}-12-31`,
+        entry_type: 'tax',
+        description: 'Déclaration TVA annuelle',
+        total_debit: 100100,
+        total_credit: 100100,
+        status: 'posted',
+        items: [
+          { account: tva_due, debit: 121100, credit: 0, desc: 'TVA collectée cumulée' },
+          { account: tva_ded, debit: 0,      credit: 21400, desc: 'TVA déductible cumulée' },
+          { account: bank,    debit: 0,      credit: 99700, desc: 'TVA nette à payer' },
+        ],
       },
     ];
 
-    const { data: createdEntries, error } = await client
-      .from("journal_entries")
-      .insert(journalEntries)
-      .select();
+    // Insert all journal entries
+    const allCreatedEntries: any[] = [];
+    for (const entry of entries) {
+      const { items, ...entryData } = entry;
 
-    if (error) {
-      this.logger.error(
-        `Failed to create demo journal entries: ${error.message}`,
-      );
-      return [];
+      // Recalculate totals from items
+      const totalDebit = items.reduce((sum, i) => sum + (i.debit || 0), 0);
+      const totalCredit = items.reduce((sum, i) => sum + (i.credit || 0), 0);
+
+      const { data: created, error } = await client
+        .from('journal_entries')
+        .insert({
+          organization_id: organizationId,
+          ...entryData,
+          total_debit: totalDebit,
+          total_credit: totalCredit,
+          created_by: userId,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        this.logger.warn(`Failed to create journal entry ${entry.entry_number}: ${error.message}`);
+        continue;
+      }
+
+      // Create journal items - skip items with null accounts
+      const validItems = items.filter(i => i.account?.id);
+      if (validItems.length > 0) {
+        const journalItems = validItems.map(i => ({
+          journal_entry_id: created.id,
+          account_id: i.account!.id,
+          debit: i.debit || 0,
+          credit: i.credit || 0,
+          description: i.desc,
+        }));
+
+        const { error: itemsError } = await client.from('journal_items').insert(journalItems);
+        if (itemsError) {
+          this.logger.warn(`Failed to create items for ${entry.entry_number}: ${itemsError.message}`);
+        }
+      }
+
+      allCreatedEntries.push(created);
     }
 
-    // Create journal items for each entry
-    if (createdEntries && createdEntries.length > 0) {
-      const journalItems = [];
-
-      // JE-2024-001: Revenue entry (Debit: Bank/Cash, Credit: Sales)
-      if (createdEntries[0]) {
-        journalItems.push(
-          {
-            journal_entry_id: createdEntries[0].id,
-            account_id: bankAccount?.id || defaultAsset?.id,
-            debit: 17700,
-            credit: 0,
-            description: "Encaissement vente huile olive",
-          },
-          {
-            journal_entry_id: createdEntries[0].id,
-            account_id: defaultIncome?.id,
-            debit: 0,
-            credit: 17700,
-            description: "Vente huile olive",
-          },
-        );
-      }
-
-      // JE-2024-002: Expense entry (Debit: Expense, Credit: Bank/Supplier)
-      if (createdEntries[1]) {
-        journalItems.push(
-          {
-            journal_entry_id: createdEntries[1].id,
-            account_id: defaultExpense?.id,
-            debit: 14750,
-            credit: 0,
-            description: "Achat engrais",
-          },
-          {
-            journal_entry_id: createdEntries[1].id,
-            account_id: bankAccount?.id || defaultAsset?.id,
-            debit: 0,
-            credit: 14750,
-            description: "Paiement fournisseur",
-          },
-        );
-      }
-
-      // JE-2024-003: Labor expense
-      if (createdEntries[2]) {
-        journalItems.push(
-          {
-            journal_entry_id: createdEntries[2].id,
-            account_id: defaultExpense?.id,
-            debit: 8500,
-            credit: 0,
-            description: "Charges personnel récolte",
-            parcel_id: parcels[0]?.id,
-          },
-          {
-            journal_entry_id: createdEntries[2].id,
-            account_id: cashAccount?.id || defaultAsset?.id,
-            debit: 0,
-            credit: 8500,
-            description: "Paiement main d'œuvre",
-          },
-        );
-      }
-
-      // JE-2024-004: Internal transfer
-      if (createdEntries[3] && cashAccount && bankAccount) {
-        journalItems.push(
-          {
-            journal_entry_id: createdEntries[3].id,
-            account_id: bankAccount.id,
-            debit: 5000,
-            credit: 0,
-            description: "Versement en banque",
-          },
-          {
-            journal_entry_id: createdEntries[3].id,
-            account_id: cashAccount.id,
-            debit: 0,
-            credit: 5000,
-            description: "Retrait caisse",
-          },
-        );
-      }
-
-      if (journalItems.length > 0) {
-        await client.from("journal_items").insert(journalItems);
-      }
-    }
-
-    return createdEntries || [];
+    return allCreatedEntries;
   }
 
   /**
@@ -5544,6 +6194,13 @@ export class DemoDataService {
         .eq("organization_id", organizationId);
       deletedCounts["crop_cycles"] = cropCyclesCount || 0;
 
+      // Corrective actions (references compliance checks)
+      const { count: correctiveActionsCount } = await client
+        .from("corrective_actions")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["corrective_actions"] = correctiveActionsCount || 0;
+
       // Compliance checks (references certifications)
       const { count: complianceChecksCount } = await client
         .from("compliance_checks")
@@ -6764,7 +7421,7 @@ export class DemoDataService {
       .from("accounts")
       .select("id")
       .eq("organization_id", organizationId)
-      .eq("account_type", "Expense")
+      .eq("account_type", "expense")
       .limit(1)
       .single();
 
@@ -6793,7 +7450,7 @@ export class DemoDataService {
       .from("accounts")
       .select("id")
       .eq("organization_id", organizationId)
-      .eq("account_type", "Income")
+      .eq("account_type", "revenue")
       .limit(1)
       .single();
 
@@ -10237,8 +10894,8 @@ export class DemoDataService {
       {
         code: "2100",
         name: "Immobilisations en non-valeurs",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10246,8 +10903,8 @@ export class DemoDataService {
       {
         code: "2200",
         name: "Immobilisations incorporelles",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10255,8 +10912,8 @@ export class DemoDataService {
       {
         code: "2300",
         name: "Immobilisations corporelles",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10264,8 +10921,8 @@ export class DemoDataService {
       {
         code: "2310",
         name: "Terrains agricoles",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10274,8 +10931,8 @@ export class DemoDataService {
       {
         code: "2321",
         name: "Bâtiments agricoles",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10284,8 +10941,8 @@ export class DemoDataService {
       {
         code: "2331",
         name: "Tracteurs et machines agricoles",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10294,8 +10951,8 @@ export class DemoDataService {
       {
         code: "2332",
         name: "Système d'irrigation",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10304,8 +10961,8 @@ export class DemoDataService {
       {
         code: "2340",
         name: "Matériel de transport",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10314,8 +10971,8 @@ export class DemoDataService {
       {
         code: "2362",
         name: "Plantations permanentes",
-        account_type: "Asset",
-        account_subtype: "Fixed Asset",
+        account_type: "asset",
+        account_subtype: "fixed_asset",
         is_group: false,
         is_active: true,
         parent_code: "2300",
@@ -10324,8 +10981,8 @@ export class DemoDataService {
       {
         code: "2800",
         name: "Amortissements",
-        account_type: "Asset",
-        account_subtype: "Accumulated Depreciation",
+        account_type: "asset",
+        account_subtype: "accumulated_depreciation",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10333,8 +10990,8 @@ export class DemoDataService {
       {
         code: "2832",
         name: "Amortissements bâtiments",
-        account_type: "Asset",
-        account_subtype: "Accumulated Depreciation",
+        account_type: "asset",
+        account_subtype: "accumulated_depreciation",
         is_group: false,
         is_active: true,
         parent_code: "2800",
@@ -10343,8 +11000,8 @@ export class DemoDataService {
       {
         code: "2834",
         name: "Amortissements matériel",
-        account_type: "Asset",
-        account_subtype: "Accumulated Depreciation",
+        account_type: "asset",
+        account_subtype: "accumulated_depreciation",
         is_group: false,
         is_active: true,
         parent_code: "2800",
@@ -10353,8 +11010,8 @@ export class DemoDataService {
       {
         code: "3100",
         name: "Stocks matières premières",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10362,8 +11019,8 @@ export class DemoDataService {
       {
         code: "3110",
         name: "Semences et plants",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: false,
         is_active: true,
         parent_code: "3100",
@@ -10372,8 +11029,8 @@ export class DemoDataService {
       {
         code: "3111",
         name: "Engrais et amendements",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: false,
         is_active: true,
         parent_code: "3100",
@@ -10382,8 +11039,8 @@ export class DemoDataService {
       {
         code: "3112",
         name: "Produits phytosanitaires",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: false,
         is_active: true,
         parent_code: "3100",
@@ -10392,8 +11049,8 @@ export class DemoDataService {
       {
         code: "3500",
         name: "Produits finis",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10401,8 +11058,8 @@ export class DemoDataService {
       {
         code: "3510",
         name: "Récoltes",
-        account_type: "Asset",
-        account_subtype: "Inventory",
+        account_type: "asset",
+        account_subtype: "inventory",
         is_group: false,
         is_active: true,
         parent_code: "3500",
@@ -10411,8 +11068,8 @@ export class DemoDataService {
       {
         code: "3420",
         name: "Clients",
-        account_type: "Asset",
-        account_subtype: "Receivable",
+        account_type: "asset",
+        account_subtype: "accounts_receivable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10420,8 +11077,8 @@ export class DemoDataService {
       {
         code: "3421",
         name: "Clients - ventes agricoles",
-        account_type: "Asset",
-        account_subtype: "Receivable",
+        account_type: "asset",
+        account_subtype: "accounts_receivable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10429,8 +11086,8 @@ export class DemoDataService {
       {
         code: "4410",
         name: "Fournisseurs",
-        account_type: "Liability",
-        account_subtype: "Payable",
+        account_type: "liability",
+        account_subtype: "accounts_payable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10438,8 +11095,8 @@ export class DemoDataService {
       {
         code: "4411",
         name: "Fournisseurs - intrants agricoles",
-        account_type: "Liability",
-        account_subtype: "Payable",
+        account_type: "liability",
+        account_subtype: "accounts_payable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10447,8 +11104,8 @@ export class DemoDataService {
       {
         code: "4430",
         name: "Sécurité sociale (CNSS)",
-        account_type: "Liability",
-        account_subtype: "Payable",
+        account_type: "liability",
+        account_subtype: "accounts_payable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10456,8 +11113,8 @@ export class DemoDataService {
       {
         code: "4431",
         name: "Rémunérations dues au personnel",
-        account_type: "Liability",
-        account_subtype: "Payable",
+        account_type: "liability",
+        account_subtype: "accounts_payable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10465,8 +11122,8 @@ export class DemoDataService {
       {
         code: "4455",
         name: "TVA due",
-        account_type: "Liability",
-        account_subtype: "Payable",
+        account_type: "liability",
+        account_subtype: "accounts_payable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10474,8 +11131,8 @@ export class DemoDataService {
       {
         code: "4456",
         name: "TVA déductible",
-        account_type: "Asset",
-        account_subtype: "Receivable",
+        account_type: "asset",
+        account_subtype: "accounts_receivable",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10483,8 +11140,8 @@ export class DemoDataService {
       {
         code: "5141",
         name: "Banque - Compte courant",
-        account_type: "Asset",
-        account_subtype: "Cash",
+        account_type: "asset",
+        account_subtype: "cash",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10492,8 +11149,8 @@ export class DemoDataService {
       {
         code: "5161",
         name: "Caisse principale",
-        account_type: "Asset",
-        account_subtype: "Cash",
+        account_type: "asset",
+        account_subtype: "cash",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10501,8 +11158,8 @@ export class DemoDataService {
       {
         code: "5162",
         name: "Caisse ferme",
-        account_type: "Asset",
-        account_subtype: "Cash",
+        account_type: "asset",
+        account_subtype: "cash",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10510,8 +11167,8 @@ export class DemoDataService {
       {
         code: "6000",
         name: "Charges d'exploitation",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10519,8 +11176,8 @@ export class DemoDataService {
       {
         code: "6110",
         name: "Achats de semences et plants",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10529,8 +11186,8 @@ export class DemoDataService {
       {
         code: "6111",
         name: "Achats d'engrais",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10539,8 +11196,8 @@ export class DemoDataService {
       {
         code: "6112",
         name: "Achats de produits phytosanitaires",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10549,8 +11206,8 @@ export class DemoDataService {
       {
         code: "6121",
         name: "Eau d'irrigation",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10559,8 +11216,8 @@ export class DemoDataService {
       {
         code: "6124",
         name: "Carburants et lubrifiants",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10569,8 +11226,8 @@ export class DemoDataService {
       {
         code: "6167",
         name: "Électricité",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6000",
@@ -10579,8 +11236,8 @@ export class DemoDataService {
       {
         code: "6171",
         name: "Charges de personnel",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10588,8 +11245,8 @@ export class DemoDataService {
       {
         code: "6174",
         name: "Salaires ouvriers agricoles",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6171",
@@ -10598,8 +11255,8 @@ export class DemoDataService {
       {
         code: "6175",
         name: "Salaires personnel administratif",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6171",
@@ -10608,8 +11265,8 @@ export class DemoDataService {
       {
         code: "6176",
         name: "Charges sociales",
-        account_type: "Expense",
-        account_subtype: "Operating Expense",
+        account_type: "expense",
+        account_subtype: "operating_expense",
         is_group: false,
         is_active: true,
         parent_code: "6171",
@@ -10618,8 +11275,8 @@ export class DemoDataService {
       {
         code: "7000",
         name: "Produits d'exploitation",
-        account_type: "Income",
-        account_subtype: "Operating Revenue",
+        account_type: "revenue",
+        account_subtype: "operating_revenue",
         is_group: true,
         is_active: true,
         currency_code: "MAD",
@@ -10627,8 +11284,8 @@ export class DemoDataService {
       {
         code: "7111",
         name: "Ventes de récoltes",
-        account_type: "Income",
-        account_subtype: "Operating Revenue",
+        account_type: "revenue",
+        account_subtype: "operating_revenue",
         is_group: false,
         is_active: true,
         parent_code: "7000",
@@ -10637,8 +11294,8 @@ export class DemoDataService {
       {
         code: "7112",
         name: "Ventes de fruits et légumes",
-        account_type: "Income",
-        account_subtype: "Operating Revenue",
+        account_type: "revenue",
+        account_subtype: "operating_revenue",
         is_group: false,
         is_active: true,
         parent_code: "7000",
@@ -10647,8 +11304,8 @@ export class DemoDataService {
       {
         code: "7113",
         name: "Ventes d'huile d'olive",
-        account_type: "Income",
-        account_subtype: "Operating Revenue",
+        account_type: "revenue",
+        account_subtype: "operating_revenue",
         is_group: false,
         is_active: true,
         parent_code: "7000",
@@ -10657,8 +11314,8 @@ export class DemoDataService {
       {
         code: "7580",
         name: "Autres produits d'exploitation",
-        account_type: "Income",
-        account_subtype: "Operating Revenue",
+        account_type: "revenue",
+        account_subtype: "operating_revenue",
         is_group: false,
         is_active: true,
         parent_code: "7000",
@@ -10667,8 +11324,8 @@ export class DemoDataService {
       {
         code: "1100",
         name: "Capital social",
-        account_type: "Equity",
-        account_subtype: "Capital",
+        account_type: "equity",
+        account_subtype: "capital",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10676,8 +11333,8 @@ export class DemoDataService {
       {
         code: "1190",
         name: "Report à nouveau",
-        account_type: "Equity",
-        account_subtype: "Retained Earnings",
+        account_type: "equity",
+        account_subtype: "retained_earnings",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10685,8 +11342,8 @@ export class DemoDataService {
       {
         code: "1200",
         name: "Résultat de l'exercice",
-        account_type: "Equity",
-        account_subtype: "Current Year Earnings",
+        account_type: "equity",
+        account_subtype: "current_year_earnings",
         is_group: false,
         is_active: true,
         currency_code: "MAD",
@@ -10787,7 +11444,6 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "Bureau Veritas Maroc",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
@@ -10823,7 +11479,6 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "Ecocert Maroc",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
@@ -10853,11 +11508,10 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "SGS Maroc",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "ISO 22000",
+        certification_type: "ISO22000",
         certification_number: "ISO22000-MA-2024-12345",
         issued_date: nineMonthsAgo.toISOString().split("T")[0],
         expiry_date: twoYearsFromNow.toISOString().split("T")[0],
@@ -10885,11 +11539,10 @@ export class DemoDataService {
           audit_frequency: "Annual surveillance, 3-year recertification",
           auditor_name: "Bureau Veritas Certification",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "Rainforest Alliance",
+        certification_type: "Rainforest",
         certification_number: "RA-MA-2023-56789",
         issued_date: eighteenMonthsAgo.toISOString().split("T")[0],
         expiry_date: sixMonthsFromNow.toISOString().split("T")[0],
@@ -10911,11 +11564,10 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "SCS Global Services",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "Fairtrade",
+        certification_type: "FairTrade",
         certification_number: "FLO-MA-2024-34567",
         issued_date: new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000)
           .toISOString()
@@ -10947,11 +11599,10 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "FLOCERT",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "Maroc Label",
+        certification_type: "Maroc_Label",
         certification_number: "ML-BERKANE-2024-001",
         issued_date: new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000)
           .toISOString()
@@ -10977,11 +11628,10 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "ONSSA Inspection",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "BRC Food Safety",
+        certification_type: "BRC_Food_Safety",
         certification_number: "BRC-MA-2022-78901",
         issued_date: twoYearsAgo.toISOString().split("T")[0],
         expiry_date: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
@@ -11004,13 +11654,14 @@ export class DemoDataService {
           audit_frequency: "Annual",
           auditor_name: "Intertek Testing Services",
         },
-        created_by: userId,
       },
       {
         organization_id: organizationId,
-        certification_type: "IFS Food",
+        certification_type: "IFS_Food",
         certification_number: "IFS-APP-2024-001",
-        issued_date: null,
+        issued_date: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
         expiry_date: null,
         status: "pending",
         issuing_body: "IFS Management GmbH",
@@ -11032,7 +11683,6 @@ export class DemoDataService {
           audit_frequency: "Initial certification audit planned",
           auditor_name: "TÜV SÜD",
         },
-        created_by: userId,
       },
     ];
 
@@ -11051,10 +11701,120 @@ export class DemoDataService {
     return data || [];
   }
 
+  private async createDemoCorrectiveActions(
+    organizationId: string,
+    certifications: any[],
+    complianceChecks: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!complianceChecks?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+
+    const haccpCert = certifications.find(
+      (c) => c.certification_type === "HACCP",
+    );
+    const globalGapCert = certifications.find(
+      (c) => c.certification_type === "GlobalGAP",
+    );
+
+    const haccpQualityCheck = complianceChecks.find(
+      (cc) =>
+        cc.certification_id === haccpCert?.id &&
+        cc.check_type === "quality_control",
+    );
+    const globalGapRecordCheck = complianceChecks.find(
+      (cc) =>
+        cc.certification_id === globalGapCert?.id &&
+        cc.check_type === "record_keeping",
+    );
+
+    const actions: any[] = [];
+
+    if (haccpQualityCheck) {
+      actions.push(
+        {
+          organization_id: organizationId,
+          certification_id: haccpCert.id,
+          compliance_check_id: haccpQualityCheck.id,
+          finding_description: "Procédures de nettoyage non documentées",
+          requirement_code: "HACCP.3.1",
+          priority: "high",
+          action_description:
+            "Documenter toutes les procédures de nettoyage selon les normes HACCP",
+          responsible_person: "Responsable qualité",
+          due_date: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          status: "resolved",
+          resolution_notes:
+            "Toutes les procédures de nettoyage ont été documentées et validées",
+          resolved_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          created_by: userId,
+          updated_by: userId,
+        },
+        {
+          organization_id: organizationId,
+          certification_id: haccpCert.id,
+          compliance_check_id: haccpQualityCheck.id,
+          finding_description: "Formation du personnel à renouveler",
+          requirement_code: "HACCP.4.2",
+          priority: "medium",
+          action_description: "Organiser formation HACCP pour le personnel",
+          responsible_person: "RH",
+          due_date: new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          status: "in_progress",
+          notes: "Formation planifiée pour le mois prochain",
+          created_by: userId,
+          updated_by: userId,
+        },
+      );
+    }
+
+    if (globalGapRecordCheck) {
+      actions.push(
+        {
+          organization_id: organizationId,
+          certification_id: globalGapCert.id,
+          compliance_check_id: globalGapRecordCheck.id,
+          finding_description: "Registres de traçabilité à mettre à jour",
+          requirement_code: "AF.1.2.1",
+          priority: "medium",
+          action_description: "Mettre à jour les registres de traçabilité pour toutes les parcelles",
+          responsible_person: "Gestionnaire de ferme",
+          due_date: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0],
+          status: "open",
+          created_by: userId,
+          updated_by: userId,
+        },
+      );
+    }
+
+    if (actions.length === 0) return [];
+
+    const { data, error } = await client
+      .from("corrective_actions")
+      .insert(actions)
+      .select();
+
+    if (error) {
+      this.logger.error(
+        `Failed to create demo corrective actions: ${error.message}`,
+      );
+      return [];
+    }
+
+    return data || [];
+  }
+
   private async createDemoComplianceChecks(
     organizationId: string,
     certifications: any[],
-    userId: string,
   ): Promise<any[]> {
     if (!certifications?.length) return [];
 
@@ -11091,7 +11851,6 @@ export class DemoDataService {
           corrective_actions: [],
           auditor_name: "Jean-Pierre Audit",
           score: 95,
-          created_by: userId,
         },
         {
           organization_id: organizationId,
@@ -11109,7 +11868,6 @@ export class DemoDataService {
           corrective_actions: [],
           auditor_name: "Ahmed Contrôleur",
           score: 92,
-          created_by: userId,
         },
         {
           organization_id: organizationId,
@@ -11136,7 +11894,6 @@ export class DemoDataService {
           ],
           auditor_name: "Ahmed Contrôleur",
           score: 78,
-          created_by: userId,
         },
       );
     }
@@ -11153,7 +11910,6 @@ export class DemoDataService {
           corrective_actions: [],
           auditor_name: "Marie Bio-Contrôle",
           score: 98,
-          created_by: userId,
         },
         {
           organization_id: organizationId,
@@ -11165,7 +11921,6 @@ export class DemoDataService {
           corrective_actions: [],
           auditor_name: "Marie Bio-Contrôle",
           score: 100,
-          created_by: userId,
         },
       );
     }
@@ -11211,7 +11966,6 @@ export class DemoDataService {
           ],
           auditor_name: "Pierre Qualité",
           score: 65,
-          created_by: userId,
         },
         {
           organization_id: organizationId,
@@ -11222,7 +11976,6 @@ export class DemoDataService {
           findings: [],
           corrective_actions: [],
           auditor_name: "Pierre Qualité",
-          created_by: userId,
         },
       );
     }
@@ -11267,6 +12020,17 @@ export class DemoDataService {
     const agrumesCampaign = campaigns?.find((c) => c.name?.includes("Agrumes") && c.status === "active");
     const olivesCampaign = campaigns?.find((c) => c.name?.includes("Olives") && c.status !== "completed" && c.status !== "cancelled");
     const tomatoesCampaign = campaigns?.find((c) => c.name?.includes("Tomates Été"));
+    const avocatsCampaign = campaigns?.find((c) => c.name?.includes("Avocats") && c.status !== "completed" && c.status !== "cancelled");
+    const grenadiersCampaign = campaigns?.find((c) => c.name?.includes("Grenadiers") && c.status !== "completed" && c.status !== "cancelled");
+    const tomatesHiverCampaign = campaigns?.find((c) => c.name?.includes("Tomates Hiver"));
+
+    // Previous year campaigns for historical cycles
+    const prevAgrumesCampaign = campaigns?.find((c) => c.name?.includes("Agrumes") && c.name?.includes(`${currentYear - 1}`));
+    const prevOlivesCampaign = campaigns?.find((c) => c.name?.includes("Olives") && c.name?.includes(`${currentYear - 1}`));
+    const prevTomatoesCampaign = campaigns?.find((c) => c.name?.includes("Tomates") && c.name?.includes(`${currentYear - 1}`));
+    const prevMelonsCampaign = campaigns?.find((c) => c.name?.includes("Melons") && c.name?.includes(`${currentYear - 1}`));
+    const twoYearsAgoAgrumesCampaign = campaigns?.find((c) => c.name?.includes("Agrumes") && c.name?.includes(`${currentYear - 2}`));
+    const twoYearsAgoOlivesCampaign = campaigns?.find((c) => c.name?.includes("Olives") && c.name?.includes(`${currentYear - 2}`));
 
     const previousYear = currentYear - 1;
     const twoYearsAgo = currentYear - 2;
@@ -11373,6 +12137,7 @@ export class DemoDataService {
         variety_name: "Roma",
         cycle_code: `TOM-${currentYear + 1}-001`,
         cycle_name: `Campagne Tomates Hiver ${currentYear + 1}`,
+        campaign_id: tomatesHiverCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "hiver",
         land_prep_date: `${currentYear}-10-15`,
@@ -11396,6 +12161,7 @@ export class DemoDataService {
         variety_name: "Hass",
         cycle_code: `AVO-${currentYear}-001`,
         cycle_name: `Cycle Avocats ${currentYear}`,
+        campaign_id: avocatsCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "été",
         land_prep_date: `${currentYear}-01-01`,
@@ -11424,6 +12190,7 @@ export class DemoDataService {
         variety_name: "Wonderful",
         cycle_code: `GRN-${currentYear}-001`,
         cycle_name: `Cycle Grenades ${currentYear}`,
+        campaign_id: grenadiersCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "automne",
         land_prep_date: `${currentYear}-07-01`,
@@ -11482,6 +12249,7 @@ export class DemoDataService {
         variety_name: "Picholine Marocaine",
         cycle_code: `OLV-${previousYear}-001`,
         cycle_name: `Campagne Olives ${previousYear}`,
+        campaign_id: prevOlivesCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "automne",
         land_prep_date: `${previousYear}-08-01`,
@@ -11517,6 +12285,7 @@ export class DemoDataService {
         variety_name: "Clémentine Nules",
         cycle_code: `AGR-${previousYear}-001`,
         cycle_name: `Campagne Agrumes ${previousYear}`,
+        campaign_id: prevAgrumesCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "hiver",
         land_prep_date: `${previousYear}-01-15`,
@@ -11552,6 +12321,7 @@ export class DemoDataService {
         variety_name: "Marmande",
         cycle_code: `TOM-${previousYear}-001`,
         cycle_name: `Campagne Tomates ${previousYear}`,
+        campaign_id: prevTomatoesCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "été",
         land_prep_date: `${previousYear}-03-10`,
@@ -11588,6 +12358,7 @@ export class DemoDataService {
         variety_name: "Charentais",
         cycle_code: `MEL-${previousYear}-001`,
         cycle_name: `Cycle Melons ${previousYear}`,
+        campaign_id: prevMelonsCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "été",
         land_prep_date: `${previousYear}-04-15`,
@@ -11624,6 +12395,7 @@ export class DemoDataService {
         variety_name: "Picholine Marocaine",
         cycle_code: `OLV-${twoYearsAgo}-001`,
         cycle_name: `Campagne Olives ${twoYearsAgo}`,
+        campaign_id: twoYearsAgoOlivesCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "automne",
         land_prep_date: `${twoYearsAgo}-08-01`,
@@ -11659,6 +12431,7 @@ export class DemoDataService {
         variety_name: "Clémentine Nules",
         cycle_code: `AGR-${twoYearsAgo}-001`,
         cycle_name: `Campagne Agrumes ${twoYearsAgo}`,
+        campaign_id: twoYearsAgoAgrumesCampaign?.id || null,
         fiscal_year_id: fiscalYear?.id || null,
         season: "hiver",
         land_prep_date: `${twoYearsAgo}-01-15`,
