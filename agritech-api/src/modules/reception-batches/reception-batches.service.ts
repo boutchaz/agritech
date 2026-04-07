@@ -447,6 +447,13 @@ export class ReceptionBatchesService {
       query = query.eq('quality_grade', filters.quality_grade);
     }
 
+    if (filters?.search) {
+      const searchTerm = `%${filters.search}%`;
+      query = query.or(
+        `batch_code.ilike.${searchTerm},producer_name.ilike.${searchTerm},notes.ilike.${searchTerm}`,
+      );
+    }
+
     const dateFrom = filters?.date_from || filters?.dateFrom;
     const dateTo = filters?.date_to || filters?.dateTo;
 
@@ -483,6 +490,12 @@ export class ReceptionBatchesService {
     if (filters?.status) countQuery.eq('status', filters.status);
     if (filters?.decision) countQuery.eq('decision', filters.decision);
     if (filters?.quality_grade) countQuery.eq('quality_grade', filters.quality_grade);
+    if (filters?.search) {
+      const searchTerm = `%${filters.search}%`;
+      countQuery.or(
+        `batch_code.ilike.${searchTerm},producer_name.ilike.${searchTerm},notes.ilike.${searchTerm}`,
+      );
+    }
     if (dateFrom) countQuery.gte('reception_date', dateFrom);
     if (dateTo) countQuery.lte('reception_date', dateTo);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,6 +6,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 
 import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
+import ReceptionBatchDetail from '@/components/Stock/ReceptionBatchDetail';
 import { Building2, ClipboardCheck } from 'lucide-react';
 import type { ReceptionBatch } from '@/types/reception';
 import { SectionLoader } from '@/components/ui/loader';
@@ -16,15 +17,13 @@ function ReceptionBatchesPage() {
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
-  const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
   const defaultHarvestId = search.harvest_id;
 
-  useEffect(() => {
-    if (defaultHarvestId) {
-      setShowForm(true);
-    }
-  }, [defaultHarvestId]);
+  if (defaultHarvestId && !showForm) {
+    setShowForm(true);
+  }
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);
@@ -76,7 +75,13 @@ function ReceptionBatchesPage() {
         open={showForm}
         onOpenChange={handleFormClose}
         defaultHarvestId={defaultHarvestId}
-        batchToEdit={batchToEdit}
+        batchToEdit={batchToEdit as unknown as Record<string, unknown> | undefined}
+      />
+
+      <ReceptionBatchDetail
+        batchId={selectedBatch?.id ?? null}
+        open={!!selectedBatch}
+        onOpenChange={(open) => { if (!open) setSelectedBatch(null); }}
       />
     </>
   );

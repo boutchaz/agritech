@@ -541,7 +541,7 @@ export default function ReceptionBatchList({
         </div>
       </div>
 
-      {totalPages > 1 && (
+      {totalItems > 0 && (
         <DataTablePagination
           page={tableState.page}
           pageSize={tableState.pageSize}

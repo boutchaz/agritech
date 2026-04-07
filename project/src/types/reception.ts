@@ -96,6 +96,9 @@ export interface ReceptionBatch {
   producer_name?: string | null;
   supplier_id?: string | null;
 
+  // Notes
+  notes?: string | null;
+
   // Status workflow
   status: ReceptionBatchStatus;
 
@@ -104,6 +107,11 @@ export interface ReceptionBatch {
   updated_at?: string;
 
   // Relations (populated via joins)
+  receiver?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
   warehouse?: {
     id: string;
     name: string;
