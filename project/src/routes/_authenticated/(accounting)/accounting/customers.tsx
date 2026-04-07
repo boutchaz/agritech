@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,10 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
-import {
-  Dialog,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { DialogFooter } from '@/components/ui/dialog';
 import {
   useCustomers,
   useCreateCustomer,
@@ -30,6 +27,8 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { PageLoader } from '@/components/ui/loader';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { useServerTableState, DataTablePagination } from '@/components/ui/data-table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 // Zod schema for customer form validation
@@ -72,7 +71,11 @@ function CustomersPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+
+  const tableState = useServerTableState({
+    defaultPageSize: 12,
+  });
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -208,11 +211,40 @@ function CustomersPage() {
     }, {variant: "destructive"});
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm)
-  );
+  const filteredCustomers = useMemo(() => {
+    const q = tableState.search.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(q) ||
+        customer.email?.toLowerCase().includes(q) ||
+        customer.phone?.toLowerCase().includes(q) ||
+        customer.mobile?.toLowerCase().includes(q) ||
+        customer.customer_code?.toLowerCase().includes(q) ||
+        customer.contact_person?.toLowerCase().includes(q),
+    );
+  }, [customers, tableState.search]);
+
+  const { page, pageSize, setPage, setSearch, setPageSize } = tableState;
+
+  const totalItems = filteredCustomers.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages, setPage]);
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, page, pageSize]);
+
+  const formatCustomerType = (customerType: string | null) => {
+    if (!customerType) return '—';
+    return t(`accountingModule.customers.types.${customerType}`, customerType);
+  };
 
   if (!currentOrganization || isLoading) {
     return (
@@ -235,25 +267,47 @@ function CustomersPage() {
       }
     >
       <div className="p-6 space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
-              <Input
-                placeholder={t('accountingModule.customers.searchPlaceholder', 'Search customers by name, email, or phone...')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-md bg-white dark:bg-gray-800"
-              />
+          {/* Header: search, view toggle, add */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <Input
+              placeholder={t('accountingModule.customers.searchPlaceholder', 'Search customers by name, email, or phone...')}
+              value={tableState.search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full max-w-md bg-white dark:bg-gray-800"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <Button
+                  type="button"
+                  variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('card')}
+                  className="rounded-none border-r border-gray-300 dark:border-gray-600"
+                  title={t('accountingModule.customers.viewMode.card', 'Card view')}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="rounded-none"
+                  title={t('accountingModule.customers.viewMode.list', 'List view')}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('accountingModule.customers.addCustomer', 'Add Customer')}
+              </Button>
             </div>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('accountingModule.customers.addCustomer', 'Add Customer')}
-            </Button>
           </div>
 
           {/* Customer List */}
           <div data-tour="billing-customers">
-          {filteredCustomers.length === 0 ? (
+          {customers.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <Building2 className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.noCustomers', 'No customers')}</h3>
@@ -267,72 +321,179 @@ function CustomersPage() {
                 </Button>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCustomers.map((customer) => (
-                <div
-                  key={customer.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{customer.name}</h3>
-                      {customer.customer_code && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Code: {customer.customer_code}</p>
-                      )}
-                      {customer.customer_type && (
-                        <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded">
-                          {customer.customer_type}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => handleOpenDialog(customer)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        onClick={() => handleDelete(customer)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    {customer.contact_person && (
-                      <p className="font-medium">{customer.contact_person}</p>
-                    )}
-                    {customer.email && (
-                      <p className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {customer.email}
-                      </p>
-                    )}
-                    {customer.phone && (
-                      <p className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {customer.phone}
-                      </p>
-                    )}
-                    {(customer.city || customer.country) && (
-                      <p className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        {[customer.city, customer.country].filter(Boolean).join(', ')}
-                      </p>
-                    )}
-                    {customer.payment_terms && (
-                      <p className="text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                        Terms: {customer.payment_terms}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          ) : filteredCustomers.length === 0 ? (
+            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('app.noResults', 'No results found')}</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
+              </p>
             </div>
+          ) : (
+            <>
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedCustomers.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{customer.name}</h3>
+                          {customer.customer_code && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {t('accountingModule.customers.fields.code', 'Customer Code')}: {customer.customer_code}
+                            </p>
+                          )}
+                          {customer.customer_type && (
+                            <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded">
+                              {formatCustomerType(customer.customer_type)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(customer)}
+                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            aria-label={t('app.edit', 'Edit')}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(customer)}
+                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            aria-label={t('app.delete', 'Delete')}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                        {customer.contact_person && (
+                          <p className="font-medium">{customer.contact_person}</p>
+                        )}
+                        {customer.email && (
+                          <p className="flex items-center gap-2 min-w-0">
+                            <Mail className="h-4 w-4 shrink-0" />
+                            <span className="truncate">{customer.email}</span>
+                          </p>
+                        )}
+                        {customer.phone && (
+                          <p className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 shrink-0" />
+                            {customer.phone}
+                          </p>
+                        )}
+                        {(customer.city || customer.country) && (
+                          <p className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            {[customer.city, customer.country].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {customer.payment_terms && (
+                          <p className="text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            {t('accountingModule.customers.fields.paymentTerms', 'Payment terms')}: {customer.payment_terms}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('accountingModule.customers.table.name', 'Name')}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t('accountingModule.customers.table.code', 'Code')}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t('accountingModule.customers.table.type', 'Type')}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t('accountingModule.customers.table.contact', 'Contact')}</TableHead>
+                        <TableHead className="hidden xl:table-cell">{t('accountingModule.customers.table.email', 'Email')}</TableHead>
+                        <TableHead className="hidden lg:table-cell">{t('accountingModule.customers.table.phone', 'Phone')}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t('accountingModule.customers.table.location', 'Location')}</TableHead>
+                        <TableHead className="text-end w-[100px]">{t('accountingModule.customers.table.actions', 'Actions')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedCustomers.map((customer) => (
+                        <TableRow key={customer.id}>
+                          <TableCell className="font-medium text-gray-900 dark:text-gray-100 max-w-[160px]">
+                            <div className="truncate">{customer.name}</div>
+                            <div className="sm:hidden text-xs text-gray-500 mt-0.5 truncate">
+                              {[customer.email, customer.phone].filter(Boolean).join(' · ') || '—'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-gray-600 dark:text-gray-400">
+                            {customer.customer_code || '—'}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-gray-600 dark:text-gray-400">
+                            {formatCustomerType(customer.customer_type)}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-gray-600 dark:text-gray-400 max-w-[140px] truncate">
+                            {customer.contact_person || '—'}
+                          </TableCell>
+                          <TableCell className="hidden xl:table-cell text-gray-600 dark:text-gray-400 max-w-[180px] truncate">
+                            {customer.email || '—'}
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                            {customer.phone || customer.mobile || '—'}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell text-gray-600 dark:text-gray-400 max-w-[160px] truncate">
+                            {[customer.city, customer.country].filter(Boolean).join(', ') || '—'}
+                          </TableCell>
+                          <TableCell className="text-end">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenDialog(customer)}
+                                className="h-8 w-8 text-blue-600 dark:text-blue-400"
+                                aria-label={t('app.edit', 'Edit')}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDelete(customer)}
+                                className="h-8 w-8 text-red-600 dark:text-red-400"
+                                aria-label={t('app.delete', 'Delete')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {totalItems > 0 && (
+                <div className="mt-4">
+                  <DataTablePagination
+                    page={page}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    totalPages={totalPages}
+                    onPageChange={setPage}
+                    onPageSizeChange={setPageSize}
+                    pageSizeOptions={[12, 24, 48, 96]}
+                  />
+                </div>
+              )}
+            </>
           )}
           </div>
 

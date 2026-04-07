@@ -2560,6 +2560,21 @@
       "title": "Customers",
       "subtitle": "Manage your customers for sales invoices",
       "searchPlaceholder": "Search customers by name, email, or phone...",
+      "viewMode": {
+        "card": "Card view",
+        "list": "List view"
+      },
+      "noSearchResults": "No customers match your search.",
+      "table": {
+        "name": "Name",
+        "code": "Code",
+        "type": "Type",
+        "contact": "Contact",
+        "email": "Email",
+        "phone": "Phone",
+        "location": "Location",
+        "actions": "Actions"
+      },
       "fields": {
         "name": "Customer Name",
         "code": "Customer Code",

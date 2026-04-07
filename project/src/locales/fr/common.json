@@ -2556,6 +2556,21 @@
       "title": "Clients",
       "subtitle": "Gérez vos clients pour les factures de vente",
       "searchPlaceholder": "Rechercher par nom, email ou téléphone...",
+      "viewMode": {
+        "card": "Vue cartes",
+        "list": "Vue liste"
+      },
+      "noSearchResults": "Aucun client ne correspond à votre recherche.",
+      "table": {
+        "name": "Nom",
+        "code": "Code",
+        "type": "Type",
+        "contact": "Contact",
+        "email": "Email",
+        "phone": "Téléphone",
+        "location": "Localisation",
+        "actions": "Actions"
+      },
       "fields": {
         "name": "Nom du client",
         "code": "Code client",
