@@ -4172,6 +4172,35 @@
         "quality": "Quality",
         "destination": "Destination",
         "status": "Status"
+      },
+      "viewMode": {
+        "card": "Card view",
+        "table": "Table view"
+      },
+      "table": {
+        "date": "Date",
+        "crop": "Crop",
+        "parcel": "Parcel",
+        "quantity": "Quantity",
+        "quality": "Quality",
+        "status": "Status",
+        "destination": "Destination",
+        "revenue": "Revenue",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetails": "View details",
+        "createReception": "Create Reception Batch"
+      },
+      "unspecifiedCrop": "Unspecified crop",
+      "estimated": "estimated",
+      "destination": "Destination",
+      "intendedFor": {
+        "market": "Market",
+        "storage": "Storage",
+        "processing": "Processing",
+        "export": "Export",
+        "direct_client": "Direct Client"
       }
     },
     "intelligence": {

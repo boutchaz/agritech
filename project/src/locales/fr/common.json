@@ -3991,6 +3991,35 @@
         "quality": "Qualité",
         "destination": "Destination",
         "status": "Statut"
+      },
+      "viewMode": {
+        "card": "Vue cartes",
+        "table": "Vue tableau"
+      },
+      "table": {
+        "date": "Date",
+        "crop": "Culture",
+        "parcel": "Parcelle",
+        "quantity": "Quantité",
+        "quality": "Qualité",
+        "status": "Statut",
+        "destination": "Destination",
+        "revenue": "Revenu",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetails": "Voir les détails",
+        "createReception": "Créer un lot de réception"
+      },
+      "unspecifiedCrop": "Culture non spécifiée",
+      "estimated": "estimé",
+      "destination": "Destination",
+      "intendedFor": {
+        "market": "Marché",
+        "storage": "Stockage",
+        "processing": "Transformation",
+        "export": "Export",
+        "direct_client": "Client direct"
       }
     },
     "intelligence": {

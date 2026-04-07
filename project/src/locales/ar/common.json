@@ -3412,6 +3412,35 @@
         "quality": "الجودة",
         "destination": "الوجهة",
         "status": "الحالة"
+      },
+      "viewMode": {
+        "card": "عرض البطاقات",
+        "table": "عرض الجدول"
+      },
+      "table": {
+        "date": "التاريخ",
+        "crop": "المحصول",
+        "parcel": "القطعة",
+        "quantity": "الكمية",
+        "quality": "الجودة",
+        "status": "الحالة",
+        "destination": "الوجهة",
+        "revenue": "الإيرادات",
+        "actions": "الإجراءات"
+      },
+      "actions": {
+        "viewDetails": "عرض التفاصيل",
+        "createReception": "إنشاء دفعة استلام"
+      },
+      "unspecifiedCrop": "محصول غير محدد",
+      "estimated": "تقديري",
+      "destination": "الوجهة",
+      "intendedFor": {
+        "market": "السوق",
+        "storage": "التخزين",
+        "processing": "التحويل",
+        "export": "التصدير",
+        "direct_client": "عميل مباشر"
       }
     },
     "intelligence": {

@@ -5,11 +5,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Package, Plus, Filter, Download, Building2, Loader2, Search } from 'lucide-react';
+import { Package, Plus, Filter, Download, Building2, Loader2, Search, LayoutGrid, List } from 'lucide-react';
 import { usePaginatedHarvests, useHarvests, useHarvestStatistics, useDeleteHarvest } from '@/hooks/useHarvests';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import HarvestForm from '@/components/Harvests/HarvestForm';
 import HarvestCard from '@/components/Harvests/HarvestCard';
+import HarvestTable from '@/components/Harvests/HarvestTable';
 import HarvestDetailsModal from '@/components/Harvests/HarvestDetailsModal';
 import HarvestStatistics from '@/components/Harvests/HarvestStatistics';
 import { PageLoader } from '@/components/ui/loader';
@@ -37,6 +38,7 @@ function HarvestsPage() {
   const [selectedHarvest, setSelectedHarvest] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const navigate = useNavigate();
 
   const tableState = useServerTableState({
@@ -217,6 +219,28 @@ function HarvestsPage() {
               <option value="sold">{t('harvests.statuses.sold')}</option>
               <option value="spoiled">{t('harvests.statuses.spoiled')}</option>
             </select>
+            
+            {/* View Toggle */}
+            <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+              <Button
+                variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('card')}
+                className="rounded-none border-r border-gray-300 dark:border-gray-600"
+                title={t('harvests.viewMode.card', 'Card view')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'table' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="rounded-none"
+                title={t('harvests.viewMode.table', 'Table view')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -245,18 +269,28 @@ function HarvestsPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="harvest-list">
-              {harvests.map(harvest => (
-                <HarvestCard
-                  key={harvest.id}
-                  harvest={harvest}
-                  onEdit={handleEditHarvest}
-                  onDelete={handleDeleteHarvest}
-                  onViewDetails={handleViewDetails}
-                  onCreateReception={handleCreateReception}
-                />
-              ))}
-            </div>
+            {viewMode === 'card' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" data-tour="harvest-list">
+                {harvests.map(harvest => (
+                  <HarvestCard
+                    key={harvest.id}
+                    harvest={harvest}
+                    onEdit={handleEditHarvest}
+                    onDelete={handleDeleteHarvest}
+                    onViewDetails={handleViewDetails}
+                    onCreateReception={handleCreateReception}
+                  />
+                ))}
+              </div>
+            ) : (
+              <HarvestTable
+                harvests={harvests}
+                onEdit={handleEditHarvest}
+                onDelete={handleDeleteHarvest}
+                onViewDetails={handleViewDetails}
+                onCreateReception={handleCreateReception}
+              />
+            )}
 
             {totalPages > 1 && (
               <div className="mt-6">
