@@ -5,20 +5,29 @@ from datetime import date
 import pytest
 
 from app.services.calibration.referential_utils import (
+    clear_gdd_referential_cache,
     cycle_year_for_date,
     filter_points_to_cycle,
     french_month_to_num,
     get_cycle_months_from_stades_bbch,
+    get_gdd_tbase_tupper,
     get_index_key_from_referential,
+    get_phase_boundaries_from_reference,
     get_phenology_periods_from_stades_bbch,
     get_satellite_thresholds_from_referential,
     group_points_by_cycle_year,
+    parse_legacy_rendement_key_to_half_open,
+    parse_olive_stades_bbch_gdd_context,
+    span_for_rendement_key,
 )
+from app.services.calibration.types import MaturityPhase
 
 
 def test_french_month_to_num() -> None:
     assert french_month_to_num("Dec") == 12
     assert french_month_to_num("Jan") == 1
+    assert french_month_to_num("Feb") == 2
+    assert french_month_to_num("Jun") == 6
     assert french_month_to_num("Fev") == 2
     assert french_month_to_num("Mar") == 3
     assert french_month_to_num("Avr") == 4
@@ -145,3 +154,78 @@ def test_group_points_by_cycle_year() -> None:
     assert 2025 in grouped
     assert len(grouped[2024]) == 4  # Dec23, Jan24, Jun24, Nov24
     assert len(grouped[2025]) == 1  # Dec24
+
+
+def test_get_gdd_tbase_tupper_from_disk_agrumes() -> None:
+    clear_gdd_referential_cache()
+    tb, tu = get_gdd_tbase_tupper("agrumes", None)
+    assert tb == 13.0
+    assert tu == 36.0
+
+
+def test_get_gdd_tbase_tupper_embedded_reference_overrides_file() -> None:
+    ref = {"gdd": {"tbase_c": 11.0, "plafond_c": 34.0}}
+    tb, tu = get_gdd_tbase_tupper("agrumes", ref)
+    assert tb == 11.0
+    assert tu == 34.0
+
+
+def test_get_gdd_tbase_tupper_unknown_crop() -> None:
+    assert get_gdd_tbase_tupper("ble", None) == (None, None)
+
+
+def test_parse_olive_stades_bbch_gdd_context_baseline_and_caps() -> None:
+    ref = {
+        "stades_bbch": [
+            {
+                "code": "00",
+                "nom": "Dormance",
+                "mois": ["Dec", "Jan"],
+                "gdd_cumul": [0, 30],
+            },
+            {
+                "code": "09",
+                "nom": "Feuilles",
+                "mois": ["Mar"],
+                "gdd_cumul": [0, 15],
+            },
+        ],
+    }
+    ctx = parse_olive_stades_bbch_gdd_context(ref)
+    assert ctx is not None
+    assert ctx.baseline_months == frozenset({12, 1})
+    assert 3 in ctx.allowed_gdd_months
+    assert ctx.month_max_gdd[3] == 15
+
+
+def test_parse_olive_stades_bbch_gdd_context_missing_returns_none() -> None:
+    assert parse_olive_stades_bbch_gdd_context({}) is None
+    assert parse_olive_stades_bbch_gdd_context({"stades_bbch": []}) is None
+
+
+def test_get_phase_boundaries_from_reference_defaults() -> None:
+    b = get_phase_boundaries_from_reference({})
+    assert b[MaturityPhase.JUVENILE] == (0, 5)
+    assert b[MaturityPhase.SENESCENCE] == (60, 200)
+
+
+def test_get_phase_boundaries_from_reference_partial_override() -> None:
+    b = get_phase_boundaries_from_reference(
+        {
+            "phases_maturite_ans": {
+                "juvenile": [0, 7],
+                "entree_production": [7, 12],
+            }
+        }
+    )
+    assert b[MaturityPhase.JUVENILE] == (0, 7)
+    assert b[MaturityPhase.ENTREE_PRODUCTION] == (7, 12)
+    assert b[MaturityPhase.PLEINE_PRODUCTION] == (10, 40)
+
+
+def test_parse_legacy_rendement_key_and_phase_span() -> None:
+    assert parse_legacy_rendement_key_to_half_open("6-10_ans") == (6, 11)
+    assert parse_legacy_rendement_key_to_half_open("ans_3_5") == (3, 6)
+    boundaries = get_phase_boundaries_from_reference({})
+    assert span_for_rendement_key("pleine_production", boundaries) == (10, 40)
+    assert span_for_rendement_key("21-40_ans", boundaries) == (21, 41)

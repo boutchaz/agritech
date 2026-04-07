@@ -299,7 +299,10 @@
       "plateauStart": "Plateau Start",
       "declineStart": "Decline Start",
       "dormancyEntry": "Dormancy Entry",
-      "pending": "Pending"
+      "pending": "Pending",
+      "phenologyCampaignYear": "Campaign year",
+      "phenologyCampaignYearHint": "Years with detected phenology and satellite coverage (from planting year when set).",
+      "phenologyMeanAcrossYears": "Average calendar (multi-year)"
     },
     "level5": {
       "title": "5. Data Quality — Audit",

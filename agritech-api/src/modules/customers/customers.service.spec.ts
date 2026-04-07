@@ -150,6 +150,17 @@ describe('CustomersService', () => {
 
       expect(countBuilder.eq).toHaveBeenCalledWith('is_active', true);
     });
+
+    it('should apply search across name, email, phone, mobile, contact_person', async () => {
+      const { countBuilder, dataBuilder } = setupPaginateMock([MOCK_CUSTOMERS[0]], 1);
+
+      await service.findAll(TEST_IDS.organization, { search: 'test' } as any);
+
+      const expectedOr =
+        'name.ilike.%test%,email.ilike.%test%,phone.ilike.%test%,mobile.ilike.%test%,contact_person.ilike.%test%';
+      expect(countBuilder.or).toHaveBeenCalledWith(expectedOr);
+      expect(dataBuilder.or).toHaveBeenCalledWith(expectedOr);
+    });
   });
 
   // ============================================================

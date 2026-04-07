@@ -168,7 +168,7 @@ export class QualityControlService {
     }
 
     const { error } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .delete()
       .eq('id', id)
       .eq('organization_id', organizationId);
@@ -191,7 +191,7 @@ export class QualityControlService {
     }
 
     const { data, error } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .update({
         status,
         updated_by: userId,
@@ -242,7 +242,7 @@ export class QualityControlService {
 
     // Get total count by type
     const { data: byType, error: typeError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('type')
       .eq('organization_id', organizationId);
 
@@ -251,14 +251,14 @@ export class QualityControlService {
       throw typeError;
     }
 
-    const typeCounts = byType.reduce((acc, inspeection) => {
-      acc[inspeection.type] = (acc[inspeection.type] || 0) + 1;
+    const typeCounts = (byType || []).reduce((acc, inspection) => {
+      acc[inspection.type] = (acc[inspection.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Get total count by status
     const { data: byStatus, error: statusError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('status')
       .eq('organization_id', organizationId);
 
@@ -267,14 +267,14 @@ export class QualityControlService {
       throw statusError;
     }
 
-    const statusCounts = byStatus.reduce((acc, inspeection) => {
-      acc[inspeection.status] = (acc[inspeection.status] || 0) + 1;
+    const statusCounts = (byStatus || []).reduce((acc, inspection) => {
+      acc[inspection.status] = (acc[inspection.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Get average score
     const { data: scores, error: scoreError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('overall_score')
       .eq('organization_id', organizationId);
 
@@ -283,13 +283,13 @@ export class QualityControlService {
       throw scoreError;
     }
 
-    const validScores = scores.filter(s => s.overall_score !== null);
+    const validScores = (scores || []).filter(s => s.overall_score !== null);
     const averageScore = validScores.length > 0
       ? validScores.reduce((sum, s) => sum + (s.overall_score || 0), 0) / validScores.length
       : 0;
 
     return {
-      total: byType.length,
+      total: (byType || []).length,
       averageScore: Math.round(averageScore * 100) / 100,
       byType: typeCounts,
       byStatus: statusCounts,

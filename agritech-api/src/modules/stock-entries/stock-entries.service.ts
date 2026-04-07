@@ -329,7 +329,7 @@ export class StockEntriesService {
       );
 
       if (entryResult.rows.length === 0) {
-        throw new BadRequestException('Stock entry not found');
+        throw new NotFoundException('Stock entry not found');
       }
 
       const stockEntry = entryResult.rows[0];
@@ -1519,6 +1519,9 @@ export class StockEntriesService {
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116' || error.message?.toLowerCase().includes('no rows')) {
+        throw new NotFoundException('Opening stock balance not found');
+      }
       throw new BadRequestException(`Failed to update opening stock balance: ${error.message}`);
     }
 

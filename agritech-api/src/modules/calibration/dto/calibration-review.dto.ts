@@ -118,6 +118,14 @@ export interface Level3Biophysical {
 
 // === Level 4: Temporelles (EST-CE FIABLE) ===
 
+export interface PhenologyYearStages {
+  dormancy_exit: string;
+  peak: string;
+  plateau_start: string;
+  decline_start: string;
+  dormancy_entry: string;
+}
+
 export interface Level4Temporal {
   phenology_timeline: {
     dormancy_exit: string;
@@ -126,6 +134,8 @@ export interface Level4Temporal {
     decline_start: string;
     dormancy_entry: string;
     inter_annual_variability: Record<string, number>;
+    /** Cycle year → dates (matches calibration step4.yearly_stages) */
+    yearly_stages?: Record<string, PhenologyYearStages>;
   };
   calibration_history: Array<{
     id: string;
@@ -201,6 +211,9 @@ export interface CalibrationReviewView {
   generated_at: string;
   schema_version: "calibration-review/v1";
 
+  /** Parcel planting year when known — filters phenology year picker */
+  planting_year?: number | null;
+
   /** Raw CalibrationOutput (step1-8) — available for export and expert */
   output: Record<string, unknown>;
 
@@ -233,6 +246,8 @@ export interface CalibrationSnapshotInput {
   /** Current parcel phase from state machine */
   parcel_phase: string;
   organization_id: string;
+  /** From parcels.planting_year — phenology year list filter */
+  planting_year?: number | null;
   /** Calibration history for this parcel */
   calibration_history: Array<{
     id: string;

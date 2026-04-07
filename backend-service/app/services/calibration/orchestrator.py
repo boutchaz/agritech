@@ -20,7 +20,7 @@ from .step1_satellite_extraction import (
 from .step2_weather_extraction import extract_weather_history
 from .step3_percentile_calculation import calculate_percentiles
 from .step4_phenology_detection import detect_phenology
-from .gdd_service import TBASE_BY_CROP
+from .referential_utils import get_gdd_tbase_tupper
 from .types import (
     CalibrationInput,
     CalibrationMetadata,
@@ -167,6 +167,7 @@ def run_calibration_pipeline(
     adjustment = get_threshold_adjustment(
         maturity_phase,
         planting_year=calibration_input.planting_year,
+        reference_data=calibration_input.reference_data,
     )
 
     step1 = extract_satellite_history(
@@ -176,10 +177,11 @@ def run_calibration_pipeline(
         storage=storage,
     )
 
-    from .gdd_service import TUPPER_BY_CROP
-
-    tbase = TBASE_BY_CROP.get(calibration_input.crop_type, 10.0)
-    tupper = TUPPER_BY_CROP.get(calibration_input.crop_type)
+    tbase_resolved, tupper = get_gdd_tbase_tupper(
+        calibration_input.crop_type,
+        calibration_input.reference_data,
+    )
+    tbase = tbase_resolved if tbase_resolved is not None else 10.0
     frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)
     step2 = extract_weather_history(
         weather_data=weather_rows,

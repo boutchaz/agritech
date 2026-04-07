@@ -126,31 +126,97 @@ describe('CalibrationService', () => {
     await expect(service.getLatestCalibration(parcelId, organizationId)).resolves.toBeNull();
   });
 
-  it('startCalibration rejects when parcel is already calibrating', async () => {
+  it('startCalibration recovers stuck calibrating then starts', async () => {
+    let aiPhase = 'calibrating';
+
     const parcelQuery = createMockQueryBuilder();
     parcelQuery.select.mockReturnValue(parcelQuery);
     parcelQuery.eq.mockReturnValue(parcelQuery);
-    parcelQuery.single.mockResolvedValue(
+    parcelQuery.single.mockImplementation(async () =>
       mockQueryResult({
         id: parcelId,
         crop_type: agromindCalibrationFixture.parcel.crop_type,
         planting_system: agromindCalibrationFixture.parcel.system,
         planting_year: 2015,
         variety: 'picholine_marocaine',
-        ai_phase: 'calibrating',
+        ai_phase: aiPhase,
         boundary: parcelBoundary,
+        organization_id: organizationId,
         farms: { organization_id: organizationId },
       }),
     );
 
+    const listQuery = createMockQueryBuilder();
+    listQuery.select.mockReturnValue(listQuery);
+    listQuery.eq.mockReturnValue(listQuery);
+    listQuery.order.mockReturnValue(listQuery);
+    setupThenableMock(listQuery, [
+      {
+        profile_snapshot: { recovery: { previous_ai_phase: 'ready_calibration' } },
+        started_at: new Date().toISOString(),
+      },
+    ]);
+
+    const updateQuery = createMockQueryBuilder();
+    updateQuery.update.mockReturnValue(updateQuery);
+    updateQuery.eq.mockReturnValue(updateQuery);
+    setupThenableMock(updateQuery, null);
+
+    const insertQuery = createMockQueryBuilder();
+    insertQuery.insert.mockReturnValue(insertQuery);
+    insertQuery.select.mockReturnValue(insertQuery);
+    insertQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: 'new-calibration-id',
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        status: 'in_progress',
+        type: 'initial',
+        calibration_version: 'v3',
+        profile_snapshot: {},
+      }),
+    );
+
+    mockStateMachine.transitionPhase.mockImplementation(
+      async (_pid, from: string, to: string) => {
+        if (from === 'calibrating' && to === 'ready_calibration') {
+          aiPhase = 'ready_calibration';
+        }
+        if (from === 'ready_calibration' && to === 'calibrating') {
+          aiPhase = 'calibrating';
+        }
+      },
+    );
+
+    let calibrationsCalls = 0;
     mockClient.from.mockImplementation((table: string) => {
       if (table === 'parcels') return parcelQuery;
+      if (table === 'calibrations') {
+        calibrationsCalls += 1;
+        if (calibrationsCalls === 1) return listQuery;
+        if (calibrationsCalls === 2) return updateQuery;
+        return insertQuery;
+      }
       return createMockQueryBuilder();
     });
 
-    await expect(
-      service.startCalibration(parcelId, organizationId, {}),
-    ).rejects.toThrow('already in progress');
+    const result = await service.startCalibration(parcelId, organizationId, {}, {
+      skipReadinessCheck: true,
+    });
+
+    expect(result.status).toBe('in_progress');
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'calibrating',
+      'ready_calibration',
+      organizationId,
+    );
+    expect(mockStateMachine.transitionPhase).toHaveBeenCalledWith(
+      parcelId,
+      'ready_calibration',
+      'calibrating',
+      organizationId,
+    );
   });
 
   it('startCalibration restores the previous parcel phase when calibration creation fails', async () => {

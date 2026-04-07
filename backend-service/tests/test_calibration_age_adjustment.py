@@ -19,11 +19,11 @@ def test_25_year_old_picholine_is_pleine_production() -> None:
                 "nom": "Picholine Marocaine",
                 "code": "picholine_marocaine",
                 "rendement_kg_arbre": {
-                    "3-5_ans": [5, 12],
-                    "6-10_ans": [15, 28],
-                    "11-20_ans": [28, 45],
-                    "21-40_ans": [35, 55],
-                    "plus_40_ans": [20, 30],
+                    "juvenile": [5, 12],
+                    "entree_production": [15, 28],
+                    "pleine_production": [28, 45],
+                    "maturite_avancee": [35, 55],
+                    "senescence": [20, 30],
                 },
             }
         ]
@@ -62,11 +62,11 @@ def test_arbosana_declin_classified_as_senescence() -> None:
                 "nom": "Arbosana",
                 "code": "arbosana",
                 "rendement_kg_arbre": {
-                    "3-5_ans": [8, 16],
-                    "6-10_ans": [18, 30],
-                    "11-20_ans": [25, 40],
-                    "21-40_ans": [22, 34],
-                    "plus_40_ans": "declin",
+                    "juvenile": [8, 16],
+                    "entree_production": [18, 30],
+                    "pleine_production": [25, 40],
+                    "maturite_avancee": "declin",
+                    "senescence": [22, 34],
                 },
             }
         ]

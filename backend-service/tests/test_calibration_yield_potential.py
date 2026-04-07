@@ -19,10 +19,9 @@ def test_step6_uses_reference_bracket_by_age() -> None:
                     "nom": "Picholine Marocaine",
                     "code": "picholine_marocaine",
                     "rendement_kg_arbre": {
-                        "3-5_ans": [5, 12],
-                        "6-10_ans": [15, 28],
-                        "11-20_ans": [28, 45],
-                        "21-40_ans": [35, 55],
+                        "juvenile": [5, 12],
+                        "entree_production": [15, 28],
+                        "pleine_production": [35, 55],
                     },
                 }
             ]
@@ -32,7 +31,7 @@ def test_step6_uses_reference_bracket_by_age() -> None:
         current_year=2026,
     )
 
-    assert output.yield_potential.reference_bracket == "21-40_ans"
+    assert output.yield_potential.reference_bracket == "pleine_production"
     assert output.yield_potential.minimum == 35
     assert output.yield_potential.maximum == 55
 
@@ -48,7 +47,7 @@ def test_step6_combines_reference_with_history() -> None:
                     "nom": "Picholine Marocaine",
                     "code": "picholine_marocaine",
                     "rendement_kg_arbre": {
-                        "21-40_ans": [35, 55],
+                        "pleine_production": [35, 55],
                     },
                 }
             ]

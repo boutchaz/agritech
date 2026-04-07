@@ -2,7 +2,47 @@
 
 from __future__ import annotations
 
+import json
+import os
+import re
+from dataclasses import dataclass
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
+
+from .types import MaturityPhase
+
+# Crop type (API / calibration_input) → referentials/DATA_*.json
+CROP_TYPE_TO_REFERENTIAL_JSON: dict[str, str] = {
+    "olivier": "DATA_OLIVIER.json",
+    "agrumes": "DATA_AGRUMES.json",
+    "avocatier": "DATA_AVOCATIER.json",
+    "palmier_dattier": "DATA_PALMIER_DATTIER.json",
+}
+
+# Used when referential file is missing or gdd block incomplete (e.g. minimal deploy).
+FALLBACK_GDD_TBASE: dict[str, float] = {
+    "olivier": 7.5,
+    "agrumes": 13.0,
+    "avocatier": 10.0,
+    "palmier_dattier": 18.0,
+}
+
+FALLBACK_GDD_TUPPER: dict[str, float] = {
+    "olivier": 30.0,
+    "agrumes": 36.0,
+    "avocatier": 33.0,
+    "palmier_dattier": 45.0,
+}
+
+# Default phenology period months when no referential stades_bbch is available.
+# Used by both step3 (percentile calculation) and step4 (phenology detection).
+DEFAULT_PERIODS: dict[str, set[int]] = {
+    "dormancy": {12, 1, 2},
+    "growth": {3, 4, 5},
+    "flowering": {6, 7},
+    "maturation": {8, 9, 10, 11},
+}
 
 # French month codes in referential (Dec, Jan, Fev, ...) -> month number 1-12
 FRENCH_MONTH_TO_NUM: dict[str, int] = {
@@ -21,11 +61,126 @@ FRENCH_MONTH_TO_NUM: dict[str, int] = {
     "dec": 12,
 }
 
+# English abbreviations used in some referential JSON (e.g. Feb, Jun).
+_EXTRA_MONTH_CODES: dict[str, int] = {
+    "feb": 2,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+}
+
 
 def french_month_to_num(code: str) -> int:
-    """Convert referential French month code to 1-12. Case-insensitive."""
+    """Convert referential month code (FR or EN) to 1-12. Case-insensitive."""
     normalized = code.strip().lower() if isinstance(code, str) else ""
-    return FRENCH_MONTH_TO_NUM.get(normalized, 1)
+    if normalized in FRENCH_MONTH_TO_NUM:
+        return FRENCH_MONTH_TO_NUM[normalized]
+    if normalized in _EXTRA_MONTH_CODES:
+        return _EXTRA_MONTH_CODES[normalized]
+    return 1
+
+
+def _months_from_stade_mois(mois: Any) -> set[int]:
+    if isinstance(mois, list):
+        return {french_month_to_num(str(m)) for m in mois if m is not None}
+    if isinstance(mois, str):
+        return {french_month_to_num(mois)}
+    return set()
+
+
+def _normalize_bbch_code(code: Any) -> str | None:
+    if isinstance(code, int):
+        return f"{code:02d}"
+    if isinstance(code, str):
+        s = code.strip()
+        if s.isdigit():
+            return f"{int(s):02d}"
+        return s
+    return None
+
+
+def _parse_stage_gdd_interval(stage: dict[str, Any]) -> tuple[float, float] | None:
+    raw = stage.get("gdd_cumul")
+    if isinstance(raw, (int, float)):
+        x = float(raw)
+        return (x, x)
+    if (
+        isinstance(raw, list)
+        and len(raw) == 2
+        and all(isinstance(v, (int, float)) for v in raw)
+    ):
+        return (float(raw[0]), float(raw[1]))
+    return None
+
+
+@dataclass(frozen=True)
+class OliveStadesBbchGddContext:
+    """Olive GDD precompute driven by ``stades_bbch`` (see :func:`parse_olive_stades_bbch_gdd_context`)."""
+
+    baseline_months: frozenset[int]
+    allowed_gdd_months: frozenset[int]
+    month_max_gdd: dict[int, float]
+
+
+def parse_olive_stades_bbch_gdd_context(
+    reference_data: dict[str, Any] | None,
+) -> OliveStadesBbchGddContext | None:
+    """Build BBCH-driven rules from ``reference_data['stades_bbch']`` (list order preserved).
+
+    - **baseline_months**: months of stage code ``00`` (dormancy) for NIRv baseline (+20 % gate).
+    - **allowed_gdd_months**: union of all stage ``mois`` — thermal GDD only accrues on these months.
+    - **month_max_gdd**: per calendar month, maximum ``gdd_cumul`` upper bound among stages that
+      include that month — accrual is blocked if season cumulative would exceed that cap (soft
+      alignment with referential BBCH ceilings; no lower bound so early-season carry-over works).
+
+    Returns ``None`` if ``stades_bbch`` is missing or empty (legacy behaviour).
+    """
+    if not reference_data:
+        return None
+    stades = reference_data.get("stades_bbch")
+    if not isinstance(stades, list) or len(stades) == 0:
+        return None
+
+    baseline_months: set[int] = set()
+    allowed: set[int] = set()
+    bands_by_month: dict[int, list[tuple[float, float]]] = {}
+
+    for stage in stades:
+        if not isinstance(stage, dict):
+            continue
+        code = _normalize_bbch_code(stage.get("code"))
+        months = _months_from_stade_mois(stage.get("mois"))
+        if not months:
+            continue
+        allowed |= months
+        if code == "00":
+            baseline_months |= months
+        interval = _parse_stage_gdd_interval(stage)
+        if interval is None:
+            continue
+        lo, hi = interval
+        for m in months:
+            bands_by_month.setdefault(m, []).append((lo, hi))
+
+    if not allowed:
+        return None
+
+    if not baseline_months:
+        baseline_months = {12, 1}
+
+    month_max_gdd: dict[int, float] = {}
+    for m, bands in bands_by_month.items():
+        if bands:
+            month_max_gdd[m] = max(b[1] for b in bands)
+
+    return OliveStadesBbchGddContext(
+        baseline_months=frozenset(baseline_months),
+        allowed_gdd_months=frozenset(allowed),
+        month_max_gdd=month_max_gdd,
+    )
 
 
 def get_cycle_months_from_stades_bbch(
@@ -133,7 +288,9 @@ def get_satellite_thresholds_from_referential(
     alerte = index_seuils.get("alerte")
     result: dict[str, Any] = {}
     if optimal is not None:
-        result["optimal"] = list(optimal) if isinstance(optimal, (list, tuple)) else optimal
+        result["optimal"] = (
+            list(optimal) if isinstance(optimal, (list, tuple)) else optimal
+        )
     if vigilance is not None and isinstance(vigilance, (int, float)):
         result["vigilance"] = float(vigilance)
     if alerte is not None and isinstance(alerte, (int, float)):
@@ -240,7 +397,12 @@ def get_phenology_periods_from_stades_bbch(
         else:
             maturation_months.update(months)
 
-    if not dormancy_months and not growth_months and not flowering_months and not maturation_months:
+    if (
+        not dormancy_months
+        and not growth_months
+        and not flowering_months
+        and not maturation_months
+    ):
         return None
 
     result: dict[str, set[int]] = {}
@@ -275,3 +437,218 @@ def group_points_by_cycle_year(
             continue
         grouped[cy].append(item)
     return dict(grouped)
+
+
+def get_stages_gdd_ranges_from_stades_bbch(
+    reference_data: dict[str, Any],
+) -> dict[str, tuple[float, float]]:
+    """Extract GDD ranges from stades_bbch[].gdd_cumul per BBCH stage code.
+
+    Returns { "00": (0, 30), "65": (900, 1000), ... } mapping stage code
+    to (gdd_min, gdd_max).  Missing or unparseable entries are skipped.
+    """
+    stades = reference_data.get("stades_bbch")
+    if not isinstance(stades, list):
+        return {}
+
+    ranges: dict[str, tuple[float, float]] = {}
+    for stage in stades:
+        if not isinstance(stage, dict):
+            continue
+        code = stage.get("code")
+        if not isinstance(code, str):
+            continue
+        gdd_cumul = stage.get("gdd_cumul")
+        if gdd_cumul is None:
+            continue
+        if isinstance(gdd_cumul, (int, float)):
+            ranges[code] = (float(gdd_cumul), float(gdd_cumul))
+        elif (
+            isinstance(gdd_cumul, list)
+            and len(gdd_cumul) == 2
+            and all(isinstance(v, (int, float)) for v in gdd_cumul)
+        ):
+            ranges[code] = (float(gdd_cumul[0]), float(gdd_cumul[1]))
+    return ranges
+
+
+def _referentials_dir() -> Path | None:
+    """Directory containing DATA_*.json. Override with AGRITECH_REFERENTIALS_DIR."""
+    env = os.environ.get("AGRITECH_REFERENTIALS_DIR", "").strip()
+    if env:
+        p = Path(env).expanduser()
+        return p if p.is_dir() else None
+    # repo_root = parent of backend-service/
+    here = Path(__file__).resolve()
+    candidate = here.parents[4] / "referentials"
+    return candidate if candidate.is_dir() else None
+
+
+def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
+    """Read tbase_c and plafond_c from referential ``gdd`` object."""
+    if not isinstance(gdd, dict):
+        return None, None
+    tbase: float | None = None
+    tupper: float | None = None
+    raw_base = gdd.get("tbase_c")
+    raw_cap = gdd.get("plafond_c")
+    if isinstance(raw_base, (int, float)):
+        tbase = float(raw_base)
+    if isinstance(raw_cap, (int, float)):
+        tupper = float(raw_cap)
+    return tbase, tupper
+
+
+@lru_cache(maxsize=8)
+def _load_gdd_from_referential_file(crop_type: str) -> tuple[float | None, float | None]:
+    """Load ``gdd.tbase_c`` / ``gdd.plafond_c`` from referentials JSON on disk."""
+    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
+    if not filename:
+        return None, None
+    root = _referentials_dir()
+    if root is None:
+        return None, None
+    path = root / filename
+    if not path.is_file():
+        return None, None
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None, None
+    return _parse_gdd_block(data.get("gdd"))
+
+
+def get_gdd_tbase_tupper(
+    crop_type: str,
+    reference_data: dict[str, Any] | None = None,
+) -> tuple[float | None, float | None]:
+    """Resolve GDD base and upper temperature caps for a supported crop.
+
+    Priority: embedded ``reference_data["gdd"]`` → referential JSON on disk →
+    :data:`FALLBACK_GDD_TBASE` / :data:`FALLBACK_GDD_TUPPER`.
+
+    Returns ``(None, None)`` when *crop_type* is not one of the four referential
+    crops (caller should use generic defaults, e.g. tbase 10°C).
+    """
+    if crop_type not in CROP_TYPE_TO_REFERENTIAL_JSON:
+        return None, None
+
+    tbase: float | None = None
+    tupper: float | None = None
+
+    if reference_data is not None:
+        tb, tu = _parse_gdd_block(reference_data.get("gdd"))
+        if tb is not None:
+            tbase = tb
+            tupper = tu if tu is not None else FALLBACK_GDD_TUPPER.get(crop_type)
+
+    if tbase is None:
+        tb, tu = _load_gdd_from_referential_file(crop_type)
+        if tb is not None:
+            tbase = tb
+            if tu is not None:
+                tupper = tu
+            elif tupper is None:
+                tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+        else:
+            tbase = FALLBACK_GDD_TBASE.get(crop_type)
+            tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+    elif tupper is None:
+        tupper = FALLBACK_GDD_TUPPER.get(crop_type)
+
+    return tbase, tupper
+
+
+def clear_gdd_referential_cache() -> None:
+    """Clear LRU cache (for tests that swap referential files)."""
+    _load_gdd_from_referential_file.cache_clear()
+
+
+# --- Maturity phase age spans (half-open: age in [start, end) years) -----------------
+
+DEFAULT_MATURITY_PHASE_BOUNDARIES: dict[MaturityPhase, tuple[int, int]] = {
+    MaturityPhase.JUVENILE: (0, 5),
+    MaturityPhase.ENTREE_PRODUCTION: (5, 10),
+    MaturityPhase.PLEINE_PRODUCTION: (10, 40),
+    MaturityPhase.MATURITE_AVANCEE: (40, 60),
+    MaturityPhase.SENESCENCE: (60, 200),
+}
+
+_MATURITY_PHASE_BY_YIELD_KEY: dict[str, MaturityPhase] = {
+    MaturityPhase.JUVENILE.value: MaturityPhase.JUVENILE,
+    MaturityPhase.ENTREE_PRODUCTION.value: MaturityPhase.ENTREE_PRODUCTION,
+    MaturityPhase.PLEINE_PRODUCTION.value: MaturityPhase.PLEINE_PRODUCTION,
+    MaturityPhase.MATURITE_AVANCEE.value: MaturityPhase.MATURITE_AVANCEE,
+    MaturityPhase.SENESCENCE.value: MaturityPhase.SENESCENCE,
+}
+
+
+def get_phase_boundaries_from_reference(
+    reference_data: dict[str, Any],
+) -> dict[MaturityPhase, tuple[int, int]]:
+    """Load ``phases_maturite_ans`` from referential; merge with defaults for missing phases."""
+    out: dict[MaturityPhase, tuple[int, int]] = dict(DEFAULT_MATURITY_PHASE_BOUNDARIES)
+    raw = reference_data.get("phases_maturite_ans")
+    if not isinstance(raw, dict):
+        return out
+    for key, val in raw.items():
+        phase = _MATURITY_PHASE_BY_YIELD_KEY.get(str(key).strip())
+        if phase is None:
+            continue
+        if isinstance(val, (list, tuple)) and len(val) >= 2:
+            start = int(val[0])
+            end = int(val[1])
+            out[phase] = (start, end)
+    return out
+
+
+def parse_legacy_rendement_key_to_half_open(key: str) -> tuple[int, int] | None:
+    """Map legacy ``rendement_kg_arbre`` keys to half-open age span [lo, hi)."""
+
+    range_match = re.match(r"^(\d+)-(\d+)_ans$", key)
+    if range_match:
+        lo, hi_inclusive = int(range_match.group(1)), int(range_match.group(2))
+        return lo, hi_inclusive + 1
+
+    ans_match = re.match(r"^ans_(\d+)_(\d+)$", key)
+    if ans_match:
+        lo, hi_inclusive = int(ans_match.group(1)), int(ans_match.group(2))
+        return lo, hi_inclusive + 1
+
+    plus_match = re.match(r"^plus_(\d+)_ans$", key)
+    if plus_match:
+        return int(plus_match.group(1)), 200
+
+    ans_plus_match = re.match(r"^ans_(\d+)_plus$", key)
+    if ans_plus_match:
+        return int(ans_plus_match.group(1)), 200
+
+    return None
+
+
+def span_for_rendement_key(
+    key: str,
+    boundaries: dict[MaturityPhase, tuple[int, int]],
+) -> tuple[int, int] | None:
+    """Age span for a ``rendement_kg_arbre`` key (phase name or legacy pattern)."""
+    stripped = key.strip()
+    phase = _MATURITY_PHASE_BY_YIELD_KEY.get(stripped)
+    if phase is not None:
+        return boundaries.get(phase)
+    return parse_legacy_rendement_key_to_half_open(stripped)
+
+
+def iter_yield_curve_age_brackets(
+    yield_by_age: dict[str, Any],
+    boundaries: dict[MaturityPhase, tuple[int, int]],
+) -> list[tuple[int, int, Any]]:
+    """(start, end, value) per yield key, sorted by start (half-open spans)."""
+    rows: list[tuple[int, int, Any]] = []
+    for key, value in yield_by_age.items():
+        span = span_for_rendement_key(str(key), boundaries)
+        if span is None:
+            continue
+        lo, hi = span
+        rows.append((lo, hi, value))
+    return sorted(rows, key=lambda item: (item[0], item[1]))

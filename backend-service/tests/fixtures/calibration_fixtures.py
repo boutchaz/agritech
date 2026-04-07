@@ -115,11 +115,11 @@ def build_crop_reference_fixture() -> dict[str, object]:
                 "nom": "Picholine Marocaine",
                 "code": "picholine_marocaine",
                 "rendement_kg_arbre": {
-                    "3-5_ans": [5, 12],
-                    "6-10_ans": [15, 28],
-                    "11-20_ans": [28, 45],
-                    "21-40_ans": [35, 55],
-                    "plus_40_ans": [20, 30],
+                    "juvenile": [5, 12],
+                    "entree_production": [15, 28],
+                    "pleine_production": [28, 45],
+                    "maturite_avancee": [35, 55],
+                    "senescence": [20, 30],
                 },
             }
         ],

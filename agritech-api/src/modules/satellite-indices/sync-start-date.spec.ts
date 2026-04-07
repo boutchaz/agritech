@@ -9,6 +9,7 @@ import {
   MockSupabaseClient,
   createMockSupabaseClient,
 } from '../../../test/helpers/mock-database.helper';
+import { resolveParcelSyncLookbackStartDate } from './parcel-sync-lookback';
 
 describe('SatelliteCacheService.getParcelSyncStartDate', () => {
   let service: SatelliteCacheService;
@@ -36,14 +37,10 @@ describe('SatelliteCacheService.getParcelSyncStartDate', () => {
     service = module.get<SatelliteCacheService>(SatelliteCacheService);
   });
 
-  const TODAY = new Date().toISOString().split('T')[0];
-
   function mockMaxDateResult(date: string | null) {
     const queryBuilder = createMockQueryBuilder();
     mockClient.from.mockReturnValue(queryBuilder);
 
-    // Override single to return the expected result
-    // The query chain is: from().select().eq().eq().order().limit().single()
     const result = date
       ? { data: { date }, error: null }
       : { data: null, error: { message: 'no rows' } };
@@ -58,11 +55,10 @@ describe('SatelliteCacheService.getParcelSyncStartDate', () => {
       'org-1',
     );
 
-    // Should be 2026-03-27 (one day before last synced date)
     expect(result).toBe('2026-03-27');
   });
 
-  it('returns today - 36 months when no data and planting_year >= 3 years ago', async () => {
+  it('delegates no-data lookback to referential + MAX_LOOKBACK clamp (juvenile)', async () => {
     mockMaxDateResult(null);
 
     const threeYearsAgo = new Date().getFullYear() - 3;
@@ -70,29 +66,47 @@ describe('SatelliteCacheService.getParcelSyncStartDate', () => {
       'parcel-1',
       'org-1',
       threeYearsAgo,
+      null,
     );
 
-    const expected = new Date();
-    expected.setMonth(expected.getMonth() - 36);
-    const expectedStr = expected.toISOString().split('T')[0];
-
-    expect(result).toBe(expectedStr);
+    expect(result).toBe(
+      resolveParcelSyncLookbackStartDate(threeYearsAgo, null),
+    );
   });
 
-  it('returns Jan 1 of planting year when no data and planting_year < 2 years ago', async () => {
+  it('delegates no-data lookback (entree span [5,10): 24 rolling months, clamped)', async () => {
     mockMaxDateResult(null);
 
-    const lastYear = new Date().getFullYear() - 1;
+    const sevenYearsAgo = new Date().getFullYear() - 7;
     const result = await service.getParcelSyncStartDate(
       'parcel-1',
       'org-1',
-      lastYear,
+      sevenYearsAgo,
+      null,
     );
 
-    expect(result).toBe(`${lastYear}-01-01`);
+    expect(result).toBe(
+      resolveParcelSyncLookbackStartDate(sevenYearsAgo, null),
+    );
   });
 
-  it('returns today - 24 months when no data and no planting_year', async () => {
+  it('delegates no-data lookback (pleine: 36 rolling months, clamped)', async () => {
+    mockMaxDateResult(null);
+
+    const fifteenYearsAgo = new Date().getFullYear() - 15;
+    const result = await service.getParcelSyncStartDate(
+      'parcel-1',
+      'org-1',
+      fifteenYearsAgo,
+      null,
+    );
+
+    expect(result).toBe(
+      resolveParcelSyncLookbackStartDate(fifteenYearsAgo, null),
+    );
+  });
+
+  it('delegates no planting_year to 24 months + clamp', async () => {
     mockMaxDateResult(null);
 
     const result = await service.getParcelSyncStartDate(
@@ -101,27 +115,22 @@ describe('SatelliteCacheService.getParcelSyncStartDate', () => {
       null,
     );
 
-    const expected = new Date();
-    expected.setMonth(expected.getMonth() - 24);
-    const expectedStr = expected.toISOString().split('T')[0];
-
-    expect(result).toBe(expectedStr);
+    expect(result).toBe(resolveParcelSyncLookbackStartDate(null, null));
   });
 
-  it('returns today - 24 months when no data and planting_year 2-3 years ago', async () => {
+  it('delegates last-year planting (juvenile) to Jan 1 when within MAX_LOOKBACK', async () => {
     mockMaxDateResult(null);
 
-    const twoYearsAgo = new Date().getFullYear() - 2;
+    const lastYear = new Date().getFullYear() - 1;
     const result = await service.getParcelSyncStartDate(
       'parcel-1',
       'org-1',
-      twoYearsAgo,
+      lastYear,
+      null,
     );
 
-    const expected = new Date();
-    expected.setMonth(expected.getMonth() - 24);
-    const expectedStr = expected.toISOString().split('T')[0];
-
-    expect(result).toBe(expectedStr);
+    expect(result).toBe(
+      resolveParcelSyncLookbackStartDate(lastYear, null),
+    );
   });
 });

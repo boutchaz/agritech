@@ -8,12 +8,14 @@ import {
   Param,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from "@nestjs/swagger";
@@ -27,6 +29,10 @@ import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { AnnualSnoozeDto } from "./dto/annual-snooze.dto";
 import { ResolveAnnualMissingTasksDto } from "./dto/resolve-annual-missing-tasks.dto";
 import { SaveCalibrationDraftDto } from "./dto/save-calibration-draft.dto";
+import {
+  CALIBRATION_HISTORY_DEFAULT_LIMIT,
+  CALIBRATION_HISTORY_MAX_LIMIT,
+} from "./calibration.constants";
 
 @ApiTags("calibration")
 @ApiBearerAuth()
@@ -110,7 +116,13 @@ export class CalibrationController {
 
   @Get("history")
   @ApiOperation({
-    summary: "Get calibration history (last 5 runs) for a parcel",
+    summary: "Get calibration history for a parcel (newest first)",
+  })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: `Max rows (1–${CALIBRATION_HISTORY_MAX_LIMIT}), default ${CALIBRATION_HISTORY_DEFAULT_LIMIT}`,
   })
   @ApiResponse({
     status: 200,
@@ -118,29 +130,53 @@ export class CalibrationController {
   })
   async getCalibrationHistory(
     @Param("parcelId") parcelId: string,
+    @Query("limit") limitParam: string | undefined,
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
+    let limit = CALIBRATION_HISTORY_DEFAULT_LIMIT;
+    if (limitParam !== undefined && limitParam !== "") {
+      const parsed = Number.parseInt(limitParam, 10);
+      if (!Number.isNaN(parsed)) {
+        limit = parsed;
+      }
+    }
     return this.calibrationService.getCalibrationHistory(
       parcelId,
       organizationId,
+      limit,
     );
   }
 
   @Get("history/recalibration")
   @ApiOperation({ summary: "Get partial recalibration history for a parcel" })
+  @ApiQuery({
+    name: "limit",
+    required: false,
+    type: Number,
+    description: `Max rows (1–${CALIBRATION_HISTORY_MAX_LIMIT}), default ${CALIBRATION_HISTORY_DEFAULT_LIMIT}`,
+  })
   @ApiResponse({
     status: 200,
     description: "Partial recalibration history retrieved successfully",
   })
   async getRecalibrationHistory(
     @Param("parcelId") parcelId: string,
+    @Query("limit") limitParam: string | undefined,
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
+    let limit = CALIBRATION_HISTORY_DEFAULT_LIMIT;
+    if (limitParam !== undefined && limitParam !== "") {
+      const parsed = Number.parseInt(limitParam, 10);
+      if (!Number.isNaN(parsed)) {
+        limit = parsed;
+      }
+    }
     return this.calibrationService.getRecalibrationHistory(
       parcelId,
       organizationId,
+      limit,
     );
   }
 
@@ -451,6 +487,7 @@ export class CalibrationController {
   @Delete("draft")
   @ApiOperation({ summary: "Delete calibration wizard draft" })
   @ApiResponse({ status: 200, description: "Draft deleted" })
+  @ApiResponse({ status: 404, description: "Parcel not found" })
   async deleteDraft(
     @Param("parcelId") parcelId: string,
     @Req() req: Request,

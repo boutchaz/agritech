@@ -17,6 +17,7 @@
 # Temporary / scratch files
 temp.txt
 temp/
+/calibration.json
 
 # Dependencies
 node_modules/

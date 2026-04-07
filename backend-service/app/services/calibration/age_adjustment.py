@@ -1,22 +1,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-import re
-from typing import cast
+from typing import Any, cast
 
+from .referential_utils import (
+    DEFAULT_MATURITY_PHASE_BOUNDARIES,
+    get_phase_boundaries_from_reference,
+    iter_yield_curve_age_brackets,
+)
 from .types import MaturityPhase
-
 
 YieldValue = float | int | str | list[float] | tuple[float, float]
 
-
-DEFAULT_PHASE_BOUNDARIES = {
-    MaturityPhase.JUVENILE: (0, 5),
-    MaturityPhase.ENTREE_PRODUCTION: (5, 10),
-    MaturityPhase.PLEINE_PRODUCTION: (10, 40),
-    MaturityPhase.MATURITE_AVANCEE: (40, 60),
-    MaturityPhase.SENESCENCE: (60, 200),
-}
+# Back-compat alias for tests and callers
+DEFAULT_PHASE_BOUNDARIES = DEFAULT_MATURITY_PHASE_BOUNDARIES
 
 DEFAULT_INDEX_MULTIPLIERS = {
     "NDVI": 1.0,
@@ -35,27 +32,6 @@ DEFAULT_INDEX_MULTIPLIERS = {
     "TCARI": 1.0,
     "TCARI_OSAVI": 1.0,
 }
-
-
-def _extract_age_brackets(
-    yield_by_age: dict[str, YieldValue],
-) -> list[tuple[int, int, YieldValue]]:
-    brackets: list[tuple[int, int, YieldValue]] = []
-    for key, value in yield_by_age.items():
-        range_match = re.match(r"^(\d+)-(\d+)_ans$", key)
-        plus_match = re.match(r"^plus_(\d+)_ans$", key)
-
-        if range_match:
-            start = int(range_match.group(1))
-            end = int(range_match.group(2))
-            brackets.append((start, end, value))
-            continue
-
-        if plus_match:
-            start = int(plus_match.group(1))
-            brackets.append((start, 200, value))
-
-    return sorted(brackets, key=lambda item: item[0])
 
 
 def _lookup_variety_yield_curve(
@@ -105,30 +81,39 @@ def determine_maturity_phase(
     resolved_year = current_year if current_year is not None else datetime.now().year
     age = max(0, resolved_year - planting_year)
 
+    boundaries = get_phase_boundaries_from_reference(
+        cast(dict[str, Any], reference_data),
+    )
     yield_curve = _lookup_variety_yield_curve(reference_data, variety)
     if yield_curve:
-        for start, end, value in _extract_age_brackets(yield_curve):
-            if age < start or age > end:
+        for start, end, value in iter_yield_curve_age_brackets(
+            cast(dict[str, Any], yield_curve),
+            boundaries,
+        ):
+            if age < start or age >= end:
                 continue
             if isinstance(value, str) and value in {"declin", "arrachage"}:
                 return MaturityPhase.SENESCENCE
 
-    boundaries = DEFAULT_PHASE_BOUNDARIES
-    for phase, (start, end) in boundaries.items():
+    for phase, (start, end) in sorted(
+        boundaries.items(),
+        key=lambda kv: kv[1][0],
+    ):
         if age >= start and age < end:
             return phase
 
     return MaturityPhase.SENESCENCE
 
 
-def _entree_multiplier(age: int) -> float:
-    start_age = DEFAULT_PHASE_BOUNDARIES[MaturityPhase.ENTREE_PRODUCTION][0]
-    end_age = DEFAULT_PHASE_BOUNDARIES[MaturityPhase.ENTREE_PRODUCTION][1]
-    if age <= start_age:
+def _entree_multiplier(
+    age: int,
+    boundaries: dict[MaturityPhase, tuple[int, int]],
+) -> float:
+    start_age, end_age = boundaries[MaturityPhase.ENTREE_PRODUCTION]
+    if age < start_age:
         return 0.8
     if age >= end_age:
         return 1.0
-
     progress = (age - start_age) / (end_age - start_age)
     return 0.8 + (0.2 * progress)
 
@@ -137,7 +122,11 @@ def get_threshold_adjustment(
     phase: MaturityPhase,
     planting_year: int | None = None,
     current_year: int | None = None,
+    reference_data: dict[str, object] | None = None,
 ) -> dict[str, float]:
+    boundaries = get_phase_boundaries_from_reference(
+        cast(dict[str, Any], reference_data if reference_data is not None else {}),
+    )
     if phase == MaturityPhase.UNKNOWN:
         return DEFAULT_INDEX_MULTIPLIERS.copy()
 
@@ -148,7 +137,7 @@ def get_threshold_adjustment(
             current_year if current_year is not None else datetime.now().year
         )
         age = 0 if planting_year is None else max(0, resolved_year - planting_year)
-        multiplier = _entree_multiplier(age)
+        multiplier = _entree_multiplier(age, boundaries)
     elif phase == MaturityPhase.PLEINE_PRODUCTION:
         multiplier = 1.0
     elif phase == MaturityPhase.MATURITE_AVANCEE:

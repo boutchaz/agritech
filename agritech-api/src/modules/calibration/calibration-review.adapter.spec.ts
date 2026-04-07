@@ -83,6 +83,15 @@ const buildSnapshotInput = (
         decline_start: '2026-07-01',
         dormancy_entry: '2026-10-01',
       },
+      yearly_stages: {
+        '2026': {
+          dormancy_exit: '2026-01-15',
+          peak: '2026-02-20',
+          plateau_start: '2026-03-20',
+          decline_start: '2026-07-01',
+          dormancy_entry: '2026-10-01',
+        },
+      },
       inter_annual_variability_days: { peak: 3 },
     },
     step5: {
@@ -133,6 +142,24 @@ describe('CalibrationReviewAdapter', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  it('transform() maps step4.yearly_stages onto level4 phenology_timeline', () => {
+    const result = adapter.transform(buildSnapshotInput());
+    expect(result.level4_temporal.phenology_timeline.yearly_stages?.['2026']).toEqual({
+      dormancy_exit: '2026-01-15',
+      peak: '2026-02-20',
+      plateau_start: '2026-03-20',
+      decline_start: '2026-07-01',
+      dormancy_entry: '2026-10-01',
+    });
+  });
+
+  it('transform() passes through planting_year from snapshot input', () => {
+    const result = adapter.transform(
+      buildSnapshotInput({ planting_year: 2019 }),
+    );
+    expect(result.planting_year).toBe(2019);
   });
 
   it('transform() with valid step1-8 output returns review view with all levels populated', () => {

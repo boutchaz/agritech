@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import archiver from "archiver";
 import { PassThrough, Readable } from "stream";
 import { DatabaseService } from "../database/database.service";
@@ -7,6 +12,7 @@ import {
   CalibrationReviewView,
   CalibrationSnapshotInput,
 } from "./calibration-review.adapter";
+import { CALIBRATION_HISTORY_DEFAULT_LIMIT } from "./calibration.constants";
 
 type JsonObject = Record<string, unknown>;
 
@@ -52,6 +58,8 @@ export interface CalibrationExportData {
 
 @Injectable()
 export class CalibrationExportService {
+  private readonly logger = new Logger(CalibrationExportService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly calibrationReviewAdapter: CalibrationReviewAdapter,
@@ -90,7 +98,7 @@ export class CalibrationExportService {
       .eq("parcel_id", record.parcel_id)
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(CALIBRATION_HISTORY_DEFAULT_LIMIT);
 
     if (historyError) {
       throw new BadRequestException(
@@ -99,6 +107,25 @@ export class CalibrationExportService {
     }
 
     const history = (historyRows ?? []) as CalibrationHistoryRow[];
+
+    const { data: parcelRow, error: parcelError } = await supabase
+      .from("parcels")
+      .select("planting_year")
+      .eq("id", record.parcel_id)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (parcelError) {
+      this.logger.warn(
+        `Failed to fetch parcel planting_year for export review: ${parcelError.message}`,
+      );
+    }
+
+    const plantingYear =
+      parcelRow && typeof (parcelRow as { planting_year?: unknown }).planting_year === "number"
+        ? (parcelRow as { planting_year: number }).planting_year
+        : null;
+
     const snapshotInput: CalibrationSnapshotInput = {
       calibration_id: record.id,
       parcel_id: record.parcel_id,
@@ -111,6 +138,7 @@ export class CalibrationExportService {
         record.phenology_stage ??
         (typeof output.phase_age === "string" ? output.phase_age : "unknown"),
       organization_id: record.organization_id,
+      planting_year: plantingYear,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,

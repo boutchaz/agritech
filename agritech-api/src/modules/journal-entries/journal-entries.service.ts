@@ -205,6 +205,13 @@ export class JournalEntriesService {
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
+      if (!dto?.entry_date || String(dto.entry_date).trim() === '') {
+        throw new BadRequestException('entry_date is required');
+      }
+      if (!dto.items || !Array.isArray(dto.items) || dto.items.length === 0) {
+        throw new BadRequestException('At least one journal line item is required');
+      }
+
       // Validate double-entry principle
       const totalDebit = dto.items.reduce((sum, item) => sum + (item.debit || 0), 0);
       const totalCredit = dto.items.reduce((sum, item) => sum + (item.credit || 0), 0);

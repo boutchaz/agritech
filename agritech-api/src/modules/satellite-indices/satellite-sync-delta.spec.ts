@@ -60,6 +60,7 @@ describe('SatelliteSyncService — delta sync', () => {
               farm_id: 'farm-1',
               organization_id: 'org-1',
               planting_year: 2022,
+              crop_type: 'olivier',
             }],
             error: null,
           });
@@ -77,6 +78,7 @@ describe('SatelliteSyncService — delta sync', () => {
     expect(queryBuilder.select).toHaveBeenCalled();
     const selectArg = queryBuilder.select.mock.calls[0][0];
     expect(selectArg).toContain('planting_year');
+    expect(selectArg).toContain('crop_type');
   });
 
   it('calls syncParcelSatelliteData with delta date range from getParcelSyncStartDate', async () => {
@@ -95,6 +97,7 @@ describe('SatelliteSyncService — delta sync', () => {
               farm_id: 'farm-1',
               organization_id: 'org-1',
               planting_year: 2020,
+              crop_type: 'olivier',
             }],
             error: null,
           });
@@ -113,6 +116,7 @@ describe('SatelliteSyncService — delta sync', () => {
       'parcel-1',
       'org-1',
       2020,
+      'olivier',
     );
 
     // Should call syncParcelSatelliteData with delta range
@@ -143,6 +147,7 @@ describe('SatelliteSyncService — delta sync', () => {
               farm_id: 'farm-1',
               organization_id: 'org-1',
               planting_year: null,
+              crop_type: null,
             }],
             error: null,
           });

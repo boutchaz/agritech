@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { JournalEntriesService } from './journal-entries.service';
+import { JournalEntriesService, type CreateJournalEntryDto } from './journal-entries.service';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
 import {
@@ -18,6 +18,7 @@ import {
   createJournalEntryDto,
   createUnbalancedJournalEntryDto,
 } from '../../../test/fixtures/accounting.fixture';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('JournalEntriesService', () => {
   let service: JournalEntriesService;
@@ -39,6 +40,7 @@ describe('JournalEntriesService', () => {
         JournalEntriesService,
         { provide: DatabaseService, useValue: mockDatabaseService },
         { provide: SequencesService, useValue: mockSequencesService },
+        { provide: NotificationsService, useValue: { notifyOrganizationAdmins: jest.fn() } },
       ],
     }).compile();
 
@@ -90,9 +92,9 @@ describe('JournalEntriesService', () => {
       const result = await service.create(dto, TEST_IDS.organization, TEST_IDS.user);
 
       expect(result.entry_number).toBe('JE-2024-00001');
-      expect(mockClient.rpc).toHaveBeenCalledWith('generate_journal_entry_number', {
-        p_organization_id: TEST_IDS.organization,
-      });
+      expect(mockSequencesService.generateJournalEntryNumber).toHaveBeenCalledWith(
+        TEST_IDS.organization,
+      );
     });
 
     it('should reject unbalanced journal entry', async () => {
@@ -100,6 +102,22 @@ describe('JournalEntriesService', () => {
 
       await expect(
         service.create(dto, TEST_IDS.organization, TEST_IDS.user),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject empty payload', async () => {
+      await expect(
+        service.create({} as CreateJournalEntryDto, TEST_IDS.organization, TEST_IDS.user),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject missing line items', async () => {
+      await expect(
+        service.create(
+          { entry_date: TEST_DATES.today, items: [] },
+          TEST_IDS.organization,
+          TEST_IDS.user,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 

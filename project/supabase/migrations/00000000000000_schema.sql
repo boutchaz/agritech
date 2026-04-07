@@ -19242,6 +19242,48 @@ GRANT SELECT, INSERT, DELETE ON public.chat_conversations TO authenticated;
 GRANT SELECT, INSERT, DELETE ON public.chat_conversations TO service_role;
 
 -- =====================================================
+-- Chat Pending Actions (two-phase tool execution)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.chat_pending_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  tool_name TEXT NOT NULL,
+  parameters JSONB NOT NULL DEFAULT '{}'::jsonb,
+  preview_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 minutes'),
+  CONSTRAINT uq_chat_pending_actions_user_org UNIQUE (user_id, organization_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_pending_actions_user_org
+  ON public.chat_pending_actions(user_id, organization_id);
+
+CREATE INDEX IF NOT EXISTS idx_chat_pending_actions_expires
+  ON public.chat_pending_actions(expires_at);
+
+COMMENT ON TABLE public.chat_pending_actions IS 'Stores pending chat tool actions awaiting user confirmation (one per user per org)';
+
+-- Enable RLS
+ALTER TABLE public.chat_pending_actions ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+CREATE POLICY "Users can manage their own pending actions"
+  ON public.chat_pending_actions FOR ALL
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+    AND user_id = auth.uid()
+  );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_pending_actions TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.chat_pending_actions TO service_role;
+
+-- =====================================================
 -- 2025-01-10: Organizations Multi-Country Accounting Support
 -- =====================================================
 

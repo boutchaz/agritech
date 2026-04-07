@@ -22,6 +22,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { Step1Output } from '@/types/calibration-output';
 
 interface CalibrationReviewSectionProps {
   parcelId: string;
@@ -68,7 +69,13 @@ export function CalibrationReviewSection({ parcelId }: CalibrationReviewSectionP
       case 'level3':
         return <Level3Biophysical data={review.level3_biophysical} />;
       case 'level4':
-        return <Level4Temporal data={review.level4_temporal} />;
+        return (
+          <Level4Temporal
+            data={review.level4_temporal}
+            step1={review.output.step1 as Step1Output | undefined}
+            plantingYear={review.planting_year}
+          />
+        );
       case 'level5':
         return <Level5QualityAudit data={review.level5_quality_audit} />;
       default:

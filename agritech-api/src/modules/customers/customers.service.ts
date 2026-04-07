@@ -27,6 +27,15 @@ export class CustomersService {
       } else {
         q = q.eq('is_active', true);
       }
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) {
+          const pattern = `%${s}%`;
+          q = q.or(
+            `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},mobile.ilike.${pattern},contact_person.ilike.${pattern}`,
+          );
+        }
+      }
       return q;
     };
 

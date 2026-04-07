@@ -821,7 +821,7 @@
             "stades_phenomenologiques"
           ],
           "ajustement_doses": {
-            "regle": "Lire rendement_kg_arbre[tranche_age] depuis referentiel.varietes[variete] pour calculer doses proportionnelles",
+            "regle": "Lire rendement_kg_arbre[phase_maturite] depuis referentiel.varietes[variete] (cles: juvenile, entree_production, pleine_production, maturite_avancee, senescence) avec tranches d'age definies par referentiel.phases_maturite_ans",
             "facteur_N": 0.4,
             "facteur_P": 0.6,
             "facteur_K": 0.3,
@@ -877,7 +877,7 @@
           "mode": "standard_adapte_age",
           "description": "Programme annuel du référentiel avec doses ajustées selon tranche d'âge réelle",
           "ajustement_doses": {
-            "regle": "Lire rendement_kg_arbre[tranche_age] pour calculer export réaliste",
+            "regle": "Lire rendement_kg_arbre[phase_maturite] (memes cles que phases_maturite_ans) pour calculer export réaliste",
             "facteur_N": 0.7,
             "facteur_P": 0.8,
             "facteur_K": 0.6

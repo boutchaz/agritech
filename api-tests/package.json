@@ -12,6 +12,13 @@
     "test:accounting": "playwright test --grep @accounting",
     "test:harvests": "playwright test --grep @harvests",
     "test:crm": "playwright test --grep @crm",
+    "test:ai": "playwright test --grep @ai",
+    "test:organizations": "playwright test --grep @organizations",
+    "test:agriculture": "playwright test --grep @agriculture",
+    "test:compliance": "playwright test --grep @compliance",
+    "test:satellite": "playwright test --grep @satellite",
+    "test:campaigns": "playwright test --grep @campaigns",
+    "test:marketplace": "playwright test --grep @marketplace",
     "test:smoke": "playwright test --grep @smoke",
     "test:report": "playwright show-report",
     "test:list": "playwright test --list"

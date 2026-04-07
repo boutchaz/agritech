@@ -72,6 +72,10 @@ Parcel ai_phase values replaced with V2 lifecycle: awaiting_data → ready_calib
 
 V1 prompts embedded all agronomic rules in prompt text. V2 prompts are meta-programs: they take (moteurConfig, referentiel) as arguments and JSON.stringify them into the system prompt. MOTEUR_CONFIG.json (54KB, culture-agnostic) and DATA_{CULTURE}_v*.json (per-culture referentiel) are loaded from disk via crop-reference-loader.ts. This makes agronomic rules editable without code changes and keeps prompts consistent across cultures.
 
+### Chat action tools use @IsString() instead of @IsUUID() for tool parameter validation — 2026-04-06 (Request: chat-action-tools)
+
+SWC decorator compilation with @IsUUID() from class-validator fails silently in Jest tests — validated UUIDs are rejected. Switched to @IsString() for all UUID-type parameters in chat tool validation classes (CreateTaskParams, MarkInterventionDoneParams). Entity existence is validated by the subsequent Supabase lookup (which also enforces org-scoping), so the UUID format validation is redundant. The @IsUUID() decorators work fine in other NestJS modules compiled with tsc but not in the SWC-based jest transform.
+
 ### AgromindIA V2: mode_calibrage gets V2 engine semantics — 2026-04-04 (Request: agromind-v2-integration)
 
 The calibrations.mode_calibrage column changes meaning: old values (full/partial/annual) described what triggered the calibration; V2 values (lecture_pure/calibrage_progressif/calibrage_complet/calibrage_avec_signalement/collecte_donnees/age_manquant) describe how the engine behaved based on parcel maturity. A new `type` column (initial/F2_partial/F3_complete) takes over the trigger-type responsibility.

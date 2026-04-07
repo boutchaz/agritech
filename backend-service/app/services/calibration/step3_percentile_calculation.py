@@ -6,16 +6,12 @@ from typing import Any
 
 import numpy as np
 
-from .referential_utils import get_phenology_periods_from_stades_bbch
+from .referential_utils import (
+    DEFAULT_PERIODS,
+    get_phenology_periods_from_stades_bbch,
+)
 from .types import PercentileSet, Step1Output, Step3Output
 
-
-DEFAULT_PERIODS: dict[str, set[int]] = {
-    "dormancy": {12, 1, 2},
-    "growth": {3, 4, 5},
-    "flowering": {6, 7},
-    "maturation": {8, 9, 10, 11},
-}
 
 # Minimum observations for meaningful percentile statistics.
 # Below this threshold, P10/P90 are unreliable noise.
