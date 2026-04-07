@@ -46,6 +46,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -138,6 +139,9 @@ const InteractiveIndexViewer = ({
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('red-green');
   const [baseLayer, setBaseLayer] = useState<'osm' | 'satellite'>('satellite');
+  const [renderMode, setRenderMode] = useState<import('./LeafletHeatmapViewer').HeatmapRenderMode>('grid');
+  const [valueDisplay, setValueDisplay] = useState<import('./LeafletHeatmapViewer').ValueDisplayMode>('interactive');
+  const [showIsolines, setShowIsolines] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | InteractiveDataResponse | null>(null);
@@ -692,6 +696,49 @@ const InteractiveIndexViewer = ({
                       </div>
                     )}
 
+                    {visualizationType === 'leaflet' && (
+                      <>
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Style d'affichage</Label>
+                          <Select value={renderMode} onValueChange={(v) => setRenderMode(v as import('./LeafletHeatmapViewer').HeatmapRenderMode)}>
+                            <SelectTrigger className="h-9 text-xs font-semibold bg-slate-50 border-slate-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="grid" className="text-xs font-medium">Grille</SelectItem>
+                              <SelectItem value="smooth" className="text-xs font-medium">Interpolé</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {renderMode === 'smooth' && (
+                          <div className="flex items-center gap-2 pt-1">
+                            <Checkbox
+                              id="isolines-check"
+                              checked={showIsolines}
+                              onCheckedChange={(v) => setShowIsolines(!!v)}
+                            />
+                            <label htmlFor="isolines-check" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider cursor-pointer select-none">
+                              Isolignes
+                            </label>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valeurs</Label>
+                          <Select value={valueDisplay} onValueChange={(v) => setValueDisplay(v as import('./LeafletHeatmapViewer').ValueDisplayMode)}>
+                            <SelectTrigger className="h-9 text-xs font-semibold bg-slate-50 border-slate-200">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="interactive" className="text-xs font-medium">Interactif (clic/survol)</SelectItem>
+                              <SelectItem value="always" className="text-xs font-medium">Valeurs affichées</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
                     <div className="space-y-2">
                       <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('satellite:heatmap.labels.colorPalette')}</Label>
                       <div className="grid grid-cols-1 gap-1.5">
@@ -896,6 +943,9 @@ const InteractiveIndexViewer = ({
                         embedded={true}
                         colorPalette={colorPalette}
                         baseLayer={baseLayer}
+                        renderMode={renderMode}
+                        valueDisplay={valueDisplay}
+                        showIsolines={renderMode === 'smooth' ? showIsolines : false}
                       />
                     ) : (
                       <div className="p-4 h-full">

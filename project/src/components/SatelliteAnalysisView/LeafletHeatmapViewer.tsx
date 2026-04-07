@@ -20,8 +20,6 @@ import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 // Fix Leaflet default icon issue - only in browser
 if (typeof window !== 'undefined') {
-  // Dynamically import leaflet.heat only on client-side
-  import('leaflet.heat');
 
   delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
   L.Icon.Default.mergeOptions({
@@ -30,6 +28,9 @@ if (typeof window !== 'undefined') {
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
   });
 }
+
+export type HeatmapRenderMode = 'grid' | 'smooth';
+export type ValueDisplayMode = 'interactive' | 'always';
 
 interface LeafletHeatmapViewerProps {
   parcelId: string;
@@ -42,17 +43,23 @@ interface LeafletHeatmapViewerProps {
   colorPalette?: ColorPalette; // Color palette to use for the heatmap
   compact?: boolean; // When true, shows a minimal version suitable for grid display
   baseLayer?: 'osm' | 'satellite'; // Base map layer
+  renderMode?: HeatmapRenderMode;
+  valueDisplay?: ValueDisplayMode;
+  showIsolines?: boolean;
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0 }: {
+export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showBorders = true }: {
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
   colorPalette?: ColorPalette;
   opacity?: number;
+  valueDisplay?: ValueDisplayMode;
+  showBorders?: boolean;
 }) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
+  const labelLayerRef = useRef<L.LayerGroup | null>(null);
 
   // Color interpolation function using selected palette
   const getColorForValue = (value: number, min: number, max: number): string => {
@@ -118,6 +125,32 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       return a.lon - b.lon; // Then by lon (left to right)
     });
 
+    // Remove existing label layer
+    if (labelLayerRef.current) {
+      map.removeLayer(labelLayerRef.current);
+      labelLayerRef.current = null;
+    }
+
+    // Determine if we should show value labels
+    const showLabels = valueDisplay === 'always';
+    // Only show labels if pixel count is manageable (anti-overlap)
+    const MAX_LABELS = 120;
+    const shouldRenderLabels = showLabels && sortedPixels.length <= MAX_LABELS;
+
+    if (showLabels && sortedPixels.length > MAX_LABELS) {
+      labelLayerRef.current = L.layerGroup();
+      const warningMarker = L.marker([sortedPixels[0].lat, sortedPixels[0].lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="background:rgba(0,0,0,0.7);color:#fff;padding:4px 8px;border-radius:6px;font-size:10px;white-space:nowrap;font-weight:bold;">Zoom in to see values</div>`,
+          iconAnchor: [0, 0]
+        }),
+        interactive: false,
+      });
+      labelLayerRef.current.addLayer(warningMarker);
+      labelLayerRef.current.addTo(map);
+    }
+
     sortedPixels.forEach((point) => {
       const color = getColorForValue(point.value, data.statistics.min, data.statistics.max);
 
@@ -129,21 +162,41 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       const rectangle = L.rectangle(bounds, {
         fillColor: color,
         fillOpacity: opacity,
-        color: color,
-        weight: 0.1,
-        opacity: Math.min(0.3, opacity)
-      }).bindTooltip(
-        `${selectedIndex}: ${point.value.toFixed(3)}<br/>
-         Lat: ${point.lat.toFixed(6)}<br/>
-         Lon: ${point.lon.toFixed(6)}<br/>
-         Scale: ${pixelScale}m`,
-        { sticky: true }
-      );
+        color: showBorders ? color : 'transparent',
+        weight: showBorders ? 0.1 : 0,
+        opacity: showBorders ? Math.min(0.3, opacity) : 0
+      });
+
+      if (valueDisplay === 'interactive') {
+        rectangle.bindTooltip(
+          `${selectedIndex}: ${point.value.toFixed(3)}<br/>Lat: ${point.lat.toFixed(6)}<br/>Lon: ${point.lon.toFixed(6)}<br/>Scale: ${pixelScale}m`,
+          { sticky: true }
+        );
+      }
 
       gridLayerRef.current!.addLayer(rectangle);
     });
 
     gridLayerRef.current.addTo(map);
+
+    // Add value labels if needed
+    if (shouldRenderLabels) {
+      labelLayerRef.current = L.layerGroup();
+      sortedPixels.forEach((point) => {
+        const label = L.marker([point.lat, point.lon], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="background:rgba(0,0,0,0.65);color:#fff;padding:1px 4px;border-radius:3px;font-size:9px;font-weight:bold;line-height:1.4;white-space:nowrap;transform:translate(-50%,-50%);">${point.value.toFixed(2)}</div>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0]
+          }),
+          interactive: false,
+          zIndexOffset: 1000
+        });
+        labelLayerRef.current!.addLayer(label);
+      });
+      labelLayerRef.current.addTo(map);
+    }
 
     // Fit map to data bounds
     const lats = data.pixel_data.map(p => p.lat);
@@ -158,11 +211,197 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       if (gridLayerRef.current) {
         map.removeLayer(gridLayerRef.current);
       }
+      if (labelLayerRef.current) {
+        map.removeLayer(labelLayerRef.current);
+      }
     };
-  }, [data, selectedIndex, map]);
+  }, [data, selectedIndex, map, valueDisplay, showBorders]);
 
   return null;
 };
+
+
+// Helper: get interpolated RGB from palette for a normalized value [0,1]
+function paletteColorRGB(normalized: number, colorPalette: ColorPalette): [number, number, number] {
+  const palette = COLOR_PALETTES[colorPalette];
+  const colors = palette.colors;
+  const idx = Math.max(0, Math.min(1, normalized)) * (colors.length - 1);
+  const li = Math.floor(idx);
+  const ui = Math.min(Math.ceil(idx), colors.length - 1);
+  const t = idx - li;
+  const hex2rgb = (h: string): [number, number, number] => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+  const [lr, lg, lb] = hex2rgb(colors[li]);
+  const [ur, ug, ub] = hex2rgb(colors[ui]);
+  return [Math.round(lr + (ur-lr)*t), Math.round(lg + (ug-lg)*t), Math.round(lb + (ub-lb)*t)];
+}
+
+// Build heatmap canvas using bilinear interpolation.
+// GEE already clips pixel_data to the AOI — pixels outside = NaN in the grid.
+// Key fix: skip any pixel where ANY of the 4 bilinear corners is NaN.
+// This ensures we never "paint" outside the AOI by filling NaN with neighbor values.
+function buildHeatmapCanvas(
+  grid: Float32Array, nRows: number, nCols: number,
+  minLon: number, maxLat: number, pxDeg: number,
+  min: number, range: number,
+  colorPalette: ColorPalette, opacity: number,
+): string {
+  const SCALE = 8;
+  const cW = nCols * SCALE;
+  const cH = nRows * SCALE;
+  const degPerPx = pxDeg / SCALE;
+  const bMinLon = minLon - pxDeg / 2;
+  const bMaxLat = maxLat + pxDeg / 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cW; canvas.height = cH;
+  const ctx = canvas.getContext('2d')!;
+  const img = ctx.createImageData(cW, cH);
+  const d = img.data;
+
+  for (let cy = 0; cy < cH; cy++) {
+    for (let cx = 0; cx < cW; cx++) {
+      const lon = bMinLon + (cx + 0.5) * degPerPx;
+      const lat = bMaxLat - (cy + 0.5) * degPerPx;
+
+      const gxF = (lon - minLon) / pxDeg;
+      const gyF = (maxLat - lat) / pxDeg;
+      const gi = Math.floor(gxF), gj = Math.floor(gyF);
+      if (gi < 0 || gj < 0 || gi >= nCols - 1 || gj >= nRows - 1) continue;
+      const gi1 = gi + 1, gj1 = gj + 1;
+      const fx = gxF - gi, fy = gyF - gj;
+      const v00 = grid[gj*nCols+gi],  v10 = grid[gj*nCols+gi1];
+      const v01 = grid[gj1*nCols+gi], v11 = grid[gj1*nCols+gi1];
+      // All 4 corners valid → smooth bilinear interpolation
+      // Some corners NaN (AOI boundary) → use nearest valid corner (no bleed outside AOI)
+      let value: number;
+      if (!isNaN(v00) && !isNaN(v10) && !isNaN(v01) && !isNaN(v11)) {
+        value = v00*(1-fx)*(1-fy) + v10*fx*(1-fy) + v01*(1-fx)*fy + v11*fx*fy;
+      } else {
+        // Bilinear weight = proximity; pick the closest valid corner
+        const corners = [v00, v10, v01, v11];
+        const weights = [(1-fx)*(1-fy), fx*(1-fy), (1-fx)*fy, fx*fy];
+        let bestW = -1, bestV = NaN;
+        for (let k = 0; k < 4; k++) {
+          if (!isNaN(corners[k]) && weights[k] > bestW) {
+            bestW = weights[k]; bestV = corners[k];
+          }
+        }
+        if (isNaN(bestV)) continue; // all corners outside AOI → skip
+        value = bestV;
+      }
+      const [r, g, b] = paletteColorRGB((value - min) / range, colorPalette);
+      const pi = (cy * cW + cx) * 4;
+      d[pi]=r; d[pi+1]=g; d[pi+2]=b; d[pi+3]=Math.round(opacity * 230);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return canvas.toDataURL();
+}
+
+// Smooth heatmap using Canvas ImageOverlay with bilinear interpolation + optional isolines
+export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false }: {
+  data: HeatmapDataResponse | null;
+  colorPalette?: ColorPalette;
+  opacity?: number;
+  valueDisplay?: ValueDisplayMode;
+  showIsolines?: boolean;
+}) => {
+  const map = useMap();
+  const overlayRef = useRef<L.ImageOverlay | null>(null);
+  const isolinesRef = useRef<L.LayerGroup | null>(null);
+
+  useEffect(() => {
+    if (!data?.pixel_data?.length || !data.statistics) return;
+
+    if (overlayRef.current) { map.removeLayer(overlayRef.current); overlayRef.current = null; }
+    if (isolinesRef.current) { map.removeLayer(isolinesRef.current); isolinesRef.current = null; }
+
+    const { min, max } = data.statistics;
+    const range = max - min || 1;
+    const pxDeg = (data.metadata?.sample_scale || 10) / 111320;
+
+    const lats = data.pixel_data.map(p => p.lat);
+    const lons = data.pixel_data.map(p => p.lon);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+
+    const nRows = Math.max(2, Math.round((maxLat - minLat) / pxDeg) + 1);
+    const nCols = Math.max(2, Math.round((maxLon - minLon) / pxDeg) + 1);
+
+    const grid = new Float32Array(nRows * nCols).fill(NaN);
+    data.pixel_data.forEach(p => {
+      const ri = Math.round((maxLat - p.lat) / pxDeg);
+      const ci = Math.round((p.lon - minLon) / pxDeg);
+      if (ri >= 0 && ri < nRows && ci >= 0 && ci < nCols) grid[ri * nCols + ci] = p.value;
+    });
+
+    const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity);
+    const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
+    overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
+    overlayRef.current.addTo(map);
+    map.fitBounds(bounds, { padding: [20, 20] });
+
+    // Marching squares isolines
+    if (showIsolines) {
+      isolinesRef.current = L.layerGroup();
+      const NUM_LEVELS = 5;
+      const thresholds = Array.from({ length: NUM_LEVELS }, (_, i) => min + (i + 1) * range / (NUM_LEVELS + 1));
+
+      thresholds.forEach(threshold => {
+        const segments: [[number,number],[number,number]][] = [];
+        for (let r = 0; r < nRows - 1; r++) {
+          for (let c = 0; c < nCols - 1; c++) {
+            const vTL = grid[r*nCols+c], vTR = grid[r*nCols+c+1];
+            const vBL = grid[(r+1)*nCols+c], vBR = grid[(r+1)*nCols+c+1];
+            if (isNaN(vTL) || isNaN(vTR) || isNaN(vBL) || isNaN(vBR)) continue;
+            const lonL = minLon + c * pxDeg, lonR = minLon + (c+1) * pxDeg;
+            const latT = maxLat - r * pxDeg, latB = maxLat - (r+1) * pxDeg;
+            const lerp = (v1: number, v2: number) => (threshold - v1) / (v2 - v1);
+            const top    = (vTL > threshold) !== (vTR > threshold) ? [latT, lonL + lerp(vTL,vTR)*pxDeg] as [number,number] : null;
+            const right  = (vTR > threshold) !== (vBR > threshold) ? [latT - lerp(vTR,vBR)*pxDeg, lonR] as [number,number] : null;
+            const bottom = (vBL > threshold) !== (vBR > threshold) ? [latB, lonL + lerp(vBL,vBR)*pxDeg] as [number,number] : null;
+            const left   = (vTL > threshold) !== (vBL > threshold) ? [latT - lerp(vTL,vBL)*pxDeg, lonL] as [number,number] : null;
+            const cross = [top, right, bottom, left].filter(Boolean) as [number,number][];
+            if (cross.length === 2) segments.push([cross[0], cross[1]]);
+            else if (cross.length === 4) { segments.push([cross[0], cross[3]]); segments.push([cross[1], cross[2]]); }
+          }
+        }
+        if (segments.length > 0) {
+          isolinesRef.current!.addLayer(L.polyline(segments, { color: 'white', weight: 1.5, opacity: 0.85, smoothFactor: 1.5 }));
+        }
+      });
+      isolinesRef.current.addTo(map);
+    }
+
+    return () => {
+      if (overlayRef.current) map.removeLayer(overlayRef.current);
+      if (isolinesRef.current) map.removeLayer(isolinesRef.current);
+    };
+  }, [data, colorPalette, opacity, map, showIsolines]);
+
+  // Click popup for interactive mode
+  useEffect(() => {
+    if (!data?.pixel_data?.length || valueDisplay !== 'interactive') return;
+    const pxDeg = (data.metadata?.sample_scale || 10) / 111320;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onMapClick = (e: any) => {
+      const { lat, lng } = e.latlng;
+      const nearest = data.pixel_data.reduce((best, p) =>
+        Math.abs(p.lat-lat)+Math.abs(p.lon-lng) < Math.abs(best.lat-lat)+Math.abs(best.lon-lng) ? p : best
+      );
+      if (Math.abs(nearest.lat-lat)+Math.abs(nearest.lon-lng) < pxDeg * 4) {
+        L.popup().setLatLng([lat, lng])
+          .setContent(`Valeur: <strong>${nearest.value.toFixed(3)}</strong><br/>Lat: ${nearest.lat.toFixed(5)}<br/>Lon: ${nearest.lon.toFixed(5)}`)
+          .openOn(map);
+      }
+    };
+    map.on('click', onMapClick);
+    return () => { map.off('click', onMapClick); };
+  }, [data, map, valueDisplay]);
+
+  return null;
+};
+
 
 interface ColorScaleProps {
   data: HeatmapDataResponse;
@@ -250,7 +489,10 @@ const LeafletHeatmapViewer = ({
   embedded = false,
   colorPalette = 'red-green',
   compact = false,
-  baseLayer = 'satellite'
+  baseLayer = 'satellite',
+  renderMode = 'grid',
+  valueDisplay = 'interactive',
+  showIsolines = false,
 }: LeafletHeatmapViewerProps) => {
   const { t } = useTranslation('satellite');
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(propSelectedIndex || 'NIRv');
@@ -610,8 +852,13 @@ const LeafletHeatmapViewer = ({
               </>
             )}
 
-            {/* Grid Heatmap Layer */}
-            <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} />
+            {/* Heatmap Layer — switches by renderMode */}
+            {renderMode === 'grid' && (
+              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={true} />
+            )}
+            {renderMode === 'smooth' && (
+              <SmoothHeatmapLayer key="smooth-heatmap" data={data} colorPalette={colorPalette} valueDisplay={valueDisplay} showIsolines={showIsolines} />
+            )}
 
 
           </MapContainer>
