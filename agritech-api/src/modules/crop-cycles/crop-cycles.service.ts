@@ -158,7 +158,47 @@ export class CropCyclesService {
       throw error;
     }
 
+    if (data.biological_asset_id && updateDto.actual_total_yield !== undefined) {
+      await this.syncYieldToBiologicalAsset(data.biological_asset_id);
+    }
+
     return data;
+  }
+
+  /**
+   * When a crop cycle's yield changes, sum all YTD yields for the linked
+   * biological asset and write the total back. Non-blocking: failures are
+   * logged but never propagate to the caller.
+   */
+  private async syncYieldToBiologicalAsset(biologicalAssetId: string): Promise<void> {
+    try {
+      const client = this.databaseService.getAdminClient();
+      const currentYear = new Date().getFullYear();
+      const yearStart = `${currentYear}-01-01`;
+      const yearEnd = `${currentYear}-12-31`;
+
+      const { data: cycles, error: cyclesError } = await client
+        .from('crop_cycles')
+        .select('actual_total_yield')
+        .eq('biological_asset_id', biologicalAssetId)
+        .gte('actual_harvest_start', yearStart)
+        .lte('actual_harvest_start', yearEnd)
+        .not('actual_total_yield', 'is', null);
+
+      if (cyclesError) {
+        this.logger.warn(`Failed to fetch crop cycles for biological asset sync: ${cyclesError.message}`);
+        return;
+      }
+
+      const totalYtdYield = (cycles || []).reduce((sum, c) => sum + (Number(c.actual_total_yield) || 0), 0);
+
+      await client
+        .from('biological_assets')
+        .update({ actual_ytd_yield: totalYtdYield, updated_at: new Date().toISOString() })
+        .eq('id', biologicalAssetId);
+    } catch (syncError) {
+      this.logger.warn(`Failed to sync yield to biological asset: ${syncError}`);
+    }
   }
 
   async remove(id: string, organizationId: string) {

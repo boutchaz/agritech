@@ -121,6 +121,7 @@ export interface CropCycle {
   cycle_category?: CycleCategory | null;
   is_perennial?: boolean | null;
   template_id?: string | null;
+  biological_asset_id?: string | null;
 }
 
 export interface BiologicalAsset {

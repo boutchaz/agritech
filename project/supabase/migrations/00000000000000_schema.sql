@@ -17913,6 +17913,7 @@ CREATE TABLE IF NOT EXISTS crop_cycles (
   is_perennial BOOLEAN DEFAULT false,
   cycle_start_year INTEGER,
   cycle_end_year INTEGER,
+  biological_asset_id UUID REFERENCES biological_assets(id) ON DELETE SET NULL,
   template_id UUID,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -17932,6 +17933,7 @@ CREATE INDEX IF NOT EXISTS idx_crop_cycles_parcel ON crop_cycles(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_campaign ON crop_cycles(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_fiscal ON crop_cycles(fiscal_year_id);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_status ON crop_cycles(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_crop_cycles_biological_asset ON crop_cycles(biological_asset_id);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_dates ON crop_cycles(planting_date, expected_harvest_end);
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_crop_type ON crop_cycles(organization_id, crop_type);
 

@@ -260,4 +260,9 @@ export class CreateCropCycleDto {
   @IsUUID()
   @IsOptional()
   template_id?: string;
+
+  @ApiPropertyOptional({ description: 'Biological asset ID (links this crop cycle to a perennial asset)' })
+  @IsUUID()
+  @IsOptional()
+  biological_asset_id?: string;
 }
