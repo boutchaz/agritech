@@ -77,7 +77,8 @@ export class CalibrationStateMachine {
       .eq("organization_id", organizationId);
 
     if (fromPhase === "awaiting_data") {
-      query.is("ai_phase", null);
+      // Accept both NULL (old rows) and explicit 'awaiting_data' (new rows with DEFAULT)
+      query.or("ai_phase.is.null,ai_phase.eq.awaiting_data");
     } else {
       query.eq("ai_phase", fromPhase);
     }

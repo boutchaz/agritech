@@ -2890,8 +2890,15 @@ export class CalibrationService {
       .single();
 
     if (error || !parcel) {
+      this.logger.warn(
+        `[getParcelContext] Parcel not found in DB — parcelId: ${parcelId}, supabaseError: ${error?.message}`,
+      );
       throw new NotFoundException("Parcel not found");
     }
+
+    this.logger.log(
+      `[getParcelContext] Parcel found — parcel.org: ${parcel.organization_id}, received org: ${organizationId}`,
+    );
 
     const belongsToOrganization =
       this.matchesOrganization(parcel.organization_id, organizationId) ||
