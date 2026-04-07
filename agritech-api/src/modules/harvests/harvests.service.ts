@@ -9,6 +9,8 @@ import { ReceptionBatchesService } from '../reception-batches/reception-batches.
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
+import { paginate } from '../../common/dto/paginated-query.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class HarvestsService {
@@ -41,76 +43,69 @@ export class HarvestsService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    
-    // Get total count first
-    let countQuery = client
-      .from('harvest_records')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', organizationId);
 
-    // Apply filters to count query
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      countQuery = countQuery.in('status', statuses);
-    }
-    if (filters?.farm_id) countQuery = countQuery.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) countQuery = countQuery.eq('parcel_id', filters.parcel_id);
-    if (filters?.crop_id) countQuery = countQuery.eq('crop_id', filters.crop_id);
-    if (filters?.dateFrom) countQuery = countQuery.gte('harvest_date', filters.dateFrom);
-    if (filters?.dateTo) countQuery = countQuery.lte('harvest_date', filters.dateTo);
-    if (filters?.intended_for) countQuery = countQuery.eq('intended_for', filters.intended_for);
-    if (filters?.quality_grade) {
-      const grades = filters.quality_grade.split(',');
-      countQuery = countQuery.in('quality_grade', grades);
-    }
-
-    const { count: totalCount, error: countError } = await countQuery;
-    if (countError) throw new Error(`Failed to count harvests: ${countError.message}`);
-
-    // Build main query
-    let query = client
-      .from('harvest_records')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    // Apply filters
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
-    if (filters?.crop_id) query = query.eq('crop_id', filters.crop_id);
-    if (filters?.dateFrom) query = query.gte('harvest_date', filters.dateFrom);
-    if (filters?.dateTo) query = query.lte('harvest_date', filters.dateTo);
-    if (filters?.intended_for) query = query.eq('intended_for', filters.intended_for);
-    if (filters?.quality_grade) {
-      const grades = filters.quality_grade.split(',');
-      query = query.in('quality_grade', grades);
-    }
-
-    // Apply sorting
-    const sortBy = filters?.sortBy || 'harvest_date';
-    const sortDir = filters?.sortDir || 'desc';
-    query = query.order(sortBy, { ascending: sortDir === 'asc' });
-
-    // Apply pagination
-    const page = filters?.page || 1;
-    const pageSize = filters?.pageSize || 10;
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    const { data, error } = await query;
-    if (error) throw new Error(`Failed to fetch harvests: ${error.message}`);
-
-    return {
-      data: data || [],
-      total: totalCount || 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((totalCount || 0) / pageSize),
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.status) {
+        const statuses = filters.status.split(',');
+        q = q.in('status', statuses);
+      }
+      if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+      if (filters?.parcel_id) q = q.eq('parcel_id', filters.parcel_id);
+      if (filters?.crop_id) q = q.eq('crop_id', filters.crop_id);
+      if (filters?.dateFrom) q = q.gte('harvest_date', filters.dateFrom);
+      if (filters?.dateTo) q = q.lte('harvest_date', filters.dateTo);
+      if (filters?.intended_for) q = q.eq('intended_for', filters.intended_for);
+      if (filters?.quality_grade) {
+        const grades = filters.quality_grade.split(',');
+        q = q.in('quality_grade', grades);
+      }
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) q = q.or(`lot_number.ilike.%${s}%,notes.ilike.%${s}%,storage_location.ilike.%${s}%`);
+      }
+      return q;
     };
+
+    const result = await paginate(client, 'harvest_records', {
+      select: `
+        *,
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `,
+      filters: applyFilters,
+      page: filters?.page ?? 1,
+      pageSize: filters?.pageSize ?? 10,
+      orderBy: filters?.sortBy || 'harvest_date',
+      ascending: (filters?.sortDir || 'desc') === 'asc',
+      map: (row) => ({
+        ...row,
+        farm_name: Array.isArray(row.farm) ? row.farm[0]?.name : row.farm?.name,
+        parcel_name: Array.isArray(row.parcel) ? row.parcel[0]?.name : row.parcel?.name,
+        farm: undefined,
+        parcel: undefined,
+      }),
+    });
+
+    // Resolve crop names (crop_id has no FK constraint)
+    const cropIds = [...new Set(result.data.filter((h: any) => h.crop_id).map((h: any) => h.crop_id))];
+    let cropMap: Record<string, string> = {};
+    if (cropIds.length > 0) {
+      const { data: crops } = await client
+        .from('crops')
+        .select('id, name')
+        .in('id', cropIds);
+      cropMap = (crops || []).reduce((acc: Record<string, string>, c: any) => {
+        acc[c.id] = c.name;
+        return acc;
+      }, {});
+    }
+    result.data = result.data.map((h: any) => ({
+      ...h,
+      crop_name: h.crop_id ? cropMap[h.crop_id] || null : null,
+    }));
+
+    return result;
   }
 
   async findOne(userId: string, organizationId: string, harvestId: string) {
@@ -119,7 +114,11 @@ export class HarvestsService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('harvest_records')
-      .select('*')
+      .select(`
+        *,
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `)
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -127,7 +126,25 @@ export class HarvestsService {
     if (error) throw new Error(`Failed to fetch harvest: ${error.message}`);
     if (!data) throw new NotFoundException('Harvest not found');
 
-    return data;
+    // Resolve crop name (crop_id has no FK constraint)
+    let cropName: string | null = null;
+    if (data.crop_id) {
+      const { data: crop } = await client
+        .from('crops')
+        .select('name')
+        .eq('id', data.crop_id)
+        .maybeSingle();
+      cropName = crop?.name || null;
+    }
+
+    return {
+      ...data,
+      farm_name: Array.isArray(data.farm) ? data.farm[0]?.name : data.farm?.name,
+      parcel_name: Array.isArray(data.parcel) ? data.parcel[0]?.name : data.parcel?.name,
+      crop_name: cropName,
+      farm: undefined,
+      parcel: undefined,
+    };
   }
 
   /**

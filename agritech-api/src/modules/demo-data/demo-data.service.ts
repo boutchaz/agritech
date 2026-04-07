@@ -4867,141 +4867,94 @@ export class DemoDataService {
     if (!items?.length || !warehouse?.id) return;
 
     const client = this.databaseService.getAdminClient();
-    const now = new Date();
 
-    // Query existing stock entries to link movements
-    const { data: stockEntries } = await client
+    // Query all posted stock entries with their items to create matching movements
+    const { data: postedEntries } = await client
       .from('stock_entries')
-      .select('id, stock_entry_number, entry_type')
+      .select(`
+        id, entry_number, entry_type, entry_date, from_warehouse_id, to_warehouse_id, status,
+        items:stock_entry_items(
+          id, item_id, item_name, quantity, unit, cost_per_unit, total_cost,
+          batch_number, source_warehouse_id, target_warehouse_id
+        )
+      `)
       .eq('organization_id', organizationId)
-      .limit(5);
+      .eq('status', 'Posted')
+      .order('entry_date', { ascending: true });
 
-    const receiptEntry = stockEntries?.find((e) => e.entry_type === 'Receipt') || stockEntries?.[0];
-    const issueEntry = stockEntries?.find((e) => e.entry_type === 'Issue') || stockEntries?.[1];
-
-    // Find specific items
-    const fertilizerItem = items.find((i) => i.item_code === 'ENG-NPK-15-15-15') || items[0];
-    const seedItem = items.find((i) => i.item_code === 'SEM-TOM-MARM') || items[1];
-    const oliveOilItem = items.find((i) => i.item_code === 'REC-HUILE-EV') || items[2];
-
-    const movements: any[] = [];
-    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 3600000);
-    const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 3600000);
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600000);
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 3600000);
-
-    // IN: Fertilizer received from PO
-    movements.push({
-      organization_id: organizationId,
-      movement_type: 'IN',
-      movement_date: fourWeeksAgo.toISOString(),
-      item_id: fertilizerItem.id,
-      warehouse_id: warehouse.id,
-      quantity: 500,
-      unit: 'kg',
-      balance_quantity: 500,
-      cost_per_unit: 25,
-      total_cost: 12500,
-      stock_entry_id: receiptEntry?.id || null,
-      batch_number: 'LOT-ENG-2024-001',
-      created_by: userId,
-    });
-
-    // OUT: Fertilizer issued to field
-    movements.push({
-      organization_id: organizationId,
-      movement_type: 'OUT',
-      movement_date: threeWeeksAgo.toISOString(),
-      item_id: fertilizerItem.id,
-      warehouse_id: warehouse.id,
-      quantity: 100,
-      unit: 'kg',
-      balance_quantity: 400,
-      cost_per_unit: 25,
-      total_cost: 2500,
-      stock_entry_id: issueEntry?.id || null,
-      created_by: userId,
-    });
-
-    // IN: Seeds received
-    movements.push({
-      organization_id: organizationId,
-      movement_type: 'IN',
-      movement_date: threeWeeksAgo.toISOString(),
-      item_id: seedItem.id,
-      warehouse_id: warehouse.id,
-      quantity: 50,
-      unit: 'kg',
-      balance_quantity: 50,
-      cost_per_unit: 120,
-      total_cost: 6000,
-      batch_number: 'LOT-SEM-2024-001',
-      created_by: userId,
-    });
-
-    // OUT: Seeds issued for planting
-    movements.push({
-      organization_id: organizationId,
-      movement_type: 'OUT',
-      movement_date: twoWeeksAgo.toISOString(),
-      item_id: seedItem.id,
-      warehouse_id: warehouse.id,
-      quantity: 20,
-      unit: 'kg',
-      balance_quantity: 30,
-      cost_per_unit: 120,
-      total_cost: 2400,
-      created_by: userId,
-    });
-
-    // IN: Olive oil to finished goods warehouse
-    if (finishedGoodsWarehouse?.id) {
-      movements.push({
-        organization_id: organizationId,
-        movement_type: 'IN',
-        movement_date: oneWeekAgo.toISOString(),
-        item_id: oliveOilItem.id,
-        warehouse_id: finishedGoodsWarehouse.id,
-        quantity: 800,
-        unit: 'L',
-        balance_quantity: 800,
-        cost_per_unit: 30,
-        total_cost: 24000,
-        batch_number: 'LOT-HUILE-2024-001',
-        created_by: userId,
-      });
+    if (!postedEntries?.length) {
+      this.logger.warn('No posted stock entries found for movement generation');
+      return;
     }
 
-    // TRANSFER: Fertilizer between warehouses
-    if (finishedGoodsWarehouse?.id) {
-      movements.push({
-        organization_id: organizationId,
-        movement_type: 'OUT',
-        movement_date: twoWeeksAgo.toISOString(),
-        item_id: fertilizerItem.id,
-        warehouse_id: warehouse.id,
-        quantity: 50,
-        unit: 'kg',
-        balance_quantity: 350,
-        created_by: userId,
-      });
-      movements.push({
-        organization_id: organizationId,
-        movement_type: 'IN',
-        movement_date: twoWeeksAgo.toISOString(),
-        item_id: fertilizerItem.id,
-        warehouse_id: finishedGoodsWarehouse.id,
-        quantity: 50,
-        unit: 'kg',
-        balance_quantity: 50,
-        created_by: userId,
-      });
+    const movements: any[] = [];
+    // Track running balance per item+warehouse
+    const balances: Record<string, number> = {};
+
+    const getBalanceKey = (itemId: string, warehouseId: string) => `${itemId}:${warehouseId}`;
+
+    for (const entry of postedEntries) {
+      const entryItems = (entry as any).items || [];
+      const entryDate = entry.entry_date || new Date().toISOString().split('T')[0];
+
+      for (const item of entryItems) {
+        if (!item.item_id) continue;
+
+        const isReceipt = entry.entry_type === 'Material Receipt' || entry.entry_type === 'Stock Reconciliation';
+        const isIssue = entry.entry_type === 'Material Issue';
+
+        const warehouseId = isReceipt
+          ? (item.target_warehouse_id || entry.to_warehouse_id || warehouse.id)
+          : (item.source_warehouse_id || entry.from_warehouse_id || warehouse.id);
+
+        const balKey = getBalanceKey(item.item_id, warehouseId);
+
+        if (isReceipt) {
+          balances[balKey] = (balances[balKey] || 0) + item.quantity;
+          movements.push({
+            organization_id: organizationId,
+            movement_type: 'IN',
+            movement_date: entryDate + 'T10:00:00Z',
+            item_id: item.item_id,
+            warehouse_id: warehouseId,
+            quantity: item.quantity,
+            unit: item.unit || 'kg',
+            balance_quantity: balances[balKey],
+            cost_per_unit: item.cost_per_unit || 0,
+            total_cost: item.total_cost || 0,
+            stock_entry_id: entry.id,
+            stock_entry_item_id: item.id,
+            batch_number: item.batch_number || null,
+            created_by: userId,
+          });
+        } else if (isIssue) {
+          balances[balKey] = Math.max(0, (balances[balKey] || 0) - item.quantity);
+          movements.push({
+            organization_id: organizationId,
+            movement_type: 'OUT',
+            movement_date: entryDate + 'T14:00:00Z',
+            item_id: item.item_id,
+            warehouse_id: warehouseId,
+            quantity: item.quantity,
+            unit: item.unit || 'kg',
+            balance_quantity: balances[balKey],
+            cost_per_unit: item.cost_per_unit || 0,
+            total_cost: item.total_cost || 0,
+            stock_entry_id: entry.id,
+            stock_entry_item_id: item.id,
+            batch_number: item.batch_number || null,
+            created_by: userId,
+          });
+        }
+      }
     }
 
     if (movements.length > 0) {
       const { error } = await client.from('stock_movements').insert(movements);
       if (error) {
         this.logger.error(`Failed to create demo stock movements: ${error.message}`);
+      } else {
+        this.logger.log(`Created ${movements.length} stock movements from ${postedEntries.length} posted entries`);
       }
     }
   }

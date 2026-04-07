@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "charlie": {
+      "source": "EveryInc/charlie-cfo-skill",
+      "sourceType": "github",
+      "computedHash": "68319ba005f21f7b88fe18b75d4e502e51df4c968560c887aa97b7c03611cd5a"
+    }
+  }
+}

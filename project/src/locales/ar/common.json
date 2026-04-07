@@ -5049,6 +5049,39 @@
         "save": "حفظ الحصاد",
         "update": "تحديث"
       }
+    },
+    "unspecifiedCrop": "محصول غير محدد",
+    "estimated": "تقديري",
+    "destination": "الوجهة",
+    "intendedFor": {
+      "market": "السوق المحلي",
+      "storage": "التخزين",
+      "processing": "التصنيع",
+      "export": "التصدير",
+      "direct_client": "عميل مباشر"
+    },
+    "stats": {
+      "totalHarvests": "إجمالي الحصاد",
+      "totalQuantity": "الكمية الإجمالية",
+      "estimatedRevenue": "الإيرادات المقدرة",
+      "avgPerHarvest": "المتوسط لكل حصاد"
+    },
+    "details": {
+      "title": "تفاصيل الحصاد",
+      "crop": "المحصول",
+      "parcel": "القطعة",
+      "date": "التاريخ",
+      "quality": "الجودة",
+      "score": "التقييم",
+      "estimated": "تقديري",
+      "storage": "التخزين",
+      "destination": "الوجهة",
+      "notes": "ملاحظات",
+      "unspecifiedCrop": "غير محدد"
+    },
+    "actions": {
+      "viewDetails": "عرض التفاصيل",
+      "createReception": "إنشاء دفعة استقبال"
     }
   },
   "utilities": {

@@ -5295,6 +5295,39 @@
         "save": "Enregistrer la Récolte",
         "update": "Mettre à jour"
       }
+    },
+    "unspecifiedCrop": "Culture non spécifiée",
+    "estimated": "estimé",
+    "destination": "Destination",
+    "intendedFor": {
+      "market": "Marché local",
+      "storage": "Stockage",
+      "processing": "Transformation",
+      "export": "Export",
+      "direct_client": "Client direct"
+    },
+    "stats": {
+      "totalHarvests": "Total Récoltes",
+      "totalQuantity": "Quantité Totale",
+      "estimatedRevenue": "Revenu Estimé",
+      "avgPerHarvest": "Moy. par récolte"
+    },
+    "details": {
+      "title": "Détails de la Récolte",
+      "crop": "Culture",
+      "parcel": "Parcelle",
+      "date": "Date",
+      "quality": "Qualité",
+      "score": "Note",
+      "estimated": "estimé",
+      "storage": "Stockage",
+      "destination": "Destination",
+      "notes": "Notes",
+      "unspecifiedCrop": "Non spécifié"
+    },
+    "actions": {
+      "viewDetails": "Voir les détails",
+      "createReception": "Créer lot de réception"
     }
   },
   "utilities": {

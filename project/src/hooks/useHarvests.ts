@@ -76,7 +76,7 @@ export function useHarvestStatistics(organizationId: string, filters?: { dateFro
       const totalQuantity = harvests.reduce((sum, h) => sum + (h.quantity || 0), 0);
       const totalRevenue = harvests.reduce((sum, h) => {
         const quantity = h.quantity || 0;
-        const price = h.unit_price || 0;
+        const price = h.expected_price_per_unit || 0;
         return sum + (quantity * price);
       }, 0);
       const avgQuantityPerHarvest = totalHarvests > 0 ? totalQuantity / totalHarvests : 0;

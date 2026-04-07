@@ -5476,6 +5476,39 @@
         "save": "Save Harvest",
         "update": "Update"
       }
+    },
+    "unspecifiedCrop": "Unspecified crop",
+    "estimated": "estimated",
+    "destination": "Destination",
+    "intendedFor": {
+      "market": "Local market",
+      "storage": "Storage",
+      "processing": "Processing",
+      "export": "Export",
+      "direct_client": "Direct client"
+    },
+    "stats": {
+      "totalHarvests": "Total Harvests",
+      "totalQuantity": "Total Quantity",
+      "estimatedRevenue": "Estimated Revenue",
+      "avgPerHarvest": "Avg. per harvest"
+    },
+    "details": {
+      "title": "Harvest Details",
+      "crop": "Crop",
+      "parcel": "Parcel",
+      "date": "Date",
+      "quality": "Quality",
+      "score": "Score",
+      "estimated": "estimated",
+      "storage": "Storage",
+      "destination": "Destination",
+      "notes": "Notes",
+      "unspecifiedCrop": "Not specified"
+    },
+    "actions": {
+      "viewDetails": "View details",
+      "createReception": "Create reception batch"
     }
   },
   "utilities": {

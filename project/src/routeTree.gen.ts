@@ -98,7 +98,6 @@ import { Route as AuthenticatedproductionProductionSatelliteAnalysisRouteImport 
 import { Route as AuthenticatedproductionProductionQualityControlRouteImport } from './routes/_authenticated/(production)/production/quality-control'
 import { Route as AuthenticatedproductionProductionProfitabilityRouteImport } from './routes/_authenticated/(production)/production/profitability'
 import { Route as AuthenticatedproductionProductionIntelligenceRouteImport } from './routes/_authenticated/(production)/production/intelligence'
-import { Route as AuthenticatedproductionProductionHarvestsRouteImport } from './routes/_authenticated/(production)/production/harvests'
 import { Route as AuthenticatedproductionProductionCropCyclesRouteImport } from './routes/_authenticated/(production)/production/crop-cycles'
 import { Route as AuthenticatedproductionParcelsParcelIdRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId'
 import { Route as AuthenticatedproductionCropCyclesCycleIdRouteImport } from './routes/_authenticated/(production)/crop-cycles/$cycleId'
@@ -667,12 +666,6 @@ const AuthenticatedproductionProductionIntelligenceRoute =
     path: '/production/intelligence',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedproductionProductionHarvestsRoute =
-  AuthenticatedproductionProductionHarvestsRouteImport.update({
-    id: '/(production)/production/harvests',
-    path: '/production/harvests',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedproductionProductionCropCyclesRoute =
   AuthenticatedproductionProductionCropCyclesRouteImport.update({
     id: '/(production)/production/crop-cycles',
@@ -1088,7 +1081,6 @@ export interface FileRoutesByFullPath {
   '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
@@ -1228,7 +1220,6 @@ export interface FileRoutesByTo {
   '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
   '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
@@ -1373,7 +1364,6 @@ export interface FileRoutesById {
   '/_authenticated/(production)/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/_authenticated/(production)/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/_authenticated/(production)/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/_authenticated/(production)/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/_authenticated/(production)/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/_authenticated/(production)/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/_authenticated/(production)/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
@@ -1521,7 +1511,6 @@ export interface FileRouteTypes {
     | '/crop-cycles/$cycleId'
     | '/parcels/$parcelId'
     | '/production/crop-cycles'
-    | '/production/harvests'
     | '/production/intelligence'
     | '/production/profitability'
     | '/production/quality-control'
@@ -1661,7 +1650,6 @@ export interface FileRouteTypes {
     | '/marketplace/orders'
     | '/crop-cycles/$cycleId'
     | '/production/crop-cycles'
-    | '/production/harvests'
     | '/production/intelligence'
     | '/production/profitability'
     | '/production/quality-control'
@@ -1805,7 +1793,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/crop-cycles/$cycleId'
     | '/_authenticated/(production)/parcels/$parcelId'
     | '/_authenticated/(production)/production/crop-cycles'
-    | '/_authenticated/(production)/production/harvests'
     | '/_authenticated/(production)/production/intelligence'
     | '/_authenticated/(production)/production/profitability'
     | '/_authenticated/(production)/production/quality-control'
@@ -2510,13 +2497,6 @@ declare module '@tanstack/react-router' {
       path: '/production/intelligence'
       fullPath: '/production/intelligence'
       preLoaderRoute: typeof AuthenticatedproductionProductionIntelligenceRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/(production)/production/harvests': {
-      id: '/_authenticated/(production)/production/harvests'
-      path: '/production/harvests'
-      fullPath: '/production/harvests'
-      preLoaderRoute: typeof AuthenticatedproductionProductionHarvestsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/production/crop-cycles': {
@@ -3325,7 +3305,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedComplianceIndexRoute: typeof AuthenticatedComplianceIndexRoute
   AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
   AuthenticatedproductionProductionCropCyclesRoute: typeof AuthenticatedproductionProductionCropCyclesRoute
-  AuthenticatedproductionProductionHarvestsRoute: typeof AuthenticatedproductionProductionHarvestsRoute
   AuthenticatedproductionProductionIntelligenceRoute: typeof AuthenticatedproductionProductionIntelligenceRoute
   AuthenticatedproductionProductionProfitabilityRoute: typeof AuthenticatedproductionProductionProfitabilityRoute
   AuthenticatedproductionProductionQualityControlRoute: typeof AuthenticatedproductionProductionQualityControlRoute
@@ -3387,8 +3366,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
   AuthenticatedproductionProductionCropCyclesRoute:
     AuthenticatedproductionProductionCropCyclesRoute,
-  AuthenticatedproductionProductionHarvestsRoute:
-    AuthenticatedproductionProductionHarvestsRoute,
   AuthenticatedproductionProductionIntelligenceRoute:
     AuthenticatedproductionProductionIntelligenceRoute,
   AuthenticatedproductionProductionProfitabilityRoute:
