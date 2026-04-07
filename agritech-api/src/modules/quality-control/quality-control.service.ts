@@ -110,7 +110,7 @@ export class QualityControlService {
       .insert({
         organization_id: organizationId,
         created_by: userId,
-        status: createDto.status || InspectionStatus.PENDING,
+        status: createDto.status || InspectionStatus.SCHEDULED,
         ...createDto,
       })
       .select()
@@ -207,7 +207,7 @@ export class QualityControlService {
       throw error;
     }
 
-    if (status === InspectionStatus.PASSED || status === InspectionStatus.FAILED) {
+    if (status === InspectionStatus.COMPLETED || status === InspectionStatus.FAILED) {
       try {
         const { data: orgUsers } = await client
           .from('organization_users')

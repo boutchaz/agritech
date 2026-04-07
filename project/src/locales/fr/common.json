@@ -4030,6 +4030,63 @@
       "note": {
         "label": "Note",
         "message": "Les données de qualité peuvent déjà être enregistrées dans le formulaire de lot de réception. Cette page dédiée fournira des workflows et des analyses de contrôle qualité avancés."
+      },
+      "list": {
+        "title": "Inspections Qualité",
+        "subtitle": "{{count}} inspections",
+        "subtitleEmpty": "Aucune inspection",
+        "loading": "Chargement des inspections...",
+        "search": "Rechercher des inspections...",
+        "stats": {
+          "total": "Total Inspections",
+          "avgScore": "Score Moyen",
+          "completed": "Terminées",
+          "inProgress": "En Cours"
+        },
+        "filters": {
+          "allTypes": "Tous les Types",
+          "allStatuses": "Tous les Statuts",
+          "type": {
+            "preHarvest": "Pré-Récolte",
+            "postHarvest": "Post-Récolte",
+            "storage": "Stockage",
+            "transport": "Transport",
+            "processing": "Transformation"
+          },
+          "status": {
+            "scheduled": "Planifiée",
+            "inProgress": "En Cours",
+            "completed": "Terminée",
+            "failed": "Échouée",
+            "cancelled": "Annulée"
+          }
+        },
+        "table": {
+          "type": "Type",
+          "date": "Date",
+          "parcel": "Parcelle / Ferme",
+          "score": "Score",
+          "status": "Statut",
+          "actions": "Actions"
+        },
+        "actions": {
+          "delete": "Supprimer"
+        },
+        "confirm": {
+          "deleteTitle": "Supprimer l'Inspection",
+          "deleteDescription": "Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cette inspection qualité ?",
+          "cancel": "Annuler",
+          "deleteAction": "Supprimer"
+        },
+        "empty": {
+          "title": "Aucune inspection",
+          "description": "Les inspections qualité apparaîtront ici une fois créées",
+          "searchTitle": "Aucun résultat",
+          "searchDescription": "Essayez de modifier votre recherche"
+        },
+        "mobile": {
+          "empty": "Aucune inspection"
+        }
       }
     },
     "satelliteAnalysis": {

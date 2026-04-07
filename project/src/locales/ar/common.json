@@ -3451,6 +3451,63 @@
       "note": {
         "label": "ملاحظة",
         "message": "بيانات الجودة يمكن تسجيلها بالفعل في نموذج دفعة الاستلام. هذه الصفحة المخصصة ستوفر سير عمل وتحليلات متقدمة لمراقبة الجودة."
+      },
+      "list": {
+        "title": "عمليات الفحص",
+        "subtitle": "{{count}} عملية فحص",
+        "subtitleEmpty": "لا توجد عمليات فحص",
+        "loading": "جاري تحميل العمليات...",
+        "search": "البحث في العمليات...",
+        "stats": {
+          "total": "إجمالي العمليات",
+          "avgScore": "متوسط الدرجة",
+          "completed": "مكتملة",
+          "inProgress": "قيد التنفيذ"
+        },
+        "filters": {
+          "allTypes": "جميع الأنواع",
+          "allStatuses": "جميع الحالات",
+          "type": {
+            "preHarvest": "قبل الحصاد",
+            "postHarvest": "بعد الحصاد",
+            "storage": "التخزين",
+            "transport": "النقل",
+            "processing": "التصنيع"
+          },
+          "status": {
+            "scheduled": "مجدولة",
+            "inProgress": "قيد التنفيذ",
+            "completed": "مكتملة",
+            "failed": "فشلت",
+            "cancelled": "ملغاة"
+          }
+        },
+        "table": {
+          "type": "النوع",
+          "date": "التاريخ",
+          "parcel": "القطعة / المزرعة",
+          "score": "الدرجة",
+          "status": "الحالة",
+          "actions": "الإجراءات"
+        },
+        "actions": {
+          "delete": "حذف"
+        },
+        "confirm": {
+          "deleteTitle": "حذف العملية",
+          "deleteDescription": "لا يمكن التراجع عن هذا الإجراء. هل أنت متأكد من حذف عملية الفحص هذه؟",
+          "cancel": "إلغاء",
+          "deleteAction": "حذف"
+        },
+        "empty": {
+          "title": "لا توجد عمليات فحص",
+          "description": "ستظهر عمليات الفحص هنا بمجرد إنشائها",
+          "searchTitle": "لا توجد نتائج",
+          "searchDescription": "حاول تعديل البحث"
+        },
+        "mobile": {
+          "empty": "لا توجد عمليات فحص"
+        }
       }
     },
     "satelliteAnalysis": {

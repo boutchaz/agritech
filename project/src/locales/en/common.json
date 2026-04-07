@@ -4211,6 +4211,63 @@
       "note": {
         "label": "Note",
         "message": "Quality data can already be recorded in the Reception Batch form. This dedicated page will provide advanced quality control workflows and analytics."
+      },
+      "list": {
+        "title": "Quality Inspections",
+        "subtitle": "{{count}} inspections",
+        "subtitleEmpty": "No inspections yet",
+        "loading": "Loading inspections...",
+        "search": "Search inspections...",
+        "stats": {
+          "total": "Total Inspections",
+          "avgScore": "Average Score",
+          "completed": "Completed",
+          "inProgress": "In Progress"
+        },
+        "filters": {
+          "allTypes": "All Types",
+          "allStatuses": "All Statuses",
+          "type": {
+            "preHarvest": "Pre-Harvest",
+            "postHarvest": "Post-Harvest",
+            "storage": "Storage",
+            "transport": "Transport",
+            "processing": "Processing"
+          },
+          "status": {
+            "scheduled": "Scheduled",
+            "inProgress": "In Progress",
+            "completed": "Completed",
+            "failed": "Failed",
+            "cancelled": "Cancelled"
+          }
+        },
+        "table": {
+          "type": "Type",
+          "date": "Date",
+          "parcel": "Parcel / Farm",
+          "score": "Score",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "actions": {
+          "delete": "Delete"
+        },
+        "confirm": {
+          "deleteTitle": "Delete Inspection",
+          "deleteDescription": "This action cannot be undone. Are you sure you want to delete this quality inspection?",
+          "cancel": "Cancel",
+          "deleteAction": "Delete"
+        },
+        "empty": {
+          "title": "No inspections yet",
+          "description": "Quality inspections will appear here once created",
+          "searchTitle": "No results found",
+          "searchDescription": "Try adjusting your search"
+        },
+        "mobile": {
+          "empty": "No inspections yet"
+        }
       }
     },
     "satelliteAnalysis": {
