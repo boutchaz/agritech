@@ -32,33 +32,6 @@ if (typeof window !== 'undefined') {
 export type HeatmapRenderMode = 'grid' | 'smooth';
 export type ValueDisplayMode = 'interactive' | 'always';
 
-/** Ring vertices as [lng, lat] (GeoJSON order). Ray-casting; fine for parcel-sized AOIs. */
-function pointInPolygon(lon: number, lat: number, ring: [number, number][]): boolean {
-  if (ring.length < 3) return false;
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0];
-    const yi = ring[i][1];
-    const xj = ring[j][0];
-    const yj = ring[j][1];
-    const intersect =
-      yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi + 1e-20) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
-
-/** Drop closing duplicate vertex if present. */
-function normalizeLngLatRing(ring: [number, number][]): [number, number][] {
-  if (ring.length < 3) return ring;
-  const first = ring[0];
-  const last = ring[ring.length - 1];
-  if (first[0] === last[0] && first[1] === last[1]) {
-    return ring.slice(0, -1);
-  }
-  return ring;
-}
-
 interface LeafletHeatmapViewerProps {
   parcelId: string;
   parcelName?: string;
@@ -75,29 +48,14 @@ interface LeafletHeatmapViewerProps {
   showIsolines?: boolean;
 }
 
-/** One-time fit to parcel/AOI; use when heatmap layers use skipFitBounds (e.g. stacked overlays). */
-export function FitMapToAoiBoundary({ boundary }: { boundary: number[][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (!boundary?.length) return;
-    const latlngs = boundary.map((c) => [c[1], c[0]] as [number, number]);
-    map.fitBounds(latlngs, { padding: [16, 16] });
-  }, [map, boundary]);
-  return null;
-}
-
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showBorders = true, aoiRingLngLat, skipFitBounds = false }: {
+export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showBorders = true }: {
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
   colorPalette?: ColorPalette;
   opacity?: number;
   valueDisplay?: ValueDisplayMode;
   showBorders?: boolean;
-  /** GeoJSON-style ring [lng, lat]; cells outside are not drawn. */
-  aoiRingLngLat?: [number, number][];
-  /** When true, do not change map view (use with FitMapToAoiBoundary). */
-  skipFitBounds?: boolean;
 }) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
@@ -193,13 +151,7 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       labelLayerRef.current.addTo(map);
     }
 
-    const ring = aoiRingLngLat?.length ? normalizeLngLatRing(aoiRingLngLat) : undefined;
-
     sortedPixels.forEach((point) => {
-      if (ring && ring.length >= 3 && !pointInPolygon(point.lon, point.lat, ring)) {
-        return;
-      }
-
       const color = getColorForValue(point.value, data.statistics.min, data.statistics.max);
 
       const bounds: [number, number][] = [
@@ -246,23 +198,14 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       labelLayerRef.current.addTo(map);
     }
 
-    // Fit map: prefer AOI polygon so the view matches the parcel outline
-    if (!skipFitBounds) {
-      if (aoiRingLngLat && aoiRingLngLat.length >= 3) {
-        const latlngs = normalizeLngLatRing(aoiRingLngLat).map(
-          ([lng, lat]) => [lat, lng] as [number, number],
-        );
-        map.fitBounds(latlngs, { padding: [20, 20] });
-      } else {
-        const lats = data.pixel_data.map(p => p.lat);
-        const lons = data.pixel_data.map(p => p.lon);
-        const bounds = L.latLngBounds(
-          [Math.min(...lats), Math.min(...lons)],
-          [Math.max(...lats), Math.max(...lons)]
-        );
-        map.fitBounds(bounds, { padding: [20, 20] });
-      }
-    }
+    // Fit map to data bounds
+    const lats = data.pixel_data.map(p => p.lat);
+    const lons = data.pixel_data.map(p => p.lon);
+    const bounds = L.latLngBounds(
+      [Math.min(...lats), Math.min(...lons)],
+      [Math.max(...lats), Math.max(...lons)]
+    );
+    map.fitBounds(bounds, { padding: [20, 20] });
 
     return () => {
       if (gridLayerRef.current) {
@@ -272,10 +215,11 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
         map.removeLayer(labelLayerRef.current);
       }
     };
-  }, [data, selectedIndex, map, valueDisplay, showBorders, aoiRingLngLat, skipFitBounds, opacity, colorPalette]);
+  }, [data, selectedIndex, map, valueDisplay, showBorders]);
 
   return null;
 };
+
 
 // Helper: get interpolated RGB from palette for a normalized value [0,1]
 function paletteColorRGB(normalized: number, colorPalette: ColorPalette): [number, number, number] {
@@ -300,19 +244,13 @@ function buildHeatmapCanvas(
   minLon: number, maxLat: number, pxDeg: number,
   min: number, range: number,
   colorPalette: ColorPalette, opacity: number,
-  aoiRingLngLat?: [number, number][],
 ): string {
-  // Higher resolution = smoother field; cap canvas size for memory/perf.
-  const maxDim = 2048;
-  const maxGrid = Math.max(nCols, nRows);
-  const SCALE = Math.min(24, Math.max(12, Math.floor(maxDim / Math.max(maxGrid, 4))));
+  const SCALE = 8;
   const cW = nCols * SCALE;
   const cH = nRows * SCALE;
   const degPerPx = pxDeg / SCALE;
   const bMinLon = minLon - pxDeg / 2;
   const bMaxLat = maxLat + pxDeg / 2;
-
-  const aoiRing = aoiRingLngLat?.length ? normalizeLngLatRing(aoiRingLngLat) : undefined;
 
   const canvas = document.createElement('canvas');
   canvas.width = cW; canvas.height = cH;
@@ -324,10 +262,6 @@ function buildHeatmapCanvas(
     for (let cx = 0; cx < cW; cx++) {
       const lon = bMinLon + (cx + 0.5) * degPerPx;
       const lat = bMaxLat - (cy + 0.5) * degPerPx;
-
-      if (aoiRing && aoiRing.length >= 3 && !pointInPolygon(lon, lat, aoiRing)) {
-        continue;
-      }
 
       const gxF = (lon - minLon) / pxDeg;
       const gyF = (maxLat - lat) / pxDeg;
@@ -365,22 +299,12 @@ function buildHeatmapCanvas(
 }
 
 // Smooth heatmap using Canvas ImageOverlay with bilinear interpolation + optional isolines
-export const SmoothHeatmapLayer = ({
-  data,
-  colorPalette = 'red-green',
-  opacity = 1.0,
-  valueDisplay = 'interactive',
-  showIsolines = false,
-  aoiRingLngLat,
-  skipFitBounds = false,
-}: {
+export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false }: {
   data: HeatmapDataResponse | null;
   colorPalette?: ColorPalette;
   opacity?: number;
   valueDisplay?: ValueDisplayMode;
   showIsolines?: boolean;
-  aoiRingLngLat?: [number, number][];
-  skipFitBounds?: boolean;
 }) => {
   const map = useMap();
   const overlayRef = useRef<L.ImageOverlay | null>(null);
@@ -411,22 +335,11 @@ export const SmoothHeatmapLayer = ({
       if (ri >= 0 && ri < nRows && ci >= 0 && ci < nCols) grid[ri * nCols + ci] = p.value;
     });
 
-    const dataUrl = buildHeatmapCanvas(
-      grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiRingLngLat,
-    );
+    const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity);
     const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
     overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
     overlayRef.current.addTo(map);
-    if (!skipFitBounds) {
-      if (aoiRingLngLat && aoiRingLngLat.length >= 3) {
-        const latlngs = normalizeLngLatRing(aoiRingLngLat).map(
-          ([lng, lat]) => [lat, lng] as [number, number],
-        );
-        map.fitBounds(latlngs, { padding: [20, 20] });
-      } else {
-        map.fitBounds(bounds, { padding: [20, 20] });
-      }
-    }
+    map.fitBounds(bounds, { padding: [20, 20] });
 
     // Marching squares isolines
     if (showIsolines) {
@@ -464,7 +377,7 @@ export const SmoothHeatmapLayer = ({
       if (overlayRef.current) map.removeLayer(overlayRef.current);
       if (isolinesRef.current) map.removeLayer(isolinesRef.current);
     };
-  }, [data, colorPalette, opacity, map, showIsolines, aoiRingLngLat, skipFitBounds]);
+  }, [data, colorPalette, opacity, map, showIsolines]);
 
   // Click popup for interactive mode
   useEffect(() => {
@@ -577,7 +490,7 @@ const LeafletHeatmapViewer = ({
   colorPalette = 'red-green',
   compact = false,
   baseLayer = 'satellite',
-  renderMode = 'smooth',
+  renderMode = 'grid',
   valueDisplay = 'interactive',
   showIsolines = false,
 }: LeafletHeatmapViewerProps) => {
@@ -741,17 +654,6 @@ const LeafletHeatmapViewer = ({
       return boundary.map(coord => [coord[1], coord[0]]);
     }
     return [];
-  }, [data?.aoi_boundary, boundary]);
-
-  /** GeoJSON [lng, lat] ring for canvas / grid clipping (same source as polygon outline). */
-  const aoiRingLngLat = useMemo((): [number, number][] | undefined => {
-    if (data?.aoi_boundary && data.aoi_boundary.length > 0) {
-      return data.aoi_boundary.map((c): [number, number] => [c[0], c[1]]);
-    }
-    if (boundary && boundary.length > 0) {
-      return boundary.map((c): [number, number] => [c[0], c[1]]);
-    }
-    return undefined;
   }, [data?.aoi_boundary, boundary]);
 
   return (
@@ -952,25 +854,10 @@ const LeafletHeatmapViewer = ({
 
             {/* Heatmap Layer — switches by renderMode */}
             {renderMode === 'grid' && (
-              <GridHeatmapLayer
-                key="grid-heatmap"
-                data={data}
-                selectedIndex={selectedIndex}
-                colorPalette={colorPalette}
-                valueDisplay={valueDisplay}
-                showBorders={true}
-                aoiRingLngLat={aoiRingLngLat}
-              />
+              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={true} />
             )}
             {renderMode === 'smooth' && (
-              <SmoothHeatmapLayer
-                key="smooth-heatmap"
-                data={data}
-                colorPalette={colorPalette}
-                valueDisplay={valueDisplay}
-                showIsolines={showIsolines}
-                aoiRingLngLat={aoiRingLngLat}
-              />
+              <SmoothHeatmapLayer key="smooth-heatmap" data={data} colorPalette={colorPalette} valueDisplay={valueDisplay} showIsolines={showIsolines} />
             )}
 
 

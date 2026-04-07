@@ -36,11 +36,7 @@ import {
    DEFAULT_CLOUD_COVERAGE,
    formatDateForAPI
 } from '../../lib/satellite-api';
-import LeafletHeatmapViewer, {
-  GridHeatmapLayer,
-  SmoothHeatmapLayer,
-  FitMapToAoiBoundary,
-} from './LeafletHeatmapViewer';
+import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
 import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 import { Button } from '../ui/button';
@@ -143,7 +139,7 @@ const InteractiveIndexViewer = ({
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('red-green');
   const [baseLayer, setBaseLayer] = useState<'osm' | 'satellite'>('satellite');
-  const [renderMode, setRenderMode] = useState<import('./LeafletHeatmapViewer').HeatmapRenderMode>('smooth');
+  const [renderMode, setRenderMode] = useState<import('./LeafletHeatmapViewer').HeatmapRenderMode>('grid');
   const [valueDisplay, setValueDisplay] = useState<import('./LeafletHeatmapViewer').ValueDisplayMode>('interactive');
   const [showIsolines, setShowIsolines] = useState(false);
 
@@ -1016,9 +1012,6 @@ const InteractiveIndexViewer = ({
                         colorPalette={indexColorPalettes.get(vegIndex) || 'red-green'}
                         baseLayer={baseLayer}
                         compact={true}
-                        renderMode={renderMode}
-                        valueDisplay={valueDisplay}
-                        showIsolines={renderMode === 'smooth' ? showIsolines : false}
                       />
                     </div>
                   </Card>
@@ -1086,9 +1079,6 @@ const InteractiveIndexViewer = ({
                       overlayOpacity={overlayOpacity}
                       selectedDate={selectedDate}
                       baseLayer={baseLayer}
-                      renderMode={renderMode}
-                      valueDisplay={valueDisplay}
-                      showIsolines={renderMode === 'smooth' ? showIsolines : false}
                     />
                   </div>
                 </CardContent>
@@ -1150,9 +1140,6 @@ const InteractiveIndexViewer = ({
                         embedded={true}
                         colorPalette={colorPalette}
                         baseLayer={baseLayer}
-                        renderMode={renderMode}
-                        valueDisplay={valueDisplay}
-                        showIsolines={renderMode === 'smooth' ? showIsolines : false}
                       />
                     </div>
                   </Card>
@@ -1243,26 +1230,13 @@ const InteractiveIndexViewer = ({
 };
 
 // Multi-Index Overlay Map Component
-const MultiIndexOverlayMap = ({
-  boundary,
-  multiData,
-  overlayOpacity,
-  baseLayer,
-  renderMode = 'smooth',
-  valueDisplay = 'interactive',
-  showIsolines = false,
-}: {
-  parcelId: string;
+const MultiIndexOverlayMap = ({ boundary, multiData, overlayOpacity, baseLayer }: { parcelId: string;
   parcelName?: string;
   boundary?: number[][];
   multiData: Map<VegetationIndexType, HeatmapDataResponse>;
   overlayOpacity: Map<VegetationIndexType, number>;
   selectedDate: string;
-  baseLayer: 'osm' | 'satellite';
-  renderMode?: import('./LeafletHeatmapViewer').HeatmapRenderMode;
-  valueDisplay?: import('./LeafletHeatmapViewer').ValueDisplayMode;
-  showIsolines?: boolean;
-}) => {
+  baseLayer: 'osm' | 'satellite'; }) => {
   const { t } = useTranslation('satellite');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const indices = Array.from(multiData.keys());
@@ -1298,8 +1272,6 @@ const MultiIndexOverlayMap = ({
           withSatelliteReferenceLabels={baseLayer === 'satellite'}
         />
 
-        <FitMapToAoiBoundary boundary={boundary} />
-
         <Polygon
           positions={boundary.map(coord => [coord[1], coord[0]] as [number, number])}
           pathOptions={{ color: '#ffffff', weight: 2, fillOpacity: 0, dashArray: '5, 10' }}
@@ -1308,36 +1280,13 @@ const MultiIndexOverlayMap = ({
         {indices.map(vegIndex => {
           const indexData = multiData.get(vegIndex);
           if (!indexData) return null;
-          const aoiRingLngLat: [number, number][] = indexData.aoi_boundary?.length
-            ? indexData.aoi_boundary.map((c): [number, number] => [c[0], c[1]])
-            : boundary.map((c): [number, number] => [c[0], c[1]]);
-          const op = overlayOpacity.get(vegIndex) || 0.7;
-          const palette = getIndexColorPalette(vegIndex);
-          if (renderMode === 'smooth') {
-            return (
-              <SmoothHeatmapLayer
-                key={vegIndex}
-                data={indexData}
-                colorPalette={palette}
-                opacity={op}
-                valueDisplay={valueDisplay}
-                showIsolines={showIsolines}
-                aoiRingLngLat={aoiRingLngLat}
-                skipFitBounds
-              />
-            );
-          }
           return (
             <GridHeatmapLayer
               key={vegIndex}
               data={indexData}
               selectedIndex={vegIndex}
-              colorPalette={palette}
-              opacity={op}
-              valueDisplay={valueDisplay}
-              showBorders={false}
-              aoiRingLngLat={aoiRingLngLat}
-              skipFitBounds
+              colorPalette={getIndexColorPalette(vegIndex)}
+              opacity={overlayOpacity.get(vegIndex) || 0.7}
             />
           );
         })}
