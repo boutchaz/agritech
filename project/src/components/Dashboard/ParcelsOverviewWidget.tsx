@@ -16,7 +16,7 @@ const ParcelsOverviewWidget = () => {
 
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const farmIds = currentFarm?.id ? [currentFarm.id] : farms.map(f => f.id);
-  const { data: parcels = [], isLoading } = useParcelsByFarms(farmIds);
+  const { data: parcels = [], isLoading } = useParcelsByFarms(farmIds, currentOrganization?.id);
 
   // Calculate statistics
   const totalArea = parcels.reduce((sum, p) => sum + (p.calculated_area || p.area || 0), 0);

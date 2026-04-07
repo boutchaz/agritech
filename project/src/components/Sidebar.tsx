@@ -463,6 +463,7 @@ const Sidebar = ({
             className={cn(
               "flex items-center gap-2",
               isRTL ? "flex-row-reverse" : "",
+              isCollapsed && "md:justify-center",
             )}
           >
             <button
@@ -471,22 +472,22 @@ const Sidebar = ({
               className={cn(
                 "flex items-center min-w-0 flex-1 gap-3 cursor-pointer bg-transparent border-0 p-0",
                 isRTL && "flex-row-reverse",
-                isCollapsed && "md:justify-center md:flex-none",
+                isCollapsed && "md:w-full md:flex-none md:justify-center",
               )}
             >
               <span
                 className={cn(
                   "flex flex-shrink-0 items-center justify-center",
                   isCollapsed &&
-                    "md:h-11 md:w-11 md:rounded-2xl md:bg-slate-50 dark:md:bg-slate-800",
+                    "md:mx-auto md:flex md:h-11 md:w-11 md:shrink-0 md:rounded-2xl md:bg-slate-50 dark:md:bg-slate-800",
                 )}
               >
                 <img
                   src="/assets/logo.png"
                   alt="AGROGINA"
                   className={cn(
-                    "flex-shrink-0 object-contain rounded-lg",
-                    isCollapsed ? "h-8 w-8 md:h-7 md:w-7" : "h-10 w-10",
+                    "block flex-shrink-0 object-contain object-center",
+                    isCollapsed ? "h-8 w-8 md:h-7 md:w-7" : "h-10 w-10 rounded-lg",
                   )}
                 />
               </span>

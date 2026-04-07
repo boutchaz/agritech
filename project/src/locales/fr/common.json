@@ -4344,7 +4344,15 @@
       "revenues": "Revenus",
       "structures": "Infrastructures",
       "cost_centers": "Centres de coût",
-      "stock_entries": "Mouvements de stock"
+      "stock_entries": "Mouvements de stock",
+      "crop_templates": "Modèles de culture",
+      "stock_movements": "Mouvements de stock détaillés",
+      "inventory_batches": "Lots d'inventaire",
+      "payment_advances": "Avances sur salaire",
+      "metayage_settlements": "Règlements métayage",
+      "biological_asset_valuations": "Valorisations actifs bio.",
+      "pest_disease_reports": "Signalements ravageurs",
+      "calibrations": "Calibrations IA"
     },
     "exportImport": {
       "title": "Exporter / Importer les Données",

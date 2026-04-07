@@ -4198,7 +4198,15 @@
       "revenues": "الإيرادات",
       "structures": "البنى التحتية",
       "cost_centers": "مراكز التكلفة",
-      "stock_entries": "حركات المخزون"
+      "stock_entries": "حركات المخزون",
+      "crop_templates": "قوالب المحاصيل",
+      "stock_movements": "حركات المخزون",
+      "inventory_batches": "دفعات المخزون",
+      "payment_advances": "سلف الرواتب",
+      "metayage_settlements": "تسويات المزارعة",
+      "biological_asset_valuations": "تقييم الأصول البيولوجية",
+      "pest_disease_reports": "تقارير الآفات والأمراض",
+      "calibrations": "معايرات الذكاء الاصطناعي"
     },
     "exportImport": {
       "title": "تصدير / استيراد البيانات",

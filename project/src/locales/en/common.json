@@ -4525,7 +4525,15 @@
       "revenues": "Revenues",
       "structures": "Structures",
       "cost_centers": "Cost centers",
-      "stock_entries": "Stock entries"
+      "stock_entries": "Stock entries",
+      "crop_templates": "Crop Templates",
+      "stock_movements": "Stock Movements",
+      "inventory_batches": "Inventory Batches",
+      "payment_advances": "Payment Advances",
+      "metayage_settlements": "Sharecrop Settlements",
+      "biological_asset_valuations": "Bio Asset Valuations",
+      "pest_disease_reports": "Pest/Disease Reports",
+      "calibrations": "AI Calibrations"
     },
     "exportImport": {
       "title": "Export / Import Data",

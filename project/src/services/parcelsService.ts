@@ -77,15 +77,15 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class ParcelsService {
-  async listParcels(farmId?: string): Promise<Parcel[]> {
-    const organizationId = getCurrentOrganizationId();
+  async listParcels(farmId?: string, organizationId?: string | null): Promise<Parcel[]> {
+    const orgId = organizationId || getCurrentOrganizationId();
 
-    if (!organizationId) {
+    if (!orgId) {
       throw new OrganizationRequiredError();
     }
 
     const url = new URL('/api/v1/parcels', 'http://dummy');
-    url.searchParams.append('organization_id', organizationId);
+    url.searchParams.append('organization_id', orgId);
 
     if (farmId) {
       url.searchParams.append('farm_id', farmId);
@@ -95,7 +95,7 @@ class ParcelsService {
     const result = await apiClient.get<ListParcelsResponse>(
       url.pathname + url.search,
       {},
-      organizationId
+      orgId
     );
     type ListResponse = { data?: Parcel[]; parcels?: Parcel[] };
     const resp = result as unknown as ListResponse;

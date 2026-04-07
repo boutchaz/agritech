@@ -236,7 +236,7 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo task assignments`);
 
       // 21. Seed Deliveries (linked to harvests)
-      await this.createDemoDeliveries(
+      const deliveries = await this.createDemoDeliveries(
         organizationId,
         farm.id,
         customers,
@@ -244,7 +244,11 @@ export class DemoDataService {
         harvests,
         userId,
       );
-      this.logger.log(`✅ Created demo deliveries`);
+      this.logger.log(`✅ Created ${deliveries.length} demo deliveries`);
+
+      // 21b. Seed Delivery Tracking (linked to deliveries)
+      await this.createDemoDeliveryTracking(deliveries, userId);
+      this.logger.log(`✅ Created demo delivery tracking`);
 
       // 22. Seed Product Applications (linked to items and tasks)
       const applications = await this.createDemoProductApplications(
@@ -287,13 +291,13 @@ export class DemoDataService {
       this.logger.log(`✅ Created ${campaigns.length} demo campaigns`);
 
       // 26. Seed Biological Assets (Trees)
-      await this.createDemoBiologicalAssets(
+      const biologicalAssets = await this.createDemoBiologicalAssets(
         organizationId,
         farm.id,
         parcels,
         userId,
       );
-      this.logger.log(`✅ Created demo biological assets`);
+      this.logger.log(`✅ Created ${biologicalAssets.length} demo biological assets`);
 
       // 27. Seed Notifications
       await this.createDemoNotifications(organizationId, userId);
@@ -339,6 +343,18 @@ export class DemoDataService {
       );
       this.logger.log(`✅ Created ${cropCycles.length} demo crop cycles`);
 
+      // 32b. Seed Crop Cycle Stages (linked to crop cycles)
+      await this.createDemoCropCycleStages(cropCycles);
+      this.logger.log(`✅ Created demo crop cycle stages`);
+
+      // 32c. Seed Harvest Events (linked to crop cycles)
+      await this.createDemoHarvestEvents(cropCycles);
+      this.logger.log(`✅ Created demo harvest events`);
+
+      // 32d. Seed Crop Templates
+      await this.createDemoCropTemplates(organizationId);
+      this.logger.log(`✅ Created demo crop templates`);
+
       // 33. Seed Quality Inspections (linked to farm, parcels, crop cycles)
       await this.createDemoQualityInspections(
         organizationId,
@@ -350,21 +366,37 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo quality inspections`);
 
       // 34. Seed Task Categories and Time Logs
-      await this.createDemoTaskExtras(
+      const { categories: taskCategories } = await this.createDemoTaskExtras(
         organizationId,
         tasks,
         workers,
       );
       this.logger.log(`✅ Created demo task categories and time logs`);
 
+      // 34b. Seed Task Comments (linked to tasks, users, workers)
+      await this.createDemoTaskComments(tasks, workers, userId);
+      this.logger.log(`✅ Created demo task comments`);
+
+      // 34c. Seed Task Dependencies (linked between tasks)
+      await this.createDemoTaskDependencies(tasks);
+      this.logger.log(`✅ Created demo task dependencies`);
+
+      // 34d. Seed Task Equipment (linked to tasks)
+      await this.createDemoTaskEquipment(tasks);
+      this.logger.log(`✅ Created demo task equipment`);
+
+      // 34e. Seed Task Templates (linked to task categories)
+      await this.createDemoTaskTemplates(taskCategories);
+      this.logger.log(`✅ Created demo task templates`);
+
       // 35. Seed Worker Payment Records
-      await this.createDemoPaymentRecords(
+      const paymentRecords = await this.createDemoPaymentRecords(
         organizationId,
         farm.id,
         workers,
         userId,
       );
-      this.logger.log(`✅ Created demo payment records`);
+      this.logger.log(`✅ Created ${paymentRecords.length} demo payment records`);
 
       // 36. Seed Harvest Forecasts
       await this.createDemoHarvestForecasts(
@@ -378,6 +410,38 @@ export class DemoDataService {
       // 37. Seed Cost Center Budgets
       await this.createDemoCostCenterBudgets(organizationId);
       this.logger.log(`✅ Created demo cost center budgets`);
+
+      // 38. Seed Stock Movements (linked to items, warehouses, stock entries)
+      await this.createDemoStockMovements(organizationId, warehouse, finishedGoodsWarehouse, items, userId);
+      this.logger.log(`✅ Created demo stock movements`);
+
+      // 39. Seed Inventory Batches (linked to items, suppliers, purchase orders)
+      await this.createDemoInventoryBatches(organizationId, items, suppliers, purchaseOrders);
+      this.logger.log(`✅ Created demo inventory batches`);
+
+      // 40. Seed Payment Advances (linked to workers, farm)
+      await this.createDemoPaymentAdvances(organizationId, farm.id, workers, userId);
+      this.logger.log(`✅ Created demo payment advances`);
+
+      // 41. Seed Payment Bonuses and Deductions (linked to payment records)
+      await this.createDemoPaymentBonusesAndDeductions(paymentRecords);
+      this.logger.log(`✅ Created demo payment bonuses and deductions`);
+
+      // 42. Seed Metayage Settlements (linked to workers, farm, parcels)
+      await this.createDemoMetayage(organizationId, farm.id, workers, parcels, harvests, userId);
+      this.logger.log(`✅ Created demo metayage settlements`);
+
+      // 43. Seed Biological Asset Valuations (linked to assets, fiscal years)
+      await this.createDemoBioAssetValuations(organizationId, biologicalAssets);
+      this.logger.log(`✅ Created demo biological asset valuations`);
+
+      // 44. Seed Pest/Disease Reports (linked to farm, parcels, user)
+      await this.createDemoPestReports(organizationId, farm.id, parcels, userId);
+      this.logger.log(`✅ Created demo pest/disease reports`);
+
+      // 45. Seed Calibrations (linked to parcels via composite FK)
+      await this.createDemoCalibrations(organizationId, parcels, userId);
+      this.logger.log(`✅ Created demo calibrations`);
 
       this.logger.log(
         `✅ Demo data seeding completed successfully for organization ${organizationId}`,
@@ -3930,8 +3994,8 @@ export class DemoDataService {
     organizationId: string,
     tasks: any[],
     workers: any[],
-  ): Promise<void> {
-    if (!tasks?.length || !workers?.length) return;
+  ): Promise<{ categories: any[] }> {
+    if (!tasks?.length || !workers?.length) return { categories: [] };
 
     const client = this.databaseService.getAdminClient();
 
@@ -3979,7 +4043,7 @@ export class DemoDataService {
       },
     ];
 
-    await client.from("task_categories").insert(categories);
+    const { data: createdCategories } = await client.from("task_categories").insert(categories).select();
 
     // Create task time logs for recent tasks
     const now = new Date();
@@ -4046,6 +4110,8 @@ export class DemoDataService {
         );
       }
     }
+
+    return { categories: createdCategories || [] };
   }
 
   /**
@@ -4056,8 +4122,8 @@ export class DemoDataService {
     farmId: string,
     workers: any[],
     userId: string,
-  ): Promise<void> {
-    if (!workers?.length) return;
+  ): Promise<any[]> {
+    if (!workers?.length) return [];
 
     const client = this.databaseService.getAdminClient();
     const now = new Date();
@@ -4155,12 +4221,14 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from("payment_records").insert(records);
+    const { data: createdRecords, error } = await client.from("payment_records").insert(records).select();
     if (error) {
       this.logger.error(
         `Failed to create demo payment records: ${error.message}`,
       );
+      return [];
     }
+    return createdRecords || [];
   }
 
   /**
@@ -4295,6 +4363,1197 @@ export class DemoDataService {
   }
 
   /**
+   * Create demo crop cycle stages linked to crop cycles
+   */
+  private async createDemoCropCycleStages(cropCycles: any[]): Promise<void> {
+    if (!cropCycles?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+
+    const stageDefinitions = [
+      { stage_name: 'Dormance', stage_order: 1, offset_start: 0, offset_end: 0.15 },
+      { stage_name: 'Débourrement', stage_order: 2, offset_start: 0.15, offset_end: 0.30 },
+      { stage_name: 'Floraison', stage_order: 3, offset_start: 0.30, offset_end: 0.45 },
+      { stage_name: 'Nouaison', stage_order: 4, offset_start: 0.45, offset_end: 0.70 },
+      { stage_name: 'Véraison / Maturation', stage_order: 5, offset_start: 0.70, offset_end: 0.85 },
+      { stage_name: 'Récolte', stage_order: 6, offset_start: 0.85, offset_end: 1.0 },
+    ];
+
+    const allStages: any[] = [];
+
+    for (const cycle of cropCycles) {
+      if (!cycle?.id) continue;
+
+      // Parse cycle dates to compute stage windows
+      const cycleStart = cycle.land_prep_date || cycle.planting_date;
+      const cycleEnd = cycle.expected_harvest_end || cycle.expected_harvest_start;
+      if (!cycleStart || !cycleEnd) continue;
+
+      const start = new Date(cycleStart).getTime();
+      const end = new Date(cycleEnd).getTime();
+      const duration = end - start;
+      if (duration <= 0) continue;
+
+      const now = Date.now();
+
+      for (const def of stageDefinitions) {
+        const expectedStart = new Date(start + duration * def.offset_start);
+        const expectedEnd = new Date(start + duration * def.offset_end);
+
+        let status = 'pending';
+        let actualStart: string | null = null;
+        let actualEnd: string | null = null;
+
+        if (now >= expectedEnd.getTime()) {
+          status = 'completed';
+          actualStart = expectedStart.toISOString().split('T')[0];
+          actualEnd = expectedEnd.toISOString().split('T')[0];
+        } else if (now >= expectedStart.getTime()) {
+          status = 'in_progress';
+          actualStart = expectedStart.toISOString().split('T')[0];
+        }
+
+        allStages.push({
+          crop_cycle_id: cycle.id,
+          stage_name: def.stage_name,
+          stage_order: def.stage_order,
+          expected_start_date: expectedStart.toISOString().split('T')[0],
+          expected_end_date: expectedEnd.toISOString().split('T')[0],
+          actual_start_date: actualStart,
+          actual_end_date: actualEnd,
+          status,
+          notes: `${def.stage_name} - ${cycle.cycle_name || cycle.crop_type}`,
+        });
+      }
+    }
+
+    if (allStages.length > 0) {
+      const { error } = await client.from('crop_cycle_stages').insert(allStages);
+      if (error) {
+        this.logger.error(`Failed to create demo crop cycle stages: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo delivery tracking entries linked to deliveries
+   */
+  private async createDemoDeliveryTracking(
+    deliveries: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!deliveries?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const tracking: any[] = [];
+
+    for (const delivery of deliveries) {
+      if (!delivery?.id) continue;
+
+      const departureTime = delivery.departure_time
+        ? new Date(delivery.departure_time)
+        : new Date(delivery.delivery_date + 'T06:00:00Z');
+
+      // Dispatched
+      tracking.push({
+        delivery_id: delivery.id,
+        status: 'dispatched',
+        location_name: 'Ferme D\u00e9mo - Berkane',
+        location_lat: 34.9214,
+        location_lng: -2.3197,
+        notes: 'Chargement termin\u00e9, d\u00e9part du v\u00e9hicule',
+        recorded_by: userId,
+        recorded_at: departureTime.toISOString(),
+      });
+
+      // In transit (+2h)
+      const transitTime = new Date(departureTime.getTime() + 2 * 3600000);
+      tracking.push({
+        delivery_id: delivery.id,
+        status: 'in_transit',
+        location_name: 'Route Nationale N2 - Taza',
+        location_lat: 34.21,
+        location_lng: -4.01,
+        notes: 'En route, conditions normales',
+        recorded_by: userId,
+        recorded_at: transitTime.toISOString(),
+      });
+
+      // Delivered (only for completed deliveries)
+      if (delivery.status === 'delivered' && delivery.arrival_time) {
+        tracking.push({
+          delivery_id: delivery.id,
+          status: 'delivered',
+          location_name: delivery.delivery_address || 'Point de livraison',
+          notes: 'Livraison effectu\u00e9e, r\u00e9ception confirm\u00e9e par le client',
+          recorded_by: userId,
+          recorded_at: new Date(delivery.arrival_time).toISOString(),
+        });
+      }
+    }
+
+    if (tracking.length > 0) {
+      const { error } = await client.from('delivery_tracking').insert(tracking);
+      if (error) {
+        this.logger.error(`Failed to create demo delivery tracking: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo task comments linked to tasks, users, and workers
+   */
+  private async createDemoTaskComments(
+    tasks: any[],
+    workers: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!tasks?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const comments: any[] = [];
+
+    const completedTasks = tasks.filter((t) => t.status === 'completed');
+    const inProgressTasks = tasks.filter((t) => t.status === 'in_progress');
+    const assignedTasks = tasks.filter((t) => t.status === 'assigned');
+
+    // Comments on completed tasks
+    for (const task of completedTasks.slice(0, 3)) {
+      comments.push({
+        task_id: task.id,
+        user_id: userId,
+        worker_id: task.assigned_to || workers[0]?.id || null,
+        comment: `T\u00e2che termin\u00e9e avec succ\u00e8s. Dur\u00e9e r\u00e9elle: ${task.actual_duration || task.estimated_duration}h.`,
+        type: 'completion_note',
+      });
+    }
+
+    // Comments on in-progress tasks
+    for (const task of inProgressTasks.slice(0, 2)) {
+      comments.push({
+        task_id: task.id,
+        user_id: userId,
+        worker_id: task.assigned_to || workers[0]?.id || null,
+        comment: `Avancement: ${task.completion_percentage || 50}%. Travail en cours, pas de blocage.`,
+        type: 'status_update',
+      });
+    }
+
+    // Issue comment on one assigned task
+    if (assignedTasks[0]) {
+      comments.push({
+        task_id: assignedTasks[0].id,
+        user_id: userId,
+        comment: 'Attention: les conditions m\u00e9t\u00e9o pourraient retarder le d\u00e9marrage. V\u00e9rifier les pr\u00e9visions.',
+        type: 'issue',
+      });
+    }
+
+    if (comments.length > 0) {
+      const { error } = await client.from('task_comments').insert(comments);
+      if (error) {
+        this.logger.error(`Failed to create demo task comments: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo task dependencies between tasks
+   */
+  private async createDemoTaskDependencies(tasks: any[]): Promise<void> {
+    if (!tasks?.length || tasks.length < 2) return;
+
+    const client = this.databaseService.getAdminClient();
+    const deps: any[] = [];
+
+    // Find tasks by type for meaningful dependencies
+    const irrigationTask = tasks.find((t) => t.task_type === 'irrigation');
+    const fertilizationTask = tasks.find((t) => t.task_type === 'fertilization');
+    const harvestingTask = tasks.find((t) => t.task_type === 'harvesting' && t.status !== 'completed');
+    const plantingTask = tasks.find((t) => t.task_type === 'planting');
+
+    // Fertilization depends on irrigation (finish_to_start)
+    if (fertilizationTask && irrigationTask && fertilizationTask.id !== irrigationTask.id) {
+      deps.push({
+        task_id: fertilizationTask.id,
+        depends_on_task_id: irrigationTask.id,
+        dependency_type: 'finish_to_start',
+        lag_days: 2,
+      });
+    }
+
+    // Harvesting depends on fertilization (finish_to_start, lag 7 days)
+    if (harvestingTask && fertilizationTask && harvestingTask.id !== fertilizationTask.id) {
+      deps.push({
+        task_id: harvestingTask.id,
+        depends_on_task_id: fertilizationTask.id,
+        dependency_type: 'finish_to_start',
+        lag_days: 7,
+      });
+    }
+
+    // Planting depends on irrigation (start_to_start)
+    if (plantingTask && irrigationTask && plantingTask.id !== irrigationTask.id) {
+      deps.push({
+        task_id: plantingTask.id,
+        depends_on_task_id: irrigationTask.id,
+        dependency_type: 'start_to_start',
+        lag_days: 0,
+      });
+    }
+
+    if (deps.length > 0) {
+      const { error } = await client.from('task_dependencies').insert(deps);
+      if (error) {
+        this.logger.error(`Failed to create demo task dependencies: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo task equipment linked to tasks
+   */
+  private async createDemoTaskEquipment(tasks: any[]): Promise<void> {
+    if (!tasks?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const equipment: any[] = [];
+
+    const equipmentByType: Record<string, { name: string; qty: number; condition: string }[]> = {
+      irrigation: [
+        { name: 'Pompe irrigation 15CV', qty: 1, condition: 'good' },
+        { name: 'Tuyau goutte-\u00e0-goutte 16mm', qty: 50, condition: 'good' },
+      ],
+      pruning: [
+        { name: 'S\u00e9cateur \u00e9lectrique Pellenc', qty: 2, condition: 'excellent' },
+      ],
+      harvesting: [
+        { name: 'Caisses r\u00e9colte 20kg', qty: 100, condition: 'good' },
+        { name: 'Tracteur + remorque', qty: 1, condition: 'good' },
+      ],
+      fertilization: [
+        { name: '\u00c9pandeur engrais tra\u00een\u00e9', qty: 1, condition: 'fair' },
+      ],
+      pest_control: [
+        { name: 'Pulv\u00e9risateur 600L', qty: 1, condition: 'good' },
+      ],
+      planting: [
+        { name: 'Planteuse manuelle', qty: 3, condition: 'good' },
+      ],
+    };
+
+    for (const task of tasks) {
+      const eqList = equipmentByType[task.task_type];
+      if (!eqList) continue;
+
+      for (const eq of eqList) {
+        equipment.push({
+          task_id: task.id,
+          equipment_name: eq.name,
+          quantity: eq.qty,
+          condition_before: eq.condition,
+          condition_after: task.status === 'completed' ? eq.condition : null,
+          notes: `\u00c9quipement utilis\u00e9 pour ${task.title}`,
+        });
+      }
+    }
+
+    if (equipment.length > 0) {
+      const { error } = await client.from('task_equipment').insert(equipment);
+      if (error) {
+        this.logger.error(`Failed to create demo task equipment: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo task templates linked to task categories
+   */
+  private async createDemoTaskTemplates(taskCategories: any[]): Promise<void> {
+    if (!taskCategories?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+
+    const templatesByCategory: Record<string, { name: string; desc: string; duration: number; recurring: boolean; pattern?: string }[]> = {
+      'Irrigation': [
+        { name: 'Irrigation standard goutte-\u00e0-goutte', desc: 'Cycle irrigation complet par parcelle', duration: 240, recurring: true, pattern: 'weekly' },
+      ],
+      'Traitement': [
+        { name: 'Traitement pr\u00e9ventif fongicide', desc: 'Application fongicide pr\u00e9ventive saisonni\u00e8re', duration: 180, recurring: true, pattern: 'monthly' },
+      ],
+      'R\u00e9colte': [
+        { name: 'R\u00e9colte manuelle fruits', desc: 'R\u00e9colte manuelle avec tri qualit\u00e9 sur place', duration: 480, recurring: false },
+      ],
+      'Taille': [
+        { name: 'Taille de formation', desc: 'Taille de formation jeunes arbres', duration: 360, recurring: true, pattern: 'yearly' },
+      ],
+      'Maintenance': [
+        { name: 'Entretien syst\u00e8me irrigation', desc: 'V\u00e9rification et nettoyage filtres, goutteurs', duration: 120, recurring: true, pattern: 'monthly' },
+      ],
+    };
+
+    const templates: any[] = [];
+    for (const cat of taskCategories) {
+      const defs = templatesByCategory[cat.name];
+      if (!defs) continue;
+      for (const def of defs) {
+        templates.push({
+          category_id: cat.id,
+          name: def.name,
+          description: def.desc,
+          estimated_duration: def.duration,
+          is_recurring: def.recurring,
+          recurrence_pattern: def.pattern || null,
+          is_active: true,
+        });
+      }
+    }
+
+    if (templates.length > 0) {
+      const { error } = await client.from('task_templates').insert(templates);
+      if (error) {
+        this.logger.error(`Failed to create demo task templates: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo crop templates
+   */
+  private async createDemoCropTemplates(organizationId: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+
+    const templates = [
+      {
+        organization_id: organizationId,
+        crop_type: 'Olives',
+        crop_name: 'Olivier Picholine',
+        cycle_type: 'perennial',
+        cycle_category: 'fruit_trees',
+        is_perennial: true,
+        typical_duration_days: 365,
+        typical_duration_months: 12,
+        typical_planting_months: [3, 4],
+        typical_harvest_months: [11, 12],
+        yield_unit: 'kg',
+        average_yield_per_ha: 5000,
+        code_prefix: 'OLV',
+        stages: JSON.stringify([
+          { name: 'Dormance', order: 1, duration_days: 60 },
+          { name: 'D\u00e9bourrement', order: 2, duration_days: 45 },
+          { name: 'Floraison', order: 3, duration_days: 30 },
+          { name: 'Nouaison', order: 4, duration_days: 90 },
+          { name: 'R\u00e9colte', order: 5, duration_days: 60 },
+        ]),
+      },
+      {
+        organization_id: organizationId,
+        crop_type: 'Agrumes',
+        crop_name: 'Cl\u00e9mentine Nules',
+        cycle_type: 'perennial',
+        cycle_category: 'fruit_trees',
+        is_perennial: true,
+        typical_duration_days: 300,
+        typical_duration_months: 10,
+        typical_planting_months: [1, 2],
+        typical_harvest_months: [11, 12, 1, 2],
+        yield_unit: 'kg',
+        average_yield_per_ha: 25000,
+        code_prefix: 'AGR',
+        stages: JSON.stringify([
+          { name: 'Repos v\u00e9g\u00e9tatif', order: 1, duration_days: 60 },
+          { name: 'Floraison', order: 2, duration_days: 30 },
+          { name: 'Grossissement', order: 3, duration_days: 120 },
+          { name: 'R\u00e9colte', order: 4, duration_days: 90 },
+        ]),
+      },
+      {
+        organization_id: organizationId,
+        crop_type: 'Tomates',
+        crop_name: 'Tomate Marmande',
+        cycle_type: 'annual',
+        cycle_category: 'vegetables',
+        is_perennial: false,
+        typical_duration_days: 150,
+        typical_duration_months: 5,
+        typical_planting_months: [3, 4, 5],
+        typical_harvest_months: [6, 7, 8, 9],
+        yield_unit: 'kg',
+        average_yield_per_ha: 60000,
+        code_prefix: 'TOM',
+        stages: JSON.stringify([
+          { name: 'Semis / Plantation', order: 1, duration_days: 20 },
+          { name: 'Croissance v\u00e9g\u00e9tative', order: 2, duration_days: 40 },
+          { name: 'Floraison / Nouaison', order: 3, duration_days: 30 },
+          { name: 'R\u00e9colte', order: 4, duration_days: 60 },
+        ]),
+      },
+    ];
+
+    const { error } = await client.from('crop_templates').insert(templates);
+    if (error) {
+      this.logger.error(`Failed to create demo crop templates: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create demo harvest events linked to crop cycles
+   */
+  private async createDemoHarvestEvents(cropCycles: any[]): Promise<void> {
+    if (!cropCycles?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const events: any[] = [];
+
+    // Only add harvest events for completed or harvesting cycles
+    const harvestingCycles = cropCycles.filter(
+      (c) => c?.status === 'completed' || c?.status === 'harvesting',
+    );
+
+    for (const cycle of harvestingCycles) {
+      if (!cycle?.id) continue;
+
+      const harvestStart = cycle.actual_harvest_start || cycle.expected_harvest_start;
+      if (!harvestStart) continue;
+
+      const baseDate = new Date(harvestStart);
+
+      // First harvest pass
+      events.push({
+        crop_cycle_id: cycle.id,
+        harvest_date: baseDate.toISOString().split('T')[0],
+        harvest_number: 1,
+        quantity: cycle.actual_total_yield
+          ? Math.round(cycle.actual_total_yield * 0.6)
+          : 3000,
+        quantity_unit: cycle.yield_unit || 'kg',
+        quality_grade: cycle.average_quality_grade || 'A',
+        quality_notes: `Première passe récolte - ${cycle.crop_type}`,
+      });
+
+      // Second harvest pass (2 weeks later)
+      const secondDate = new Date(baseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+      events.push({
+        crop_cycle_id: cycle.id,
+        harvest_date: secondDate.toISOString().split('T')[0],
+        harvest_number: 2,
+        quantity: cycle.actual_total_yield
+          ? Math.round(cycle.actual_total_yield * 0.4)
+          : 2000,
+        quantity_unit: cycle.yield_unit || 'kg',
+        quality_grade: cycle.average_quality_grade || 'A',
+        quality_notes: `Deuxième passe récolte - ${cycle.crop_type}`,
+      });
+    }
+
+    if (events.length > 0) {
+      const { error } = await client.from('harvest_events').insert(events);
+      if (error) {
+        this.logger.error(`Failed to create demo harvest events: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo stock movements linked to items, warehouses, and stock entries
+   */
+  private async createDemoStockMovements(
+    organizationId: string,
+    warehouse: any,
+    finishedGoodsWarehouse: any,
+    items: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!items?.length || !warehouse?.id) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+
+    // Query existing stock entries to link movements
+    const { data: stockEntries } = await client
+      .from('stock_entries')
+      .select('id, stock_entry_number, entry_type')
+      .eq('organization_id', organizationId)
+      .limit(5);
+
+    const receiptEntry = stockEntries?.find((e) => e.entry_type === 'Receipt') || stockEntries?.[0];
+    const issueEntry = stockEntries?.find((e) => e.entry_type === 'Issue') || stockEntries?.[1];
+
+    // Find specific items
+    const fertilizerItem = items.find((i) => i.item_code === 'ENG-NPK-15-15-15') || items[0];
+    const seedItem = items.find((i) => i.item_code === 'SEM-TOM-MARM') || items[1];
+    const oliveOilItem = items.find((i) => i.item_code === 'REC-HUILE-EV') || items[2];
+
+    const movements: any[] = [];
+    const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 3600000);
+    const threeWeeksAgo = new Date(now.getTime() - 21 * 24 * 3600000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600000);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 3600000);
+
+    // IN: Fertilizer received from PO
+    movements.push({
+      organization_id: organizationId,
+      movement_type: 'IN',
+      movement_date: fourWeeksAgo.toISOString(),
+      item_id: fertilizerItem.id,
+      warehouse_id: warehouse.id,
+      quantity: 500,
+      unit: 'kg',
+      balance_quantity: 500,
+      cost_per_unit: 25,
+      total_cost: 12500,
+      stock_entry_id: receiptEntry?.id || null,
+      batch_number: 'LOT-ENG-2024-001',
+      created_by: userId,
+    });
+
+    // OUT: Fertilizer issued to field
+    movements.push({
+      organization_id: organizationId,
+      movement_type: 'OUT',
+      movement_date: threeWeeksAgo.toISOString(),
+      item_id: fertilizerItem.id,
+      warehouse_id: warehouse.id,
+      quantity: 100,
+      unit: 'kg',
+      balance_quantity: 400,
+      cost_per_unit: 25,
+      total_cost: 2500,
+      stock_entry_id: issueEntry?.id || null,
+      created_by: userId,
+    });
+
+    // IN: Seeds received
+    movements.push({
+      organization_id: organizationId,
+      movement_type: 'IN',
+      movement_date: threeWeeksAgo.toISOString(),
+      item_id: seedItem.id,
+      warehouse_id: warehouse.id,
+      quantity: 50,
+      unit: 'kg',
+      balance_quantity: 50,
+      cost_per_unit: 120,
+      total_cost: 6000,
+      batch_number: 'LOT-SEM-2024-001',
+      created_by: userId,
+    });
+
+    // OUT: Seeds issued for planting
+    movements.push({
+      organization_id: organizationId,
+      movement_type: 'OUT',
+      movement_date: twoWeeksAgo.toISOString(),
+      item_id: seedItem.id,
+      warehouse_id: warehouse.id,
+      quantity: 20,
+      unit: 'kg',
+      balance_quantity: 30,
+      cost_per_unit: 120,
+      total_cost: 2400,
+      created_by: userId,
+    });
+
+    // IN: Olive oil to finished goods warehouse
+    if (finishedGoodsWarehouse?.id) {
+      movements.push({
+        organization_id: organizationId,
+        movement_type: 'IN',
+        movement_date: oneWeekAgo.toISOString(),
+        item_id: oliveOilItem.id,
+        warehouse_id: finishedGoodsWarehouse.id,
+        quantity: 800,
+        unit: 'L',
+        balance_quantity: 800,
+        cost_per_unit: 30,
+        total_cost: 24000,
+        batch_number: 'LOT-HUILE-2024-001',
+        created_by: userId,
+      });
+    }
+
+    // TRANSFER: Fertilizer between warehouses
+    if (finishedGoodsWarehouse?.id) {
+      movements.push({
+        organization_id: organizationId,
+        movement_type: 'OUT',
+        movement_date: twoWeeksAgo.toISOString(),
+        item_id: fertilizerItem.id,
+        warehouse_id: warehouse.id,
+        quantity: 50,
+        unit: 'kg',
+        balance_quantity: 350,
+        created_by: userId,
+      });
+      movements.push({
+        organization_id: organizationId,
+        movement_type: 'IN',
+        movement_date: twoWeeksAgo.toISOString(),
+        item_id: fertilizerItem.id,
+        warehouse_id: finishedGoodsWarehouse.id,
+        quantity: 50,
+        unit: 'kg',
+        balance_quantity: 50,
+        created_by: userId,
+      });
+    }
+
+    if (movements.length > 0) {
+      const { error } = await client.from('stock_movements').insert(movements);
+      if (error) {
+        this.logger.error(`Failed to create demo stock movements: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo inventory batches linked to items, suppliers, purchase orders
+   */
+  private async createDemoInventoryBatches(
+    organizationId: string,
+    items: any[],
+    suppliers: any[],
+    purchaseOrders: any[],
+  ): Promise<void> {
+    if (!items?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+
+    const fertilizerItem = items.find((i) => i.item_code === 'ENG-NPK-15-15-15') || items[0];
+    const seedItem = items.find((i) => i.item_code === 'SEM-TOM-MARM') || items[1];
+    const oliveOilItem = items.find((i) => i.item_code === 'REC-HUILE-EV') || items[2];
+
+    const receivedPO = purchaseOrders?.find((o) => o.order_number === 'PO-2024-001');
+    const confirmedPO = purchaseOrders?.find((o) => o.order_number === 'PO-2024-002');
+
+    const batches = [
+      {
+        organization_id: organizationId,
+        batch_number: 'LOT-ENG-2024-001',
+        item_id: fertilizerItem.id,
+        received_date: new Date(now.getTime() - 28 * 24 * 3600000).toISOString().split('T')[0],
+        manufacturing_date: new Date(now.getTime() - 90 * 24 * 3600000).toISOString().split('T')[0],
+        expiry_date: new Date(now.getTime() + 365 * 24 * 3600000).toISOString().split('T')[0],
+        supplier_id: suppliers?.[0]?.id || null,
+        purchase_order_id: receivedPO?.id || null,
+        initial_quantity: 500,
+        current_quantity: 350,
+        cost_per_unit: 25,
+        status: 'Active',
+        notes: 'Lot engrais NPK - Fournisseur AgriSupply',
+      },
+      {
+        organization_id: organizationId,
+        batch_number: 'LOT-SEM-2024-001',
+        item_id: seedItem.id,
+        received_date: new Date(now.getTime() - 21 * 24 * 3600000).toISOString().split('T')[0],
+        manufacturing_date: new Date(now.getTime() - 60 * 24 * 3600000).toISOString().split('T')[0],
+        expiry_date: new Date(now.getTime() + 180 * 24 * 3600000).toISOString().split('T')[0],
+        supplier_id: suppliers?.[1]?.id || suppliers?.[0]?.id || null,
+        purchase_order_id: confirmedPO?.id || null,
+        initial_quantity: 50,
+        current_quantity: 30,
+        cost_per_unit: 120,
+        status: 'Active',
+        notes: 'Lot semences tomates Marmande certifi\u00e9es',
+      },
+      {
+        organization_id: organizationId,
+        batch_number: 'LOT-HUILE-2024-001',
+        item_id: oliveOilItem.id,
+        received_date: new Date(now.getTime() - 7 * 24 * 3600000).toISOString().split('T')[0],
+        manufacturing_date: new Date(now.getTime() - 14 * 24 * 3600000).toISOString().split('T')[0],
+        expiry_date: new Date(now.getTime() + 730 * 24 * 3600000).toISOString().split('T')[0],
+        initial_quantity: 800,
+        current_quantity: 800,
+        cost_per_unit: 30,
+        status: 'Active',
+        notes: 'Huile olive extra vierge - Production locale',
+      },
+    ];
+
+    const { error } = await client.from('inventory_batches').insert(batches);
+    if (error) {
+      this.logger.error(`Failed to create demo inventory batches: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create demo payment advances linked to workers and farm
+   */
+  private async createDemoPaymentAdvances(
+    organizationId: string,
+    farmId: string,
+    workers: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!workers?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600000);
+
+    const advances = [
+      {
+        organization_id: organizationId,
+        worker_id: workers[1]?.id || workers[0].id,
+        farm_id: farmId,
+        amount: 1000,
+        requested_date: lastMonth.toISOString().split('T')[0],
+        approved_by: userId,
+        approved_date: lastMonth.toISOString().split('T')[0],
+        reason: 'Avance sur salaire - besoins familiaux urgents',
+        status: 'paid',
+        remaining_balance: 500,
+        paid_by: userId,
+        paid_date: lastMonth.toISOString().split('T')[0],
+        payment_method: 'cash',
+        deduction_plan: JSON.stringify({ monthly_deduction: 250, installments: 4 }),
+        notes: 'Remboursement pr\u00e9vu sur 4 mois \u00e0 250 MAD/mois',
+      },
+      {
+        organization_id: organizationId,
+        worker_id: workers[2]?.id || workers[0].id,
+        farm_id: farmId,
+        amount: 500,
+        requested_date: twoWeeksAgo.toISOString().split('T')[0],
+        approved_by: userId,
+        approved_date: twoWeeksAgo.toISOString().split('T')[0],
+        reason: 'Avance pour achat \u00e9quipement personnel',
+        status: 'approved',
+        remaining_balance: 500,
+        notes: 'En attente de versement',
+      },
+    ];
+
+    const { error } = await client.from('payment_advances').insert(advances);
+    if (error) {
+      this.logger.error(`Failed to create demo payment advances: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create demo payment bonuses and deductions linked to payment records
+   */
+  private async createDemoPaymentBonusesAndDeductions(
+    paymentRecords: any[],
+  ): Promise<void> {
+    if (!paymentRecords?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+
+    // Find records with bonuses/deductions amounts > 0
+    const recordWithBonus = paymentRecords.find((r) => r.bonuses > 0);
+    const recordWithDeduction = paymentRecords.find((r) => r.deductions > 0);
+    const paidRecord = paymentRecords.find((r) => r.status === 'paid');
+
+    const bonuses: any[] = [];
+    const deductions: any[] = [];
+
+    // Bonuses
+    if (recordWithBonus) {
+      bonuses.push({
+        payment_record_id: recordWithBonus.id,
+        bonus_type: 'performance',
+        amount: 200,
+        description: 'Prime de rendement - R\u00e9colte agrumes exceptionnelle',
+      });
+    }
+    if (paidRecord) {
+      bonuses.push({
+        payment_record_id: paidRecord.id,
+        bonus_type: 'quality',
+        amount: 300,
+        description: 'Prime qualit\u00e9 - Z\u00e9ro perte lors de la r\u00e9colte',
+      });
+      bonuses.push({
+        payment_record_id: paidRecord.id,
+        bonus_type: 'attendance',
+        amount: 200,
+        description: 'Prime assiduit\u00e9 - Pr\u00e9sence compl\u00e8te sur le mois',
+      });
+    }
+
+    // Deductions
+    if (recordWithDeduction) {
+      deductions.push({
+        payment_record_id: recordWithDeduction.id,
+        deduction_type: 'cnss',
+        amount: 150,
+        description: 'Cotisation CNSS salari\u00e9',
+        reference: 'CNSS-2024-M11',
+      });
+    }
+    if (paidRecord && paidRecord.id !== recordWithDeduction?.id) {
+      deductions.push({
+        payment_record_id: paidRecord.id,
+        deduction_type: 'advance_repayment',
+        amount: 250,
+        description: 'Remboursement avance - Mensualit\u00e9 1/4',
+        reference: 'ADV-2024-001',
+      });
+    }
+    // Fallback: ensure at least 2 deductions
+    if (deductions.length < 2 && paymentRecords[0]) {
+      deductions.push({
+        payment_record_id: paymentRecords[0].id,
+        deduction_type: 'other',
+        amount: 100,
+        description: 'Retenue pour \u00e9quipement abim\u00e9',
+      });
+    }
+
+    if (bonuses.length > 0) {
+      const { error } = await client.from('payment_bonuses').insert(bonuses);
+      if (error) {
+        this.logger.error(`Failed to create demo payment bonuses: ${error.message}`);
+      }
+    }
+    if (deductions.length > 0) {
+      const { error } = await client.from('payment_deductions').insert(deductions);
+      if (error) {
+        this.logger.error(`Failed to create demo payment deductions: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo metayage (sharecropping) settlements
+   */
+  private async createDemoMetayage(
+    organizationId: string,
+    farmId: string,
+    workers: any[],
+    parcels: any[],
+    harvests: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!workers?.length || !parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    const grossRevenue = 45000;
+    const totalCharges = 12000;
+    const netRevenue = grossRevenue - totalCharges;
+    const workerPercentage = 30;
+    const workerShare = netRevenue * (workerPercentage / 100);
+
+    const settlements = [
+      {
+        organization_id: organizationId,
+        worker_id: workers[2]?.id || workers[0].id,
+        farm_id: farmId,
+        parcel_id: parcels[0].id,
+        period_start: new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0],
+        period_end: lastMonth.toISOString().split('T')[0],
+        harvest_date: harvests?.[1]?.harvest_date || lastMonth.toISOString().split('T')[0],
+        gross_revenue: grossRevenue,
+        total_charges: totalCharges,
+        net_revenue: netRevenue,
+        worker_percentage: workerPercentage,
+        worker_share_amount: workerShare,
+        calculation_basis: 'net_revenue',
+        charges_breakdown: JSON.stringify({
+          engrais: 5000,
+          irrigation: 3000,
+          transport: 2000,
+          divers: 2000,
+        }),
+        payment_status: 'paid',
+        payment_date: now.toISOString().split('T')[0],
+        payment_method: 'cash',
+        notes: 'R\u00e8glement m\u00e9tayage parcelle olives - Saison termin\u00e9e',
+        created_by: userId,
+      },
+    ];
+
+    const { error } = await client.from('metayage_settlements').insert(settlements);
+    if (error) {
+      this.logger.error(`Failed to create demo metayage settlements: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create demo biological asset valuations linked to assets and fiscal years
+   */
+  private async createDemoBioAssetValuations(
+    organizationId: string,
+    biologicalAssets: any[],
+  ): Promise<void> {
+    if (!biologicalAssets?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    // Get fiscal year for linking
+    const { data: fiscalYear } = await client
+      .from('fiscal_years')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('is_current', true)
+      .single();
+
+    const valuations: any[] = [];
+
+    for (const asset of biologicalAssets) {
+      if (!asset?.id) continue;
+
+      const initialValue = asset.initial_cost || 50000;
+      const q3Value = Math.round(initialValue * 1.15);
+      const q4Value = Math.round(initialValue * 1.22);
+
+      // Q3 valuation
+      valuations.push({
+        biological_asset_id: asset.id,
+        organization_id: organizationId,
+        valuation_date: `${currentYear}-09-30`,
+        fiscal_year_id: fiscalYear?.id || null,
+        previous_fair_value: initialValue,
+        current_fair_value: q3Value,
+        fair_value_change: q3Value - initialValue,
+        valuation_method: 'M\u00e9thode des revenus actualis\u00e9s',
+        fair_value_level: 3,
+        harvest_quantity: asset.actual_ytd_yield || 0,
+        harvest_value: (asset.actual_ytd_yield || 0) * 12,
+        notes: `Valorisation Q3 ${currentYear} - ${asset.asset_name}`,
+      });
+
+      // Q4 valuation
+      valuations.push({
+        biological_asset_id: asset.id,
+        organization_id: organizationId,
+        valuation_date: `${currentYear}-12-31`,
+        fiscal_year_id: fiscalYear?.id || null,
+        previous_fair_value: q3Value,
+        current_fair_value: q4Value,
+        fair_value_change: q4Value - q3Value,
+        valuation_method: 'M\u00e9thode des revenus actualis\u00e9s',
+        fair_value_level: 3,
+        harvest_quantity: asset.expected_annual_yield || 0,
+        harvest_value: (asset.expected_annual_yield || 0) * 12,
+        notes: `Valorisation Q4 ${currentYear} - ${asset.asset_name}`,
+      });
+    }
+
+    if (valuations.length > 0) {
+      const { error } = await client.from('biological_asset_valuations').insert(valuations);
+      if (error) {
+        this.logger.error(`Failed to create demo bio asset valuations: ${error.message}`);
+      }
+    }
+  }
+
+  /**
+   * Create demo pest/disease reports linked to farm, parcels, user
+   */
+  private async createDemoPestReports(
+    organizationId: string,
+    farmId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600000);
+    const lastMonth = new Date(now);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+
+    const reports = [
+      {
+        organization_id: organizationId,
+        farm_id: farmId,
+        parcel_id: parcels[0].id,
+        reporter_id: userId,
+        severity: 'medium',
+        affected_area_percentage: 15,
+        detection_method: 'visual_inspection',
+        notes: 'Pr\u00e9sence de mouche de l\'olive (Bactrocera oleae) d\u00e9tect\u00e9e sur plusieurs arbres. Fruits piqu\u00e9s observ\u00e9s.',
+        status: 'treated',
+        treatment_applied: 'Pi\u00e8ges \u00e0 ph\u00e9romones + traitement GF-120 (Spinosad)',
+        treatment_date: twoWeeksAgo.toISOString().split('T')[0],
+      },
+      {
+        organization_id: organizationId,
+        farm_id: farmId,
+        parcel_id: parcels[1].id,
+        reporter_id: userId,
+        severity: 'low',
+        affected_area_percentage: 5,
+        detection_method: 'visual_inspection',
+        notes: 'Quelques colonies de pucerons verts sur jeunes pousses de cl\u00e9mentiniers. Population limit\u00e9e.',
+        status: 'monitoring',
+      },
+      {
+        organization_id: organizationId,
+        farm_id: farmId,
+        parcel_id: parcels[2].id,
+        reporter_id: userId,
+        severity: 'high',
+        affected_area_percentage: 25,
+        detection_method: 'visual_inspection',
+        notes: 'Mildiou d\u00e9tect\u00e9 sur les feuilles de tomates. Taches brunes caract\u00e9ristiques. Humidit\u00e9 \u00e9lev\u00e9e.',
+        status: 'treated',
+        treatment_applied: 'Bouillie bordelaise + am\u00e9lioration ventilation',
+        treatment_date: lastMonth.toISOString().split('T')[0],
+      },
+    ];
+
+    const { error } = await client.from('pest_disease_reports').insert(reports);
+    if (error) {
+      this.logger.error(`Failed to create demo pest reports: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create demo calibrations linked to parcels via composite FK
+   */
+  private async createDemoCalibrations(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const twoMonthsAgo = new Date(now);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    const oneMonthAgo = new Date(now);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+    const calibrations = [
+      {
+        parcel_id: parcels[0].id,
+        organization_id: organizationId,
+        type: 'initial',
+        status: 'validated',
+        started_at: twoMonthsAgo.toISOString(),
+        completed_at: new Date(twoMonthsAgo.getTime() + 3600000).toISOString(),
+        mode_calibrage: 'calibrage_complet',
+        phase_age: 'pleine_production',
+        p50_ndvi: 0.6821,
+        p50_nirv: 0.4235,
+        p50_ndmi: 0.3415,
+        p50_ndre: 0.2890,
+        p10_ndvi: 0.5123,
+        p10_ndmi: 0.2100,
+        confidence_score: 82,
+        health_score: 75,
+        yield_potential_min: 4.50,
+        yield_potential_max: 6.20,
+        coefficient_etat_parcelle: 0.85,
+        anomaly_count: 1,
+        baseline_data: JSON.stringify({
+          percentiles: {
+            ndvi: { p10: 0.5123, p25: 0.5800, p50: 0.6821, p75: 0.7500, p90: 0.8100 },
+            ndmi: { p10: 0.2100, p25: 0.2700, p50: 0.3415, p75: 0.4000, p90: 0.4500 },
+          },
+          phenology: {
+            saison_courante: 'automne',
+            stade_phenologique: 'maturation',
+          },
+          zones_intra_parcellaires: [
+            { zone: 'nord', ndvi_moyen: 0.72, statut: 'bon' },
+            { zone: 'sud', ndvi_moyen: 0.65, statut: 'attention' },
+          ],
+        }),
+        diagnostic_data: JSON.stringify({
+          resume_pourquoi: 'Parcelle en bonne sant\u00e9 g\u00e9n\u00e9rale avec zone sud l\u00e9g\u00e8rement stress\u00e9e.',
+          ecarts: [
+            { indice: 'NDVI', zone: 'sud', ecart: -0.07, cause_probable: 'Stress hydrique localis\u00e9' },
+          ],
+        }),
+        scores_detail: JSON.stringify({
+          sante: {
+            vigueur: 78,
+            homogeneite: 72,
+            stabilite: 80,
+            hydrique: 68,
+            nutritionnel: 75,
+          },
+          confiance: { bloc_a: 85, bloc_b: 79 },
+        }),
+        validated_by_user: true,
+        validated_at: new Date(twoMonthsAgo.getTime() + 86400000).toISOString(),
+        calibration_version: 'v3',
+        rapport_fr: 'Calibrage initial termin\u00e9. Parcelle olives en pleine production. Sant\u00e9 globale bonne (75/100). Zone sud n\u00e9cessite surveillance hydrique.',
+      },
+      {
+        parcel_id: parcels[1].id,
+        organization_id: organizationId,
+        type: 'initial',
+        status: 'validated',
+        started_at: oneMonthAgo.toISOString(),
+        completed_at: new Date(oneMonthAgo.getTime() + 3600000).toISOString(),
+        mode_calibrage: 'calibrage_progressif',
+        phase_age: 'entree_production',
+        p50_ndvi: 0.7234,
+        p50_nirv: 0.4800,
+        p50_ndmi: 0.3890,
+        p50_ndre: 0.3120,
+        p10_ndvi: 0.5890,
+        p10_ndmi: 0.2500,
+        confidence_score: 74,
+        health_score: 80,
+        yield_potential_min: 22.00,
+        yield_potential_max: 28.00,
+        coefficient_etat_parcelle: 0.90,
+        anomaly_count: 0,
+        baseline_data: JSON.stringify({
+          percentiles: {
+            ndvi: { p10: 0.5890, p25: 0.6400, p50: 0.7234, p75: 0.7900, p90: 0.8400 },
+            ndmi: { p10: 0.2500, p25: 0.3100, p50: 0.3890, p75: 0.4400, p90: 0.4900 },
+          },
+          phenology: {
+            saison_courante: 'automne',
+            stade_phenologique: 'maturation_fruits',
+          },
+        }),
+        scores_detail: JSON.stringify({
+          sante: {
+            vigueur: 83,
+            homogeneite: 78,
+            stabilite: 82,
+            hydrique: 76,
+            nutritionnel: 80,
+          },
+          confiance: { bloc_a: 78, bloc_b: 70 },
+        }),
+        validated_by_user: true,
+        validated_at: new Date(oneMonthAgo.getTime() + 86400000).toISOString(),
+        calibration_version: 'v3',
+        rapport_fr: 'Calibrage progressif termin\u00e9. Parcelle agrumes en entr\u00e9e de production. Bonne vigueur v\u00e9g\u00e9tative (80/100).',
+      },
+    ];
+
+    const { data: createdCals, error } = await client.from('calibrations').insert(calibrations).select();
+    if (error) {
+      this.logger.error(`Failed to create demo calibrations: ${error.message}`);
+      return;
+    }
+
+    // Update parcels with calibration reference and ai_phase
+    if (createdCals?.length) {
+      for (const cal of createdCals) {
+        await client
+          .from('parcels')
+          .update({ ai_calibration_id: cal.id, ai_phase: 'active' })
+          .eq('id', cal.parcel_id)
+          .eq('organization_id', organizationId);
+      }
+    }
+  }
+
+  /**
    * Clear all demo data for an organization
    * This deletes data that was created via demo seeding
    */
@@ -4307,6 +5566,23 @@ export class DemoDataService {
 
     try {
       // Delete in reverse order of dependencies
+
+      // Calibrations (composite FK to parcels)
+      await client.from('calibrations').delete().eq('organization_id', organizationId);
+
+      // Pest/disease reports
+      await client.from('pest_disease_reports').delete().eq('organization_id', organizationId);
+
+      // Crop templates
+      await client.from('crop_templates').delete().eq('organization_id', organizationId);
+
+      // Crop cycle children first (stages, harvest events)
+      const { data: orgCropCycles } = await client.from('crop_cycles').select('id').eq('organization_id', organizationId);
+      if (orgCropCycles?.length) {
+        const cycleIds = orgCropCycles.map((c) => c.id);
+        await client.from('crop_cycle_stages').delete().in('crop_cycle_id', cycleIds);
+        await client.from('harvest_events').delete().in('crop_cycle_id', cycleIds);
+      }
 
       // Crop cycles (references campaigns, fiscal_years)
       const { count: cropCyclesCount } = await client
@@ -4336,6 +5612,9 @@ export class DemoDataService {
         .eq("organization_id", organizationId);
       deletedCounts["notifications"] = notificationsCount || 0;
 
+      // Biological asset valuations (before assets)
+      await client.from('biological_asset_valuations').delete().eq('organization_id', organizationId);
+
       // Trees, tree categories, then biological assets
       await client
         .from("trees")
@@ -4358,20 +5637,42 @@ export class DemoDataService {
         .eq("organization_id", organizationId);
       deletedCounts["agricultural_campaigns"] = campaignsCount || 0;
 
+      // Payment bonuses/deductions (before payment records)
+      const { data: orgPaymentRecords } = await client.from('payment_records').select('id').eq('organization_id', organizationId);
+      if (orgPaymentRecords?.length) {
+        const prIds = orgPaymentRecords.map((r) => r.id);
+        await client.from('payment_bonuses').delete().in('payment_record_id', prIds);
+        await client.from('payment_deductions').delete().in('payment_record_id', prIds);
+      }
+
       // Payment records (worker payments)
       await client
         .from("payment_records")
         .delete()
         .eq("organization_id", organizationId);
 
-      // Task time logs, task categories
+      // Payment advances
+      await client.from('payment_advances').delete().eq('organization_id', organizationId);
+
+      // Metayage settlements
+      await client.from('metayage_settlements').delete().eq('organization_id', organizationId);
+
+      // Task children: comments, dependencies, equipment, templates, time logs, categories
       const { data: orgTasks } = await client
         .from("tasks")
         .select("id")
         .eq("organization_id", organizationId);
       if (orgTasks && orgTasks.length > 0) {
         const orgTaskIds = orgTasks.map((t) => t.id);
+        await client.from('task_comments').delete().in('task_id', orgTaskIds);
+        await client.from('task_dependencies').delete().in('task_id', orgTaskIds);
+        await client.from('task_equipment').delete().in('task_id', orgTaskIds);
         await client.from("task_time_logs").delete().in("task_id", orgTaskIds);
+      }
+      // Task templates (FK to task_categories)
+      const { data: orgCats } = await client.from('task_categories').select('id').eq('organization_id', organizationId);
+      if (orgCats?.length) {
+        await client.from('task_templates').delete().in('category_id', orgCats.map((c) => c.id));
       }
       await client
         .from("task_categories")
@@ -4429,13 +5730,14 @@ export class DemoDataService {
         .eq("organization_id", organizationId);
       deletedCounts["product_applications"] = applicationsCount || 0;
 
-      // Delivery items then deliveries
+      // Delivery tracking, items, then deliveries
       const { data: deliveries } = await client
         .from("deliveries")
         .select("id")
         .eq("organization_id", organizationId);
       if (deliveries && deliveries.length > 0) {
         const deliveryIds = deliveries.map((d) => d.id);
+        await client.from('delivery_tracking').delete().in('delivery_id', deliveryIds);
         await client
           .from("delivery_items")
           .delete()
@@ -4659,6 +5961,10 @@ export class DemoDataService {
         .delete({ count: "exact" })
         .eq("organization_id", organizationId);
       deletedCounts["suppliers"] = suppliersCount || 0;
+
+      // Stock movements and inventory batches (before items/stock entries)
+      await client.from('stock_movements').delete().eq('organization_id', organizationId);
+      await client.from('inventory_batches').delete().eq('organization_id', organizationId);
 
       // Stock entry items and stock entries
       const { data: stockEntries } = await client
@@ -5445,6 +6751,13 @@ export class DemoDataService {
       "notifications",
       "analyses",
       "analysis_recommendations",
+      "crop_templates",
+      "stock_movements",
+      "inventory_batches",
+      "payment_advances",
+      "metayage_settlements",
+      "biological_asset_valuations",
+      "pest_disease_reports",
     ];
 
     for (const table of tables) {
@@ -6352,6 +7665,9 @@ export class DemoDataService {
       "costs",
       "revenues",
       "utilities",
+      "crop_templates",
+      "pest_disease_reports",
+      "biological_asset_valuations",
       "file_registry",
     ];
 
@@ -6455,6 +7771,49 @@ export class DemoDataService {
         .select("*")
         .in("payment_id", paymentIds);
       exportData.payment_allocations = paymentAllocations || [];
+    }
+
+    // Crop cycle children (no org_id)
+    if (exportData.crop_cycles && exportData.crop_cycles.length > 0) {
+      const cycleIds = exportData.crop_cycles.map((c: any) => c.id);
+      const { data: stages } = await client.from('crop_cycle_stages').select('*').in('crop_cycle_id', cycleIds);
+      exportData.crop_cycle_stages = stages || [];
+      const { data: hEvents } = await client.from('harvest_events').select('*').in('crop_cycle_id', cycleIds);
+      exportData.harvest_events = hEvents || [];
+    }
+
+    // Task children (no org_id)
+    if (exportData.tasks && exportData.tasks.length > 0) {
+      const taskIds = exportData.tasks.map((t: any) => t.id);
+      const { data: tComments } = await client.from('task_comments').select('*').in('task_id', taskIds);
+      exportData.task_comments = tComments || [];
+      const { data: tDeps } = await client.from('task_dependencies').select('*').in('task_id', taskIds);
+      exportData.task_dependencies = tDeps || [];
+      const { data: tEquip } = await client.from('task_equipment').select('*').in('task_id', taskIds);
+      exportData.task_equipment = tEquip || [];
+    }
+
+    // Delivery tracking (no org_id)
+    if (exportData.deliveries && exportData.deliveries.length > 0) {
+      const deliveryIds = exportData.deliveries.map((d: any) => d.id);
+      const { data: dTracking } = await client.from('delivery_tracking').select('*').in('delivery_id', deliveryIds);
+      exportData.delivery_tracking = dTracking || [];
+    }
+
+    // Payment bonuses/deductions (no org_id)
+    if (exportData.payment_records && exportData.payment_records.length > 0) {
+      const prIds = exportData.payment_records.map((r: any) => r.id);
+      const { data: pBonuses } = await client.from('payment_bonuses').select('*').in('payment_record_id', prIds);
+      exportData.payment_bonuses = pBonuses || [];
+      const { data: pDeductions } = await client.from('payment_deductions').select('*').in('payment_record_id', prIds);
+      exportData.payment_deductions = pDeductions || [];
+    }
+
+    // Biological asset valuations (has org_id, but export here for completeness)
+    if (exportData.biological_assets && exportData.biological_assets.length > 0) {
+      const assetIds = exportData.biological_assets.map((a: any) => a.id);
+      const { data: bValuations } = await client.from('biological_asset_valuations').select('*').in('biological_asset_id', assetIds);
+      exportData.biological_asset_valuations = bValuations || [];
     }
 
     // Export storage files as base64 (file_registry + satellite rasters linked from satellite_files)
@@ -7541,8 +8900,8 @@ export class DemoDataService {
     workers: any[],
     harvests: any[],
     userId: string,
-  ): Promise<void> {
-    if (!customers?.length) return;
+  ): Promise<any[]> {
+    if (!customers?.length) return [];
 
     const client = this.databaseService.getAdminClient();
     const now = new Date();
@@ -7606,7 +8965,7 @@ export class DemoDataService {
       .select();
     if (error) {
       this.logger.error(`Failed to create demo deliveries: ${error.message}`);
-      return;
+      return [];
     }
 
     // Create delivery items linked to harvest records
@@ -7652,6 +9011,8 @@ export class DemoDataService {
         }
       }
     }
+
+    return createdDeliveries || [];
   }
 
   private async createDemoProductApplications(
@@ -8228,8 +9589,8 @@ export class DemoDataService {
     farmId: string,
     parcels: any[],
     userId: string,
-  ): Promise<void> {
-    if (!parcels?.length) return;
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
 
     const client = this.databaseService.getAdminClient();
     const now = new Date();
@@ -8336,7 +9697,7 @@ export class DemoDataService {
       this.logger.error(
         `Failed to create demo biological assets: ${assetsError.message}`,
       );
-      return;
+      return [];
     }
 
     // Create tree categories first
@@ -8373,7 +9734,7 @@ export class DemoDataService {
       this.logger.error(
         `Failed to create demo tree categories: ${catError.message}`,
       );
-      return;
+      return createdAssets || [];
     }
 
     if (createdCategories && createdCategories.length > 0) {
@@ -8417,6 +9778,8 @@ export class DemoDataService {
         }
       }
     }
+
+    return createdAssets || [];
   }
 
   private async createDemoNotifications(

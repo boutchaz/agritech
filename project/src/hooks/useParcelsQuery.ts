@@ -87,7 +87,7 @@ export const useFarms = (organizationId: string | undefined) => {
       // Fetch parcels to compute total area per farm
       let parcelAreaByFarm: Record<string, number> = {};
       try {
-        const parcels = await parcelsService.listParcels();
+        const parcels = await parcelsService.listParcels(undefined, organizationId);
         parcelAreaByFarm = parcels.reduce((acc: Record<string, number>, parcel: ServiceParcel) => {
           const fid = parcel.farm_id;
           if (!fid) return acc;
@@ -118,34 +118,34 @@ export const useFarms = (organizationId: string | undefined) => {
 };
 
 // Fetch parcels for a specific farm using parcelsService (apiClient)
-export const useParcelsByFarm = (farmId: string | undefined) => {
+export const useParcelsByFarm = (farmId: string | undefined, organizationId?: string | null) => {
   return useQuery({
     queryKey: parcelsKeys.byFarm(farmId || ''),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmId) return [];
-      const parcels = await parcelsService.listParcels(farmId);
+      const parcels = await parcelsService.listParcels(farmId, organizationId);
       return parcels.map(normalizeParcel);
     },
-    enabled: !!farmId,
+    enabled: !!farmId && !!organizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });
 };
 
 // Fetch parcels for multiple farms (organization-wide) using parcelsService (apiClient)
-export const useParcelsByFarms = (farmIds: string[]) => {
+export const useParcelsByFarms = (farmIds: string[], organizationId?: string | null) => {
   return useQuery({
     queryKey: parcelsKeys.byFarms(farmIds),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmIds.length) return [];
 
       // Fetch all parcels for organization and filter by farm IDs
-      const parcels = await parcelsService.listParcels();
+      const parcels = await parcelsService.listParcels(undefined, organizationId);
       const filteredParcels = parcels.filter(p => farmIds.includes(p.farm_id));
 
       return filteredParcels.map(normalizeParcel);
     },
-    enabled: farmIds.length > 0,
+    enabled: farmIds.length > 0 && !!organizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });

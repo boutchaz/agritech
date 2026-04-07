@@ -50,22 +50,24 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   );
 
   // React Query hooks
-  const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
+  const { data: farms = [], isLoading: farmsLoading, error: farmsError } = useFarms(currentOrganization?.id);
   const updateParcelMutation = useUpdateParcel();
   const archiveParcelMutation = useDeleteParcel();
 
   // Determine which parcels query to use
   const isAllFarmsView = selectedFarmId === "";
   const targetFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
-  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading } = useParcelsByFarm(targetFarmId);
-  const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading } = useParcelsByFarms(
-    !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : []
+  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading, error: parcelsByFarmError } = useParcelsByFarm(targetFarmId, currentOrganization?.id);
+  const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading, error: parcelsByFarmsError } = useParcelsByFarms(
+    !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : [],
+    currentOrganization?.id
   );
 
 
   // Get the appropriate parcels data
   const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
   const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
+  const fetchError = targetFarmId ? parcelsByFarmError : (parcelsByFarmsError || farmsError);
 
 
 
@@ -172,6 +174,18 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
 
           {loading ? (
             <PageLoader className="h-96 min-h-0" />
+          ) : fetchError ? (
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
+              <p className="text-red-500 dark:text-red-400 mb-4">
+                {t('parcels.loadError', 'Failed to load parcels. Please try again.')}
+              </p>
+              <Button variant="blue"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 rounded-lg"
+              >
+                {t('parcels.refresh')}
+              </Button>
+            </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
             <div data-testid="parcels-empty-state" className="space-y-6">
               {/* Show farms overview when no specific farm is selected */}

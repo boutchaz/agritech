@@ -78,7 +78,7 @@ export const test = base.extend<AuthFixture>({
       extraHTTPHeaders: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${authTokens.accessToken}`,
+        Authorization: `Bearer ${authTokens.accessToken}`,
         'x-organization-id': organizationId,
       },
     });

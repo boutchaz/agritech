@@ -478,16 +478,13 @@ export class CalibrationReviewAdapter {
   }
 
   private mapConfidenceLabel(value: number | null): string {
-    if (value === null || value === undefined) {
+    if (!value || value < 0.4) {
       return "FAIBLE";
     }
     if (value >= 0.75) {
       return "ELEVEE";
     }
-    if (value >= 0.4) {
-      return "MODEREE";
-    }
-    return "FAIBLE";
+    return "MODEREE";
   }
 
   private formatPhaseName(phase: string | null): string {

@@ -24,6 +24,14 @@ import {
   DollarSign,
   Download,
   Upload,
+  Sprout,
+  ArrowLeftRight,
+  Layers,
+  Banknote,
+  Handshake,
+  TrendingUp,
+  Bug,
+  Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -51,6 +59,14 @@ const STAT_ICONS: Record<string, React.ElementType> = {
   structures: Warehouse,
   cost_centers: DollarSign,
   stock_entries: Package,
+  crop_templates: Sprout,
+  stock_movements: ArrowLeftRight,
+  inventory_batches: Layers,
+  payment_advances: Banknote,
+  metayage_settlements: Handshake,
+  biological_asset_valuations: TrendingUp,
+  pest_disease_reports: Bug,
+  calibrations: Target,
 };
 
 function DangerZonePage() {
