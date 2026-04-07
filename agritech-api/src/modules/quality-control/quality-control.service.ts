@@ -19,7 +19,11 @@ export class QualityControlService {
     const client = this.databaseService.getAdminClient();
     let query = client
       .from('quality_inspections')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        parcel:parcels(id, name, farm:farms(id, name)),
+        farm:farms(id, name)
+      `, { count: 'exact' })
       .eq('organization_id', organizationId);
 
     // Apply filters
@@ -89,7 +93,11 @@ export class QualityControlService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('quality_inspections')
-      .select('*')
+      .select(`
+        *,
+        parcel:parcels(id, name, farm:farms(id, name)),
+        farm:farms(id, name)
+      `)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();

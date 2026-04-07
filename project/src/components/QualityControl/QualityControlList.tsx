@@ -52,6 +52,7 @@ import {
   TrendingUp,
   BarChart3,
   Clock,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -338,6 +339,10 @@ export default function QualityControlList() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
+                          </DropdownMenuItem>
                           {inspection.status !== 'in_progress' && (
                             <>
                               <DropdownMenuSeparator />
@@ -391,6 +396,10 @@ export default function QualityControlList() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
+                      </DropdownMenuItem>
                       {inspection.status !== 'in_progress' && (
                         <>
                           <DropdownMenuSeparator />

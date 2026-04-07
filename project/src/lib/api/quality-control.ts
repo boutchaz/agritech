@@ -67,36 +67,36 @@ export const qualityControlApi = {
   getAll(organizationId: string, filters?: QualityInspectionFilters): Promise<PaginatedResponse<QualityInspection>> {
     requireOrganizationId(organizationId, 'qualityControlApi.getAll');
     const url = buildQueryUrl(`/api/v1/quality-control`, filters as Record<string, unknown>);
-    return apiClient.get<PaginatedResponse<QualityInspection>>(url);
+    return apiClient.get<PaginatedResponse<QualityInspection>>(url, {}, organizationId);
   },
 
   getById(organizationId: string, id: string): Promise<QualityInspection> {
     requireOrganizationId(organizationId, 'qualityControlApi.getById');
-    return apiClient.get<QualityInspection>(`/api/v1/quality-control/${id}`);
+    return apiClient.get<QualityInspection>(`/api/v1/quality-control/${id}`, {}, organizationId);
   },
 
   getStatistics(organizationId: string): Promise<QualityControlStats> {
     requireOrganizationId(organizationId, 'qualityControlApi.getStatistics');
-    return apiClient.get<QualityControlStats>(`/api/v1/quality-control/statistics`);
+    return apiClient.get<QualityControlStats>(`/api/v1/quality-control/statistics`, {}, organizationId);
   },
 
   create(organizationId: string, data: Partial<QualityInspection>): Promise<QualityInspection> {
     requireOrganizationId(organizationId, 'qualityControlApi.create');
-    return apiClient.post<QualityInspection>(`/api/v1/quality-control`, data);
+    return apiClient.post<QualityInspection>(`/api/v1/quality-control`, data, {}, organizationId);
   },
 
   update(organizationId: string, id: string, data: Partial<QualityInspection>): Promise<QualityInspection> {
     requireOrganizationId(organizationId, 'qualityControlApi.update');
-    return apiClient.patch<QualityInspection>(`/api/v1/quality-control/${id}`, data);
+    return apiClient.patch<QualityInspection>(`/api/v1/quality-control/${id}`, data, {}, organizationId);
   },
 
   updateStatus(organizationId: string, id: string, status: InspectionStatus): Promise<QualityInspection> {
     requireOrganizationId(organizationId, 'qualityControlApi.updateStatus');
-    return apiClient.patch<QualityInspection>(`/api/v1/quality-control/${id}/status`, { status });
+    return apiClient.patch<QualityInspection>(`/api/v1/quality-control/${id}/status`, { status }, {}, organizationId);
   },
 
   delete(organizationId: string, id: string): Promise<void> {
     requireOrganizationId(organizationId, 'qualityControlApi.delete');
-    return apiClient.delete(`/api/v1/quality-control/${id}`);
+    return apiClient.delete(`/api/v1/quality-control/${id}`, {}, organizationId);
   },
 };
