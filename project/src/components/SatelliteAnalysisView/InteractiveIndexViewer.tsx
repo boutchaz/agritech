@@ -139,7 +139,7 @@ const InteractiveIndexViewer = ({
   const [visualizationType, setVisualizationType] = useState<VisualizationType>('leaflet');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('red-green');
   const [baseLayer, setBaseLayer] = useState<'osm' | 'satellite'>('satellite');
-  const [renderMode, setRenderMode] = useState<import('./LeafletHeatmapViewer').HeatmapRenderMode>('grid');
+  const [renderMode, setRenderMode] = useState<import('./LeafletHeatmapViewer').HeatmapRenderMode>('smooth');
   const [valueDisplay, setValueDisplay] = useState<import('./LeafletHeatmapViewer').ValueDisplayMode>('interactive');
   const [showIsolines, setShowIsolines] = useState(false);
 

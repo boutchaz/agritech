@@ -235,15 +235,28 @@ function paletteColorRGB(normalized: number, colorPalette: ColorPalette): [numbe
   return [Math.round(lr + (ur-lr)*t), Math.round(lg + (ug-lg)*t), Math.round(lb + (ub-lb)*t)];
 }
 
+// Ray-casting point-in-polygon test (lon/lat coordinates)
+function pointInPolygon(x: number, y: number, polygon: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 // Build heatmap canvas using bilinear interpolation.
 // GEE already clips pixel_data to the AOI — pixels outside = NaN in the grid.
-// Key fix: skip any pixel where ANY of the 4 bilinear corners is NaN.
-// This ensures we never "paint" outside the AOI by filling NaN with neighbor values.
+// Additional polygon clipping ensures clean edges matching the AOI boundary.
 function buildHeatmapCanvas(
   grid: Float32Array, nRows: number, nCols: number,
   minLon: number, maxLat: number, pxDeg: number,
   min: number, range: number,
   colorPalette: ColorPalette, opacity: number,
+  aoiPolygon?: [number, number][],
 ): string {
   const SCALE = 8;
   const cW = nCols * SCALE;
@@ -262,6 +275,9 @@ function buildHeatmapCanvas(
     for (let cx = 0; cx < cW; cx++) {
       const lon = bMinLon + (cx + 0.5) * degPerPx;
       const lat = bMaxLat - (cy + 0.5) * degPerPx;
+
+      // Clip to AOI polygon boundary
+      if (aoiPolygon && !pointInPolygon(lon, lat, aoiPolygon)) continue;
 
       const gxF = (lon - minLon) / pxDeg;
       const gyF = (maxLat - lat) / pxDeg;
@@ -335,7 +351,8 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
       if (ri >= 0 && ri < nRows && ci >= 0 && ci < nCols) grid[ri * nCols + ci] = p.value;
     });
 
-    const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity);
+    const aoiPolygon = data.aoi_boundary?.length ? data.aoi_boundary as [number, number][] : undefined;
+    const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiPolygon);
     const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
     overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
     overlayRef.current.addTo(map);
@@ -490,7 +507,7 @@ const LeafletHeatmapViewer = ({
   colorPalette = 'red-green',
   compact = false,
   baseLayer = 'satellite',
-  renderMode = 'grid',
+  renderMode = 'smooth',
   valueDisplay = 'interactive',
   showIsolines = false,
 }: LeafletHeatmapViewerProps) => {
