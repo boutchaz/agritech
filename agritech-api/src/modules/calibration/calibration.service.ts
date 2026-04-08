@@ -296,6 +296,18 @@ export interface NutritionOptionConfirmation {
   ai_phase: "active";
 }
 
+/**
+ * Résout les variétés combinées vers une variété référentielle unique.
+ * "Menara/Haouzia" → "Menara" (paramètres INRA Maroc, fallback conservateur).
+ */
+function resolveVarietyForCalibration(
+  variety: string | null | undefined,
+): string | null | undefined {
+  if (!variety) return variety;
+  if (variety.toLowerCase() === "menara/haouzia") return "Menara";
+  return variety;
+}
+
 @Injectable()
 export class CalibrationService {
   private readonly logger = new Logger(CalibrationService.name);
@@ -1556,7 +1568,7 @@ export class CalibrationService {
           const { data: varietyData } = await supabase
             .from("crop_varieties")
             .select("chill_hours_requirement")
-            .ilike("name", parcel.variety)
+            .ilike("name", resolveVarietyForCalibration(parcel.variety) ?? parcel.variety)
             .maybeSingle();
           if (varietyData?.chill_hours_requirement) {
             chillThreshold = Number(varietyData.chill_hours_requirement);
@@ -1576,7 +1588,7 @@ export class CalibrationService {
             latitude: gddLatitude,
             longitude: gddLongitude,
             crop_type: parcel.cropType,
-            variety: parcel.variety,
+            variety: resolveVarietyForCalibration(parcel.variety),
             chill_threshold: chillThreshold,
             nirv_series: nirvSeries,
             reference_data: referenceData ?? undefined,

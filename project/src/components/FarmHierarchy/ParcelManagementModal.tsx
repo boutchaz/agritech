@@ -13,7 +13,6 @@ import {
   getPlantingSystemsByCategory,
   getVarietiesByCropType,
   PLANTING_SYSTEMS,
-  TREE_CATEGORIES,
   type CropCategory,
 } from "../../lib/plantingSystemData";
 import { parcelsService, type Parcel } from "../../services/parcelsService";
@@ -132,7 +131,6 @@ const ParcelManagementModal = ({
 
   const [showForm, setShowForm] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
-  const [treeFamily, setTreeFamily] = useState<string>('');
   const [parcelToDelete, setParcelToDelete] = useState<{
     id: string;
     name: string;
@@ -159,14 +157,8 @@ const ParcelManagementModal = ({
   const selectedArea = watch("area");
   const selectedDensity = watch("density_per_hectare");
 
-  // Get available crop types based on category (filtered by tree family if applicable)
-  // For trees: require a family to be selected first to avoid 40+ item flat list
   const availableCropTypes = selectedCategory
-    ? selectedCategory === 'trees'
-      ? treeFamily
-        ? TREE_CATEGORIES[treeFamily as keyof typeof TREE_CATEGORIES] ?? []
-        : [] // force family selection first
-      : getCropTypesByCategory(selectedCategory)
+    ? getCropTypesByCategory(selectedCategory)
     : [];
 
   // Get available varieties based on crop type
@@ -269,7 +261,6 @@ const ParcelManagementModal = ({
       reset();
       setShowForm(false);
       setEditingParcel(null);
-      setTreeFamily('');
     },
     onError: (error: Error) => {
       toast.error(t("app.error") + ": " + (error.message || ""));
@@ -315,16 +306,6 @@ const ParcelManagementModal = ({
     setValue("area_unit", parcel.area_unit);
     setValue("crop_category", parcel.crop_category || "");
     setValue("crop_type", parcel.crop_type || "");
-    // Pre-select tree family when editing
-    if (parcel.crop_category === 'trees' && parcel.crop_type) {
-      const treeCategoryEntries: Array<[string, readonly string[]]> = Object.entries(TREE_CATEGORIES);
-      const family = treeCategoryEntries.find(([, types]) =>
-        types.includes(parcel.crop_type!)
-      )?.[0] ?? '';
-      setTreeFamily(family);
-    } else {
-      setTreeFamily('');
-    }
     setValue("variety", parcel.variety || "");
     setValue("planting_system", parcel.planting_system || "");
     setValue("spacing", parcel.spacing || "");
@@ -501,7 +482,6 @@ const ParcelManagementModal = ({
                             onValueChange={(value) => {
                               setValue("crop_category", value);
                               setValue("crop_type", "");
-                              setTreeFamily('');
                             }}
                           >
                             <SelectTrigger id="crop_category">
@@ -518,32 +498,6 @@ const ParcelManagementModal = ({
                             </SelectContent>
                           </Select>
                         </FormField>
-
-                        {selectedCategory === "trees" && (
-                          <FormField
-                            label={t("farmHierarchy.parcel.treeFamily", "Famille d'arbres")}
-                            htmlFor="tree_family"
-                          >
-                            <Select
-                              value={treeFamily || undefined}
-                              onValueChange={(value) => {
-                                setTreeFamily(value);
-                                setValue("crop_type", "");
-                              }}
-                            >
-                              <SelectTrigger id="tree_family">
-                                <SelectValue placeholder={t("farmHierarchy.parcel.treeFamilyPlaceholder", "Toutes les familles")} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.keys(TREE_CATEGORIES).map((family) => (
-                                  <SelectItem key={family} value={family}>
-                                    {family}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormField>
-                        )}
 
                         <FormField
                           label={t("farmHierarchy.parcel.cropType")}
@@ -611,6 +565,11 @@ const ParcelManagementModal = ({
                                 {...register("variety")}
                                 placeholder={t("farmHierarchy.parcel.variety")}
                               />
+                            )}
+                            {watch("variety") === 'Menara/Haouzia' && (
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                                Le calibrage AgromindIA utilisera les paramètres de la variété <strong>Menara</strong>.
+                              </p>
                             )}
                           </FormField>
                         )}
@@ -914,7 +873,6 @@ const ParcelManagementModal = ({
                         onClick={() => {
                           setShowForm(false);
                           setEditingParcel(null);
-                          setTreeFamily('');
                           reset();
                         }}
                       >
