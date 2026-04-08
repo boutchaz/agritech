@@ -28,7 +28,6 @@ import {
   PLANTING_SYSTEMS,
   getCropTypesByCategory,
   getVarietiesByCropType,
-  TREE_CATEGORIES,
   type CropCategory as StaticCropCategory,
 } from '../lib/plantingSystemData';
 import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
@@ -131,7 +130,6 @@ const MapComponent = ({
   const [tempBoundary, setTempBoundary] = useState<number[][]>([]);
   const [showParcelForm, setShowParcelForm] = useState(false);
   const [isParcelFormDialogOpen, setIsParcelFormDialogOpen] = useState(false);
-  const [treeFamily, setTreeFamily] = useState<string>('');
   const [parcelDetails, setParcelDetails] = useState({
     soil_type: '',
     area: 0,
@@ -225,30 +223,14 @@ const MapComponent = ({
   // Always use the static list (fully controlled) — the static list is the source of truth
   const availableCropCategories = STATIC_CROP_CATEGORIES;
 
-  // For trees: filter CMS crop types by selected family name (preserves CMS IDs for variety lookup)
-  // If no CMS types, fall back to static strings
-  const familyNames: string[] = treeFamily
-    ? TREE_CATEGORIES[treeFamily as keyof typeof TREE_CATEGORIES] ?? []
-    : [];
-
-  const filteredCmsTreeTypes: CropType[] = treeFamily && allCropTypesFromStrapi.length > 0
-    ? allCropTypesFromStrapi.filter(ct => {
-        const ctName = (ct.name_fr || ct.name || ct.value || '').toLowerCase();
-        return familyNames.some(fn => fn.toLowerCase() === ctName || ctName.includes(fn.toLowerCase()) || fn.toLowerCase().includes(ctName));
-      })
-    : [];
-
-  // For trees: use CMS types filtered by family (keeps IDs for variety lookup), fall back to static strings
   // For other static-only categories: use static list (no CMS data)
   // For cereals/vegetables: use CMS if available, then static
   const staticOnlyCategories = ['legumes', 'fourrages', 'industrielles', 'aromatiques'];
   const availableCropTypes: (CropType | string)[] = parcelDetails.crop_category
     ? parcelDetails.crop_category === 'trees'
-      ? treeFamily
-        ? filteredCmsTreeTypes.length > 0
-          ? filteredCmsTreeTypes  // CMS objects → variety lookup works
-          : familyNames           // static strings fallback
-        : []                      // no family selected → show nothing
+      ? allCropTypesFromStrapi.length > 0
+          ? allCropTypesFromStrapi
+          : getCropTypesByCategory('trees')
       : staticOnlyCategories.includes(parcelDetails.crop_category)
         ? getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
         : allCropTypesFromStrapi.length > 0
@@ -423,15 +405,6 @@ const MapComponent = ({
           planting_type: parcel.planting_type || '',
           rootstock: parcel.rootstock || ''
         });
-        // Pre-select tree family when editing
-        if (parcel.crop_category === 'trees' && parcel.crop_type) {
-          const family = Object.entries(TREE_CATEGORIES).find(([, types]) =>
-            types.includes(parcel.crop_type!)
-          )?.[0] ?? '';
-          setTreeFamily(family);
-        } else {
-          setTreeFamily('');
-        }
         // Don't show the form immediately - let the user draw the boundary first
         // The form will be shown after they finish drawing (in the drawend event)
       }
@@ -1247,7 +1220,6 @@ const MapComponent = ({
     setIsParcelFormDialogOpen(false);
     setParcelName('');
     setTempBoundary([]);
-    setTreeFamily('');
     setParcelDetails({
       soil_type: '',
       area: 0,
@@ -1563,8 +1535,7 @@ const MapComponent = ({
                     <select
                       value={parcelDetails.crop_category}
                       onChange={(e) => {
-                        setTreeFamily('');
-                        setParcelDetails(prev => ({
+                                            setParcelDetails(prev => ({
                           ...prev,
                           crop_category: e.target.value,
                           crop_type: '', // Reset dependent fields
@@ -1586,27 +1557,6 @@ const MapComponent = ({
                       })}
                     </select>
                   </div>
-
-                  {parcelDetails.crop_category === 'trees' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t('map.treeFamily', "Famille d'arbres")}
-                      </label>
-                      <select
-                        value={treeFamily}
-                        onChange={(e) => {
-                          setTreeFamily(e.target.value);
-                          setParcelDetails(prev => ({ ...prev, crop_type: '' }));
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="">{t('map.treeFamilyAll', 'Toutes les familles')}</option>
-                        {Object.keys(TREE_CATEGORIES).map(family => (
-                          <option key={family} value={family}>{family}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
 
                   {parcelDetails.crop_category && (
                     <div>
@@ -1708,26 +1658,6 @@ const MapComponent = ({
                       )}
                     </div>
                   )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('parcels.plantingType')}
-                    </label>
-                    <select
-                      value={parcelDetails.planting_type}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        planting_type: e.target.value
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                    >
-                      <option value="">{t('map.select')}</option>
-                      <option value="traditional">{t('parcels.plantingTypes.traditional')}</option>
-                      <option value="intensive">{t('parcels.plantingTypes.intensive')}</option>
-                      <option value="super_intensive">{t('parcels.plantingTypes.super_intensive')}</option>
-                      <option value="organic">{t('parcels.plantingTypes.organic')}</option>
-                    </select>
-                  </div>
 
                   {parcelDetails.crop_category === 'trees' && (
                     <div>

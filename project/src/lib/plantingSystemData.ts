@@ -126,54 +126,27 @@ export const TREE_CATEGORIES = {
 // Flatten all tree types for easy dropdown
 export const ALL_TREE_TYPES = Object.values(TREE_CATEGORIES).flat();
 
-// Planting Systems from agritech_production.json
+// Planting Systems — olive reference table (rangées x espacement, densité/ha)
 export const PLANTING_SYSTEMS: PlantingSystem[] = [
-  {
-    type: 'Super intensif',
-    spacing: '4x1,5',
-    treesPerHectare: 1666,
-    plantingDate: 'Date de repiquage',
-  },
-  {
-    type: 'Super intensif',
-    spacing: '3x1,5',
-    treesPerHectare: 2222,
-  },
-  {
-    type: 'Intensif',
-    spacing: '4x2',
-    treesPerHectare: 1250,
-  },
-  {
-    type: 'Intensif',
-    spacing: '3x2',
-    treesPerHectare: 1666,
-  },
-  {
-    type: 'Semi-intensif',
-    spacing: '6x3',
-    treesPerHectare: 555,
-  },
-  {
-    type: 'Traditionnel amélioré',
-    spacing: '6x6',
-    treesPerHectare: 277,
-  },
-  {
-    type: 'Traditionnel',
-    spacing: '8x8',
-    treesPerHectare: 156,
-  },
-  {
-    type: 'Traditionnel',
-    spacing: '8x7',
-    treesPerHectare: 179,
-  },
-  {
-    type: 'Traditionnel très espacé',
-    spacing: '10x10',
-    treesPerHectare: 100,
-  },
+  { type: 'Traditionnelle',                  spacing: '12x12', treesPerHectare: 69   },
+  { type: 'Traditionnelle',                  spacing: '12x10', treesPerHectare: 83   },
+  { type: 'Traditionnelle',                  spacing: '10x10', treesPerHectare: 100  },
+  { type: 'Traditionnelle',                  spacing: '10x8',  treesPerHectare: 125  },
+  { type: 'Traditionnelle / Semi-Intensive', spacing: '8x8',   treesPerHectare: 156  },
+  { type: 'Semi-Intensive',                  spacing: '8x7',   treesPerHectare: 178  },
+  { type: 'Semi-Intensive',                  spacing: '7x7',   treesPerHectare: 204  },
+  { type: 'Semi-Intensive',                  spacing: '8x6',   treesPerHectare: 208  },
+  { type: 'Intensive',                       spacing: '7x6',   treesPerHectare: 238  },
+  { type: 'Intensive',                       spacing: '6x6',   treesPerHectare: 277  },
+  { type: 'Intensive',                       spacing: '7x5',   treesPerHectare: 285  },
+  { type: 'Intensive',                       spacing: '6x5',   treesPerHectare: 333  },
+  { type: 'Intensive',                       spacing: '5x5',   treesPerHectare: 400  },
+  { type: 'Super-Intensive',                 spacing: '4x2',   treesPerHectare: 1250 },
+  { type: 'Super-Intensive',                 spacing: '4x1,5', treesPerHectare: 1666 },
+  { type: 'Super-Intensive',                 spacing: '3,75x1,5', treesPerHectare: 1777 },
+  { type: 'Super-Intensive',                 spacing: '3,5x1,5',  treesPerHectare: 1904 },
+  { type: 'Super-Intensive',                 spacing: '3x1,5', treesPerHectare: 2222 },
+  { type: 'Super-Intensive',                 spacing: '3x1,35', treesPerHectare: 2469 },
 ];
 
 // Olive Varieties with yield data
