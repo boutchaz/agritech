@@ -3,8 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Building2,
   Plus,
-  Search,
-  Filter,
   Grid3x3,
   List,
   BarChart3,
@@ -20,19 +18,10 @@ interface FarmHierarchyHeaderProps {
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
   onAddFarm: () => void;
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
   onExportAll?: () => void;
   onImport?: () => void;
   selectedFarmId?: string | null;
   onExportFarm?: (farmId: string) => void;
-  showFilters?: boolean;
-  onToggleFilters?: () => void;
-  filters?: {
-    type: 'all' | 'main' | 'sub';
-    status: 'all' | 'active' | 'inactive';
-  };
-  onFiltersChange?: (filters: { type: 'all' | 'main' | 'sub'; status: 'all' | 'active' | 'inactive' }) => void;
 }
 
 const FarmHierarchyHeader = ({
@@ -42,16 +31,10 @@ const FarmHierarchyHeader = ({
   viewMode,
   onViewModeChange,
   onAddFarm,
-  searchTerm,
-  onSearchChange,
   onExportAll,
   onImport,
   selectedFarmId,
   onExportFarm,
-  showFilters = false,
-  onToggleFilters,
-  filters,
-  onFiltersChange,
 }: FarmHierarchyHeaderProps) => {
   const { t } = useTranslation();
 
@@ -165,37 +148,7 @@ const FarmHierarchyHeader = ({
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="flex items-center gap-3">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder={t('farmHierarchy.farm.searchPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white transition-shadow"
-          />
-        </div>
-
-        {/* Filters Button */}
-        <Button
-          variant={showFilters ? 'default' : 'outline'}
-          onClick={onToggleFilters}
-        >
-          <Filter className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            {t('farmHierarchy.filters')}
-          </span>
-          {filters && (filters.type !== 'all' || filters.status !== 'all') && (
-            <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-green-600 text-white rounded-full">
-              {[filters.type !== 'all' ? 1 : 0, filters.status !== 'all' ? 1 : 0].reduce((a, b) => a + b)}
-            </span>
-          )}
-        </Button>
-
-        {/* View Mode Toggle */}
+      <div className="flex justify-end">
         <div className="flex items-center gap-1">
           <Button
             size="icon"
@@ -215,58 +168,6 @@ const FarmHierarchyHeader = ({
           </Button>
         </div>
       </div>
-
-      {/* Filter Panel */}
-      {showFilters && filters && onFiltersChange && (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-          <div className="grid grid-cols-2 gap-4">
-            {/* Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Type de ferme
-              </label>
-              <select
-                value={filters.type}
-                onChange={(e) => onFiltersChange({ ...filters, type: e.target.value as 'all' | 'main' | 'sub' })}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white"
-              >
-                <option value="all">Tous les types</option>
-                <option value="main">Fermes principales</option>
-                <option value="sub">Sous-fermes</option>
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Statut
-              </label>
-              <select
-                value={filters.status}
-                onChange={(e) => onFiltersChange({ ...filters, status: e.target.value as 'all' | 'active' | 'inactive' })}
-                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:text-white"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="active">Actif</option>
-                <option value="inactive">Inactif</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Reset Filters */}
-          {(filters.type !== 'all' || filters.status !== 'all') && (
-            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-              <Button
-                variant="link"
-                onClick={() => onFiltersChange({ type: 'all', status: 'all' })}
-                className="p-0 h-auto text-sm text-gray-600 dark:text-gray-400"
-              >
-                {t('common.resetFilters', 'Reset filters')}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

@@ -1,9 +1,11 @@
 import { apiClient } from '../api-client';
 import { requireOrganizationId } from './createCrudApi';
+import type { PaginatedQuery, PaginatedResponse } from './types';
+import { buildPaginatedQueryString } from './types';
 import type { WorkRecord, MetayageSettlement } from '../../types/workers';
 
 export type WorkerType = 'fixed_salary' | 'daily_worker' | 'metayage';
-export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'harvest_share';
+export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'per_unit' | 'harvest_share';
 export type MetayageType = 'khammass' | 'rebaa' | 'tholth' | 'custom';
 export type CalculationBasis = 'gross_revenue' | 'net_revenue';
 export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
@@ -69,7 +71,7 @@ export interface Worker {
 
   // Metadata
   notes?: string;
-  documents?: unknown;
+  documents?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -128,6 +130,13 @@ export interface WorkerFilters {
   is_active?: boolean;
 }
 
+export interface PaginatedWorkerQuery extends PaginatedQuery {
+  workerType?: WorkerType;
+  isActive?: boolean;
+  farmId?: string;
+  platformAccess?: 'with' | 'without';
+}
+
 export const workersApi = {
   /**
    * Get all workers for an organization
@@ -139,6 +148,19 @@ export const workersApi = {
     const queryString = params.toString();
     const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers?${queryString}`, {}, organizationId);
     return res.data || [];
+  },
+
+  async getPaginated(
+    organizationId: string,
+    query: PaginatedWorkerQuery,
+  ): Promise<PaginatedResponse<Worker>> {
+    requireOrganizationId(organizationId, 'workersApi.getPaginated');
+    const queryString = buildPaginatedQueryString(query as PaginatedQuery & Record<string, unknown>);
+    const url = queryString
+      ? `/api/v1/organizations/${organizationId}/workers?${queryString}`
+      : `/api/v1/organizations/${organizationId}/workers`;
+
+    return apiClient.get<PaginatedResponse<Worker>>(url, {}, organizationId);
   },
 
   /**

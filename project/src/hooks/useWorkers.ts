@@ -1,6 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { workersApi } from '../lib/api/workers';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { workersApi, type PaginatedWorkerQuery } from '../lib/api/workers';
+import type { PaginatedResponse } from '../lib/api/types';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
+
+export type { PaginatedWorkerQuery };
 
 // Fetch workers for an organization
 export const useWorkers = (organizationId: string | null, farmId?: string | null) => {
@@ -11,6 +14,24 @@ export const useWorkers = (organizationId: string | null, farmId?: string | null
       return workersApi.getAll({ farmId: farmId || undefined }, organizationId);
     },
     enabled: !!organizationId,
+  });
+};
+
+export const usePaginatedWorkers = (organizationId: string, query: PaginatedWorkerQuery) => {
+  const queryKey = JSON.stringify(query);
+
+  return useQuery({
+    queryKey: ['workers', 'paginated', organizationId, queryKey],
+    queryFn: async (): Promise<PaginatedResponse<import('../types/workers').Worker>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+
+      return workersApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 };
 
@@ -48,7 +69,7 @@ export const useCreateWorker = () => {
       return workersApi.create(workerData, organization_id);
     },
     onSuccess: (worker) => {
-      queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
   });
@@ -63,7 +84,7 @@ export const useUpdateWorker = () => {
       return workersApi.update(id, data, organizationId);
     },
     onSuccess: (worker) => {
-      queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
@@ -79,7 +100,7 @@ export const useDeleteWorker = () => {
       return workersApi.delete(workerId, organizationId);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['workers', variables.organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', variables.organizationId] });
     },
   });
@@ -94,7 +115,7 @@ export const useDeactivateWorker = () => {
       return workersApi.deactivate(organizationId, workerId, endDate);
     },
     onSuccess: (worker) => {
-      queryClient.invalidateQueries({ queryKey: ['workers', worker.organization_id] });
+      queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
@@ -159,7 +180,7 @@ export const useUpdateWorkRecord = () => {
     }) => {
       return workersApi.updateWorkRecord(organizationId, workerId, recordId, data) as Promise<WorkRecord>;
     },
-    onSuccess: (record, variables) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['work-records', variables.organizationId, variables.workerId] });
     },
   });

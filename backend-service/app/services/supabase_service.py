@@ -199,7 +199,14 @@ class SupabaseService:
                     params=query_params,
                 )
                 response.raise_for_status()
-                return response.json()
+                payload = response.json()
+                if isinstance(payload, list):
+                    return payload
+                logger.warning(
+                    "satellite_indices_data returned non-list payload: %s",
+                    type(payload).__name__,
+                )
+                return []
         except Exception as e:
             logger.error(f"Error fetching satellite data: {e}")
             return []

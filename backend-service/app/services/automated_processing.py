@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from app.services import supabase_service
+from app.services.supabase_service import supabase_service
 from app.services.satellite import get_satellite_provider
 from app.models.schemas import BatchProcessingRequest, VegetationIndex
 

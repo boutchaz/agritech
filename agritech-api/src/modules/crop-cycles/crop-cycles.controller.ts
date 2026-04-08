@@ -25,6 +25,7 @@ import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { CropCyclesService } from './crop-cycles.service';
 import { CreateCropCycleDto } from './dto/create-crop-cycle.dto';
 import { CropCycleFiltersDto } from './dto/crop-cycle-filters.dto';
+import { CropCyclePnLFiltersDto } from './dto/crop-cycle-pnl-filters.dto';
 import { CropCycleStatus } from './dto/create-crop-cycle.dto';
 
 @ApiTags('Crop Cycles')
@@ -49,6 +50,15 @@ export class CropCyclesController {
   getStatistics(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.cropCyclesService.getStatistics(organizationId);
+  }
+
+  @Get('pnl')
+  @ApiOperation({ summary: 'Get crop cycle profit & loss (reporting view)' })
+  @ApiResponse({ status: 200, description: 'PnL rows retrieved successfully' })
+  @ApiQuery({ type: CropCyclePnLFiltersDto, required: false })
+  getPnL(@Request() req, @Query() filters: CropCyclePnLFiltersDto) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.cropCyclesService.getPnL(organizationId, filters);
   }
 
   @Get(':id')

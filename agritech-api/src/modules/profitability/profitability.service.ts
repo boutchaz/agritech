@@ -198,6 +198,20 @@ export class ProfitabilityService {
   ) {
     const supabase = this.databaseService.getAdminClient();
 
+    // Validate account mappings exist before inserting — hard fail if missing
+    const expenseAccountId = await this.accountingAutomationService.resolveAccountId(
+      organizationId, 'cost_type', createCostDto.cost_type,
+    );
+    const cashAccountId = await this.accountingAutomationService.resolveAccountId(
+      organizationId, 'cash', 'bank',
+    );
+    if (!expenseAccountId || !cashAccountId) {
+      throw new BadRequestException(
+        `Account mappings not configured for cost_type: ${createCostDto.cost_type}. ` +
+        `Please configure account mappings before creating costs.`,
+      );
+    }
+
     const { data, error } = await supabase
       .from('costs')
       .insert({
@@ -213,32 +227,19 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to create cost');
     }
 
-    // Create journal entry automatically for the cost
+    // Create journal entry — mandatory, no silent swallow
     if (data && data.amount > 0) {
-      try {
-        await this.accountingAutomationService.createJournalEntryFromCost(
-          organizationId,
-          data.id,
-          createCostDto.cost_type,
-          Number(data.amount),
-          new Date(createCostDto.date),
-          createCostDto.description || `Cost: ${createCostDto.cost_type}`,
-          userId,
-          createCostDto.parcel_id,
-        );
-        this.logger.log(`Journal entry created automatically for cost ${data.id}`);
-      } catch (journalError) {
-        // Log error but don't fail cost creation if journal entry fails
-        // This allows costs to be recorded even if account mappings are not configured
-        this.logger.error(
-          `Failed to create journal entry for cost ${data.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
-          journalError instanceof Error ? journalError.stack : undefined,
-        );
-        this.logger.warn(
-          `Cost ${data.id} created but journal entry not created. ` +
-          `Please configure account mappings for cost_type: ${createCostDto.cost_type} or create manual journal entry.`
-        );
-      }
+      await this.accountingAutomationService.createJournalEntryFromCost(
+        organizationId,
+        data.id,
+        createCostDto.cost_type,
+        Number(data.amount),
+        new Date(createCostDto.date),
+        createCostDto.description || `Cost: ${createCostDto.cost_type}`,
+        userId,
+        createCostDto.parcel_id,
+      );
+      this.logger.log(`Journal entry created automatically for cost ${data.id}`);
     }
 
     return data;
@@ -253,6 +254,20 @@ export class ProfitabilityService {
     createRevenueDto: CreateRevenueDto,
   ) {
     const supabase = this.databaseService.getAdminClient();
+
+    // Validate account mappings exist before inserting — hard fail if missing
+    const revenueAccountId = await this.accountingAutomationService.resolveAccountId(
+      organizationId, 'revenue_type', createRevenueDto.revenue_type,
+    );
+    const cashAccountId = await this.accountingAutomationService.resolveAccountId(
+      organizationId, 'cash', 'bank',
+    );
+    if (!revenueAccountId || !cashAccountId) {
+      throw new BadRequestException(
+        `Account mappings not configured for revenue_type: ${createRevenueDto.revenue_type}. ` +
+        `Please configure account mappings before creating revenues.`,
+      );
+    }
 
     const { data, error } = await supabase
       .from('revenues')
@@ -269,32 +284,19 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to create revenue');
     }
 
-    // Create journal entry automatically for the revenue
+    // Create journal entry — mandatory, no silent swallow
     if (data && data.amount > 0) {
-      try {
-        await this.accountingAutomationService.createJournalEntryFromRevenue(
-          organizationId,
-          data.id,
-          createRevenueDto.revenue_type,
-          Number(data.amount),
-          new Date(createRevenueDto.date),
-          createRevenueDto.description || `Revenue: ${createRevenueDto.revenue_type}`,
-          userId,
-          createRevenueDto.parcel_id,
-        );
-        this.logger.log(`Journal entry created automatically for revenue ${data.id}`);
-      } catch (journalError) {
-        // Log error but don't fail revenue creation if journal entry fails
-        // This allows revenues to be recorded even if account mappings are not configured
-        this.logger.error(
-          `Failed to create journal entry for revenue ${data.id}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
-          journalError instanceof Error ? journalError.stack : undefined,
-        );
-        this.logger.warn(
-          `Revenue ${data.id} created but journal entry not created. ` +
-          `Please configure account mappings for revenue_type: ${createRevenueDto.revenue_type} or create manual journal entry.`
-        );
-      }
+      await this.accountingAutomationService.createJournalEntryFromRevenue(
+        organizationId,
+        data.id,
+        createRevenueDto.revenue_type,
+        Number(data.amount),
+        new Date(createRevenueDto.date),
+        createRevenueDto.description || `Revenue: ${createRevenueDto.revenue_type}`,
+        userId,
+        createRevenueDto.parcel_id,
+      );
+      this.logger.log(`Journal entry created automatically for revenue ${data.id}`);
     }
 
     return data;
@@ -323,6 +325,7 @@ export class ProfitabilityService {
         )
       `)
       .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false });
@@ -337,6 +340,7 @@ export class ProfitabilityService {
       .from('revenues')
       .select('*')
       .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false });
@@ -346,41 +350,8 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to fetch revenues');
     }
 
-    // Find costs/revenues that have linked journal entries to avoid double counting
-    // Journal entries store reference_type='cost' or 'revenue' and reference_number=id
-    const costIds = (costs || []).map(c => c.id);
-    const revenueIds = (revenues || []).map(r => r.id);
-
-    // Get journal entries that reference these costs/revenues
-    const { data: linkedJournalEntries } = await supabase
-      .from('journal_entries')
-      .select('reference_type, reference_number')
-      .eq('organization_id', organizationId)
-      .eq('status', 'posted')
-      .in('reference_type', ['cost', 'revenue']);
-
-    // Build sets of cost/revenue IDs that have journal entries
-    const costsWithJournalEntry = new Set<string>();
-    const revenuesWithJournalEntry = new Set<string>();
-
-    (linkedJournalEntries || []).forEach((entry: any) => {
-      if (entry.reference_type === 'cost' && costIds.includes(entry.reference_number)) {
-        costsWithJournalEntry.add(entry.reference_number);
-      } else if (entry.reference_type === 'revenue' && revenueIds.includes(entry.reference_number)) {
-        revenuesWithJournalEntry.add(entry.reference_number);
-      }
-    });
-
-    // Calculate totals - exclude costs/revenues that have linked journal entries
-    // Those will be counted via the ledger data instead
-    const totalCosts = (costs || [])
-      .filter(cost => !costsWithJournalEntry.has(cost.id))
-      .reduce((sum, cost) => sum + Number(cost.amount || 0), 0);
-    const totalRevenue = (revenues || [])
-      .filter(rev => !revenuesWithJournalEntry.has(rev.id))
-      .reduce((sum, rev) => sum + Number(rev.amount || 0), 0);
-    const netProfit = totalRevenue - totalCosts;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    // De-duplication logic removed: journal_entries is now the single source of truth.
+    // Costs/revenues tables are kept as detail data only — totals come from journal.
 
     // Category breakdown
     const categoryMap = new Map();
@@ -451,39 +422,9 @@ export class ProfitabilityService {
       (a, b) => b.total_amount - a.total_amount,
     );
 
-    // Monthly time series
-    const monthlyMap = new Map();
-    const getMonthKey = (dateStr: string) => {
-      const date = new Date(dateStr);
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    };
-
-    (costs || []).forEach((cost) => {
-      const month = getMonthKey(cost.date);
-      if (!monthlyMap.has(month)) {
-        monthlyMap.set(month, { costs: 0, revenue: 0 });
-      }
-      const monthData = monthlyMap.get(month);
-      monthData.costs += Number(cost.amount || 0);
-    });
-
-    (revenues || []).forEach((rev) => {
-      const month = getMonthKey(rev.date);
-      if (!monthlyMap.has(month)) {
-        monthlyMap.set(month, { costs: 0, revenue: 0 });
-      }
-      const monthData = monthlyMap.get(month);
-      monthData.revenue += Number(rev.amount || 0);
-    });
-
-    const monthlyData = Array.from(monthlyMap.entries())
-      .map(([month, data]) => ({
-        month,
-        costs: data.costs,
-        revenue: data.revenue,
-        profit: data.revenue - data.costs,
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month));
+    // Monthly time series — built from journal items after ledger queries
+    // (populated after ledger data is fetched below)
+    let monthlyData: { month: string; costs: number; revenue: number; profit: number }[] = [];
 
     // Fetch ledger data from journal_items with parcel filter
     let ledgerExpenses: any[] = [];
@@ -504,6 +445,7 @@ export class ProfitabilityService {
         `)
         .eq('parcel_id', parcelId)
         .eq('accounts.account_type', 'expense')
+        .eq('journal_entries.organization_id', organizationId)
         .eq('journal_entries.status', 'posted')
         .gte('journal_entries.entry_date', startDate)
         .lte('journal_entries.entry_date', endDate);
@@ -533,6 +475,7 @@ export class ProfitabilityService {
         `)
         .eq('parcel_id', parcelId)
         .eq('accounts.account_type', 'revenue')
+        .eq('journal_entries.organization_id', organizationId)
         .eq('journal_entries.status', 'posted')
         .gte('journal_entries.entry_date', startDate)
         .lte('journal_entries.entry_date', endDate);
@@ -620,9 +563,34 @@ export class ProfitabilityService {
       0,
     );
 
-    // Combine totals: legacy + ledger
-    const combinedCosts = totalCosts + ledgerExpenseTotal;
-    const combinedRevenue = totalRevenue + ledgerRevenueTotal;
+    // Journal is the single source of truth for totals
+    const combinedCosts = ledgerExpenseTotal;
+    const combinedRevenue = ledgerRevenueTotal;
+
+    // Build monthly time series from journal items
+    const monthlyMap = new Map<string, { costs: number; revenue: number }>();
+    const getMonthKey = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    };
+    ledgerExpenses.forEach((item) => {
+      const month = getMonthKey(item.entry_date);
+      if (!monthlyMap.has(month)) monthlyMap.set(month, { costs: 0, revenue: 0 });
+      monthlyMap.get(month)!.costs += Number(item.debit || 0) - Number(item.credit || 0);
+    });
+    ledgerRevenues.forEach((item) => {
+      const month = getMonthKey(item.entry_date);
+      if (!monthlyMap.has(month)) monthlyMap.set(month, { costs: 0, revenue: 0 });
+      monthlyMap.get(month)!.revenue += Number(item.credit || 0) - Number(item.debit || 0);
+    });
+    monthlyData = Array.from(monthlyMap.entries())
+      .map(([month, data]) => ({
+        month,
+        costs: data.costs,
+        revenue: data.revenue,
+        profit: data.revenue - data.costs,
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
 
     // === OPERATIONAL DATA (tasks, products, harvests, metayage) ===
 
@@ -642,6 +610,7 @@ export class ProfitabilityService {
       const { data: wr } = await supabase
         .from('work_records')
         .select('id, work_date, total_payment, hours_worked, hourly_rate, payment_status, task_description, task_id, worker_type')
+        .eq('organization_id', organizationId)
         .in('task_id', parcelTaskIds)
         .gte('work_date', startDate)
         .lte('work_date', endDate)
@@ -736,19 +705,17 @@ export class ProfitabilityService {
     const metayageSettlements = metayage || [];
     const metayageTotal = metayageSettlements.reduce((s, m) => s + Number(m.net_revenue || 0), 0);
 
-    // Grand totals = accounting + operational
-    const grandTotalCosts = combinedCosts + taskLaborTotal + materialCostTotal;
-    const grandTotalRevenue = combinedRevenue + harvestRevenueTotal + metayageTotal;
-    const grandProfit = grandTotalRevenue - grandTotalCosts;
-    const grandMargin = grandTotalRevenue > 0 ? (grandProfit / grandTotalRevenue) * 100 : 0;
+    // Grand totals = journal only (single source of truth)
+    const netProfit = combinedRevenue - combinedCosts;
+    const profitMargin = combinedRevenue > 0 ? (netProfit / combinedRevenue) * 100 : 0;
 
     return {
-      // Grand totals (accounting + operational)
-      totalCosts: grandTotalCosts,
-      totalRevenue: grandTotalRevenue,
-      netProfit: grandProfit,
-      profitMargin: grandMargin,
-      // Accounting sub-totals
+      // Totals from journal entries (single source of truth)
+      totalCosts: combinedCosts,
+      totalRevenue: combinedRevenue,
+      netProfit,
+      profitMargin,
+      // Accounting sub-totals (same as totals now)
       accountingCosts: combinedCosts,
       accountingRevenue: combinedRevenue,
       // Legacy data

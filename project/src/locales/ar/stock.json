@@ -87,6 +87,31 @@
     "deleteConfirmation": "هل أنت متأكد من رغبتك في حذف المورد",
     "deleteWarning": "هذا الإجراء لا يمكن التراجع عنه."
   },
+  "sampleSchedules": {
+    "title": "عمليات أخذ العينات المجدولة",
+    "new": "برنامج جديد",
+    "create": "إنشاء برنامج",
+    "empty": "لا توجد عمليات أخذ عينات مجدولة",
+    "searchPlaceholder": "ابحث عن برنامج...",
+    "edit": "تعديل",
+    "dueInDays_one": "خلال {{count}} يوم",
+    "dueInDays_other": "خلال {{count}} أيام",
+    "labels": {
+      "farm": "المزرعة:",
+      "parcel": "القطعة:",
+      "frequency": "التكرار:",
+      "nextCollection": "أخذ العينة التالي:"
+    },
+    "columns": {
+      "serviceType": "نوع الخدمة",
+      "farm": "المزرعة",
+      "parcel": "القطعة",
+      "frequency": "التكرار",
+      "nextCollection": "أخذ العينة التالي",
+      "urgency": "الاستعجال",
+      "actions": "الإجراءات"
+    }
+  },
   "warehouses": {
     "title": "إدارة المستودعات",
     "description": "إدارة المستودعات وأماكن التخزين",

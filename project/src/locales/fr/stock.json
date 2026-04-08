@@ -87,6 +87,31 @@
     "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le fournisseur",
     "deleteWarning": "Cette action est irréversible."
   },
+  "sampleSchedules": {
+    "title": "Prélèvements Programmés",
+    "new": "Nouveau Programme",
+    "create": "Créer un programme",
+    "empty": "Aucun prélèvement programmé",
+    "searchPlaceholder": "Rechercher un programme...",
+    "edit": "Modifier",
+    "dueInDays_one": "Dans {{count}} jour",
+    "dueInDays_other": "Dans {{count}} jours",
+    "labels": {
+      "farm": "Ferme:",
+      "parcel": "Parcelle:",
+      "frequency": "Fréquence:",
+      "nextCollection": "Prochain prélèvement:"
+    },
+    "columns": {
+      "serviceType": "Type de service",
+      "farm": "Ferme",
+      "parcel": "Parcelle",
+      "frequency": "Fréquence",
+      "nextCollection": "Prochain prélèvement",
+      "urgency": "Urgence",
+      "actions": "Actions"
+    }
+  },
   "warehouses": {
     "title": "Gestion des Entrepôts",
     "description": "Gérez les entrepôts et espaces de stockage",

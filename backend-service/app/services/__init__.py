@@ -10,6 +10,12 @@ try:
 except ModuleNotFoundError:
     earth_engine_service = None
 
+# Singleton (import instance, not the supabase_service module name collision)
+try:
+    from .supabase_service import supabase_service
+except ModuleNotFoundError:
+    supabase_service = None
+
 # New satellite provider interface
 try:
     from .satellite import get_satellite_provider, ISatelliteProvider
@@ -20,6 +26,7 @@ except ModuleNotFoundError:
 __all__ = [
     # Legacy
     "earth_engine_service",
+    "supabase_service",
     # New satellite provider interface
     "get_satellite_provider",
     "ISatelliteProvider",

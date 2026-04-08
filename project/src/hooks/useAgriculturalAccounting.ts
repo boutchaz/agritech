@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import {
   fiscalYearsApi,
@@ -23,12 +23,24 @@ import type {
   UpdateCropCycleStageInput,
   CreateHarvestEventInput,
   UpdateHarvestEventInput,
+  CropCycle,
   CropCycleStage,
-  CropCycleStatus,
   CampaignStatus,
   BiologicalAsset,
 } from '@/types/agricultural-accounting';
+import type { PaginatedQuery, PaginatedResponse } from '@/lib/api/types';
 import { toast } from 'sonner';
+
+export interface PaginatedCropCycleQuery extends PaginatedQuery {
+  campaign_id?: string;
+  fiscal_year_id?: string;
+  farm_id?: string;
+  parcel_id?: string;
+  status?: string;
+  crop_type?: string;
+  cycle_type?: string;
+  season?: string;
+}
 
 export function useFiscalYears() {
   const { currentOrganization } = useAuth();
@@ -219,8 +231,10 @@ export function useCropCycles(filters?: {
   fiscal_year_id?: string;
   farm_id?: string;
   parcel_id?: string;
-  status?: CropCycleStatus;
+  status?: string;
   crop_type?: string;
+  cycle_type?: string;
+  season?: string;
 }) {
   const { currentOrganization } = useAuth();
   const organizationId = currentOrganization?.id;
@@ -229,6 +243,26 @@ export function useCropCycles(filters?: {
     queryKey: ['crop-cycles', organizationId, filters],
     queryFn: () => cropCyclesApi.getAll(organizationId!, filters),
     enabled: !!organizationId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function usePaginatedCropCycles(query: PaginatedCropCycleQuery) {
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
+  const queryKey = JSON.stringify(query);
+
+  return useQuery({
+    queryKey: ['crop-cycles', 'paginated', organizationId, queryKey],
+    queryFn: async (): Promise<PaginatedResponse<CropCycle>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+
+      return cropCyclesApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
   });
 }

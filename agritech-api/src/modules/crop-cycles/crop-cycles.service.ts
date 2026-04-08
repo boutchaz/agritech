@@ -5,10 +5,24 @@ import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notific
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCropCycleDto, CropCycleStatus } from './dto';
 import { CropCycleFiltersDto } from './dto/crop-cycle-filters.dto';
+import { CropCyclePnLFiltersDto } from './dto/crop-cycle-pnl-filters.dto';
 
 @Injectable()
 export class CropCyclesService {
   private readonly logger = new Logger(CropCyclesService.name);
+
+  /** Allowed ORDER BY columns for crop_cycle_pnl (avoid dynamic SQL injection). */
+  private static readonly PNL_SORT_COLUMNS = new Set([
+    'net_profit',
+    'total_revenue',
+    'total_costs',
+    'cycle_code',
+    'cycle_name',
+    'crop_type',
+    'planting_date',
+    'actual_harvest_end',
+    'status',
+  ]);
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -304,31 +318,74 @@ export class CropCyclesService {
       throw new NotFoundException('Crop cycle not found');
     }
 
-    // Sum costs from financial_transactions linked to this cycle
-    const { data: costRows } = await client
-      .from('financial_transactions')
-      .select('amount')
+    // Sum costs from journal entries linked to this cycle's costs/revenues
+    // Path: journal_entries.reference_id → costs.id WHERE costs.crop_cycle_id = cycleId
+    const { data: costRefs } = await client
+      .from('costs')
+      .select('id')
       .eq('organization_id', organizationId)
-      .eq('crop_cycle_id', cycleId)
-      .eq('transaction_type', 'expense');
+      .eq('crop_cycle_id', cycleId);
 
-    const totalCosts = (costRows ?? []).reduce(
-      (sum, row) => sum + (Number(row.amount) || 0),
-      0,
-    );
+    const costRefIds = (costRefs ?? []).map((c) => c.id);
 
-    // Sum revenues from financial_transactions linked to this cycle
-    const { data: revenueRows } = await client
-      .from('financial_transactions')
-      .select('amount')
+    let totalCosts = 0;
+    if (costRefIds.length > 0) {
+      const { data: costJournals } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('status', 'posted')
+        .eq('reference_type', 'cost')
+        .in('reference_id', costRefIds);
+
+      const costJournalIds = (costJournals ?? []).map((j) => j.id);
+      if (costJournalIds.length > 0) {
+        const { data: expenseItems } = await client
+          .from('journal_items')
+          .select('debit, credit, accounts!inner(account_type)')
+          .in('journal_entry_id', costJournalIds)
+          .eq('accounts.account_type', 'expense');
+
+        totalCosts = (expenseItems ?? []).reduce(
+          (sum, item: any) => sum + (Number(item.debit || 0) - Number(item.credit || 0)),
+          0,
+        );
+      }
+    }
+
+    // Sum revenues from journal entries linked to this cycle's revenues
+    const { data: revenueRefs } = await client
+      .from('revenues')
+      .select('id')
       .eq('organization_id', organizationId)
-      .eq('crop_cycle_id', cycleId)
-      .eq('transaction_type', 'income');
+      .eq('crop_cycle_id', cycleId);
 
-    const totalRevenue = (revenueRows ?? []).reduce(
-      (sum, row) => sum + (Number(row.amount) || 0),
-      0,
-    );
+    const revenueRefIds = (revenueRefs ?? []).map((r) => r.id);
+
+    let totalRevenue = 0;
+    if (revenueRefIds.length > 0) {
+      const { data: revenueJournals } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('status', 'posted')
+        .eq('reference_type', 'revenue')
+        .in('reference_id', revenueRefIds);
+
+      const revenueJournalIds = (revenueJournals ?? []).map((j) => j.id);
+      if (revenueJournalIds.length > 0) {
+        const { data: revenueItems } = await client
+          .from('journal_items')
+          .select('debit, credit, accounts!inner(account_type)')
+          .in('journal_entry_id', revenueJournalIds)
+          .eq('accounts.account_type', 'revenue');
+
+        totalRevenue = (revenueItems ?? []).reduce(
+          (sum, item: any) => sum + (Number(item.credit || 0) - Number(item.debit || 0)),
+          0,
+        );
+      }
+    }
 
     const netProfit = totalRevenue - totalCosts;
     const profitMargin = totalRevenue > 0
@@ -355,6 +412,45 @@ export class CropCyclesService {
     }
 
     return data;
+  }
+
+  /**
+   * P&L rows from reporting view `crop_cycle_pnl` (joins campaigns, farms, parcels, fiscal years).
+   */
+  async getPnL(organizationId: string, filters: CropCyclePnLFiltersDto = {}) {
+    const client = this.databaseService.getAdminClient();
+
+    let query = client
+      .from('crop_cycle_pnl')
+      .select('*')
+      .eq('organization_id', organizationId);
+
+    if (filters.campaign_id) {
+      query = query.eq('campaign_id', filters.campaign_id);
+    }
+    if (filters.fiscal_year_id) {
+      query = query.eq('fiscal_year_id', filters.fiscal_year_id);
+    }
+    if (filters.farm_id) {
+      query = query.eq('farm_id', filters.farm_id);
+    }
+
+    const sortBy =
+      filters.sortBy && CropCyclesService.PNL_SORT_COLUMNS.has(filters.sortBy)
+        ? filters.sortBy
+        : 'net_profit';
+    const ascending = filters.sortDir === 'asc';
+
+    query = query.order(sortBy, { ascending });
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch crop cycle PnL: ${error.message}`);
+      throw error;
+    }
+
+    return data || [];
   }
 
   async getStatistics(organizationId: string) {

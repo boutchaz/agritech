@@ -1,51 +1,151 @@
-
-import { PestAlertCard } from './PestAlertCard';
-import type { PestReportResponseDto } from '@/lib/api/pest-alerts';
+import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
 import { Bug } from 'lucide-react';
+import { PestAlertCard } from './PestAlertCard';
+import { FilterBar, ResponsiveList, type StatusFilterOption } from '@/components/ui/data-table';
+import type { PestReportResponseDto, PestReportStatus } from '@/lib/api/pest-alerts';
 
 interface PestReportsListProps {
   reports: PestReportResponseDto[];
   isLoading: boolean;
+  searchValue?: string;
+  statusFilter?: PestReportStatus | 'all';
+  onSearchChange?: (value: string) => void;
+  onStatusFilter?: (status: PestReportStatus | 'all') => void;
 }
 
-export const PestReportsList = ({ reports, isLoading }: PestReportsListProps) => {
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[1, 2, 3, 4, 5, 6].map((_, skIdx) => (
-          <div key={"sk-" + skIdx} className="space-y-3">
-            <div className="h-[125px] w-full rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse" />
-            <div className="space-y-2">
-              <div className="h-4 w-[250px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded" />
-              <div className="h-4 w-[200px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+const STATUS_LABELS: Record<PestReportStatus, string> = {
+  pending: 'En attente',
+  verified: 'Vérifié',
+  treated: 'Traité',
+  resolved: 'Résolu',
+  dismissed: 'Rejeté',
+};
 
-  if (reports.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-lg bg-gray-50 dark:bg-gray-900/50">
-        <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-full mb-4">
-          <Bug className="h-8 w-8 text-gray-400" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Aucun signalement
-        </h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mt-2">
-          Il n'y a pas encore de signalements de ravageurs ou maladies pour cette période.
-        </p>
-      </div>
-    );
-  }
+const SEVERITY_LABELS = {
+  low: 'Faible',
+  medium: 'Moyenne',
+  high: 'Élevée',
+  critical: 'Critique',
+} as const;
+
+export const PestReportsList = ({
+  reports,
+  isLoading,
+  searchValue,
+  statusFilter,
+  onSearchChange,
+  onStatusFilter,
+}: PestReportsListProps) => {
+  const { t } = useTranslation();
+  const [internalSearch, setInternalSearch] = useState('');
+  const [internalStatus, setInternalStatus] = useState<PestReportStatus | 'all'>('all');
+
+  const currentSearch = searchValue ?? internalSearch;
+  const currentStatus = statusFilter ?? internalStatus;
+
+  const handleSearchChange = (value: string) => {
+    onSearchChange?.(value);
+    if (searchValue === undefined) {
+      setInternalSearch(value);
+    }
+  };
+
+  const handleStatusChange = (status: string) => {
+    const nextStatus = status as PestReportStatus | 'all';
+
+    onStatusFilter?.(nextStatus);
+    if (statusFilter === undefined) {
+      setInternalStatus(nextStatus);
+    }
+  };
+
+  const visibleReports = useMemo(() => {
+    const normalizedSearch = currentSearch.trim().toLowerCase();
+
+    return reports.filter((report) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        report.pest_disease?.name?.toLowerCase().includes(normalizedSearch) ||
+        report.notes?.toLowerCase().includes(normalizedSearch) ||
+        report.farm?.name?.toLowerCase().includes(normalizedSearch) ||
+        report.parcel?.name?.toLowerCase().includes(normalizedSearch);
+
+      const matchesStatus = currentStatus === 'all' || report.status === currentStatus;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [currentSearch, currentStatus, reports]);
+
+  const statusFilters: StatusFilterOption[] = [
+    { value: 'all', label: t('pestAlerts.filters.status.all', 'Tous') },
+    { value: 'pending', label: t('pestAlerts.status.pending', 'En attente') },
+    { value: 'verified', label: t('pestAlerts.status.verified', 'Vérifié') },
+    { value: 'treated', label: t('pestAlerts.status.treated', 'Traité') },
+    { value: 'resolved', label: t('pestAlerts.status.resolved', 'Résolu') },
+    { value: 'dismissed', label: t('pestAlerts.status.dismissed', 'Rejeté') },
+  ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {reports.map((report) => (
-        <PestAlertCard key={report.id} report={report} />
-      ))}
+    <div className="space-y-4">
+      <FilterBar
+        searchValue={currentSearch}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={t(
+          'pestAlerts.filters.searchPlaceholder',
+          'Rechercher par ravageur, maladie, ferme ou parcelle...',
+        )}
+        statusFilters={statusFilters}
+        activeStatus={currentStatus}
+        onStatusChange={handleStatusChange}
+      />
+
+      <ResponsiveList
+        items={visibleReports}
+        isLoading={isLoading}
+        keyExtractor={(report) => report.id}
+        emptyIcon={Bug}
+        emptyTitle={t('pestAlerts.list.emptyTitle', 'Aucun signalement')}
+        emptyMessage={t(
+          'pestAlerts.list.emptyDescription',
+          "Il n'y a pas encore de signalements de ravageurs ou maladies pour cette période.",
+        )}
+        renderCard={(report) => <PestAlertCard report={report} />}
+        renderTableHeader={
+          <tr>
+            <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {t('pestAlerts.table.severity', 'Sévérité')}
+            </th>
+            <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {t('pestAlerts.table.name', 'Ravageur / maladie')}
+            </th>
+            <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {t('pestAlerts.table.status', 'Statut')}
+            </th>
+            <th className="px-4 xl:px-6 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              {t('pestAlerts.table.date', 'Date')}
+            </th>
+          </tr>
+        }
+        renderTable={(report) => (
+          <>
+            <td className="px-4 xl:px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+              {SEVERITY_LABELS[report.severity]}
+            </td>
+            <td className="px-4 xl:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+              {report.pest_disease?.name ?? t('pestAlerts.table.unknownPest', 'Ravageur non identifié')}
+            </td>
+            <td className="px-4 xl:px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
+              {STATUS_LABELS[report.status]}
+            </td>
+            <td className="px-4 xl:px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+              {format(new Date(report.created_at), 'dd MMM yyyy', { locale: fr })}
+            </td>
+          </>
+        )}
+      />
     </div>
   );
 };

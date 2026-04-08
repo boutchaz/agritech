@@ -5,6 +5,7 @@ import { DatabaseService } from '../database/database.service';
 import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 
 export interface WorkerProfile {
@@ -32,6 +33,7 @@ export class WorkersService {
     private readonly databaseService: DatabaseService,
     private readonly emailService: EmailService,
     private readonly notificationsService: NotificationsService,
+    private readonly accountingAutomationService: AccountingAutomationService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -671,6 +673,18 @@ export class WorkersService {
       throw new NotFoundException('Worker not found');
     }
 
+    // Validate account mappings before insert
+    const [revenueAccountId, cashAccountId] = await Promise.all([
+      this.accountingAutomationService.resolveAccountId(organizationId, 'revenue_type', 'metayage'),
+      this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank'),
+    ]);
+
+    if (!revenueAccountId || !cashAccountId) {
+      throw new BadRequestException(
+        'Account mappings not configured for revenue_type: metayage. Please configure account mappings before creating metayage settlements.',
+      );
+    }
+
     const { data: settlement, error } = await client
       .from('metayage_settlements')
       .insert({
@@ -683,6 +697,20 @@ export class WorkersService {
 
     if (error) {
       throw new Error(`Failed to create métayage settlement: ${error.message}`);
+    }
+
+    // Create journal entry for the metayage revenue
+    const settlementAmount = Number(settlement.amount || data.amount);
+    if (settlementAmount > 0) {
+      await this.accountingAutomationService.createJournalEntryFromRevenue(
+        organizationId,
+        settlement.id,
+        'metayage',
+        settlementAmount,
+        new Date(settlement.settlement_date || data.settlement_date),
+        `Metayage settlement: worker ${workerId}`,
+        userId,
+      );
     }
 
     return settlement;

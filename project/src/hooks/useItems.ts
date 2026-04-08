@@ -1,9 +1,11 @@
 import React from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import { itemsApi } from '../lib/api/items';
+import { itemsApi, type PaginatedItemQuery } from '../lib/api/items';
+import type { PaginatedResponse } from '../lib/api/types';
 import type {
   ItemGroupWithChildren,
+  Item,
   CreateItemInput,
   UpdateItemInput,
   CreateItemGroupInput,
@@ -13,6 +15,8 @@ import type {
   ItemFilters,
   ItemGroupFilters,
 } from '../types/items';
+
+export type { PaginatedItemQuery };
 
 // =====================================================
 // ITEM GROUPS QUERIES
@@ -112,6 +116,25 @@ export function useItems(filters?: ItemFilters) {
       return itemsApi.getAll(filters, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
+  });
+}
+
+export function usePaginatedItems(query: PaginatedItemQuery) {
+  const { currentOrganization } = useAuth();
+  const queryKey = JSON.stringify(query);
+
+  return useQuery({
+    queryKey: ['items', 'paginated', currentOrganization?.id, queryKey],
+    queryFn: async (): Promise<PaginatedResponse<Item>> => {
+      if (!currentOrganization?.id) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+
+      return itemsApi.getPaginated(currentOrganization.id, query);
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

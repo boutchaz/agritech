@@ -1025,6 +1025,18 @@ export class TasksService {
           const ratePerUnit = completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
           const workUnitId = completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
 
+          // Pre-validate accounting mappings if any worker may have payments
+          const hasPayableWorkers = allWorkers.some(w => !w.payment_included_in_salary);
+          if (hasPayableWorkers) {
+            const laborAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cost_type', 'labor');
+            const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+            if (!laborAccountId || !cashAccountId) {
+              throw new BadRequestException(
+                'Account mappings not configured for cost_type: labor. Please configure account mappings before completing tasks with payments.',
+              );
+            }
+          }
+
           // Create work record for each worker
           for (const workerEntry of allWorkers) {
             // Determine units for this worker
@@ -1059,7 +1071,7 @@ export class TasksService {
               totalPayment = workerUnits * ratePerUnit;
             }
 
-            const { error: workRecordError } = await client
+            const { data: workRecord, error: workRecordError } = await client
               .from("work_records")
               .insert({
                 worker_id: workerEntry.worker_id,
@@ -1084,12 +1096,36 @@ export class TasksService {
                   parcel_id: existingTask.parcel_id,
                   completed_at: now,
                 }),
-              });
+              })
+              .select('id')
+              .single();
 
             if (workRecordError) {
               this.logger.warn(`Failed to create work record for worker ${workerEntry.worker_id}: ${workRecordError.message}`);
             } else {
               this.logger.log(`Work record created for task ${taskId}, worker ${workerEntry.worker_id}`);
+
+              // Create journal entry for labor cost
+              if (totalPayment && totalPayment > 0 && workRecord) {
+                try {
+                  await this.accountingAutomationService.createJournalEntryFromCost(
+                    organizationId,
+                    workRecord.id,
+                    'labor',
+                    totalPayment,
+                    new Date(now.split("T")[0]),
+                    `Task labor: ${existingTask.title || 'Sans titre'}`,
+                    userId,
+                    existingTask.parcel_id || undefined,
+                  );
+                  this.logger.log(`Labor journal entry created for work record ${workRecord.id}, worker ${workerEntry.worker_id}`);
+                } catch (journalError) {
+                  this.logger.error(
+                    `Failed to create labor journal entry for work record ${workRecord.id}: ${journalError.message}`,
+                    journalError.stack,
+                  );
+                }
+              }
             }
           }
         } // end else (farmId exists)

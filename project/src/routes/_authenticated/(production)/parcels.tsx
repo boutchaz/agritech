@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -8,13 +8,15 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { useAutoStartTour } from '@/contexts/TourContext'
-import Map from '@/components/Map'
+import ParcelsMap from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
-import { PageLoader } from '@/components/ui/loader'
+import { PageLoader, SectionLoader } from '@/components/ui/loader'
 import { useFarms, useParcelsByFarm, useParcelsByOrganization, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery';
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FilterBar, useServerTableState } from '@/components/ui/data-table';
 
 interface ParcelsListContentProps {
   search: { farmId?: string };
@@ -28,13 +30,14 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   useAutoStartTour('parcels', 1500);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [showAddParcelMap, setShowAddParcelMap] = useState(false);
   const [editingParcel, setEditingParcel] = useState<Parcel | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const { search: searchTerm, setSearch: setSearchTerm } = useServerTableState();
 
   /** Farm filter: URL is the only source of truth (avoids navigate ↔ state sync loops). */
   const selectedFarmId = search.farmId ?? '';
@@ -66,6 +69,29 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const parcels = targetFarmId ? parcelsByFarm : parcelsByOrg;
   const loading = targetFarmId ? parcelsByFarmLoading : parcelsByOrgLoading || farmsLoading;
   const fetchError = targetFarmId ? parcelsByFarmError : (parcelsByOrgError || farmsError);
+  const activeFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
+  const activeFarm = activeFarmId ? farms.find((farm) => farm.id === activeFarmId) : null;
+
+  const filteredParcels = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) return parcels;
+
+    return parcels.filter((parcel) => {
+      const farmName = farms.find((farm) => farm.id === parcel.farm_id)?.name ?? '';
+      return [
+        parcel.name,
+        parcel.description,
+        parcel.irrigation_type,
+        parcel.tree_type,
+        parcel.variety,
+        parcel.rootstock,
+        farmName,
+      ]
+        .filter(Boolean)
+        .some((value) => value?.toString().toLowerCase().includes(normalizedSearch));
+    });
+  }, [farms, parcels, searchTerm]);
 
           // Farms and parcels are loaded automatically via React Query hooks
           // No manual fetching needed
@@ -111,65 +137,33 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
           ]}
           title={t('parcels.title')}
           subtitle={(() => {
-            const activeFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
-            const farm = activeFarmId ? farms?.find(f => f.id === activeFarmId) : null;
-            const farmName = farm?.name || (!isAllFarmsView ? currentFarm?.name : undefined);
+            const farmName = activeFarm?.name || (!isAllFarmsView ? currentFarm?.name : undefined);
             return activeFarmId && farmName
-              ? t('parcels.subtitle', { count: parcels.length, farmName })
-              : t('parcels.subtitleAllFarms', { count: parcels.length });
+              ? t('parcels.subtitle', { count: filteredParcels.length, farmName })
+              : t('parcels.subtitleAllFarms', { count: filteredParcels.length });
           })()}
-          actions={
-            farms && farms.length > 1 ? (
-              <select
-                data-tour="parcel-filters"
-                value={selectedFarmId}
-                onChange={(e) => setFarmFilter(e.target.value)}
-                className="px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm w-full sm:w-auto"
-              >
-                <option value="">{t('parcels.allFarms')}</option>
-                {farms.map((farm) => (
-                  <option key={farm.id} value={farm.id}>
-                    {farm.name}
-                  </option>
-                ))}
-              </select>
-            ) : undefined
-          }
         />
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6 hidden">
-            <div className="w-full sm:w-auto">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                {t('parcels.title')}
-              </h2>
-              {/* Show current context */}
-              <div className="mt-1 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                {(selectedFarmId !== "" || currentFarm) ? (
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {(() => {
-                      const targetFarmId = selectedFarmId || currentFarm?.id;
-                      const farm = farms?.find(f => f.id === targetFarmId);
-                      return farm?.name || currentFarm?.name || t('parcels.loading');
-                    })()}
-                  </span>
-                ) : (
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {currentOrganization?.name}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto text-left sm:text-right">
-              {loading ? (
-                <span>{t('parcels.loading')}</span>
-              ) : (
-                <span>{t('parcels.subtitle', { count: parcels.length, farmName: '' })}</span>
-              )}
-            </div>
+          <div data-tour="parcel-filters">
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={t('parcels.searchPlaceholder', 'Search parcels...')}
+              filters={farms.length > 1 ? [{
+                key: 'farm',
+                value: selectedFarmId,
+                onChange: setFarmFilter,
+                options: [
+                  { value: '', label: t('parcels.allFarms') },
+                  ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
+                ],
+                placeholder: t('parcels.allFarms'),
+              }] : []}
+            />
           </div>
 
           {loading ? (
-            <PageLoader className="h-96 min-h-0" />
+            <SectionLoader className="h-96 min-h-0 rounded-lg bg-white dark:bg-gray-800" />
           ) : fetchError ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
               <p className="text-red-500 dark:text-red-400 mb-4">
@@ -183,83 +177,27 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
               </Button>
             </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
-            <div data-testid="parcels-empty-state" className="space-y-6">
-              {/* Show farms overview when no specific farm is selected */}
-              {isAllFarmsView && farms.length > 0 && (
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    {t('parcels.farmsIn', { orgName: currentOrganization?.name })}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {farms.map((farm) => (
-                      <div
-                        key={farm.id}
-                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:border-green-500 transition-colors cursor-pointer"
-                        onClick={() => setFarmFilter(farm.id)}
-                      >
-                        <div className="flex items-center space-x-2 mb-2">
-                          <TreePine className="h-5 w-5 text-green-600" />
-                          <h4 className="font-medium text-gray-900 dark:text-white">{farm.name}</h4>
-                        </div>
-                        {farm.location && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                            📍 {farm.location}
-                          </p>
-                        )}
-                        {farm.size && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                            📏 {farm.size} {t('units.hectares').toLowerCase()}
-                          </p>
-                        )}
-                        {farm.manager_name && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            👤 {farm.manager_name}
-                          </p>
-                        )}
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-2">
-                          {t('parcels.clickToViewParcels')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* No parcels message */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {!isAllFarmsView
-                    ? t('parcels.noParcelsForFarm', { farmName: (() => {
-                      const targetFarmId = selectedFarmId || currentFarm?.id;
-                      const farm = farms?.find(f => f.id === targetFarmId);
-                      return farm?.name || '';
-                    })() })
-                    : t('parcels.selectFarmToAdd')}
-                </p>
-                  {!isAllFarmsView && (currentFarm || selectedFarmId) && (
-                    <div className="space-x-3" data-tour="parcel-actions">
-                      <Button variant="green"
-                        data-testid="create-parcel-button"
-                        onClick={() => {
-                          setEditingBoundaryParcelId(null);
-                          setShowAddParcelMap(true);
-                        }}
-                        className="px-4 py-2 rounded-lg"
-                      >
-                        {t('parcels.addParcel')}
-                      </Button>
-                    <Button variant="blue"
-                      onClick={() => {
-                        // Manual refresh of React Query cache
-                        window.location.reload();
-                      }}
-                      className="px-4 py-2 rounded-lg"
-                    >
-                      {t('parcels.refresh')}
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <div data-testid="parcels-empty-state">
+              <EmptyState
+                icon={MapPin}
+                title={t('parcels.emptyTitle', 'No parcels yet')}
+                description={!isAllFarmsView
+                  ? t('parcels.noParcelsForFarm', { farmName: activeFarm?.name || '' })
+                  : t('parcels.selectFarmToAdd')}
+                action={!isAllFarmsView && (currentFarm || selectedFarmId)
+                  ? {
+                      label: t('parcels.addParcel'),
+                      onClick: () => {
+                        setEditingBoundaryParcelId(null);
+                        setShowAddParcelMap(true);
+                      },
+                    }
+                  : undefined}
+                secondaryAction={{
+                  label: t('parcels.refresh'),
+                  onClick: () => window.location.reload(),
+                }}
+              />
             </div>
           ) : (
             <>
@@ -278,7 +216,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
               )}
 
               <div data-tour="farm-map">
-                <Map
+                <ParcelsMap
                   center={[31.7917, -7.0926]}
                   zones={[]}
                   sensors={[]}
@@ -286,14 +224,17 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                   enableDrawing={true}
                   selectedParcelId={selectedParcelId}
                   onParcelSelect={handleParcelSelect}
-                  parcels={parcels}
+                  parcels={filteredParcels}
                   editingParcelId={editingBoundaryParcelId}
-                  onParcelAdded={(newParcel) => {
+                  onParcelAdded={(newParcel: unknown) => {
                     setShowAddParcelMap(false);
                     setEditingBoundaryParcelId(null);
+                    const createdParcel = typeof newParcel === 'object' && newParcel !== null && 'id' in newParcel
+                      ? (newParcel as { id?: string })
+                      : null;
                     // Navigate to the newly created parcel detail page
-                    if (newParcel?.id) {
-                      navigate({ to: `/parcels/${newParcel.id}` });
+                    if (createdParcel?.id) {
+                      navigate({ to: `/parcels/${createdParcel.id}` });
                     }
                   }}
                   onBoundaryUpdated={() => {
@@ -305,26 +246,29 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
 
               {/* Parcel selection now navigates to dedicated parcel detail pages */}
 
-              {parcels.length > 0 && (
+              {filteredParcels.length > 0 ? (
                 <div data-testid="parcels-list" data-tour="parcel-list" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                  {parcels.map((parcel) => {
+                  {filteredParcels.map((parcel) => {
                     const farm = farms.find(f => f.id === parcel.farm_id);
                     return (
                       <div
                         key={parcel.id}
                         data-testid={`parcel-card-${parcel.id}`}
-                        onClick={() => handleParcelSelect(parcel.id)}
-                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border-2 transition-all hover:shadow-lg cursor-pointer ${
+                        className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow p-4 cursor-pointer text-left ${
                           selectedParcelId === parcel.id
-                            ? 'border-green-500 ring-2 ring-green-200 dark:ring-green-800 shadow-lg'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-green-300'
+                            ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900'
+                            : ''
                         }`}
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => handleParcelSelect(parcel.id)}
+                            className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2 text-left"
+                          >
                             <MapPin className="h-4 w-4 text-green-600" />
                             <span>{parcel.name}</span>
-                          </h3>
+                          </button>
                           <div className="flex space-x-1">
                             <Button
                               onClick={(e) => {
@@ -340,69 +284,75 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                             <Button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'))) {
-                                  handleArchiveParcel(parcel.id);
-                                }
-                              }}
-                              className="p-1 text-amber-600 hover:bg-amber-50 rounded"
-                              title={t('parcels.archive', 'Archiver')}
+                                  setConfirmAction({
+                                    title: t('parcels.archiveConfirmTitle', 'Archive parcel'),
+                                    description: t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'),
+                                    variant: 'destructive',
+                                    onConfirm: () => handleArchiveParcel(parcel.id),
+                                  });
+                                  setConfirmOpen(true);
+                                }}
+                                className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                                title={t('parcels.archive', 'Archiver')}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
 
-                        {/* Show farm name when viewing all farms */}
-                        {isAllFarmsView && farm && (
-                          <div className="mb-2">
-                            <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
-                              <TreePine className="h-3 w-3" />
-                              <span>{farm.name}</span>
+                        <button type="button" onClick={() => handleParcelSelect(parcel.id)} className="w-full text-left">
+                          {/* Show farm name when viewing all farms */}
+                          {isAllFarmsView && farm && (
+                            <div className="mb-2">
+                              <div className="flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400">
+                                <TreePine className="h-3 w-3" />
+                                <span>{farm.name}</span>
+                              </div>
                             </div>
+                          )}
+
+                          {parcel.description && (
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{parcel.description}</p>
+                          )}
+
+                          <div className="space-y-1">
+                            {(parcel.calculated_area || parcel.area) ? (
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <Ruler className="h-3 w-3 mr-1" />
+                                <span>{parcel.calculated_area || parcel.area} {parcel.area_unit || t('parcels.areaUnits.hectares')}</span>
+                              </div>
+                            ) : null}
+                            {parcel.irrigation_type && (
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <Droplets className="h-3 w-3 mr-1" />
+                                <span>{parcel.irrigation_type}</span>
+                              </div>
+                            )}
+                            {/* Fruit Trees Information */}
+                            {parcel.tree_type && (
+                              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                                <Tree className="h-3 w-3 mr-1" />
+                                <span>{parcel.tree_type}</span>
+                                {parcel.variety && <span className="text-xs text-gray-400 ml-1">({parcel.variety})</span>}
+                              </div>
+                            )}
+                            {parcel.tree_count && (
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                <span className="font-medium">{parcel.tree_count}</span> {t('parcels.trees')}
+                                {parcel.planting_year && (
+                                  <span className="text-xs text-gray-400 ml-1">
+                                    • {t('parcels.plantedIn')} {parcel.planting_year}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {parcel.rootstock && (
+                              <div className="text-xs text-gray-400">
+                                {t('parcels.rootstock')}: {parcel.rootstock}
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        {parcel.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{parcel.description}</p>
-                        )}
-
-                        <div className="space-y-1">
-                          {(parcel.calculated_area || parcel.area) ? (
-                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                              <Ruler className="h-3 w-3 mr-1" />
-                              <span>{parcel.calculated_area || parcel.area} {parcel.area_unit || 'hectares'}</span>
-                            </div>
-                          ) : null}
-                          {parcel.irrigation_type && (
-                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                              <Droplets className="h-3 w-3 mr-1" />
-                              <span>{parcel.irrigation_type}</span>
-                            </div>
-                          )}
-                          {/* Fruit Trees Information */}
-                          {parcel.tree_type && (
-                            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                              <Tree className="h-3 w-3 mr-1" />
-                              <span>{parcel.tree_type}</span>
-                              {parcel.variety && <span className="text-xs text-gray-400 ml-1">({parcel.variety})</span>}
-                            </div>
-                          )}
-                          {parcel.tree_count && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              <span className="font-medium">{parcel.tree_count}</span> {t('parcels.trees')}
-                              {parcel.planting_year && (
-                                <span className="text-xs text-gray-400 ml-1">
-                                  • {t('parcels.plantedIn')} {parcel.planting_year}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          {parcel.rootstock && (
-                            <div className="text-xs text-gray-400">
-                              {t('parcels.rootstock')}: {parcel.rootstock}
-                            </div>
-                          )}
-                        </div>
+                        </button>
 
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
                           {parcel.boundary && parcel.boundary.length > 0 ? (
@@ -441,6 +391,16 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                     );
                   })}
                 </div>
+              ) : (
+                <EmptyState
+                  icon={MapPin}
+                  title={t('parcels.noSearchResultsTitle', 'No matching parcels')}
+                  description={t('parcels.noSearchResults', 'Try adjusting your search to find a parcel.')}
+                  secondaryAction={{
+                    label: t('dataTable.clearFilters', 'Clear'),
+                    onClick: () => setSearchTerm(''),
+                  }}
+                />
               )}
 
             </>

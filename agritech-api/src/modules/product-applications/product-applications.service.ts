@@ -3,6 +3,7 @@ import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
 import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { CreateProductApplicationDto } from './dto/create-product-application.dto';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class ProductApplicationsService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly notificationsService: NotificationsService,
+    private readonly accountingAutomationService: AccountingAutomationService,
   ) {}
 
   /**
@@ -87,6 +89,15 @@ export class ProductApplicationsService {
     createDto: CreateProductApplicationDto,
   ) {
     return this.executeInPgTransaction(async (client) => {
+      // 0. Validate account mappings before proceeding
+      const expenseAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cost_type', 'materials');
+      const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+      if (!expenseAccountId || !cashAccountId) {
+        throw new BadRequestException(
+          'Account mappings not configured for cost_type: materials. Please configure account mappings before creating product applications.',
+        );
+      }
+
       // 1. Get warehouse for stock deduction
       const warehouseId = await this.getOrganizationWarehouse(organizationId);
       if (!warehouseId) {
@@ -208,6 +219,20 @@ export class ProductApplicationsService {
         `Product application created: ${createDto.quantity_used} ${unit} of item ${createDto.product_id}, ` +
         `stock deducted: ${totalCost} (${consumedBatches.length} batches consumed)`,
       );
+
+      // 8. Create journal entry for material cost
+      if (totalCost > 0) {
+        await this.accountingAutomationService.createJournalEntryFromCost(
+          organizationId,
+          application.id,
+          'materials',
+          totalCost,
+          new Date(createDto.application_date),
+          `Product application: ${createDto.product_id}`,
+          userId,
+          createDto.parcel_id,
+        );
+      }
 
       // Notify operational roles about product application
       try {

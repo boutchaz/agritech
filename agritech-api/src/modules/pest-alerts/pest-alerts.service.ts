@@ -53,7 +53,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name)
+        reporter:user_profiles!reporter_id(id, first_name, last_name)
       `)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
@@ -79,7 +79,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name),
+        reporter:user_profiles!reporter_id(id, first_name, last_name),
         verifier:user_profiles!verified_by(id, first_name, last_name)
       `)
       .eq('id', reportId)
@@ -169,7 +169,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name)
+        reporter:user_profiles!reporter_id(id, first_name, last_name)
       `)
       .single();
 
@@ -263,7 +263,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name),
+        reporter:user_profiles!reporter_id(id, first_name, last_name),
         verifier:user_profiles!verified_by(id, first_name, last_name)
       `)
       .eq('id', reportId)

@@ -79,3 +79,15 @@ SWC decorator compilation with @IsUUID() from class-validator fails silently in 
 ### AgromindIA V2: mode_calibrage gets V2 engine semantics — 2026-04-04 (Request: agromind-v2-integration)
 
 The calibrations.mode_calibrage column changes meaning: old values (full/partial/annual) described what triggered the calibration; V2 values (lecture_pure/calibrage_progressif/calibrage_complet/calibrage_avec_signalement/collecte_donnees/age_manquant) describe how the engine behaved based on parcel maturity. A new `type` column (initial/F2_partial/F3_complete) takes over the trigger-type responsibility.
+
+### Journal entries as single source of truth for all profitability — 2026-04-08 (Request: profitability-consolidation)
+
+All profitability calculations (parcel-level, crop-cycle-level, org-level) must derive exclusively from journal_entries/journal_items. The dual-path system — where crop_cycles.recalculateProfitability() read from financial_transactions while profitability.getParcelProfitability() read from costs+revenues+operational tables — is retired. Costs/revenues tables remain as data entry mechanisms but only count toward profitability once posted to the journal. Considered keeping the triple-source approach for backward compatibility but rejected it: two paths guaranteed number mismatches between views.
+
+### Account mappings are mandatory — hard fail on missing mappings — 2026-04-08 (Request: profitability-consolidation)
+
+When creating any cost or revenue (manual, labor, material, harvest, metayage), the system must fail the entire operation if account mappings are not configured — no silent fallback, no orphaned records without journal entries. Previously the backend logged a warning and saved the cost/revenue without a journal entry, creating orphaned records invisible to profitability. This was rejected because it breaks the journal-as-source-of-truth invariant.
+
+### All operational modules must create journal entries — 2026-04-08 (Request: profitability-consolidation)
+
+Work records (labor), product applications (materials), harvest records (revenue), and metayage settlements must all create journal entries via AccountingAutomationService to appear in profitability. Previously these were queried directly from their source tables by getParcelProfitability(), bypassing the accounting ledger entirely. This created a shadow accounting system outside the journal. All six cost/revenue sources now follow the same path: source event → account mapping lookup → journal entry creation → profitability reads journal.

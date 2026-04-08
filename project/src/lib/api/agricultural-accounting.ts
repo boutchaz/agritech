@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   FiscalYear,
   FiscalPeriod,
@@ -162,6 +163,32 @@ export const campaignsApi = {
 };
 
 export const cropCyclesApi = {
+  async getPaginated(
+    organizationId: string,
+    query?: PaginatedQuery & {
+      campaign_id?: string;
+      fiscal_year_id?: string;
+      farm_id?: string;
+      parcel_id?: string;
+      status?: string;
+      crop_type?: string;
+      cycle_type?: string;
+      season?: string;
+    }
+  ): Promise<PaginatedResponse<CropCycle>> {
+    const queryString = toQueryString({
+      ...query,
+      sortBy: query?.sortBy || 'created_at',
+      sortDir: query?.sortDir || 'desc',
+    });
+
+    return apiClient.get<PaginatedResponse<CropCycle>>(
+      `/api/v1/crop-cycles${queryString}`,
+      {},
+      organizationId
+    );
+  },
+
   async getAll(
     organizationId: string,
     filters?: {
@@ -171,6 +198,8 @@ export const cropCyclesApi = {
       parcel_id?: string;
       status?: string;
       crop_type?: string;
+      cycle_type?: string;
+      season?: string;
     }
   ): Promise<CropCycle[]> {
     const query = toQueryString({

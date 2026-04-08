@@ -219,6 +219,25 @@ export class HarvestsService {
       (Number(createHarvestDto.quantity) || 0) *
       (Number(createHarvestDto.expected_price_per_unit) || 0);
 
+    // Pre-validate account mappings if this harvest will generate revenue
+    if (estimatedRevenue > 0) {
+      const revenueAccountId = await this.accountingAutomationService.resolveAccountId(
+        organizationId,
+        'revenue_type',
+        'harvest',
+      );
+      const cashAccountId = await this.accountingAutomationService.resolveAccountId(
+        organizationId,
+        'cash',
+        'bank',
+      );
+      if (!revenueAccountId || !cashAccountId) {
+        throw new BadRequestException(
+          'Account mappings not configured for revenue_type: harvest. Please configure account mappings before creating harvests.',
+        );
+      }
+    }
+
     // Create harvest record
     const { data: harvest, error } = await client
       .from('harvest_records')
@@ -269,6 +288,28 @@ export class HarvestsService {
     } catch (receptionError) {
       // Log error but don't fail the harvest creation
       this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${receptionError.message}`, receptionError.stack);
+    }
+
+    // Create journal entry for harvest revenue
+    if (estimatedRevenue > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          harvest.id,
+          'harvest',
+          estimatedRevenue,
+          new Date(createHarvestDto.harvest_date),
+          `Harvest: ${createHarvestDto.crop_id || 'unknown crop'}`,
+          userId,
+          createHarvestDto.parcel_id,
+        );
+        this.logger.log(`Journal entry created for harvest ${harvest.id} with revenue ${estimatedRevenue}`);
+      } catch (journalError) {
+        this.logger.error(
+          `Failed to create journal entry for harvest ${harvest.id}: ${journalError.message}`,
+          journalError.stack,
+        );
+      }
     }
 
     // Track first harvest recorded milestone

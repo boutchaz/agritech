@@ -92,6 +92,31 @@
     "updateFailed": "Failed to update supplier: {{error}}",
     "createFailed": "Failed to create supplier: {{error}}"
   },
+  "sampleSchedules": {
+    "title": "Scheduled Collections",
+    "new": "New Schedule",
+    "create": "Create schedule",
+    "empty": "No scheduled collections",
+    "searchPlaceholder": "Search schedules...",
+    "edit": "Edit",
+    "dueInDays_one": "In {{count}} day",
+    "dueInDays_other": "In {{count}} days",
+    "labels": {
+      "farm": "Farm:",
+      "parcel": "Parcel:",
+      "frequency": "Frequency:",
+      "nextCollection": "Next collection:"
+    },
+    "columns": {
+      "serviceType": "Service type",
+      "farm": "Farm",
+      "parcel": "Parcel",
+      "frequency": "Frequency",
+      "nextCollection": "Next collection",
+      "urgency": "Urgency",
+      "actions": "Actions"
+    }
+  },
   "warehouses": {
     "title": "Warehouse Management",
     "description": "Manage warehouses and storage locations",

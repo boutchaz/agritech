@@ -1,29 +1,44 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { SectionLoader } from '@/components/ui/loader';
+import { EmptyState } from '@/components/ui/empty-state';
+import type { LucideIcon } from 'lucide-react';
 
 export interface ResponsiveListProps<T> {
   items: T[];
   isLoading?: boolean;
+  isFetching?: boolean;
   keyExtractor: (item: T) => string;
   renderCard: (item: T) => ReactNode;
   renderTable: (item: T) => ReactNode;
   renderTableHeader?: ReactNode;
-  emptyIcon?: ReactNode;
-  emptyMessage?: string;
+  emptyIcon?: LucideIcon;
+  emptyTitle?: string;
+  emptyMessage: string;
+  emptyAction?: {
+    label: string;
+    onClick: () => void;
+    variant?: 'default' | 'outline' | 'secondary' | 'destructive';
+  };
   className?: string;
+  /** Extra content rendered below the empty state (e.g. secondary message) */
+  emptyExtra?: ReactNode;
 }
 
 export function ResponsiveList<T>({
   items,
   isLoading = false,
+  isFetching = false,
   keyExtractor,
   renderCard,
   renderTable,
   renderTableHeader,
   emptyIcon,
+  emptyTitle,
   emptyMessage,
+  emptyAction,
   className,
+  emptyExtra,
 }: ResponsiveListProps<T>) {
   if (isLoading) {
     return <SectionLoader />;
@@ -31,21 +46,28 @@ export function ResponsiveList<T>({
 
   if (items.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-8 sm:p-12 text-center">
-        {emptyIcon && (
-          <div className="mx-auto mb-4 w-12 h-12 sm:w-16 sm:h-16 text-gray-300">
-            {emptyIcon}
-          </div>
-        )}
-        {emptyMessage && (
-          <p className="text-gray-600 dark:text-gray-400">{emptyMessage}</p>
-        )}
+      <div className="space-y-4">
+        <EmptyState
+          variant="card"
+          icon={emptyIcon}
+          title={emptyTitle}
+          description={emptyMessage}
+          action={emptyAction}
+        />
+        {emptyExtra}
       </div>
     );
   }
 
   return (
-    <>
+    <div className={cn('relative', isFetching && 'opacity-70', className)}>
+      {isFetching && (
+        <div className="absolute top-2 right-2 z-10">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+        </div>
+      )}
+
+      {/* Mobile: Card View */}
       <ul className="lg:hidden space-y-3">
         {items.map((item) => (
           <li key={keyExtractor(item)}>
@@ -54,10 +76,10 @@ export function ResponsiveList<T>({
         ))}
       </ul>
 
+      {/* Desktop: Table View */}
       <div
         className={cn(
           'hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden',
-          className,
         )}
       >
         <div className="overflow-x-auto">
@@ -80,6 +102,6 @@ export function ResponsiveList<T>({
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 }

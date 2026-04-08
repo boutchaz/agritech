@@ -1,6 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { paymentRecordsApi } from '../lib/api/payment-records';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  keepPreviousData,
+} from '@tanstack/react-query';
+import {
+  paymentRecordsApi,
+  type PaginatedPaymentRecordsQuery,
+} from '../lib/api/payment-records';
 import { useAuth } from '../hooks/useAuth';
+import type { PaginatedResponse } from '../lib/api/types';
 import type {
   PaymentFilters,
   CreatePaymentRecordRequest,
@@ -8,7 +17,10 @@ import type {
   RequestAdvanceRequest,
   ApproveAdvanceRequest,
   CalculatePaymentRequest,
+  PaymentSummary,
 } from '../types/payments';
+
+export type { PaginatedPaymentRecordsQuery };
 
 // =====================================================
 // PAYMENT QUERIES
@@ -22,6 +34,26 @@ export function usePayments(organizationId: string, filters?: PaymentFilters) {
       return paymentRecordsApi.getAll(filters, organizationId);
     },
     enabled: !!organizationId,
+  });
+}
+
+export function usePaginatedPaymentRecords(
+  organizationId: string,
+  query: PaginatedPaymentRecordsQuery,
+) {
+  const queryKey = JSON.stringify(query);
+
+  return useQuery({
+    queryKey: ['payments', 'paginated', organizationId, queryKey],
+    queryFn: async (): Promise<PaginatedResponse<PaymentSummary>> => {
+      if (!organizationId) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+
+      return paymentRecordsApi.getPaginated(organizationId, query);
+    },
+    enabled: !!organizationId,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -225,4 +257,3 @@ export function usePayAdvance() {
     },
   });
 }
-

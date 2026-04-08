@@ -473,7 +473,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Main d'œuvre (tâches liées à la parcelle)
+                    {t('profitability.operational.taskLabor', 'Task Labor Costs')}
                   </h3>
                   <span className="text-sm font-bold text-red-600">
                     − {formatCurrency(profitabilityData?.taskLaborTotal ?? 0)}
@@ -486,8 +486,8 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                         <div className="text-sm font-medium text-gray-900 dark:text-white">{wr.task_title}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(wr.work_date).toLocaleDateString()} • {wr.worker_type} • {wr.hours_worked ? `${wr.hours_worked}h` : wr.task_description}
-                          {wr.payment_status === 'paid' && <span className="ml-2 text-green-600">✓ payé</span>}
-                          {wr.payment_status === 'pending' && <span className="ml-2 text-orange-500">en attente</span>}
+                          {wr.payment_status === 'paid' && <span className="ml-2 text-green-600">✓ {t('common.paid', 'paid')}</span>}
+                          {wr.payment_status === 'pending' && <span className="ml-2 text-orange-500">{t('common.pending', 'pending')}</span>}
                         </div>
                       </div>
                       <div className="text-sm font-medium text-red-600 dark:text-red-400">
@@ -501,12 +501,12 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
           )}
 
           {/* Material / Product Application Costs */}
-          {(profitabilityData?.materialCosts?.length ?? 0) > 0 && (
+          {(profitabilityData?.materialCosts?.length ?? 0) > 0 ? (
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Matières et produits appliqués
+                    {t('profitability.operational.materialCosts', 'Material Costs')}
                   </h3>
                   <span className="text-sm font-bold text-red-600">
                     − {formatCurrency(profitabilityData?.materialCostTotal ?? 0)}
@@ -516,10 +516,10 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                   {profitabilityData!.materialCosts!.map((app) => (
                     <div key={app.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{app.item_name ?? 'Produit'}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{app.item_name ?? t('profitability.operational.product', 'Product')}</div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(app.application_date).toLocaleDateString()}
-                          {' • '}{app.quantity_used} {app.unit ?? 'unité(s)'}
+                          {' • '}{app.quantity_used} {app.unit ?? t('common.units', 'units')}
                           {app.quantity_used > 0 && app.cost > 0
                             ? ` × ${formatCurrency(app.cost / app.quantity_used)}/unité`
                             : ''}
@@ -534,15 +534,21 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                 </div>
               </CardContent>
             </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noMaterialData', 'No material cost data available for this period')}</p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Harvest Revenues */}
-          {(profitabilityData?.harvestRevenues?.length ?? 0) > 0 && (
+          {(profitabilityData?.harvestRevenues?.length ?? 0) > 0 ? (
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Récoltes
+                    {t('profitability.operational.harvestRevenues', 'Harvest Revenues')}
                   </h3>
                   <span className="text-sm font-bold text-green-600">
                     + {formatCurrency(profitabilityData?.harvestRevenueTotal ?? 0)}
@@ -553,7 +559,7 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                     <div key={hr.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {hr.crop_type ?? 'Récolte'}{hr.lot_number ? ` — Lot ${hr.lot_number}` : ''}
+                          {hr.crop_type ?? t('profitability.operational.harvest', 'Harvest')}{hr.lot_number ? ` — Lot ${hr.lot_number}` : ''}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(hr.harvest_date).toLocaleDateString()} • {hr.quantity} {hr.unit}
@@ -568,15 +574,21 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                 </div>
               </CardContent>
             </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noHarvestData', 'No harvest revenue data available for this period')}</p>
+              </CardContent>
+            </Card>
           )}
 
           {/* Metayage Settlements */}
-          {(profitabilityData?.metayageSettlements?.length ?? 0) > 0 && (
+          {(profitabilityData?.metayageSettlements?.length ?? 0) > 0 ? (
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                    Partage métayage
+                    {t('profitability.operational.metayageSettlements', 'Metayage Settlements')}
                   </h3>
                   <span className="text-sm font-bold text-green-600">
                     + {formatCurrency(profitabilityData?.metayageTotal ?? 0)}
@@ -587,13 +599,13 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                     <div key={ms.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
                       <div className="flex-1">
                         <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          Brut {formatCurrency(Number(ms.gross_revenue))} — charges {formatCurrency(Number(ms.total_charges || 0))}
+                          {t('profitability.operational.gross', 'Gross')} {formatCurrency(Number(ms.gross_revenue))} — {t('profitability.operational.charges', 'charges')} {formatCurrency(Number(ms.total_charges || 0))}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {ms.payment_date ? new Date(ms.payment_date).toLocaleDateString() : '—'}
-                          {ms.worker_percentage ? ` • Part ouvrier ${ms.worker_percentage}%` : ''}
+                          {ms.worker_percentage ? ` • ${t('profitability.operational.workerShare', 'Worker share')} ${ms.worker_percentage}%` : ''}
                           <span className={`ml-2 ${ms.payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'}`}>
-                            {ms.payment_status === 'paid' ? '✓ payé' : ms.payment_status}
+                            {ms.payment_status === 'paid' ? `✓ ${t('common.paid', 'paid')}` : ms.payment_status}
                           </span>
                         </div>
                       </div>
@@ -603,6 +615,12 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noMetayageData', 'No metayage settlement data available for this period')}</p>
               </CardContent>
             </Card>
           )}
@@ -643,48 +661,34 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.legacyCosts', 'Legacy Costs')}
+                          {t('profitability.overview.totalCosts', 'Total Costs')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.costs || []).reduce((sum, c) => sum + Number(c.amount || 0), 0)
-                          )}
+                        <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                          {formatCurrency(profitabilityData?.totalCosts ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.legacyRevenue', 'Legacy Revenue')}
+                          {t('profitability.overview.totalRevenue', 'Total Revenue')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.revenues || []).reduce((sum, r) => sum + Number(r.amount || 0), 0)
-                          )}
+                        <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(profitabilityData?.totalRevenue ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.ledgerExpenses', 'Ledger Expenses')}
+                          {t('profitability.overview.netProfit', 'Net Profit')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.ledgerExpenses || []).reduce(
-                              (sum, e) => sum + (Number(e.debit || 0) - Number(e.credit || 0)),
-                              0
-                            )
-                          )}
+                        <p className={`text-xl font-bold ${(profitabilityData?.netProfit ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {formatCurrency(profitabilityData?.netProfit ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.ledgerRevenue', 'Ledger Revenue')}
+                          {t('profitability.overview.profitMargin', 'Profit Margin')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.ledgerRevenues || []).reduce(
-                              (sum, r) => sum + (Number(r.credit || 0) - Number(r.debit || 0)),
-                              0
-                            )
-                          )}
+                        <p className={`text-xl font-bold ${(profitabilityData?.profitMargin ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {(profitabilityData?.profitMargin ?? 0).toFixed(1)}%
                         </p>
                       </div>
                     </div>

@@ -1,5 +1,6 @@
-import { createCrudApi } from './createCrudApi';
+import { createCrudApi, requireOrganizationId } from './createCrudApi';
 import { apiClient } from '../api-client';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   Item,
   ItemWithDetails,
@@ -28,6 +29,12 @@ import type {
 
 const BASE_URL = '/api/v1/items';
 
+export interface PaginatedItemQuery extends PaginatedQuery {
+  is_sales_item?: boolean;
+  is_active?: boolean;
+  item_group_id?: string;
+}
+
 export type {
   ItemStockLevelWarehouse,
   ItemStockLevelSummary,
@@ -47,6 +54,29 @@ export const itemsApi = {
    */
   async getOne(id: string, organizationId?: string): Promise<ItemWithDetails> {
     return apiClient.get<ItemWithDetails>(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  async getPaginated(
+    organizationId: string,
+    query: PaginatedItemQuery,
+  ): Promise<PaginatedResponse<Item>> {
+    requireOrganizationId(organizationId, 'itemsApi.getPaginated');
+
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.is_sales_item !== undefined) params.append('is_sales_item', String(query.is_sales_item));
+    if (query.is_active !== undefined) params.append('is_active', String(query.is_active));
+    if (query.item_group_id) params.append('item_group_id', query.item_group_id);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+
+    return apiClient.get<PaginatedResponse<Item>>(url, {}, organizationId);
   },
 
   // =====================================================

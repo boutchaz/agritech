@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,12 +50,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { EmptyState } from "@/components/ui/empty-state";
-import { ListPageLayout } from "@/components/ui/data-table";
+import {
+  DataTablePagination,
+  FilterBar,
+  ListPageHeader,
+  ListPageLayout,
+  ResponsiveList,
+  useServerTableState,
+} from "@/components/ui/data-table";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import {
   useCropCycles,
+  usePaginatedCropCycles,
   useCropCyclePnL,
   useCreateCropCycle,
   useUpdateCropCycle,
@@ -107,6 +114,14 @@ interface CropCyclesListProps {
   initialCampaignId?: string;
 }
 
+const ACTIVE_CROP_CYCLE_STATUSES: CropCycleStatus[] = [
+  "land_prep",
+  "growing",
+  "harvesting",
+];
+
+type CropCycleListStatusFilter = "all" | "active" | CropCycleStatus;
+
 export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) {
   const { hasRole, currentOrganization } = useAuth();
   const { t } = useTranslation();
@@ -117,6 +132,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   const [selectedFarmId, setSelectedFarmId] = useState<string>("");
 
   const [filterCampaignId, setFilterCampaignId] = useState<string>(initialCampaignId || "");
+  const [filterFiscalYearId, setFilterFiscalYearId] = useState<string>("");
 
   // Sync filterCampaignId when initialCampaignId changes (e.g., URL navigation)
   useEffect(() => {
@@ -125,7 +141,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     }
   }, [initialCampaignId]);
 
-  const [filterStatus, setFilterStatus] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState<CropCycleListStatusFilter>("all");
   const [filterCycleType, setFilterCycleType] = useState<string>("");
   const [filterSeason, setFilterSeason] = useState<string>("");
 
@@ -141,23 +157,42 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   ]);
   const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
-  const { data: cropCycles = [], isLoading } = useCropCycles({
-    campaign_id: filterCampaignId || undefined,
-    status: (filterStatus as CropCycleStatus) || undefined,
+  const tableState = useServerTableState({
+    defaultPageSize: 12,
+    defaultSort: { key: "created_at", direction: "desc" },
   });
 
-  const filteredCycles = cropCycles.filter((cycle) => {
-    if (filterCycleType && filterCycleType !== "__all__") {
-      if (cycle.cycle_type !== filterCycleType) return false;
-    }
-    if (filterSeason && filterSeason !== "__all__") {
-      if (cycle.season !== filterSeason) return false;
-    }
-    return true;
+  const statusQueryValue =
+    filterStatus === "active"
+      ? ACTIVE_CROP_CYCLE_STATUSES.join(",")
+      : filterStatus !== "all"
+        ? filterStatus
+        : undefined;
+
+  const { data: paginatedData, isLoading, isFetching } = usePaginatedCropCycles({
+    ...tableState.queryParams,
+    campaign_id: filterCampaignId || undefined,
+    fiscal_year_id: filterFiscalYearId || undefined,
+    status: statusQueryValue,
+    cycle_type: filterCycleType || undefined,
+    season: filterSeason || undefined,
   });
+
+  const { data: cropCycles = [] } = useCropCycles({
+    campaign_id: filterCampaignId || undefined,
+    fiscal_year_id: filterFiscalYearId || undefined,
+    status: statusQueryValue,
+    cycle_type: filterCycleType || undefined,
+    season: filterSeason || undefined,
+  });
+
+  const displayedCycles = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
 
   const { data: pnlData = [] } = useCropCyclePnL({
     campaign_id: filterCampaignId || undefined,
+    fiscal_year_id: filterFiscalYearId || undefined,
   });
   const { data: campaigns = [] } = useCampaigns();
   const { data: fiscalYears = [] } = useFiscalYears();
@@ -266,12 +301,20 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
       if (overlappingCycle) {
         const startStr = overlappingCycle.planting_date
           ? new Date(overlappingCycle.planting_date).toLocaleDateString()
-          : "Unknown";
+          : t("common.unknown", "Unknown");
         const endStr = overlappingCycle.expected_harvest_end
           ? new Date(overlappingCycle.expected_harvest_end).toLocaleDateString()
-          : "Unknown";
+          : t("common.unknown", "Unknown");
         setOverlapWarning(
-          `Warning: This parcel already has an active cycle (${overlappingCycle.cycle_code}) from ${startStr} to ${endStr}. Overlapping cycles may cause cost attribution issues.`,
+          t(
+            "cropCycles.overlapWarning",
+            "Warning: This parcel already has an active cycle ({{cycleCode}}) from {{startDate}} to {{endDate}}. Overlapping cycles may cause cost attribution issues.",
+            {
+              cycleCode: overlappingCycle.cycle_code,
+              startDate: startStr,
+              endDate: endStr,
+            },
+          ),
         );
       } else {
         setOverlapWarning(null);
@@ -282,6 +325,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   }, [
     cropCycles,
     editingCycle,
+    t,
     watchedExpectedHarvestEnd,
     watchedParcelId,
     watchedPlantingDate,
@@ -544,10 +588,36 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     );
   };
 
-  const getPnLForCycle = (cycleId: string) =>
-    pnlData.find((p) => p.id === cycleId);
+  const getPnLForCycle = (cycleId: string) => pnlData.find((p) => p.id === cycleId);
 
-  const totals = filteredCycles.reduce(
+  const getCycleLocation = (cycle: CropCycle) => {
+    const pnl = getPnLForCycle(cycle.id);
+    const locationParts = [pnl?.farm_name, pnl?.parcel_name].filter(Boolean);
+
+    if (locationParts.length > 0) {
+      return locationParts.join(" / ");
+    }
+
+    const farmName = farms.find((farm) => farm.id === cycle.farm_id)?.name;
+    return farmName || t("cropCycles.unknownFarm", "Unknown Farm");
+  };
+
+  const getCycleDateRange = (cycle: CropCycle) => {
+    if (!cycle.planting_date && !cycle.expected_harvest_end) {
+      return t("cropCycles.noDates", "No dates set");
+    }
+
+    const plantingDate = cycle.planting_date
+      ? new Date(cycle.planting_date).toLocaleDateString()
+      : "-";
+    const harvestEndDate = cycle.expected_harvest_end
+      ? new Date(cycle.expected_harvest_end).toLocaleDateString()
+      : null;
+
+    return harvestEndDate ? `${plantingDate} → ${harvestEndDate}` : plantingDate;
+  };
+
+  const totals = cropCycles.reduce(
     (acc, c) => ({
       area: acc.area + (c.planted_area_ha || 0),
       costs: acc.costs + c.total_costs,
@@ -561,29 +631,184 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     (_, month) => new Date(2000, month, 1),
   );
 
-  return (
-    <ListPageLayout
-      header={
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Sprout className="h-6 w-6 text-green-600" />
-              {t("cropCycles.title", "Crop Cycles")}
-            </h2>
-            <p className="text-muted-foreground">
-              {t(
-                "cropCycles.description",
-                "Track production cycles from planting to harvest with full cost attribution.",
-              )}
-            </p>
+  const renderCycleActionsMenu = (cycle: CropCycle) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() =>
+            navigate({
+              to: "/crop-cycles/$cycleId",
+              params: { cycleId: cycle.id },
+            })
+          }
+        >
+          <Eye className="h-4 w-4 mr-2" />
+          {t("common.view", "View Details")}
+        </DropdownMenuItem>
+        {canManage && (
+          <DropdownMenuItem onClick={() => handleOpenDialog(cycle)}>
+            <Edit2 className="h-4 w-4 mr-2" />
+            {t("common.edit", "Edit")}
+          </DropdownMenuItem>
+        )}
+        {canManage &&
+          cycle.status !== "completed" &&
+          cycle.status !== "cancelled" && (
+            <DropdownMenuItem onClick={() => handleComplete(cycle.id)}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              {t("cropCycles.complete", "Mark Complete")}
+            </DropdownMenuItem>
+          )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderCycleCard = (cycle: CropCycle) => (
+    <Card className="hover:shadow-md transition-shadow">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                className="text-left text-lg font-semibold hover:text-primary transition-colors"
+                onClick={() =>
+                  navigate({
+                    to: "/crop-cycles/$cycleId",
+                    params: { cycleId: cycle.id },
+                  })
+                }
+              >
+                {cycle.cycle_name || cycle.crop_type}
+              </button>
+              {getCycleTypeBadge(cycle)}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+              <code className="text-xs bg-muted px-1 rounded">{cycle.cycle_code}</code>
+              {getStatusBadge(cycle.status)}
+            </div>
           </div>
+          <div className="lg:hidden">{renderCycleActionsMenu(cycle)}</div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <MapPin className="h-4 w-4 shrink-0" />
+          <span className="truncate">{getCycleLocation(cycle)}</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4 shrink-0" />
+          <span>{getCycleDateRange(cycle)}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <span className="text-muted-foreground">
+              {t("cropCycles.area", "Area")}: 
+            </span>
+            <span className="font-medium">
+              {cycle.planted_area_ha?.toFixed(1) || "-"} ha
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground">
+              {t("cropCycles.yield", "Yield")}: 
+            </span>
+            <span className="font-medium">
+              {cycle.actual_total_yield?.toLocaleString() ||
+                cycle.expected_total_yield?.toLocaleString() ||
+                "-"}{" "}
+              {cycle.yield_unit}
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-2 border-t space-y-1.5">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">
+              {t("cropCycles.costs", "Costs")}
+            </span>
+            <span className="font-medium">
+              {currencySymbol} {cycle.total_costs.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">
+              {t("cropCycles.revenue", "Revenue")}
+            </span>
+            <span className="font-medium">
+              {currencySymbol} {cycle.total_revenue.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm font-medium">
+            <span>{t("cropCycles.profit", "Profit")}</span>
+            <span className={cycle.net_profit >= 0 ? "text-green-600" : "text-red-600"}>
+              {cycle.net_profit >= 0 ? (
+                <TrendingUp className="h-4 w-4 inline mr-1" />
+              ) : (
+                <TrendingDown className="h-4 w-4 inline mr-1" />
+              )}
+              {currencySymbol} {cycle.net_profit.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              navigate({
+                to: "/crop-cycles/$cycleId",
+                params: { cycleId: cycle.id },
+              })
+            }
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            {t("common.view", "View")}
+          </Button>
           {canManage && (
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t("cropCycles.addNew", "New Cycle")}
+            <Button variant="outline" size="sm" onClick={() => handleOpenDialog(cycle)}>
+              <Edit2 className="h-4 w-4 mr-1" />
+              {t("common.edit", "Edit")}
+            </Button>
+          )}
+          {canManage && cycle.status !== "completed" && cycle.status !== "cancelled" && (
+            <Button size="sm" onClick={() => handleComplete(cycle.id)}>
+              <CheckCircle className="h-4 w-4 mr-1" />
+              {t("cropCycles.complete", "Complete")}
             </Button>
           )}
         </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <ListPageLayout
+      header={
+        <ListPageHeader
+          title={t("cropCycles.title", "Crop Cycles")}
+          subtitle={t(
+            "cropCycles.description",
+            "Track production cycles from planting to harvest with full cost attribution.",
+          )}
+          icon={<Sprout className="h-6 w-6 text-green-600" />}
+          actions={
+            canManage ? (
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t("cropCycles.addNew", "New Cycle")}
+              </Button>
+            ) : undefined
+          }
+        />
       }
       stats={
         <div className="grid gap-4 lg:grid-cols-4">
@@ -632,112 +857,85 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
         </div>
       }
       filters={
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
-          <div className="flex flex-wrap gap-4 flex-1">
-            <Select
-              value={filterCampaignId || "__all__"}
-              onValueChange={(v) => setFilterCampaignId(v === "__all__" ? "" : v)}
-            >
-              <SelectTrigger className="w-[200px]">
-                <SelectValue
-                  placeholder={t("cropCycles.filter.campaign", "All Campaigns")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  {t("cropCycles.filter.allCampaigns", "All Campaigns")}
-                </SelectItem>
-                {campaigns.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filterStatus || "__all__"}
-              onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue
-                  placeholder={t("cropCycles.filter.status", "All Statuses")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  {t("cropCycles.filter.allStatuses", "All Statuses")}
-                </SelectItem>
-                <SelectItem value="planned">
-                  {t("cropCycles.status.planned", "Planned")}
-                </SelectItem>
-                <SelectItem value="growing">
-                  {t("cropCycles.status.growing", "Growing")}
-                </SelectItem>
-                <SelectItem value="harvesting">
-                  {t("cropCycles.status.harvesting", "Harvesting")}
-                </SelectItem>
-                <SelectItem value="completed">
-                  {t("cropCycles.status.completed", "Completed")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filterCycleType || "__all__"}
-              onValueChange={(v) => setFilterCycleType(v === "__all__" ? "" : v)}
-            >
-              <SelectTrigger className="w-[160px]">
-                <SelectValue
-                  placeholder={t("cropCycles.filter.type", "All Types")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  {t("common.all", "All Types")}
-                </SelectItem>
-                <SelectItem value="annual">
-                  {t("cropCycles.type.annual", "Annual")}
-                </SelectItem>
-                <SelectItem value="perennial">
-                  {t("cropCycles.type.perennial", "Perennial")}
-                </SelectItem>
-                <SelectItem value="multi_harvest">
-                  {t("cropCycles.type.multiHarvest", "Multi-Harvest")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select
-              value={filterSeason || "__all__"}
-              onValueChange={(v) => setFilterSeason(v === "__all__" ? "" : v)}
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue
-                  placeholder={t("cropCycles.filter.season", "All Seasons")}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">
-                  {t("common.all", "All Seasons")}
-                </SelectItem>
-                <SelectItem value="spring">
-                  {t("seasons.spring", "Spring")}
-                </SelectItem>
-                <SelectItem value="summer">
-                  {t("seasons.summer", "Summer")}
-                </SelectItem>
-                <SelectItem value="autumn">
-                  {t("seasons.autumn", "Autumn")}
-                </SelectItem>
-                <SelectItem value="winter">
-                  {t("seasons.winter", "Winter")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="flex-1">
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={tableState.setSearch}
+              searchPlaceholder={t("cropCycles.searchPlaceholder", "Search crop cycles...")}
+              isSearching={isFetching}
+              filters={[
+                {
+                  key: "campaign",
+                  value: filterCampaignId || "all",
+                  onChange: (value) => {
+                    setFilterCampaignId(value === "all" ? "" : value);
+                    tableState.setPage(1);
+                  },
+                  options: [
+                    { value: "all", label: t("cropCycles.filter.allCampaigns", "All Campaigns") },
+                    ...campaigns.map((campaign) => ({ value: campaign.id, label: campaign.name })),
+                  ],
+                },
+                {
+                  key: "fiscalYear",
+                  value: filterFiscalYearId || "all",
+                  onChange: (value) => {
+                    setFilterFiscalYearId(value === "all" ? "" : value);
+                    tableState.setPage(1);
+                  },
+                  options: [
+                    { value: "all", label: t("cropCycles.filter.allFiscalYears", "All Fiscal Years") },
+                    ...fiscalYears.map((fiscalYear) => ({ value: fiscalYear.id, label: fiscalYear.name })),
+                  ],
+                },
+                {
+                  key: "cycleType",
+                  value: filterCycleType || "all",
+                  onChange: (value) => {
+                    setFilterCycleType(value === "all" ? "" : value);
+                    tableState.setPage(1);
+                  },
+                  options: [
+                    { value: "all", label: t("common.all", "All Types") },
+                    { value: "annual", label: t("cropCycles.type.annual", "Annual") },
+                    { value: "perennial", label: t("cropCycles.type.perennial", "Perennial") },
+                    { value: "multi_harvest", label: t("cropCycles.type.multiHarvest", "Multi-Harvest") },
+                    { value: "continuous", label: t("cropCycles.type.continuous", "Continuous") },
+                  ],
+                },
+                {
+                  key: "season",
+                  value: filterSeason || "all",
+                  onChange: (value) => {
+                    setFilterSeason(value === "all" ? "" : value);
+                    tableState.setPage(1);
+                  },
+                  options: [
+                    { value: "all", label: t("common.all", "All Seasons") },
+                    { value: "spring", label: t("seasons.spring", "Spring") },
+                    { value: "summer", label: t("seasons.summer", "Summer") },
+                    { value: "autumn", label: t("seasons.autumn", "Autumn") },
+                    { value: "winter", label: t("seasons.winter", "Winter") },
+                  ],
+                },
+              ]}
+              statusFilters={[
+                { value: "all", label: t("common.all", "All") },
+                { value: "planned", label: t("cropCycles.status.planned", "Planned") },
+                { value: "active", label: t("common.active", "Active") },
+                { value: "completed", label: t("cropCycles.status.completed", "Completed") },
+                { value: "cancelled", label: t("cropCycles.status.cancelled", "Cancelled") },
+              ]}
+              activeStatus={filterStatus}
+              onStatusChange={(status) => {
+                setFilterStatus(status as CropCycleListStatusFilter);
+                tableState.setPage(1);
+              }}
+            />
           </div>
 
-          <div className="flex bg-muted rounded-lg p-1">
+          <div className="flex bg-muted rounded-lg p-1 self-start xl:self-auto">
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="sm"
@@ -759,22 +957,127 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
           </div>
         </div>
       }
+      pagination={
+        totalItems > 0 ? (
+          <DataTablePagination
+            page={tableState.page}
+            pageSize={tableState.pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
+          />
+        ) : undefined
+      }
     >
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {t("cropCycles.loading", "Loading crop cycles...")}
-        </div>
-      ) : filteredCycles.length === 0 ? (
-        <EmptyState
-          variant="card"
-          icon={Layers}
-          title={t("cropCycles.empty.title", "No crop cycles")}
-          description={t(
-            "cropCycles.empty",
-            "No crop cycles found. Create your first cycle to start tracking production.",
+      {viewMode === "list" ? (
+        <ResponsiveList
+          items={displayedCycles}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          keyExtractor={(cycle) => cycle.id}
+          renderCard={renderCycleCard}
+          renderTableHeader={
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.crop", "Crop")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.location", "Farm / Parcel")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.status", "Status")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.dates", "Dates")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.production", "Area / Yield")}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("cropCycles.table.pnl", "P&L")}
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                {t("common.actions", "Actions")}
+              </th>
+            </tr>
+          }
+          renderTable={(cycle) => (
+            <>
+              <td className="px-4 py-4 align-top">
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    className="font-medium text-left hover:text-primary transition-colors"
+                    onClick={() =>
+                      navigate({
+                        to: "/crop-cycles/$cycleId",
+                        params: { cycleId: cycle.id },
+                      })
+                    }
+                  >
+                    {cycle.cycle_name || cycle.crop_type}
+                  </button>
+                  <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                    <code className="text-xs bg-muted px-1 rounded">{cycle.cycle_code}</code>
+                    {getCycleTypeBadge(cycle)}
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-4 align-top text-sm text-muted-foreground">
+                {getCycleLocation(cycle)}
+              </td>
+              <td className="px-4 py-4 align-top">{getStatusBadge(cycle.status)}</td>
+              <td className="px-4 py-4 align-top text-sm text-muted-foreground">
+                {getCycleDateRange(cycle)}
+              </td>
+              <td className="px-4 py-4 align-top text-sm">
+                <div>
+                  <span className="text-muted-foreground">{t("cropCycles.area", "Area")}: </span>
+                  <span className="font-medium">{cycle.planted_area_ha?.toFixed(1) || "-"} ha</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("cropCycles.yield", "Yield")}: </span>
+                  <span className="font-medium">
+                    {cycle.actual_total_yield?.toLocaleString() ||
+                      cycle.expected_total_yield?.toLocaleString() ||
+                      "-"}{" "}
+                    {cycle.yield_unit}
+                  </span>
+                </div>
+              </td>
+              <td className="px-4 py-4 align-top text-sm">
+                <div>
+                  <span className="text-muted-foreground">{t("cropCycles.costs", "Costs")}: </span>
+                  <span className="font-medium">{currencySymbol} {cycle.total_costs.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">{t("cropCycles.revenue", "Revenue")}: </span>
+                  <span className="font-medium">{currencySymbol} {cycle.total_revenue.toLocaleString()}</span>
+                </div>
+                <div className={cycle.net_profit >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                  {t("cropCycles.profit", "Profit")}: {currencySymbol} {cycle.net_profit.toLocaleString()}
+                </div>
+              </td>
+              <td className="px-4 py-4 align-top text-right">{renderCycleActionsMenu(cycle)}</td>
+            </>
           )}
-          action={
-            canManage
+          emptyIcon={Layers}
+          emptyTitle={
+            tableState.search
+              ? t("cropCycles.empty.searchTitle", "No crop cycles found")
+              : t("cropCycles.empty.title", "No crop cycles")
+          }
+          emptyMessage={
+            tableState.search
+              ? t("cropCycles.empty.searchDescription", "Try adjusting your search or filters.")
+              : t(
+                  "cropCycles.empty",
+                  "No crop cycles found. Create your first cycle to start tracking production.",
+                )
+          }
+          emptyAction={
+            canManage && !tableState.search
               ? {
                   label: t("cropCycles.addNew", "New Cycle"),
                   onClick: () => handleOpenDialog(),
@@ -782,161 +1085,6 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               : undefined
           }
         />
-      ) : viewMode === "list" ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredCycles.map((cycle) => {
-            const pnl = getPnLForCycle(cycle.id);
-            return (
-              <Card
-                key={cycle.id}
-                className="hover:shadow-md transition-shadow"
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <CardTitle
-                          className="text-lg cursor-pointer hover:text-primary transition-colors"
-                          onClick={() =>
-                            navigate({
-                              to: "/crop-cycles/$cycleId",
-                              params: { cycleId: cycle.id },
-                            })
-                          }
-                        >
-                          {cycle.cycle_name || cycle.crop_type}
-                        </CardTitle>
-                        {getCycleTypeBadge(cycle)}
-                      </div>
-                      <CardDescription className="flex items-center gap-2">
-                        <code className="text-xs bg-muted px-1 rounded">
-                          {cycle.cycle_code}
-                        </code>
-                        {getStatusBadge(cycle.status)}
-                      </CardDescription>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() =>
-                            navigate({
-                              to: "/crop-cycles/$cycleId",
-                              params: { cycleId: cycle.id },
-                            })
-                          }
-                        >
-                          <Eye className="h-4 w-4 mr-2" />{" "}
-                          {t("common.view", "View Details")}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleOpenDialog(cycle)}
-                        >
-                          <Edit2 className="h-4 w-4 mr-2" />{" "}
-                          {t("common.edit", "Edit")}
-                        </DropdownMenuItem>
-                        {cycle.status !== "completed" &&
-                          cycle.status !== "cancelled" && (
-                            <DropdownMenuItem
-                              onClick={() => handleComplete(cycle.id)}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />{" "}
-                              {t("cropCycles.complete", "Mark Complete")}
-                            </DropdownMenuItem>
-                          )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    {pnl?.farm_name || "Unknown Farm"}
-                    {pnl?.parcel_name && ` / ${pnl.parcel_name}`}
-                  </div>
-
-                  {cycle.planting_date && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(cycle.planting_date).toLocaleDateString()}
-                      {cycle.expected_harvest_end && (
-                        <>
-                          {" "}
-                          →{" "}
-                          {new Date(
-                            cycle.expected_harvest_end,
-                          ).toLocaleDateString()}
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t("cropCycles.area", "Area")}:{" "}
-                      </span>
-                      <span className="font-medium">
-                        {cycle.planted_area_ha?.toFixed(1) || "-"} ha
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">
-                        {t("cropCycles.yield", "Yield")}:{" "}
-                      </span>
-                      <span className="font-medium">
-                        {cycle.actual_total_yield?.toLocaleString() ||
-                          cycle.expected_total_yield?.toLocaleString() ||
-                          "-"}{" "}
-                        {cycle.yield_unit}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2 border-t">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("cropCycles.costs", "Costs")}
-                      </span>
-                      <span className="font-medium">
-                        {currencySymbol} {cycle.total_costs.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {t("cropCycles.revenue", "Revenue")}
-                      </span>
-                      <span className="font-medium">
-                        {currencySymbol} {cycle.total_revenue.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm font-medium">
-                      <span>{t("cropCycles.profit", "Profit")}</span>
-                      <span
-                        className={
-                          cycle.net_profit >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }
-                      >
-                        {cycle.net_profit >= 0 ? (
-                          <TrendingUp className="h-4 w-4 inline mr-1" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 inline mr-1" />
-                        )}
-                        {currencySymbol} {cycle.net_profit.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
       ) : (
         <Card>
           <CardHeader>
@@ -964,7 +1112,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
                 </div>
 
                 <div className="space-y-2">
-                  {filteredCycles.map((cycle) => {
+                  {displayedCycles.map((cycle) => {
                     const start = cycle.planting_date
                       ? new Date(cycle.planting_date)
                       : new Date();
@@ -1023,7 +1171,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
             </div>
 
             <div className="md:hidden space-y-3">
-              {filteredCycles.length === 0 ? (
+              {displayedCycles.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Sprout className="w-10 h-10 mx-auto mb-3 text-gray-400" />
                   <p>
@@ -1031,77 +1179,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
                   </p>
                 </div>
               ) : (
-                filteredCycles.map((cycle) => {
-                  const parcel = cycle.parcel_id
-                    ? parcels.find((p) => p.id === cycle.parcel_id)
-                    : null;
-                  const farm = cycle.farm_id
-                    ? farms.find((f) => f.id === cycle.farm_id)
-                    : null;
-
-                  return (
-                    <div
-                      key={cycle.id}
-                      className="border rounded-lg p-3 bg-white dark:bg-gray-800 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 dark:text-white truncate">
-                            {cycle.cycle_name || cycle.crop_type}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            {cycle.cycle_code}
-                          </p>
-                        </div>
-                        <Badge
-                          className={`${
-                            cycle.status === "completed"
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400"
-                              : cycle.status === "harvesting"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-                                : cycle.status === "growing"
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                          }`}
-                        >
-                          {t(`cropCycles.status.${cycle.status}`, cycle.status)}
-                        </Badge>
-                      </div>
-
-                      <div className="mt-2 space-y-1 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                          <Leaf className="h-3.5 w-3.5" />
-                          <span>{cycle.crop_type}</span>
-                        </div>
-
-                        {(cycle.planting_date ||
-                          cycle.expected_harvest_end) && (
-                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span>
-                              {cycle.planting_date
-                                ? new Date(
-                                    cycle.planting_date,
-                                  ).toLocaleDateString()
-                                : "-"}
-                              {cycle.expected_harvest_end &&
-                                ` → ${new Date(cycle.expected_harvest_end).toLocaleDateString()}`}
-                            </span>
-                          </div>
-                        )}
-
-                        {(parcel || farm) && (
-                          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span className="truncate">
-                              {parcel?.name || farm?.name || "-"}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
+                displayedCycles.map((cycle) => <div key={cycle.id}>{renderCycleCard(cycle)}</div>)
               )}
             </div>
           </CardContent>
@@ -1213,14 +1291,18 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
                     {templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         {template.crop_name}
-                        {template.is_perennial ? " (Perennial)" : " (Annual)"}
+                        {template.is_perennial
+                          ? ` (${t("cropCycles.type.perennial", "Perennial")})`
+                          : ` (${t("cropCycles.type.annual", "Annual")})`}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Selecting a template will auto-fill crop type, yield units,
-                  and other details.
+                  {t(
+                    "cropCycles.form.templateHelp",
+                    "Selecting a template will auto-fill crop type, yield units, and other details.",
+                  )}
                 </p>
               </div>
             )}
@@ -1410,7 +1492,10 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
             </div>
             {datesAutoCalculated && (
               <div className="text-xs text-blue-600">
-                Dates auto-calculated from template
+                {t(
+                  "cropCycles.form.datesAutoCalculated",
+                  "Dates auto-calculated from template",
+                )}
               </div>
             )}
 
