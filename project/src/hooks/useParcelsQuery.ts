@@ -64,7 +64,7 @@ function normalizeParcel(parcel: ServiceParcel): Parcel {
 export const parcelsKeys = {
   all: ['parcels'] as const,
   byFarm: (farmId: string) => ['parcels', farmId] as const,
-  byOrganization: (organizationId: string) => ['parcels', organizationId] as const,
+  byOrganization: (organizationId: string) => ['parcels', 'organization', organizationId] as const,
   byFarms: (farmIds: string[]) => ['parcels', 'farms', [...farmIds].sort().join(',')] as const,
   byId: (parcelId: string) => ['parcels', parcelId] as const,
   applications: (parcelId: string) => ['parcels', parcelId, 'applications'] as const,
@@ -146,6 +146,20 @@ export const useParcelsByFarms = (farmIds: string[], organizationId?: string | n
       return filteredParcels.map(normalizeParcel);
     },
     enabled: farmIds.length > 0 && !!organizationId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
+  });
+};
+
+export const useParcelsByOrganization = (organizationId?: string | null) => {
+  return useQuery({
+    queryKey: parcelsKeys.byOrganization(organizationId || ''),
+    queryFn: async (): Promise<Parcel[]> => {
+      if (!organizationId) return [];
+      const parcels = await parcelsService.listParcels(undefined, organizationId);
+      return parcels.map(normalizeParcel);
+    },
+    enabled: !!organizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });

@@ -11,7 +11,7 @@ import { useAutoStartTour } from '@/contexts/TourContext'
 import Map from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader } from '@/components/ui/loader'
-import { useFarms, useParcelsByFarm, useParcelsByFarms, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery'
+import { useFarms, useParcelsByFarm, useParcelsByOrganization, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery';
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -54,25 +54,21 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const updateParcelMutation = useUpdateParcel();
   const archiveParcelMutation = useDeleteParcel();
 
-  // Determine which parcels query to use
-  const isAllFarmsView = selectedFarmId === "";
-  const targetFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
-  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading, error: parcelsByFarmError } = useParcelsByFarm(targetFarmId, currentOrganization?.id);
-  const { data: parcelsByFarms = [], isLoading: parcelsByFarmsLoading, error: parcelsByFarmsError } = useParcelsByFarms(
-    !targetFarmId && farms.length > 0 ? farms.map(f => f.id) : [],
-    currentOrganization?.id
-  );
+  // Determine farm view context - use stable values to prevent re-render loops
+  const isAllFarmsView = !selectedFarmId && !currentFarm?.id;
+  const targetFarmId = selectedFarmId || currentFarm?.id || undefined;
 
+  // Use organization-wide parcels query for stable query key
+  const { data: parcelsByOrg = [], isLoading: parcelsByOrgLoading, error: parcelsByOrgError } = useParcelsByOrganization(currentOrganization?.id);
+  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading, error: parcelsByFarmError } = useParcelsByFarm(targetFarmId, currentOrganization?.id);
 
   // Get the appropriate parcels data
-  const parcels = targetFarmId ? parcelsByFarm : parcelsByFarms;
-  const loading = targetFarmId ? parcelsByFarmLoading : parcelsByFarmsLoading || farmsLoading;
-  const fetchError = targetFarmId ? parcelsByFarmError : (parcelsByFarmsError || farmsError);
+  const parcels = targetFarmId ? parcelsByFarm : parcelsByOrg;
+  const loading = targetFarmId ? parcelsByFarmLoading : parcelsByOrgLoading || farmsLoading;
+  const fetchError = targetFarmId ? parcelsByFarmError : (parcelsByOrgError || farmsError);
 
-
-
-  // Farms and parcels are loaded automatically via React Query hooks
-  // No manual fetching needed
+          // Farms and parcels are loaded automatically via React Query hooks
+          // No manual fetching needed
 
   const handleArchiveParcel = async (parcelId: string) => {
     try {
