@@ -24,7 +24,7 @@ interface JsonObject {
   [key: string]: JsonValue;
 }
 
-const REFERENTIALS_DIR = path.resolve(__dirname, '../../referentials');
+const REFERENTIALS_DIR = path.resolve(__dirname, '../referentials');
 
 /** Matches DATA_<crop_type>.json; crop_type is derived from filename (e.g. DATA_OLIVIER.json → olivier). */
 const REFERENTIAL_FILE_PATTERN = /^DATA_(.+)\.json$/i;

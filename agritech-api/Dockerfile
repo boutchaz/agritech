@@ -34,7 +34,7 @@ COPY --from=builder /app/agritech-api/dist ./dist
 COPY --from=builder /app/agritech-api/src/modules/email/templates ./dist/modules/email/templates
 
 # Bundle crop reference data (JSON files read at runtime as fallback)
-COPY referentials/DATA_*.json ./referentials/
+COPY --from=builder /app/agritech-api/referentials/ ./referentials/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

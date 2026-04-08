@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Param,
   Body,
   Query,
@@ -11,6 +12,7 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from './guards/internal-admin.guard';
 import { AdminService } from './admin.service';
+import { ReferentialService } from './referential.service';
 import {
   ReferenceDataTable,
   ImportReferenceDataDto,
@@ -24,7 +26,10 @@ import {
 @Controller('admin')
 @UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly referentialService: ReferentialService,
+  ) {}
 
   // ============================================
   // Reference Data Endpoints
@@ -126,5 +131,36 @@ export class AdminController {
       parseInt(limit || '50', 10),
       parseInt(offset || '0', 10),
     );
+  }
+
+  // ============================================
+  // Crop Referential JSON Endpoints
+  // ============================================
+
+  @Get('referentials')
+  async listReferentials() {
+    return this.referentialService.listAll();
+  }
+
+  @Get('referentials/:crop')
+  async getReferential(@Param('crop') crop: string) {
+    return this.referentialService.getOne(crop);
+  }
+
+  @Get('referentials/:crop/:section')
+  async getReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+  ) {
+    return this.referentialService.getSection(crop, section);
+  }
+
+  @Put('referentials/:crop/:section')
+  async updateReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.updateSection(crop, section, body);
   }
 }

@@ -19,7 +19,8 @@ import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
-import { socketManager, NotificationData } from '@/lib/socket';
+import { NotificationData } from '@/lib/socket';
+import { BELL_EVENT } from '@/components/NotificationRealtimeBridge';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
 
 interface EnhancedNotificationItemProps {
@@ -302,38 +303,28 @@ export function NotificationBell() {
     setOpen(false);
   }, [markAsRead, navigate]);
 
-  // Show toast and animate bell for new notifications
+  // Bell animation only — toasts come from NotificationRealtimeBridge (single subscriber)
   useEffect(() => {
-    const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
-      if (!notification?.id || !notification?.title) {
-        return;
-      }
+    const onNew = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (!id) return;
 
-      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
+      setNewNotificationIds((prev) => new Set(prev).add(id));
       setIsBellAnimating(true);
       setTimeout(() => setIsBellAnimating(false), 500);
-
-      toast.info(notification.title, {
-        description: notification.message || undefined,
-        action: getNotificationRedirect(notification) ? {
-          label: 'View',
-          onClick: () => handleNotificationClick(notification),
-        } : undefined,
-        duration: 5000,
-      });
-
 
       setTimeout(() => {
         setNewNotificationIds((prev) => {
           const next = new Set(prev);
-          next.delete(notification.id);
+          next.delete(id);
           return next;
         });
       }, 3000);
-    });
+    };
 
-    return unsubscribe;
-  }, [handleNotificationClick]);
+    window.addEventListener(BELL_EVENT, onNew);
+    return () => window.removeEventListener(BELL_EVENT, onNew);
+  }, []);
 
   const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();

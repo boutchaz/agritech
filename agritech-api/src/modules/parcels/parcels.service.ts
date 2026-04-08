@@ -825,10 +825,15 @@ export class ParcelsService {
 
     if (!orgUsers?.length) return;
 
+    const seen = new Set<string>();
     for (const orgUser of orgUsers) {
+      const uid = orgUser.user_id as string;
+      if (seen.has(uid)) continue;
+      seen.add(uid);
+
       await this.notificationsService
         .createNotification({
-          userId: orgUser.user_id as string,
+          userId: uid,
           organizationId,
           type,
           title,

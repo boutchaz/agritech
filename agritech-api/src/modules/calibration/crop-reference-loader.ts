@@ -10,11 +10,10 @@ let moteurConfigCache: Record<string, unknown> | null = null;
 const REFERENTIALS_SEARCH_PATHS = [
   // Production Docker image: copied next to dist/
   path.resolve(__dirname, '..', '..', '..', 'referentials'),
-  // Dev / monorepo root
+  // Dev: agritech-api/referentials/ (from src/modules/calibration/)
   path.resolve(__dirname, '..', '..', '..', '..', 'referentials'),
-  // Fallback: cwd-based
+  // Fallback: cwd-based (agritech-api/)
   path.resolve(process.cwd(), 'referentials'),
-  path.resolve(process.cwd(), '..', 'referentials'),
 ];
 
 function discoverReferentialsDir(): string | null {

@@ -7,6 +7,7 @@ import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
+import { useIsDesktop } from '../hooks/useMediaQuery';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -68,6 +69,7 @@ const ModernPageHeader = ({
   const CurrentIcon = currentPage.icon;
   const { currentFarm, farms, setCurrentFarm } = useAuth();
   const currentFarmId = currentFarm?.id;
+  const isDesktop = useIsDesktop();
 
   // Handle farm change
   const handleFarmChange = (farmId: string) => {
@@ -79,8 +81,9 @@ const ModernPageHeader = ({
 
   return (
     <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-300">
-      {/* ===== MOBILE HEADER (<lg) ===== */}
-      <div className="lg:hidden">
+      {/* One header branch mounts at a time so NotificationBell / useNotifications socket logic runs once */}
+      {!isDesktop ? (
+      <div>
         {/* Mobile Navigation Bar */}
         <div className="flex gap-2 py-2 px-3 items-center">
           <Button
@@ -137,9 +140,8 @@ const ModernPageHeader = ({
           </div>
         )}
       </div>
-
-      {/* ===== DESKTOP HEADER (lg+) ===== */}
-      <div className="hidden lg:block">
+      ) : (
+      <div>
         <div className="px-6 lg:px-8">
           {/* Top Section - Breadcrumbs & Organization */}
           <div className="flex items-center justify-between py-2.5 border-b border-slate-50 dark:border-slate-800/50">
@@ -255,6 +257,7 @@ const ModernPageHeader = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

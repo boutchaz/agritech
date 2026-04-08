@@ -478,9 +478,9 @@ def _referentials_dir() -> Path | None:
     if env:
         p = Path(env).expanduser()
         return p if p.is_dir() else None
-    # repo_root = parent of backend-service/
+    # agritech-api/referentials/ from backend-service/app/services/calibration/
     here = Path(__file__).resolve()
-    candidate = here.parents[4] / "referentials"
+    candidate = here.parents[4] / "agritech-api" / "referentials"
     return candidate if candidate.is_dir() else None
 
 

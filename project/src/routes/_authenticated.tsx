@@ -17,6 +17,7 @@ import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
 import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
+import { NotificationRealtimeBridge } from '@/components/NotificationRealtimeBridge';
 
 
 export const Route = createFileRoute('/_authenticated')({
@@ -149,6 +150,7 @@ function AuthenticatedLayout() {
         >
           <LegacyUserBanner />
           <SubscriptionBanner />
+          <NotificationRealtimeBridge />
           {/* <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="px-6 py-4 flex items-center justify-between">
               <div className="flex items-center space-x-4">

@@ -56,8 +56,8 @@ export interface UseNotificationsReturn {
   toggleImportant: (id: string) => void;
 }
 
-const NOTIFICATIONS_QUERY_KEY = 'notifications';
-const UNREAD_COUNT_QUERY_KEY = 'notifications-unread-count';
+export const NOTIFICATIONS_QUERY_KEY = 'notifications';
+export const UNREAD_COUNT_QUERY_KEY = 'notifications-unread-count';
 const PAGE_SIZE = 20;
 
 export function useNotifications(filters: NotificationFilters = {}): UseNotificationsReturn {
@@ -89,16 +89,7 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
 
   const organizationId = currentOrganization?.id;
 
-  // Connect to WebSocket when organization is available
-  useEffect(() => {
-    if (organizationId && user) {
-      socketManager.connect(organizationId);
-    }
-
-    return () => {
-      // Don't disconnect on unmount - keep connection for other components
-    };
-  }, [organizationId, user]);
+  // WebSocket connect + realtime cache updates live in NotificationRealtimeBridge (single subscriber).
 
   // Subscribe to socket status changes
   useEffect(() => {
@@ -126,102 +117,6 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
       return next;
     });
   }, []);
-
-  // Subscribe to real-time notifications
-  useEffect(() => {
-    const handleNewNotification = (notification: NotificationData) => {
-      // Validate notification has required fields — ignore malformed payloads
-      if (!notification?.id || !notification?.title) {
-        return;
-      }
-
-      // Play sound if enabled
-      if (isSoundEnabled) {
-        try {
-          const AudioContextCtor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-          if (AudioContextCtor) {
-            const audioContext = new AudioContextCtor();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.15);
-          }
-        } catch (error) {
-          console.warn('Failed to play notification sound:', error);
-        }
-      }
-
-      // Haptic feedback for mobile
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
-
-      // Add to cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) => [notification, ...old]
-      );
-
-      // Increment unread count
-      queryClient.setQueryData<number>(
-        [UNREAD_COUNT_QUERY_KEY, organizationId],
-        (old = 0) => old + 1
-      );
-    };
-
-    const handleNotificationRead = (data: { notificationId: string; readAt: string }) => {
-      // Update in cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) =>
-          old.map((n) =>
-            n.id === data.notificationId
-              ? { ...n, is_read: true, read_at: data.readAt }
-              : n
-          )
-      );
-
-      // Decrement unread count
-      queryClient.setQueryData<number>(
-        [UNREAD_COUNT_QUERY_KEY, organizationId],
-        (old = 0) => Math.max(0, old - 1)
-      );
-    };
-
-    const handleAllRead = (data: { count: number; readAt: string }) => {
-      // Mark all as read in cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) =>
-          old.map((n) =>
-            !n.is_read ? { ...n, is_read: true, read_at: data.readAt } : n
-          )
-      );
-
-      // Reset unread count
-      queryClient.setQueryData<number>([UNREAD_COUNT_QUERY_KEY, organizationId], 0);
-    };
-
-    const unsubNew = socketManager.on('notification:new', handleNewNotification);
-    const unsubRead = socketManager.on('notification:read', handleNotificationRead);
-    const unsubAllRead = socketManager.on('notification:read-all', handleAllRead);
-
-    return () => {
-      unsubNew();
-      unsubRead();
-      unsubAllRead();
-    };
-  }, [organizationId, filters, queryClient, isSoundEnabled]);
 
   // Build query params from filters
   const queryParams = useCallback(() => {
