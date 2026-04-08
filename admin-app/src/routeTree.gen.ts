@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
 import { Route as AuthenticatedReferentielsTableRouteImport } from './routes/_authenticated/referentiels/$table'
 
 const LoginRoute = LoginRouteImport.update({
@@ -28,6 +29,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedRdvRoute = AuthenticatedRdvRouteImport.update({
+  id: '/rdv',
+  path: '/rdv',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedReferentielsTableRoute =
   AuthenticatedReferentielsTableRouteImport.update({
     id: '/referentiels/$table',
@@ -38,10 +44,12 @@ const AuthenticatedReferentielsTableRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/rdv': typeof AuthenticatedRdvRoute
   '/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/rdv': typeof AuthenticatedRdvRoute
   '/': typeof AuthenticatedIndexRoute
   '/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
 }
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/referentiels/$table'
+  fullPaths: '/' | '/login' | '/rdv' | '/referentiels/$table'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/' | '/referentiels/$table'
+  to: '/login' | '/rdv' | '/' | '/referentiels/$table'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/rdv'
     | '/_authenticated/'
     | '/_authenticated/referentiels/$table'
   fileRoutesById: FileRoutesById
@@ -93,6 +103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/rdv': {
+      id: '/_authenticated/rdv'
+      path: '/rdv'
+      fullPath: '/rdv'
+      preLoaderRoute: typeof AuthenticatedRdvRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/referentiels/$table': {
       id: '/_authenticated/referentiels/$table'
       path: '/referentiels/$table'
@@ -104,11 +121,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedReferentielsTableRoute: typeof AuthenticatedReferentielsTableRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedReferentielsTableRoute: AuthenticatedReferentielsTableRoute,
 }

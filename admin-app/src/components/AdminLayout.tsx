@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Database, LogOut, Users } from 'lucide-react';
+import { Database, LogOut, Users, CalendarCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +31,19 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               >
                 <Database className="h-5 w-5" />
                 Référentiels
+              </Link>
+            </li>
+            <li>
+              <Link
+                to="/rdv"
+                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/rdv')
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <CalendarCheck className="h-5 w-5" />
+                RDV SIAM
               </Link>
             </li>
           </ul>
