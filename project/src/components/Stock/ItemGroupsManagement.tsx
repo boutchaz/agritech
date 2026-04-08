@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { FilterBar, ResponsiveList, DataTablePagination } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,8 +54,6 @@ import {
   FolderOpen,
   Package,
   Download,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   ChevronRightIcon,
   List,
@@ -74,7 +74,8 @@ const itemGroupSchema = z.object({
   is_active: z.boolean(),
 });
 
-type ItemGroupFormData = z.infer<typeof itemGroupSchema>;
+type ItemGroupFormValues = z.input<typeof itemGroupSchema>;
+type ItemGroupFormData = z.output<typeof itemGroupSchema>;
 
 type ViewMode = 'table' | 'tree';
 
@@ -210,13 +211,14 @@ export default function ItemGroupsManagement() {
   const createItemGroup = useCreateItemGroup();
   const updateItemGroup = useUpdateItemGroup();
   const deleteItemGroup = useDeleteItemGroup();
-  const { handleFormError } = useFormErrors<ItemGroupFormData>();
+  const { handleFormError } = useFormErrors<ItemGroupFormValues>();
 
   const [showDialog, setShowDialog] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ItemGroup | null>(null);
   const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
   const [deleteConfirmGroup, setDeleteConfirmGroup] = useState<ItemGroup | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const PAGE_SIZE = 15;
@@ -224,19 +226,51 @@ export default function ItemGroupsManagement() {
   // Parent groups only (no parent themselves)
   const parentGroups = itemGroups.filter((g) => !g.parent_group_id);
 
+  const groupNameById = useMemo(() => new Map(itemGroups.map((g) => [g.id, g.name])), [itemGroups]);
+
+  const filteredGroups = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      return itemGroups;
+    }
+
+    const groupsById = new Map(itemGroups.map((group) => [group.id, group]));
+    const matchingIds = new Set<string>();
+
+    for (const group of itemGroups) {
+      const matches = [
+        group.name,
+        group.code,
+        group.description,
+        group.parent_group_id ? groupNameById.get(group.parent_group_id) : undefined,
+      ].some((value) => value?.toLowerCase().includes(term));
+
+      if (!matches) continue;
+
+      let current: ItemGroup | undefined = group;
+      while (current) {
+        matchingIds.add(current.id);
+        current = current.parent_group_id ? groupsById.get(current.parent_group_id) : undefined;
+      }
+    }
+
+    return itemGroups.filter((group) => matchingIds.has(group.id));
+  }, [groupNameById, itemGroups, searchTerm]);
+
   // Build tree for tree view
-  const tree = useMemo(() => buildTree(itemGroups), [itemGroups]);
+  const tree = useMemo(() => buildTree(filteredGroups), [filteredGroups]);
 
   // Collect all IDs that have children for expand/collapse all
   const allParentIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const group of itemGroups) {
+    for (const group of filteredGroups) {
       if (group.parent_group_id) {
         ids.add(group.parent_group_id);
       }
     }
     return ids;
-  }, [itemGroups]);
+  }, [filteredGroups]);
 
   const handleToggle = useCallback((id: string) => {
     setExpanded((prev) => {
@@ -289,7 +323,7 @@ export default function ItemGroupsManagement() {
     watch,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<ItemGroupFormData>({
+  } = useForm<ItemGroupFormValues, unknown, ItemGroupFormData>({
     resolver: zodResolver(itemGroupSchema),
     defaultValues: {
       name: '',
@@ -326,6 +360,11 @@ export default function ItemGroupsManagement() {
     setEditingGroup(null);
     setDefaultParentId(null);
     setShowDialog(true);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
   };
 
   const handleAddChild = useCallback((parentId: string) => {
@@ -390,11 +429,8 @@ export default function ItemGroupsManagement() {
     }
   };
 
-  // Build lookup map for parent names
-  const groupNameById = new Map(itemGroups.map((g) => [g.id, g.name]));
-
-  const totalPages = Math.max(1, Math.ceil(itemGroups.length / PAGE_SIZE));
-  const paginatedGroups = itemGroups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filteredGroups.length / PAGE_SIZE));
+  const paginatedGroups = filteredGroups.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   if (isLoading) {
     return (
@@ -440,31 +476,29 @@ export default function ItemGroupsManagement() {
         </CardHeader>
         <CardContent>
           {itemGroups.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">{t('items.itemGroup.noGroups')}</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t('items.itemGroup.noGroupsDescription')}
-              </p>
-              <div className="flex justify-center gap-3">
-                {!predefinedImported && (
-                  <Button variant="outline" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
-                    {seedMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="h-4 w-4 mr-2" />
-                    )}
-                    {t('items.itemGroup.importPredefined')}
-                  </Button>
-                )}
-                <Button onClick={handleOpenCreate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t('items.itemGroup.createFirst')}
-                </Button>
-              </div>
-            </div>
+            <EmptyState
+              icon={Package}
+              title={t('items.itemGroup.noGroups')}
+              description={t('items.itemGroup.noGroupsDescription')}
+              action={{
+                label: t('items.itemGroup.createFirst'),
+                onClick: handleOpenCreate,
+              }}
+              secondaryAction={!predefinedImported ? {
+                label: t('items.itemGroup.importPredefined'),
+                onClick: () => seedMutation.mutate(),
+              } : undefined}
+            />
           ) : (
             <>
+              <div className="mb-4">
+                <FilterBar
+                  searchValue={searchTerm}
+                  onSearchChange={handleSearchChange}
+                  searchPlaceholder={t('items.itemGroup.searchPlaceholder', 'Search groups...')}
+                />
+              </div>
+
               {/* View mode toggle + tree controls */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-1 rounded-lg border p-1 bg-muted/50">
@@ -504,135 +538,165 @@ export default function ItemGroupsManagement() {
               {/* ─── TABLE VIEW ─────────────────────────── */}
               {viewMode === 'table' && (
                 <>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('items.itemGroup.code')}</TableHead>
-                          <TableHead>{t('items.itemGroup.name')}</TableHead>
-                          <TableHead>{t('items.itemGroup.parentGroup')}</TableHead>
-                          <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
-                          <TableHead className="text-center">{t('common:statusColumn')}</TableHead>
-                          <TableHead className="text-right">{t('common:actionsColumn')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {paginatedGroups.map((group) => (
-                          <TableRow key={group.id}>
-                            <TableCell className="font-mono text-sm">{group.code || '-'}</TableCell>
-                            <TableCell className="font-medium">
-                              {group.parent_group_id && (
-                                <span className="text-muted-foreground mr-1">↳</span>
-                              )}
-                              {group.name}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {group.parent_group_id
-                                ? groupNameById.get(group.parent_group_id) || '-'
-                                : (
-                                  <Badge variant="outline" className="text-xs text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
-                                    {t('items.itemGroup.mainGroup')}
-                                  </Badge>
-                                )
-                              }
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                              {group.description || '-'}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <span
-                                className={cn(
-                                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
-                                  group.is_active
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                                )}
-                              >
-                                {group.is_active ? t('common:active') : t('common:inactive')}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenEdit(group)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setDeleteConfirmGroup(group)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                  <ResponsiveList
+                    items={paginatedGroups}
+                    keyExtractor={(group) => group.id}
+                    emptyIcon={Package}
+                    emptyTitle={searchTerm ? t('common:noResults', 'No results found') : t('items.itemGroup.noGroups')}
+                    emptyMessage={searchTerm
+                      ? t('items.itemGroup.noGroupsSearch', 'No groups match your search.')
+                      : t('items.itemGroup.noGroupsDescription')}
+                    renderCard={(group) => (
+                      <Card className="border shadow-sm">
+                        <CardContent className="space-y-4 p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <FolderOpen className="h-4 w-4 text-primary" />
+                                <p className="truncate font-semibold">{group.name}</p>
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  {itemGroups.length > PAGE_SIZE && (
-                    <div className="flex items-center justify-between mt-4 px-1">
-                      <p className="text-sm text-muted-foreground">
-                        {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, itemGroups.length)} / {itemGroups.length}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                          disabled={currentPage === 1}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm px-2">{currentPage} / {totalPages}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                          disabled={currentPage === totalPages}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+                              <p className="font-mono text-xs text-muted-foreground">{group.code || '-'}</p>
+                            </div>
+                            <span
+                              className={cn(
+                                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                group.is_active
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                              )}
+                            >
+                              {group.is_active ? t('common:active') : t('common:inactive')}
+                            </span>
+                          </div>
+
+                          <div className="grid gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">{t('items.itemGroup.parentGroup')}: </span>
+                              {group.parent_group_id ? groupNameById.get(group.parent_group_id) || '-' : t('items.itemGroup.mainGroup')}
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">{t('items.itemGroup.groupDescription')}: </span>
+                              {group.description || '-'}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(group)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmGroup(group)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                    renderTableHeader={(
+                      <TableRow>
+                        <TableHead>{t('items.itemGroup.code')}</TableHead>
+                        <TableHead>{t('items.itemGroup.name')}</TableHead>
+                        <TableHead>{t('items.itemGroup.parentGroup')}</TableHead>
+                        <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
+                        <TableHead className="text-center">{t('common:statusColumn')}</TableHead>
+                        <TableHead className="text-right">{t('common:actionsColumn')}</TableHead>
+                      </TableRow>
+                    )}
+                    renderTable={(group) => (
+                      <>
+                        <TableCell className="font-mono text-sm">{group.code || '-'}</TableCell>
+                        <TableCell className="font-medium">
+                          {group.parent_group_id && <span className="text-muted-foreground mr-1">↳</span>}
+                          {group.name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {group.parent_group_id
+                            ? groupNameById.get(group.parent_group_id) || '-'
+                            : (
+                              <Badge variant="outline" className="border-blue-200 text-xs text-blue-600 dark:border-blue-800 dark:text-blue-400">
+                                {t('items.itemGroup.mainGroup')}
+                              </Badge>
+                            )}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                          {group.description || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span
+                            className={cn(
+                              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                              group.is_active
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                            )}
+                          >
+                            {group.is_active ? t('common:active') : t('common:inactive')}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(group)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmGroup(group)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </>
+                    )}
+                  />
+                  {filteredGroups.length > PAGE_SIZE && (
+                    <DataTablePagination
+                      page={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      totalItems={filteredGroups.length}
+                      pageSize={PAGE_SIZE}
+                      onPageSizeChange={() => {}}
+                    />
                   )}
                 </>
               )}
 
               {/* ─── TREE VIEW ──────────────────────────── */}
               {viewMode === 'tree' && (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[120px]">{t('items.itemGroup.code')}</TableHead>
-                        <TableHead>{t('items.itemGroup.name')}</TableHead>
-                        <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
-                        <TableHead className="text-center w-[100px]">{t('common:statusColumn')}</TableHead>
-                        <TableHead className="text-right w-[100px]">{t('common:actionsColumn')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tree.map((node) => (
-                        <TreeNodeRow
-                          key={node.id}
-                          node={node}
-                          depth={0}
-                          expanded={expanded}
-                          onToggle={handleToggle}
-                          onEdit={handleOpenEdit}
-                          onDelete={setDeleteConfirmGroup}
-                          onAddChild={handleAddChild}
-                          t={t}
-                        />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                filteredGroups.length === 0 ? (
+                  <EmptyState
+                    variant="inline"
+                    icon={Package}
+                    title={t('common:noResults', 'No results found')}
+                    description={t('items.itemGroup.noGroupsSearch', 'No groups match your search.')}
+                  />
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[120px]">{t('items.itemGroup.code')}</TableHead>
+                          <TableHead>{t('items.itemGroup.name')}</TableHead>
+                          <TableHead>{t('items.itemGroup.groupDescription')}</TableHead>
+                          <TableHead className="text-center w-[100px]">{t('common:statusColumn')}</TableHead>
+                          <TableHead className="text-right w-[100px]">{t('common:actionsColumn')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tree.map((node) => (
+                          <TreeNodeRow
+                            key={node.id}
+                            node={node}
+                            depth={0}
+                            expanded={expanded}
+                            onToggle={handleToggle}
+                            onEdit={handleOpenEdit}
+                            onDelete={setDeleteConfirmGroup}
+                            onAddChild={handleAddChild}
+                            t={(key, defaultValue) => defaultValue ? t(key, defaultValue) : t(key)}
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )
               )}
             </>
           )}

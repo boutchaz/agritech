@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -16,13 +16,15 @@ import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   Select,
   SelectContent,
@@ -87,8 +89,10 @@ const valuationSchema = z.object({
   notes: z.string().optional(),
 });
 
-type AssetFormData = z.infer<typeof assetSchema>;
-type ValuationFormData = z.infer<typeof valuationSchema>;
+type AssetFormInput = z.input<typeof assetSchema>;
+type AssetFormData = z.output<typeof assetSchema>;
+type ValuationFormInput = z.input<typeof valuationSchema>;
+type ValuationFormData = z.output<typeof valuationSchema>;
 
 const ASSET_TYPES: { value: BiologicalAssetType; label: string; icon: React.ReactNode }[] = [
   { value: 'bearer_plant', label: 'Bearer Plant (Orchard)', icon: <TreeDeciduous className="h-4 w-4" /> },
@@ -126,11 +130,13 @@ export function BiologicalAssetsManagement() {
   const [selectedAssetForValuation, setSelectedAssetForValuation] = useState<BiologicalAsset | null>(null);
   const [selectedAssetType, setSelectedAssetType] = useState<BiologicalAssetType | ''>('');
   const [selectedFarmFilter, setSelectedFarmFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<BiologicalAssetStatus | ''>('');
 
   const isAdmin = hasRole(['organization_admin', 'system_admin']);
   const canManage = hasRole(['organization_admin', 'system_admin', 'farm_manager']);
 
-  const { data: assets = [], isLoading } = useBiologicalAssets({
+  const { data: assets = [], isLoading, isFetching } = useBiologicalAssets({
     farm_id: selectedFarmFilter || undefined,
     asset_type: selectedAssetType || undefined,
   });
@@ -141,7 +147,7 @@ export function BiologicalAssetsManagement() {
   const updateMutation = useUpdateBiologicalAsset();
   const createValuationMutation = useCreateBiologicalAssetValuation();
 
-  const assetForm = useForm<AssetFormData>({
+  const assetForm = useForm<AssetFormInput, unknown, AssetFormData>({
     resolver: zodResolver(assetSchema),
     defaultValues: {
       farm_id: '',
@@ -157,7 +163,7 @@ export function BiologicalAssetsManagement() {
     },
   });
 
-  const valuationForm = useForm<ValuationFormData>({
+  const valuationForm = useForm<ValuationFormInput, unknown, ValuationFormData>({
     resolver: zodResolver(valuationSchema),
     defaultValues: {
       valuation_date: new Date().toISOString().split('T')[0],
@@ -168,6 +174,134 @@ export function BiologicalAssetsManagement() {
   });
 
   const watchedAssetType = assetForm.watch('asset_type');
+
+  const getAssetTypeLabel = (type: BiologicalAssetType) => {
+    switch (type) {
+      case 'bearer_plant':
+        return t('biologicalAssets.assetTypes.bearerPlant', 'Bearer Plant (Orchard)');
+      case 'consumable_plant':
+        return t('biologicalAssets.assetTypes.consumablePlant', 'Consumable Plant');
+      case 'livestock_bearer':
+        return t('biologicalAssets.assetTypes.livestockBearer', 'Livestock (Bearer)');
+      case 'livestock_consumable':
+        return t('biologicalAssets.assetTypes.livestockConsumable', 'Livestock (Consumable)');
+      default:
+        return type;
+    }
+  };
+
+  const getAssetStatusLabel = (status: BiologicalAssetStatus) => {
+    switch (status) {
+      case 'immature':
+        return t('biologicalAssets.statuses.immature', 'Immature');
+      case 'productive':
+        return t('biologicalAssets.statuses.productive', 'Productive');
+      case 'declining':
+        return t('biologicalAssets.statuses.declining', 'Declining');
+      case 'disposed':
+        return t('biologicalAssets.statuses.disposed', 'Disposed');
+      default:
+        return status;
+    }
+  };
+
+  const getAssetMeasureLabel = (asset: BiologicalAsset) => {
+    if (asset.area_ha) {
+      return t('biologicalAssets.measure.areaValue', '{{value}} ha', { value: asset.area_ha });
+    }
+
+    if (asset.quantity) {
+      return t('biologicalAssets.measure.quantityValue', '{{value}} units', { value: asset.quantity });
+    }
+
+    return t('common.notAvailable', '-');
+  };
+
+  const filteredAssets = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return assets.filter((asset) => {
+      const matchesSearch = !normalizedSearch
+        || asset.asset_name.toLowerCase().includes(normalizedSearch)
+        || asset.asset_code.toLowerCase().includes(normalizedSearch);
+      const matchesStatus = !selectedStatusFilter || asset.status === selectedStatusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [assets, searchQuery, selectedStatusFilter]);
+
+  const hasActiveFilters = Boolean(searchQuery || selectedAssetType || selectedFarmFilter || selectedStatusFilter);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedFarmFilter('');
+    setSelectedAssetType('');
+    setSelectedStatusFilter('');
+  };
+
+  const emptyIcon = selectedAssetType === 'bearer_plant' ? TreeDeciduous : Leaf;
+
+  const renderAssetActions = (asset: BiologicalAsset) => (
+    <div className="flex justify-end gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => handleOpenValuationDialog(asset)}
+        title={t('biologicalAssets.recordValuation', 'Record Valuation')}
+      >
+        <TrendingUp className="h-4 w-4" />
+      </Button>
+      {isAdmin && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleOpenAssetDialog(asset)}
+          title={t('biologicalAssets.edit', 'Edit')}
+        >
+          <Edit2 className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+
+  const renderAssetCard = (asset: BiologicalAsset) => {
+    const farmName = farms.find((farm) => farm.id === asset.farm_id)?.name || t('common.notAvailable', '-');
+
+    return (
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="font-medium">{asset.asset_name}</div>
+              <code className="inline-block rounded bg-muted px-2 py-1 text-xs">{asset.asset_code}</code>
+            </div>
+            <Badge variant="outline">{getAssetTypeLabel(asset.asset_type)}</Badge>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <div className="text-muted-foreground">{t('biologicalAssets.table.farm', 'Farm')}</div>
+              <div>{farmName}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">{t('biologicalAssets.table.status', 'Status')}</div>
+              <Badge className={STATUS_COLORS[asset.status]}>{getAssetStatusLabel(asset.status)}</Badge>
+            </div>
+            <div>
+              <div className="text-muted-foreground">{t('biologicalAssets.table.area', 'Area/Qty')}</div>
+              <div>{getAssetMeasureLabel(asset)}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">{t('biologicalAssets.card.value', 'Value')}</div>
+              <div className="font-medium">{formatCurrency(asset.carrying_amount || asset.initial_cost)}</div>
+            </div>
+          </div>
+
+          <div className="flex justify-end border-t pt-2">{renderAssetActions(asset)}</div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const handleOpenAssetDialog = (asset?: BiologicalAsset) => {
     if (asset) {
@@ -286,9 +420,13 @@ export function BiologicalAssetsManagement() {
   if (!canManage) {
     return (
       <Card>
-        <CardContent className="py-10 text-center text-muted-foreground">
-          <AlertCircle className="h-10 w-10 mx-auto mb-4 text-yellow-500" />
-          {t('biologicalAssets.noPermission', 'You do not have permission to manage biological assets.')}
+        <CardContent className="py-10">
+          <EmptyState
+            variant="inline"
+            icon={AlertCircle}
+            title={t('biologicalAssets.noPermissionTitle', 'Access restricted')}
+            description={t('biologicalAssets.noPermission', 'You do not have permission to manage biological assets.')}
+          />
         </CardContent>
       </Card>
     );
@@ -362,118 +500,118 @@ export function BiologicalAssetsManagement() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>{t('biologicalAssets.listTitle', 'Asset Register')}</CardTitle>
-              <CardDescription>
-                {t('biologicalAssets.listDescription', 'IAS 41 compliant biological asset tracking')}
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Select value={selectedFarmFilter || '__all__'} onValueChange={(v) => setSelectedFarmFilter(v === '__all__' ? '' : v)}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('biologicalAssets.filters.allFarms', 'All Farms')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t('biologicalAssets.filters.allFarms', 'All Farms')}</SelectItem>
-                  {farms.map((farm) => (
-                    <SelectItem key={farm.id} value={farm.id}>{farm.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedAssetType || '__all__'} onValueChange={(v) => setSelectedAssetType(v === '__all__' ? '' : v as BiologicalAssetType | '')}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder={t('biologicalAssets.filters.allTypes', 'All Types')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">{t('biologicalAssets.filters.allTypes', 'All Types')}</SelectItem>
-                  {ASSET_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <CardTitle>{t('biologicalAssets.listTitle', 'Asset Register')}</CardTitle>
+          <CardDescription>
+            {t('biologicalAssets.listDescription', 'IAS 41 compliant biological asset tracking')}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('biologicalAssets.loading', 'Loading biological assets...')}
-            </div>
-          ) : assets.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('biologicalAssets.empty', 'No biological assets yet. Add orchards, livestock, or other perennial assets.')}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow className="border-b">
-                    <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.code', 'Code')}</TableHead>
-                    <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.name', 'Name')}</TableHead>
-                    <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.type', 'Type')}</TableHead>
-                    <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('biologicalAssets.table.area', 'Area/Qty')}</TableHead>
-                    <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.carryingAmount', 'Carrying Amt')}</TableHead>
-                    <TableHead className="text-right py-3 px-4 font-medium hidden md:table-cell">{t('biologicalAssets.table.fairValue', 'Fair Value')}</TableHead>
-                    <TableHead className="text-center py-3 px-4 font-medium">{t('biologicalAssets.table.status', 'Status')}</TableHead>
-                    <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.actions', 'Actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assets.map((asset) => (
-                    <TableRow key={asset.id} className="border-b hover:bg-muted/50">
-                      <TableCell className="py-3 px-4">
-                        <code className="text-sm bg-muted px-2 py-1 rounded">{asset.asset_code}</code>
-                      </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <div className="font-medium">{asset.asset_name}</div>
-                        <div className="text-sm text-muted-foreground">{asset.asset_category}</div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 hidden md:table-cell">
-                        {ASSET_TYPES.find(t => t.value === asset.asset_type)?.label || asset.asset_type}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 hidden lg:table-cell">
-                        {asset.area_ha ? `${asset.area_ha} ha` : asset.quantity ? `${asset.quantity} units` : '-'}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-right font-mono">
-                        {formatCurrency(asset.carrying_amount || asset.initial_cost)}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-right font-mono hidden md:table-cell">
-                        {asset.fair_value ? formatCurrency(asset.fair_value) : '-'}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-center">
-                        <Badge className={STATUS_COLORS[asset.status]}>
-                          {asset.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenValuationDialog(asset)}
-                            title={t('biologicalAssets.recordValuation', 'Record Valuation')}
-                          >
-                            <TrendingUp className="h-4 w-4" />
-                          </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenAssetDialog(asset)}
-                              title={t('biologicalAssets.edit', 'Edit')}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+        <CardContent className="space-y-4">
+          <FilterBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t('biologicalAssets.filters.searchPlaceholder', 'Search by asset name or code')}
+            filters={[
+              {
+                key: 'farm',
+                value: selectedFarmFilter || 'all',
+                onChange: (value) => setSelectedFarmFilter(value === 'all' ? '' : value),
+                options: [
+                  { value: 'all', label: t('biologicalAssets.filters.allFarms', 'All Farms') },
+                  ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
+                ],
+                className: 'w-full sm:w-48',
+              },
+              {
+                key: 'assetType',
+                value: selectedAssetType || 'all',
+                onChange: (value) => setSelectedAssetType(value === 'all' ? '' : value as BiologicalAssetType),
+                options: [
+                  { value: 'all', label: t('biologicalAssets.filters.allTypes', 'All Types') },
+                  ...ASSET_TYPES.map((type) => ({ value: type.value, label: getAssetTypeLabel(type.value) })),
+                ],
+                className: 'w-full sm:w-52',
+              },
+              {
+                key: 'status',
+                value: selectedStatusFilter || 'all',
+                onChange: (value) => setSelectedStatusFilter(value === 'all' ? '' : value as BiologicalAssetStatus),
+                options: [
+                  { value: 'all', label: t('biologicalAssets.filters.allStatuses', 'All Statuses') },
+                  { value: 'immature', label: getAssetStatusLabel('immature') },
+                  { value: 'productive', label: getAssetStatusLabel('productive') },
+                  { value: 'declining', label: getAssetStatusLabel('declining') },
+                  { value: 'disposed', label: getAssetStatusLabel('disposed') },
+                ],
+                className: 'w-full sm:w-44',
+              },
+            ]}
+            onClear={clearFilters}
+          />
+
+          <ResponsiveList
+            items={filteredAssets}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            keyExtractor={(asset) => asset.id}
+            renderCard={renderAssetCard}
+            renderTableHeader={(
+              <TableRow className="border-b">
+                <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.code', 'Code')}</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.name', 'Name')}</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.type', 'Type')}</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.farm', 'Farm')}</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium">{t('biologicalAssets.table.area', 'Area/Qty')}</TableHead>
+                <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.carryingAmount', 'Carrying Amt')}</TableHead>
+                <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.fairValue', 'Fair Value')}</TableHead>
+                <TableHead className="text-center py-3 px-4 font-medium">{t('biologicalAssets.table.status', 'Status')}</TableHead>
+                <TableHead className="text-right py-3 px-4 font-medium">{t('biologicalAssets.table.actions', 'Actions')}</TableHead>
+              </TableRow>
+            )}
+            renderTable={(asset) => (
+              <>
+                <TableCell className="py-3 px-4">
+                  <code className="text-sm bg-muted px-2 py-1 rounded">{asset.asset_code}</code>
+                </TableCell>
+                <TableCell className="py-3 px-4">
+                  <div className="font-medium">{asset.asset_name}</div>
+                  <div className="text-sm text-muted-foreground">{asset.asset_category}</div>
+                </TableCell>
+                <TableCell className="py-3 px-4">{getAssetTypeLabel(asset.asset_type)}</TableCell>
+                <TableCell className="py-3 px-4">
+                  {farms.find((farm) => farm.id === asset.farm_id)?.name || t('common.notAvailable', '-')}
+                </TableCell>
+                <TableCell className="py-3 px-4">{getAssetMeasureLabel(asset)}</TableCell>
+                <TableCell className="py-3 px-4 text-right font-mono">
+                  {formatCurrency(asset.carrying_amount || asset.initial_cost)}
+                </TableCell>
+                <TableCell className="py-3 px-4 text-right font-mono">
+                  {asset.fair_value ? formatCurrency(asset.fair_value) : t('common.notAvailable', '-')}
+                </TableCell>
+                <TableCell className="py-3 px-4 text-center">
+                  <Badge className={STATUS_COLORS[asset.status]}>{getAssetStatusLabel(asset.status)}</Badge>
+                </TableCell>
+                <TableCell className="py-3 px-4 text-right">{renderAssetActions(asset)}</TableCell>
+              </>
+            )}
+            emptyIcon={emptyIcon}
+            emptyMessage={hasActiveFilters
+              ? t('biologicalAssets.emptyFiltered', 'No biological assets match your search or filters.')
+              : t('biologicalAssets.empty', 'No biological assets yet. Add orchards, livestock, or other perennial assets.')}
+            emptyAction={isAdmin
+              ? {
+                label: t('biologicalAssets.addNew', 'Add Asset'),
+                onClick: () => handleOpenAssetDialog(),
+              }
+              : undefined}
+            emptyExtra={hasActiveFilters ? (
+              <EmptyState
+                variant="inline"
+                icon={emptyIcon}
+                description={t('biologicalAssets.emptyFilteredHint', 'Try adjusting or clearing your filters to see more assets.')}
+                showCircularContainer={false}
+              />
+            ) : undefined}
+          />
         </CardContent>
       </Card>
 

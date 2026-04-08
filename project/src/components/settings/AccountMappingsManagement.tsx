@@ -5,10 +5,11 @@
  * journal entry creation (cost types, revenue types, harvest sales, etc.)
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import type { ReactNode } from 'react';
 import {
   Plus,
   Edit2,
@@ -22,8 +23,9 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -82,6 +84,7 @@ const accountMappingSchema = z.object({
 });
 
 type AccountMappingFormData = z.infer<typeof accountMappingSchema>;
+type AccountMappingFormInput = z.input<typeof accountMappingSchema>;
 
 const toLabel = (value: string) =>
   value
@@ -91,7 +94,7 @@ const toLabel = (value: string) =>
 
 
 export function AccountMappingsManagement() {
-  const { hasRole, currentOrganization } = useAuth();
+  const { hasRole } = useAuth();
   const { t } = useTranslation();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -104,7 +107,7 @@ export function AccountMappingsManagement() {
   const isAdmin = hasRole(['organization_admin', 'system_admin']);
 
   // Data fetching
-  const { data: mappings = [], isLoading } = useAccountMappings({
+  const { data: mappings = [], isLoading, isFetching } = useAccountMappings({
     mapping_type: filterType === 'all' ? undefined : filterType,
     is_active: filterActive === 'all' ? undefined : filterActive === 'active',
   });
@@ -117,7 +120,7 @@ export function AccountMappingsManagement() {
   const { data: mappingOptions } = useAccountMappingOptions();
 
   // Form handling
-  const form = useForm<AccountMappingFormData>({
+  const form = useForm<AccountMappingFormInput, unknown, AccountMappingFormData>({
     resolver: zodResolver(accountMappingSchema),
     defaultValues: {
       mapping_type: '',
@@ -130,7 +133,10 @@ export function AccountMappingsManagement() {
 
   const selectedMappingType = form.watch('mapping_type');
   const selectedMappingKey = form.watch('mapping_key');
-  const tLabel = (value: string) => t(`accountMappings.labels.${value}`, toLabel(value));
+  const tLabel = useCallback(
+    (value: string) => t(`accountMappings.labels.${value}`, toLabel(value)),
+    [t]
+  );
 
   const mappingTypeOptions = useMemo(() => {
     const types = mappingOptions?.types?.length ? mappingOptions.types : MAPPING_TYPE_VALUES;
@@ -138,7 +144,7 @@ export function AccountMappingsManagement() {
       value: type,
       label: tLabel(type),
     }));
-  }, [mappingOptions?.types, t]);
+  }, [mappingOptions?.types, tLabel]);
 
   const availableKeys = useMemo(() => {
     const keysFromOptions = mappingOptions?.keys_by_type?.[selectedMappingType];
@@ -151,7 +157,7 @@ export function AccountMappingsManagement() {
       options.push({ value: selectedMappingKey, label: tLabel(selectedMappingKey) });
     }
     return options;
-  }, [mappingOptions?.keys_by_type, selectedMappingKey, selectedMappingType, t]);
+  }, [mappingOptions?.keys_by_type, selectedMappingKey, selectedMappingType, tLabel]);
 
   const handleOpenDialog = (mapping?: AccountMapping) => {
     if (mapping) {
@@ -243,7 +249,7 @@ export function AccountMappingsManagement() {
   };
 
   const handleInitializeDefaults = async () => {
-    const countryCode = currentOrganization?.country_code || 'MA';
+    const countryCode = 'MA';
     try {
       const result = await initializeMutation.mutateAsync(countryCode);
       toast.success(
@@ -287,11 +293,145 @@ export function AccountMappingsManagement() {
     return tLabel(key);
   };
 
+  const renderActions = (mapping: AccountMapping, buttonSize: 'sm' | 'icon' = 'sm') => (
+    <div className="flex justify-end gap-2">
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => handleToggleActive(mapping)}
+        title={mapping.is_active ? t('accountMappings.deactivate', 'Deactivate') : t('accountMappings.activate', 'Activate')}
+      >
+        {mapping.is_active ? (
+          <ToggleRight className="h-4 w-4 text-green-600" />
+        ) : (
+          <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+        )}
+      </Button>
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => handleOpenDialog(mapping)}
+      >
+        <Edit2 className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => setDeletingMapping(mapping)}
+        className="text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  const renderCard = (type: string, mapping: AccountMapping) => (
+    <Card className="border-border/60 shadow-sm">
+      <CardContent className="space-y-4 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2 min-w-0">
+            <div className="flex items-center gap-2">
+              <code className="rounded bg-muted px-2 py-1 text-sm break-all">
+                {getMappingKeyLabel(type, mapping.source_key || mapping.mapping_key || '')}
+              </code>
+              <Badge variant={mapping.is_active ? 'default' : 'secondary'}>
+                {mapping.is_active
+                  ? t('accountMappings.active', 'Active')
+                  : t('accountMappings.inactive', 'Inactive')}
+              </Badge>
+            </div>
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {getMappingTypeLabel(type)}
+            </div>
+          </div>
+          {renderActions(mapping, 'icon')}
+        </div>
+
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+          <div className="space-y-1">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('accountMappings.table.account', 'Account')}
+            </div>
+            {mapping.account ? (
+              <div>
+                <div className="font-medium">{mapping.account.code}</div>
+                <div className="text-sm text-muted-foreground">{mapping.account.name}</div>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">-</span>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {t('accountMappings.table.description', 'Description')}
+            </div>
+            <span className="text-sm text-muted-foreground break-words">
+              {mapping.description || '-'}
+            </span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderTableHeader = (
+    <TableRow className="border-b">
+      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.key', 'Key')}</TableHead>
+      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.account', 'Account')}</TableHead>
+      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.description', 'Description')}</TableHead>
+      <TableHead className="text-center py-3 px-4 font-medium">{t('accountMappings.table.status', 'Status')}</TableHead>
+      <TableHead className="text-right py-3 px-4 font-medium">{t('accountMappings.table.actions', 'Actions')}</TableHead>
+    </TableRow>
+  );
+
+  const renderTable = (type: string, mapping: AccountMapping): ReactNode => (
+    <>
+      <TableCell className="py-3 px-4">
+        <code className="text-sm bg-muted px-2 py-1 rounded">
+          {getMappingKeyLabel(type, mapping.source_key || mapping.mapping_key || '')}
+        </code>
+      </TableCell>
+      <TableCell className="py-3 px-4">
+        {mapping.account ? (
+          <div>
+            <div className="font-medium">{mapping.account.code}</div>
+            <div className="text-sm text-muted-foreground">{mapping.account.name}</div>
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </TableCell>
+      <TableCell className="py-3 px-4">
+        <span className="text-sm text-muted-foreground line-clamp-1">
+          {mapping.description || '-'}
+        </span>
+      </TableCell>
+      <TableCell className="py-3 px-4 text-center">
+        <Badge variant={mapping.is_active ? 'default' : 'secondary'}>
+          {mapping.is_active
+            ? t('accountMappings.active', 'Active')
+            : t('accountMappings.inactive', 'Inactive')}
+        </Badge>
+      </TableCell>
+      <TableCell className="py-3 px-4">{renderActions(mapping)}</TableCell>
+    </>
+  );
+
+  const emptyMessage = searchTerm || filterType !== 'all' || filterActive !== 'all'
+    ? t('accountMappings.noSearchResults', 'No mappings found matching your filters.')
+    : t('accountMappings.empty', 'No account mappings configured. Click "Initialize Defaults" to set up standard mappings, or add them manually.');
+
   if (!isAdmin) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          {t('accountMappings.noPermission', 'You do not have permission to manage account mappings.')}
+        <CardContent className="py-8">
+          <EmptyState
+            variant="inline"
+            icon={Link2}
+            title={t('accountMappings.title', 'Account Mappings')}
+            description={t('accountMappings.noPermission', 'You do not have permission to manage account mappings.')}
+          />
         </CardContent>
       </Card>
     );
@@ -332,150 +472,83 @@ export function AccountMappingsManagement() {
               </AlertDescription>
             </Alert>
 
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col gap-4 sm:flex-row">
-                  <div className="flex-1">
-                    <FilterBar
-                      searchValue={searchTerm}
-                      onSearchChange={setSearchTerm}
-                      searchPlaceholder={t('accountMappings.searchPlaceholder', 'Search by key or account...')}
-                    />
-                  </div>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
-                      <SelectValue placeholder={t('accountMappings.filterType', 'Filter by type')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('accountMappings.allTypes', 'All Types')}</SelectItem>
-                      {mappingTypeOptions.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
-                    <SelectTrigger className="w-full sm:w-[150px]">
-                      <SelectValue placeholder={t('accountMappings.filterStatus', 'Status')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('accountMappings.allStatus', 'All Status')}</SelectItem>
-                      <SelectItem value="active">{t('accountMappings.activeOnly', 'Active')}</SelectItem>
-                      <SelectItem value="inactive">{t('accountMappings.inactiveOnly', 'Inactive')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={t('accountMappings.searchPlaceholder', 'Search by key or account...')}
+              filters={[
+                {
+                  key: 'type',
+                  value: filterType,
+                  onChange: setFilterType,
+                  placeholder: t('accountMappings.filterType', 'Filter by type'),
+                  options: [
+                    { value: 'all', label: t('accountMappings.allTypes', 'All Types') },
+                    ...mappingTypeOptions,
+                  ],
+                },
+                {
+                  key: 'status',
+                  value: filterActive,
+                  onChange: (v) => setFilterActive(v as 'all' | 'active' | 'inactive'),
+                  placeholder: t('accountMappings.filterStatus', 'Status'),
+                  options: [
+                    { value: 'all', label: t('accountMappings.allStatus', 'All Status') },
+                    { value: 'active', label: t('accountMappings.activeOnly', 'Active') },
+                    { value: 'inactive', label: t('accountMappings.inactiveOnly', 'Inactive') },
+                  ],
+                },
+              ]}
+              onClear={() => { setFilterType('all'); setFilterActive('all'); setSearchTerm(''); }}
+            />
           </>
         }
       >
-        {isLoading ? (
+        {filteredMappings.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              {t('accountMappings.loading', 'Loading account mappings...')}
-            </CardContent>
-          </Card>
-        ) : filteredMappings.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
-              {searchTerm || filterType !== 'all'
-                ? t('accountMappings.noSearchResults', 'No mappings found matching your filters.')
-                : t('accountMappings.empty', 'No account mappings configured. Click "Initialize Defaults" to set up standard mappings, or add them manually.')}
+            <CardContent className="py-6">
+              <ResponsiveList<AccountMapping>
+                items={[]}
+                isLoading={isLoading}
+                isFetching={isFetching}
+                keyExtractor={(mapping) => mapping.id}
+                renderCard={() => null}
+                renderTable={() => null}
+                emptyIcon={Link2}
+                emptyMessage={emptyMessage}
+                emptyAction={!searchTerm && filterType === 'all' && filterActive === 'all' ? {
+                  label: t('accountMappings.initializeDefaults', 'Initialize Defaults'),
+                  onClick: handleInitializeDefaults,
+                  variant: 'outline',
+                } : undefined}
+              />
             </CardContent>
           </Card>
         ) : (
           Object.entries(groupedMappings).map(([type, typeMappings]) => (
             <Card key={type}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link2 className="h-5 w-5" />
-                {getMappingTypeLabel(type)}
-              </CardTitle>
-              <CardDescription>
-                {t('accountMappings.typeCount', '{{count}} mappings', { count: typeMappings.length })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="border-b">
-                      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.key', 'Key')}</TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium">{t('accountMappings.table.account', 'Account')}</TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('accountMappings.table.description', 'Description')}</TableHead>
-                      <TableHead className="text-center py-3 px-4 font-medium">{t('accountMappings.table.status', 'Status')}</TableHead>
-                      <TableHead className="text-right py-3 px-4 font-medium">{t('accountMappings.table.actions', 'Actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {typeMappings.map((mapping) => (
-                      <TableRow key={mapping.id} className="border-b hover:bg-muted/50">
-                        <TableCell className="py-3 px-4">
-                          <code className="text-sm bg-muted px-2 py-1 rounded">
-                            {getMappingKeyLabel(type, mapping.source_key || mapping.mapping_key || '')}
-                          </code>
-                        </TableCell>
-                        <TableCell className="py-3 px-4">
-                          {mapping.account ? (
-                            <div>
-                              <div className="font-medium">{mapping.account.code}</div>
-                              <div className="text-sm text-muted-foreground">{mapping.account.name}</div>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 hidden md:table-cell">
-                          <span className="text-sm text-muted-foreground line-clamp-1">
-                            {mapping.description || '-'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-center">
-                          <Badge variant={mapping.is_active ? 'default' : 'secondary'}>
-                            {mapping.is_active
-                              ? t('accountMappings.active', 'Active')
-                              : t('accountMappings.inactive', 'Inactive')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-3 px-4">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleToggleActive(mapping)}
-                              title={mapping.is_active ? t('accountMappings.deactivate', 'Deactivate') : t('accountMappings.activate', 'Activate')}
-                            >
-                              {mapping.is_active ? (
-                                <ToggleRight className="h-4 w-4 text-green-600" />
-                              ) : (
-                                <ToggleLeft className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleOpenDialog(mapping)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeletingMapping(mapping)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link2 className="h-5 w-5" />
+                  {getMappingTypeLabel(type)}
+                </CardTitle>
+                <CardDescription>
+                  {t('accountMappings.typeCount', '{{count}} mappings', { count: typeMappings.length })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveList
+                  items={typeMappings}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                  keyExtractor={(mapping) => mapping.id}
+                  renderCard={(mapping) => renderCard(type, mapping)}
+                  renderTable={(mapping) => renderTable(type, mapping)}
+                  renderTableHeader={renderTableHeader}
+                  emptyIcon={Link2}
+                  emptyMessage={emptyMessage}
+                />
+              </CardContent>
             </Card>
           ))
         )}

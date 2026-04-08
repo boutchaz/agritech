@@ -22,8 +22,9 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
@@ -89,7 +90,7 @@ export function CostCenterManagement() {
   const isAdmin = hasRole(['organization_admin', 'system_admin']);
 
   // Data fetching
-  const { data: costCenters = [], isLoading } = useCostCenters({
+  const { data: costCenters = [], isLoading, isFetching } = useCostCenters({
     is_active: filterActive === 'all' ? undefined : filterActive === 'active',
   });
   const { data: farms = [] } = useQuery({
@@ -241,11 +242,160 @@ export function CostCenterManagement() {
     return parent?.name;
   };
 
+  const getLocationContent = (costCenter: CostCenter) => {
+    if (!costCenter.farm_id) {
+      return <span className="text-muted-foreground">-</span>;
+    }
+
+    return (
+      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+        <Building2 className="h-3 w-3" />
+        <span className="line-clamp-1">
+          {farms.find((f: { id: string }) => f.id === costCenter.farm_id)?.name || 'Farm'}
+        </span>
+        {costCenter.parcel_id && (
+          <Badge variant="outline" className="ms-1 text-xs">
+            <MapPin className="h-2 w-2 me-1" />
+            {t('costCenters.form.parcel')}
+          </Badge>
+        )}
+      </div>
+    );
+  };
+
+  const renderActions = (costCenter: CostCenter, buttonSize: 'sm' | 'icon' = 'sm') => (
+    <div className="flex justify-end gap-2">
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => handleToggleActive(costCenter)}
+        title={costCenter.is_active ? t('costCenters.deactivate', 'Deactivate') : t('costCenters.activate', 'Activate')}
+      >
+        {costCenter.is_active ? (
+          <ToggleRight className="h-4 w-4 text-green-600" />
+        ) : (
+          <ToggleLeft className="h-4 w-4 text-muted-foreground" />
+        )}
+      </Button>
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => handleOpenDialog(costCenter)}
+      >
+        <Edit2 className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size={buttonSize}
+        onClick={() => setDeletingCostCenter(costCenter)}
+        className="text-destructive hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  const renderCard = (costCenter: CostCenter) => {
+    const parentName = getParentName(costCenter.parent_id);
+
+    return (
+      <Card className="border-border/60 shadow-sm">
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <code className="rounded bg-muted px-2 py-1 text-sm">{costCenter.code}</code>
+                <Badge variant={costCenter.is_active ? 'default' : 'secondary'}>
+                  {costCenter.is_active
+                    ? t('costCenters.active', 'Active')
+                    : t('costCenters.inactive', 'Inactive')}
+                </Badge>
+              </div>
+              <div className="font-medium">{costCenter.name}</div>
+            </div>
+            {renderActions(costCenter, 'icon')}
+          </div>
+
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="space-y-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('costCenters.table.parent', 'Parent')}
+              </div>
+              {parentName ? (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <FolderTree className="h-3 w-3" />
+                  {parentName}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('costCenters.table.location', 'Location')}
+              </div>
+              {getLocationContent(costCenter)}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderTableHeader = (
+    <TableRow className="border-b">
+      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</TableHead>
+      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</TableHead>
+      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.parent', 'Parent')}</TableHead>
+      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.location', 'Location')}</TableHead>
+      <TableHead className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</TableHead>
+      <TableHead className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</TableHead>
+    </TableRow>
+  );
+
+  const renderTable = (costCenter: CostCenter) => (
+    <>
+      <TableCell className="py-3 px-4">
+        <code className="text-sm bg-muted px-2 py-1 rounded">{costCenter.code}</code>
+      </TableCell>
+      <TableCell className="py-3 px-4 font-medium">{costCenter.name}</TableCell>
+      <TableCell className="py-3 px-4">
+        {costCenter.parent_id ? (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <FolderTree className="h-3 w-3" />
+            {getParentName(costCenter.parent_id)}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </TableCell>
+      <TableCell className="py-3 px-4">{getLocationContent(costCenter)}</TableCell>
+      <TableCell className="py-3 px-4 text-center">
+        <Badge variant={costCenter.is_active ? 'default' : 'secondary'}>
+          {costCenter.is_active
+            ? t('costCenters.active', 'Active')
+            : t('costCenters.inactive', 'Inactive')}
+        </Badge>
+      </TableCell>
+      <TableCell className="py-3 px-4">{renderActions(costCenter)}</TableCell>
+    </>
+  );
+
+  const emptyMessage = searchTerm
+    ? t('costCenters.noSearchResults', 'No cost centers found matching your search.')
+    : t('costCenters.empty', 'No cost centers yet. Create your first one to get started.');
+
   if (!isAdmin) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
-          {t('costCenters.noPermission', 'You do not have permission to manage cost centers.')}
+        <CardContent className="py-8">
+          <EmptyState
+            variant="inline"
+            icon={Building2}
+            title={t('costCenters.title', 'Cost Centers')}
+            description={t('costCenters.noPermission', 'You do not have permission to manage cost centers.')}
+          />
         </CardContent>
       </Card>
     );
@@ -271,29 +421,19 @@ export function CostCenterManagement() {
           </div>
         }
         filters={
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <div className="flex-1">
-                  <FilterBar
-                    searchValue={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    searchPlaceholder={t('costCenters.searchPlaceholder', 'Search by code or name...')}
-                  />
-                </div>
-                <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder={t('costCenters.filterStatus', 'Filter by status')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('costCenters.allStatus', 'All Status')}</SelectItem>
-                    <SelectItem value="active">{t('costCenters.activeOnly', 'Active Only')}</SelectItem>
-                    <SelectItem value="inactive">{t('costCenters.inactiveOnly', 'Inactive Only')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder={t('costCenters.searchPlaceholder', 'Search by code or name...')}
+            statusFilters={[
+              { value: 'all', label: t('costCenters.allStatus', 'All') },
+              { value: 'active', label: t('costCenters.activeOnly', 'Active') },
+              { value: 'inactive', label: t('costCenters.inactiveOnly', 'Inactive') },
+            ]}
+            activeStatus={filterActive}
+            onStatusChange={(v) => setFilterActive(v as 'all' | 'active' | 'inactive')}
+            onClear={() => setFilterActive('all')}
+          />
         }
       >
         <Card>
@@ -304,108 +444,21 @@ export function CostCenterManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('costCenters.loading', 'Loading cost centers...')}
-            </div>
-          ) : filteredCostCenters.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchTerm
-                ? t('costCenters.noSearchResults', 'No cost centers found matching your search.')
-                : t('costCenters.empty', 'No cost centers yet. Create your first one to get started.')}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table className="w-full">
-                  <TableHeader>
-                    <TableRow className="border-b">
-                      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.code', 'Code')}</TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium">{t('costCenters.table.name', 'Name')}</TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('costCenters.table.parent', 'Parent')}</TableHead>
-                      <TableHead className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('costCenters.table.location', 'Location')}</TableHead>
-                      <TableHead className="text-center py-3 px-4 font-medium">{t('costCenters.table.status', 'Status')}</TableHead>
-                      <TableHead className="text-right py-3 px-4 font-medium">{t('costCenters.table.actions', 'Actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                <TableBody>
-                  {filteredCostCenters.map((costCenter) => (
-                    <TableRow key={costCenter.id} className="border-b hover:bg-muted/50">
-                      <TableCell className="py-3 px-4">
-                        <code className="text-sm bg-muted px-2 py-1 rounded">{costCenter.code}</code>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 font-medium">{costCenter.name}</TableCell>
-                      <TableCell className="py-3 px-4 hidden md:table-cell">
-                        {costCenter.parent_id ? (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <FolderTree className="h-3 w-3" />
-                            {getParentName(costCenter.parent_id)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 hidden lg:table-cell">
-                          {costCenter.farm_id ? (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Building2 className="h-3 w-3" />
-                              <span className="line-clamp-1">
-                                {farms.find((f: { id: string }) => f.id === costCenter.farm_id)?.name || 'Farm'}
-                              </span>
-                              {costCenter.parcel_id && (
-                                <Badge variant="outline" className="ms-1 text-xs">
-                                  <MapPin className="h-2 w-2 me-1" />
-                                  {t('costCenters.form.parcel')}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                      <TableCell className="py-3 px-4 text-center">
-                        <Badge variant={costCenter.is_active ? 'default' : 'secondary'}>
-                          {costCenter.is_active
-                            ? t('costCenters.active', 'Active')
-                            : t('costCenters.inactive', 'Inactive')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleToggleActive(costCenter)}
-                            title={costCenter.is_active ? t('costCenters.deactivate', 'Deactivate') : t('costCenters.activate', 'Activate')}
-                          >
-                            {costCenter.is_active ? (
-                              <ToggleRight className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <ToggleLeft className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenDialog(costCenter)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setDeletingCostCenter(costCenter)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <ResponsiveList
+            items={filteredCostCenters}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            keyExtractor={(costCenter) => costCenter.id}
+            renderCard={renderCard}
+            renderTable={renderTable}
+            renderTableHeader={renderTableHeader}
+            emptyIcon={Building2}
+            emptyMessage={emptyMessage}
+            emptyAction={!searchTerm ? {
+              label: t('costCenters.addNew', 'Add Cost Center'),
+              onClick: () => handleOpenDialog(),
+            } : undefined}
+          />
         </CardContent>
         </Card>
       </ListPageLayout>

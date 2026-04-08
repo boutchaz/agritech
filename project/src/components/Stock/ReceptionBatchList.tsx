@@ -1,4 +1,4 @@
-import {  useState  } from "react";
+import { useState } from 'react';
 import {
   usePaginatedReceptionBatches,
   useReceptionBatchStats,
@@ -7,11 +7,8 @@ import {
 } from '@/hooks/useReceptionBatches';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Table,
-  TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -46,7 +43,10 @@ import {
   FilterBar,
   ListPageLayout,
   ListPageHeader,
+  ResponsiveList,
 } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SectionLoader } from '@/components/ui/loader';
 import {
   Package,
   Plus,
@@ -55,7 +55,6 @@ import {
   Edit,
   Trash2,
   XCircle,
-  Loader2,
   ClipboardCheck,
   TrendingUp,
   AlertTriangle,
@@ -174,14 +173,58 @@ export default function ReceptionBatchList({
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">{t('receptionBatches.loading')}</span>
-      </div>
-    );
-  }
+  const renderBatchActions = (batch: ReceptionBatch) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onViewClick(batch)}>
+          <Eye className="w-4 h-4 mr-2" />
+          {t('receptionBatches.list.actions.viewDetails')}
+        </DropdownMenuItem>
+
+        {batch.status === 'received' && onEditClick && (
+          <>
+            <DropdownMenuItem onClick={() => onEditClick(batch)}>
+              <Edit className="w-4 h-4 mr-2" />
+              {t('receptionBatches.list.actions.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setConfirmAction({ batch, action: 'delete' })}
+              className="text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('receptionBatches.list.actions.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {batch.status !== 'cancelled' && batch.status !== 'processed' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setConfirmAction({ batch, action: 'cancel' })}
+              className="text-orange-600"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              {t('receptionBatches.list.actions.cancelBatch')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const emptyTitle = tableState.search
+    ? t('receptionBatches.list.empty.searchTitle')
+    : t('receptionBatches.list.empty.title');
+  const emptyMessage = tableState.search
+    ? t('receptionBatches.list.empty.searchDescription')
+    : t('receptionBatches.list.empty.description');
 
   return (
     <ListPageLayout
@@ -320,211 +363,63 @@ export default function ReceptionBatchList({
       ) : undefined}
     >
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('receptionBatches.list.table.batchCode')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.receptionDate')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.parcel')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.weight')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.quality')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.decision')}</TableHead>
-                <TableHead>{t('receptionBatches.list.table.status')}</TableHead>
-                <TableHead className="text-right">{t('receptionBatches.list.table.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {batches.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>{tableState.search ? t('receptionBatches.list.empty.searchTitle') : t('receptionBatches.list.empty.title')}</p>
-                    <p className="text-sm mt-1">
-                      {tableState.search ? t('receptionBatches.list.empty.searchDescription') : t('receptionBatches.list.empty.description')}
-                    </p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                batches.map((batch) => (
-                  <TableRow key={batch.id}>
-                    <TableCell className="font-medium">{batch.batch_code}</TableCell>
-                    <TableCell>
-                      {new Date(batch.reception_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{batch.parcel?.name || 'Unknown'}</p>
-                        {batch.parcel?.farm && (
-                          <p className="text-xs text-gray-500">
-                            {batch.parcel.farm.name}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {batch.weight.toFixed(2)} {batch.weight_unit}
-                    </TableCell>
-                    <TableCell>
-                      {batch.quality_grade ? (
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            className={QUALITY_GRADE_COLORS[batch.quality_grade]}
-                          >
-                            {batch.quality_grade}
-                          </Badge>
-                          {batch.quality_score && (
-                            <span className="text-sm text-gray-600">
-                              {batch.quality_score}{t('receptionBatches.list.quality.outOf', { max: 10 })}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">{t('receptionBatches.list.quality.notGraded')}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={DECISION_COLORS[batch.decision]}>
-                        {getDecisionLabel(batch.decision)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={STATUS_COLORS[batch.status]}>
-                        {getStatusLabel(batch.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onViewClick(batch)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            {t('receptionBatches.list.actions.viewDetails')}
-                          </DropdownMenuItem>
-
-                          {batch.status === 'received' && onEditClick && (
-                            <>
-                              <DropdownMenuItem onClick={() => onEditClick(batch)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                {t('receptionBatches.list.actions.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setConfirmAction({ batch, action: 'delete' })
-                                }
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {t('receptionBatches.list.actions.delete')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {batch.status !== 'cancelled' &&
-                            batch.status !== 'processed' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setConfirmAction({ batch, action: 'cancel' })
-                                  }
-                                  className="text-orange-600"
-                                >
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  {t('receptionBatches.list.actions.cancelBatch')}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="md:hidden space-y-3 p-3">
-          {batches.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Package className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-              <p>{tableState.search ? t('receptionBatches.list.mobile.searchEmpty') : t('receptionBatches.list.mobile.empty')}</p>
-            </div>
-          ) : (
-            batches.map((batch) => (
-              <div key={batch.id} className="border rounded-lg p-3 bg-white shadow-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+        {isLoading ? (
+          <SectionLoader />
+        ) : batches.length === 0 ? (
+          <EmptyState
+            variant="card"
+            icon={Package}
+            title={emptyTitle}
+            description={emptyMessage}
+          />
+        ) : (
+          <ResponsiveList
+            items={batches}
+            keyExtractor={(item) => item.id}
+            isLoading={isLoading}
+            isFetching={isFetching}
+            emptyIcon={Package}
+            emptyMessage={emptyMessage}
+            emptyTitle={emptyTitle}
+            className="p-3 lg:p-0"
+            renderCard={(batch) => (
+              <div className="border rounded-lg p-4 bg-white shadow-sm space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
                     <p className="font-semibold text-gray-900 truncate">{batch.batch_code}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(batch.reception_date).toLocaleDateString()}
                     </p>
-                    {batch.parcel?.name && (
-                      <p className="text-xs text-gray-600 truncate">
-                        {batch.parcel.name}{batch.parcel?.farm ? ` • ${batch.parcel.farm.name}` : ''}
-                      </p>
-                    )}
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onViewClick(batch)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        {t('receptionBatches.list.actions.viewDetails')}
-                      </DropdownMenuItem>
-                      {batch.status === 'received' && onEditClick && (
-                        <>
-                          <DropdownMenuItem onClick={() => onEditClick(batch)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            {t('receptionBatches.list.actions.edit')}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setConfirmAction({ batch, action: 'delete' })
-                            }
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            {t('receptionBatches.list.actions.delete')}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                      {batch.status !== 'cancelled' && batch.status !== 'processed' && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() =>
-                              setConfirmAction({ batch, action: 'cancel' })
-                            }
-                            className="text-orange-600"
-                          >
-                            <XCircle className="w-4 h-4 mr-2" />
-                            {t('receptionBatches.list.actions.cancelBatch')}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {renderBatchActions(batch)}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs mt-3">
-                  <Badge className="bg-gray-100 text-gray-800">
-                    {batch.weight.toFixed(2)} {batch.weight_unit}
-                  </Badge>
-                  <Badge className={STATUS_COLORS[batch.status]}>
-                    {getStatusLabel(batch.status)}
-                  </Badge>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-xs text-gray-500">{t('receptionBatches.list.table.parcel')}</p>
+                    <p className="font-medium text-gray-900 truncate">{batch.parcel?.farm?.name || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{t('receptionBatches.list.mobile.product', 'Product')}</p>
+                    <p className="font-medium text-gray-900 truncate">{batch.crop?.name || batch.culture_type || '—'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{t('receptionBatches.list.mobile.quantity', 'Quantity')}</p>
+                    <p className="font-medium text-gray-900">
+                      {batch.quantity != null && batch.quantity_unit
+                        ? `${batch.quantity} ${batch.quantity_unit}`
+                        : `${batch.weight.toFixed(2)} ${batch.weight_unit}`}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">{t('receptionBatches.list.table.status')}</p>
+                    <Badge className={STATUS_COLORS[batch.status]}>
+                      {getStatusLabel(batch.status)}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge className={DECISION_COLORS[batch.decision]}>
                     {getDecisionLabel(batch.decision)}
                   </Badge>
@@ -535,9 +430,71 @@ export default function ReceptionBatchList({
                   )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            )}
+            renderTableHeader={
+              <TableRow>
+                <TableHead>{t('receptionBatches.list.table.batchCode')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.receptionDate')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.parcel')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.weight')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.quality')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.decision')}</TableHead>
+                <TableHead>{t('receptionBatches.list.table.status')}</TableHead>
+                <TableHead className="text-right">{t('receptionBatches.list.table.actions')}</TableHead>
+              </TableRow>
+            }
+            renderTable={(batch) => (
+              <>
+                <TableCell className="font-medium">{batch.batch_code}</TableCell>
+                <TableCell>
+                  {new Date(batch.reception_date).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{batch.parcel?.name || 'Unknown'}</p>
+                    {batch.parcel?.farm && (
+                      <p className="text-xs text-gray-500">
+                        {batch.parcel.farm.name}
+                      </p>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {batch.weight.toFixed(2)} {batch.weight_unit}
+                </TableCell>
+                <TableCell>
+                  {batch.quality_grade ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className={QUALITY_GRADE_COLORS[batch.quality_grade]}>
+                        {batch.quality_grade}
+                      </Badge>
+                      {batch.quality_score && (
+                        <span className="text-sm text-gray-600">
+                          {batch.quality_score}{t('receptionBatches.list.quality.outOf', { max: 10 })}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">{t('receptionBatches.list.quality.notGraded')}</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge className={DECISION_COLORS[batch.decision]}>
+                    {getDecisionLabel(batch.decision)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={STATUS_COLORS[batch.status]}>
+                    {getStatusLabel(batch.status)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  {renderBatchActions(batch)}
+                </TableCell>
+              </>
+            )}
+          />
+        )}
       </div>
 
       {confirmAction && (

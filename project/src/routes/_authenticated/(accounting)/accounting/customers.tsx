@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users, LayoutGrid, List } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,8 +27,9 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { PageLoader } from '@/components/ui/loader';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { useServerTableState, DataTablePagination, ListPageLayout, ListPageHeader, FilterBar } from '@/components/ui/data-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { useServerTableState, DataTablePagination, ListPageLayout, ListPageHeader, FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { TableCell, TableHead } from '@/components/ui/table';
 
 
 // Zod schema for customer form validation
@@ -71,7 +72,6 @@ function CustomersPage() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
 
   const tableState = useServerTableState({
     defaultPageSize: 12,
@@ -274,28 +274,6 @@ function CustomersPage() {
               subtitle={t('accountingModule.customers.subtitle', 'Manage your customers for sales invoices')}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
-                    <Button
-                      type="button"
-                      variant={viewMode === 'card' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('card')}
-                      className="rounded-none border-r border-gray-300 dark:border-gray-600"
-                      title={t('accountingModule.customers.viewMode.card', 'Card view')}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      onClick={() => setViewMode('list')}
-                      className="rounded-none"
-                      title={t('accountingModule.customers.viewMode.list', 'List view')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </div>
                   <Button onClick={() => handleOpenDialog()}>
                     <Plus className="mr-2 h-4 w-4" />
                     {t('accountingModule.customers.addCustomer', 'Add Customer')}
@@ -328,34 +306,32 @@ function CustomersPage() {
         >
           <div data-tour="billing-customers">
             {customers.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.noCustomers', 'No customers')}</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('accountingModule.customers.getStarted', 'Get started by creating a new customer.')}
-                </p>
-                <div className="mt-6">
-                  <Button onClick={() => handleOpenDialog()}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('accountingModule.customers.addCustomer', 'Add Customer')}
-                  </Button>
-                </div>
-              </div>
+              <EmptyState
+                variant="card"
+                icon={Building2}
+                title={t('accountingModule.customers.noCustomers', 'No customers')}
+                description={t('accountingModule.customers.getStarted', 'Get started by creating a new customer.')}
+                action={{
+                  label: t('accountingModule.customers.addCustomer', 'Add Customer'),
+                  onClick: () => handleOpenDialog(),
+                }}
+              />
             ) : filteredCustomers.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('app.noResults', 'No results found')}</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
-                </p>
-              </div>
-            ) : viewMode === 'card' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {paginatedCustomers.map((customer) => (
-                  <div
-                    key={customer.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
-                  >
+              <EmptyState
+                variant="card"
+                icon={Building2}
+                title={t('app.noResults', 'No results found')}
+                description={t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
+              />
+            ) : (
+              <ResponsiveList
+                items={paginatedCustomers}
+                isLoading={isLoading}
+                keyExtractor={(customer) => customer.id}
+                emptyIcon={Building2}
+                emptyMessage={t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
+                renderCard={(customer) => (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{customer.name}</h3>
@@ -395,19 +371,17 @@ function CustomersPage() {
                     </div>
 
                     <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      {customer.contact_person && (
-                        <p className="font-medium">{customer.contact_person}</p>
-                      )}
+                      {customer.contact_person && <p className="font-medium">{customer.contact_person}</p>}
                       {customer.email && (
                         <p className="flex items-center gap-2 min-w-0">
                           <Mail className="h-4 w-4 shrink-0" />
                           <span className="truncate">{customer.email}</span>
                         </p>
                       )}
-                      {customer.phone && (
+                      {(customer.phone || customer.mobile) && (
                         <p className="flex items-center gap-2">
                           <Phone className="h-4 w-4 shrink-0" />
-                          {customer.phone}
+                          {customer.phone || customer.mobile}
                         </p>
                       )}
                       {(customer.city || customer.country) && (
@@ -423,79 +397,59 @@ function CustomersPage() {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('accountingModule.customers.table.name', 'Name')}</TableHead>
-                      <TableHead className="hidden sm:table-cell">{t('accountingModule.customers.table.code', 'Code')}</TableHead>
-                      <TableHead className="hidden md:table-cell">{t('accountingModule.customers.table.type', 'Type')}</TableHead>
-                      <TableHead className="hidden lg:table-cell">{t('accountingModule.customers.table.contact', 'Contact')}</TableHead>
-                      <TableHead className="hidden xl:table-cell">{t('accountingModule.customers.table.email', 'Email')}</TableHead>
-                      <TableHead className="hidden lg:table-cell">{t('accountingModule.customers.table.phone', 'Phone')}</TableHead>
-                      <TableHead className="hidden md:table-cell">{t('accountingModule.customers.table.location', 'Location')}</TableHead>
-                      <TableHead className="text-end w-[100px]">{t('accountingModule.customers.table.actions', 'Actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedCustomers.map((customer) => (
-                      <TableRow key={customer.id}>
-                        <TableCell className="font-medium text-gray-900 dark:text-gray-100 max-w-[160px]">
-                          <div className="truncate">{customer.name}</div>
-                          <div className="sm:hidden text-xs text-gray-500 mt-0.5 truncate">
-                            {[customer.email, customer.phone].filter(Boolean).join(' · ') || '—'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden sm:table-cell text-gray-600 dark:text-gray-400">
-                          {customer.customer_code || '—'}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-gray-600 dark:text-gray-400">
-                          {formatCustomerType(customer.customer_type)}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-gray-600 dark:text-gray-400 max-w-[140px] truncate">
-                          {customer.contact_person || '—'}
-                        </TableCell>
-                        <TableCell className="hidden xl:table-cell text-gray-600 dark:text-gray-400 max-w-[180px] truncate">
-                          {customer.email || '—'}
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                          {customer.phone || customer.mobile || '—'}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell text-gray-600 dark:text-gray-400 max-w-[160px] truncate">
-                          {[customer.city, customer.country].filter(Boolean).join(', ') || '—'}
-                        </TableCell>
-                        <TableCell className="text-end">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenDialog(customer)}
-                              className="h-8 w-8 text-blue-600 dark:text-blue-400"
-                              aria-label={t('app.edit', 'Edit')}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete(customer)}
-                              className="h-8 w-8 text-red-600 dark:text-red-400"
-                              aria-label={t('app.delete', 'Delete')}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                )}
+                renderTableHeader={
+                  <tr>
+                    <TableHead>{t('accountingModule.customers.table.name', 'Name')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.code', 'Code')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.type', 'Type')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.contact', 'Contact')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.email', 'Email')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.phone', 'Phone')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.location', 'Location')}</TableHead>
+                    <TableHead className="text-end w-[100px]">{t('accountingModule.customers.table.actions', 'Actions')}</TableHead>
+                  </tr>
+                }
+                renderTable={(customer) => (
+                  <>
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100 max-w-[160px]">
+                      <div className="truncate">{customer.name}</div>
+                    </TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">{customer.customer_code || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">{formatCustomerType(customer.customer_type)}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[140px] truncate">{customer.contact_person || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[180px] truncate">{customer.email || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{customer.phone || customer.mobile || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[160px] truncate">
+                      {[customer.city, customer.country].filter(Boolean).join(', ') || '—'}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(customer)}
+                          className="h-8 w-8 text-blue-600 dark:text-blue-400"
+                          aria-label={t('app.edit', 'Edit')}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(customer)}
+                          className="h-8 w-8 text-red-600 dark:text-red-400"
+                          aria-label={t('app.delete', 'Delete')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </>
+                )}
+              />
             )}
           </div>
         </ListPageLayout>

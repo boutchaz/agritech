@@ -3,6 +3,7 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  ClipboardList,
   Plus,
   Calendar,
   User,
@@ -42,6 +43,7 @@ import {
   FilterBar,
   ListPageLayout,
   ListPageHeader,
+  ResponsiveList,
 } from '@/components/ui/data-table';
 import { Button } from '../ui/button';
 import {
@@ -52,7 +54,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Checkbox } from '../ui/checkbox';
-import { SectionLoader } from '@/components/ui/loader';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface TasksListProps {
   organizationId: string;
@@ -238,6 +240,469 @@ const TasksList = ({
         return <Clock className="w-5 h-5 text-gray-400" />;
     }
   };
+
+  const renderTaskBadges = (task: TaskSummary, dueDateStatus: ReturnType<typeof getDueDateStatus>) => (
+    <>
+      {task.task_type === 'harvesting' && (
+        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+          <Wheat className="w-3 h-3 mr-1" />
+          {t('tasks.type.harvesting', 'Harvest')}
+        </span>
+      )}
+      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
+        {getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr')}
+      </span>
+      <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
+        {getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr')}
+      </span>
+      {dueDateStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
+        <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${dueDateStatus.color}`}>
+          <dueDateStatus.icon className="w-3 h-3 mr-1" />
+          {dueDateStatus.label}
+        </span>
+      )}
+    </>
+  );
+
+  const renderTaskMeta = (task: TaskSummary) => (
+    <>
+      {task.worker_name && (
+        <div className="flex items-center gap-1">
+          <User className="w-4 h-4" />
+          <span>{task.worker_name}</span>
+        </div>
+      )}
+
+      {task.farm_name && (
+        <div className="flex items-center gap-1">
+          <MapPin className="w-4 h-4" />
+          <span>{task.farm_name}</span>
+          {task.parcel_name && <span> - {task.parcel_name}</span>}
+        </div>
+      )}
+
+      {task.scheduled_start && (
+        <div className="flex items-center gap-1">
+          <Calendar className="w-4 h-4" />
+          <span>
+            {formatDistance(new Date(task.scheduled_start), new Date(), {
+              addSuffix: true,
+              locale: getLocale(),
+            })}
+          </span>
+        </div>
+      )}
+
+      {task.estimated_duration && (
+        <div className="flex items-center gap-1">
+          <Timer className="w-4 h-4" />
+          <span>{task.estimated_duration}h {t('tasks.estimated', 'est.')}</span>
+        </div>
+      )}
+
+      {task.actual_duration && task.actual_duration > 0 && (
+        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+          <Clock className="w-4 h-4" />
+          <span>{task.actual_duration}h {t('tasks.logged', 'logged')}</span>
+        </div>
+      )}
+
+      {task.comment_count && task.comment_count > 0 && (
+        <div className="flex items-center gap-1">
+          <MessageSquare className="w-4 h-4" />
+          <span>{task.comment_count}</span>
+        </div>
+      )}
+
+      {task.checklist && task.checklist.length > 0 && (
+        <div className="flex items-center gap-1 text-gray-500">
+          <ListChecks className="w-3.5 h-3.5" />
+          <span className="text-xs">
+            {task.checklist.filter((item: { completed?: boolean }) => item.completed).length}/{task.checklist.length}
+          </span>
+        </div>
+      )}
+
+      {task.attachments && task.attachments.length > 0 && (
+        <div className="flex items-center gap-1 text-gray-500">
+          <Paperclip className="w-3.5 h-3.5" />
+          <span className="text-xs">{task.attachments.length}</span>
+        </div>
+      )}
+
+      {task.repeat_pattern && (
+        <div className="flex items-center gap-1 text-purple-500" title={`Recurring: ${task.repeat_pattern.frequency}`}>
+          <Repeat className="w-3.5 h-3.5" />
+        </div>
+      )}
+
+      {task.parent_task_id && (
+        <div className="flex items-center gap-1 text-indigo-500" title="Part of recurring series">
+          <GitBranch className="w-3.5 h-3.5" />
+        </div>
+      )}
+    </>
+  );
+
+  const renderTaskActions = (task: TaskSummary, compact = false) => {
+    const canStart = task.status === 'pending' || task.status === 'assigned';
+    const canPause = task.status === 'in_progress';
+    const canComplete = task.status === 'in_progress' || task.status === 'paused';
+
+    return (
+      <div className={`flex items-center ${compact ? 'justify-end gap-2' : 'gap-2 ml-2 sm:ml-4'}`}>
+        <div className={`${compact ? 'hidden xl:flex items-center gap-2' : 'hidden md:flex items-center gap-2'}`}>
+          {canStart && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              onClick={(e) => handleQuickStart(e, task.id)}
+              disabled={updateTask.isPending}
+            >
+              <Play className="w-4 h-4 mr-1" />
+              {t('tasks.start', 'Start')}
+            </Button>
+          )}
+
+          {canPause && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-amber-600 border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+              onClick={(e) => handleQuickPause(e, task.id)}
+              disabled={updateTask.isPending}
+            >
+              <Pause className="w-4 h-4 mr-1" />
+              {t('tasks.pause', 'Pause')}
+            </Button>
+          )}
+
+          {canComplete && (
+            <Button
+              variant="green"
+              size="sm"
+              onClick={(e) => handleQuickComplete(e, task)}
+              disabled={updateTask.isPending}
+            >
+              <CheckCircle className="w-4 h-4 mr-1" />
+              {task.task_type === 'harvesting'
+                ? t('tasks.completeHarvest', 'Harvest')
+                : t('tasks.complete', 'Complete')}
+            </Button>
+          )}
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" variant="ghost">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onSelectTask?.(task.id)}>
+              {t('tasks.viewDetails', 'View Details')}
+            </DropdownMenuItem>
+            <div className={compact ? 'xl:hidden' : 'md:hidden'}>
+              <DropdownMenuSeparator />
+              {canStart && (
+                <DropdownMenuItem onClick={(e) => handleQuickStart(e as unknown as React.MouseEvent, task.id)}>
+                  <Play className="w-4 h-4 mr-2 text-blue-600" />
+                  {t('tasks.start', 'Start')}
+                </DropdownMenuItem>
+              )}
+              {canPause && (
+                <DropdownMenuItem onClick={(e) => handleQuickPause(e as unknown as React.MouseEvent, task.id)}>
+                  <Pause className="w-4 h-4 mr-2 text-amber-600" />
+                  {t('tasks.pause', 'Pause')}
+                </DropdownMenuItem>
+              )}
+              {canComplete && (
+                <DropdownMenuItem onClick={(e) => handleQuickComplete(e as unknown as React.MouseEvent, task)}>
+                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                  {task.task_type === 'harvesting'
+                    ? t('tasks.completeHarvest', 'Harvest')
+                    : t('tasks.complete', 'Complete')}
+                </DropdownMenuItem>
+              )}
+            </div>
+            <DropdownMenuSeparator />
+            {task.status !== 'cancelled' && (
+              <DropdownMenuItem
+                className="text-red-600"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await updateTask.mutateAsync({
+                    taskId: task.id,
+                    organizationId,
+                    updates: { status: 'cancelled' },
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['tasks'] });
+                }}
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {t('tasks.cancel', 'Cancel Task')}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  };
+
+  const renderTaskCard = (task: TaskSummary) => {
+    const dueDateStatus = getDueDateStatus(task.due_date);
+    const isSelected = selectedTaskIds.has(task.id);
+
+    return (
+      <div
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all ${
+          isSelected ? 'ring-2 ring-blue-500' : ''
+        }`}
+      >
+        <div className="flex items-start gap-3 p-4">
+          <div className="pt-1">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => toggleTaskSelection(task.id)}
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                onClick={() => onSelectTask?.(task.id)}
+              >
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {getStatusIcon(task.status)}
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white break-words">
+                    {task.title}
+                  </h3>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  {renderTaskBadges(task, dueDateStatus)}
+                </div>
+
+                {task.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
+                    {task.description}
+                  </p>
+                )}
+
+                <div className="grid grid-cols-1 gap-2 text-sm text-gray-600 dark:text-gray-400 sm:grid-cols-2">
+                  {task.farm_name && (
+                    <div className="flex items-center gap-1 min-w-0">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{task.farm_name}{task.parcel_name ? ` - ${task.parcel_name}` : ''}</span>
+                    </div>
+                  )}
+                  {task.worker_name && (
+                    <div className="flex items-center gap-1 min-w-0">
+                      <User className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{task.worker_name}</span>
+                    </div>
+                  )}
+                  {task.due_date && (
+                    <div className="flex items-center gap-1 min-w-0">
+                      <CalendarClock className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {formatDistance(new Date(task.due_date), new Date(), {
+                          addSuffix: true,
+                          locale: getLocale(),
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-600 dark:text-gray-400">
+                  {renderTaskMeta(task)}
+                </div>
+
+                {task.completion_percentage > 0 && task.status !== 'completed' && (
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <span>{t('tasks.listPage.progress')}</span>
+                      <span>{task.completion_percentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${task.completion_percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </button>
+
+              {renderTaskActions(task)}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTaskTableRow = (task: TaskSummary) => {
+    const dueDateStatus = getDueDateStatus(task.due_date);
+    const isSelected = selectedTaskIds.has(task.id);
+
+    return (
+      <>
+        <td className="px-4 py-4 align-top">
+          <Checkbox
+            checked={isSelected}
+            onCheckedChange={() => toggleTaskSelection(task.id)}
+          />
+        </td>
+        <td className="px-4 py-4 align-top min-w-[320px]">
+          <button
+            type="button"
+            className="w-full text-left"
+            onClick={() => onSelectTask?.(task.id)}
+          >
+            <div className="flex items-start gap-2 mb-2">
+              {getStatusIcon(task.status)}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-gray-900 dark:text-white">{task.title}</span>
+                  {task.task_type === 'harvesting' && (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      <Wheat className="w-3 h-3 mr-1" />
+                      {t('tasks.type.harvesting', 'Harvest')}
+                    </span>
+                  )}
+                </div>
+                {task.description && (
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {task.description}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {task.comment_count && task.comment_count > 0 && (
+                    <div className="flex items-center gap-1">
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>{task.comment_count}</span>
+                    </div>
+                  )}
+                  {task.checklist && task.checklist.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <ListChecks className="w-3.5 h-3.5" />
+                      <span>
+                        {task.checklist.filter((item: { completed?: boolean }) => item.completed).length}/{task.checklist.length}
+                      </span>
+                    </div>
+                  )}
+                  {task.attachments && task.attachments.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      <span>{task.attachments.length}</span>
+                    </div>
+                  )}
+                  {task.repeat_pattern && <Repeat className="w-3.5 h-3.5 text-purple-500" />}
+                  {task.parent_task_id && <GitBranch className="w-3.5 h-3.5 text-indigo-500" />}
+                </div>
+                {task.completion_percentage > 0 && task.status !== 'completed' && (
+                  <div className="mt-3 max-w-xs">
+                    <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <span>{t('tasks.listPage.progress')}</span>
+                      <span>{task.completion_percentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${task.completion_percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
+        </td>
+        <td className="px-4 py-4 align-top min-w-[220px]">
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            {task.worker_name ? (
+              <div className="flex items-center gap-1">
+                <User className="w-4 h-4" />
+                <span>{task.worker_name}</span>
+              </div>
+            ) : (
+              <span className="text-gray-400 dark:text-gray-500">—</span>
+            )}
+            {task.farm_name && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                <span>{task.farm_name}{task.parcel_name ? ` - ${task.parcel_name}` : ''}</span>
+              </div>
+            )}
+            {task.scheduled_start && (
+              <div className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  {formatDistance(new Date(task.scheduled_start), new Date(), {
+                    addSuffix: true,
+                    locale: getLocale(),
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-4 align-top">
+          <div className="flex flex-col gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span className={`inline-flex w-fit px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
+              {getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr')}
+            </span>
+            {task.estimated_duration && <span>{task.estimated_duration}h {t('tasks.estimated', 'est.')}</span>}
+            {task.actual_duration && task.actual_duration > 0 && (
+              <span className="text-green-600 dark:text-green-400">{task.actual_duration}h {t('tasks.logged', 'logged')}</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-4 align-top">
+          <div className="flex flex-col gap-2">
+            <span className={`inline-flex w-fit px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
+              {getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr')}
+            </span>
+            {dueDateStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
+              <span className={`inline-flex w-fit items-center px-2 py-0.5 text-xs font-medium rounded-full ${dueDateStatus.color}`}>
+                <dueDateStatus.icon className="w-3 h-3 mr-1" />
+                {dueDateStatus.label}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-4 align-top min-w-[180px]">
+          {task.due_date ? (
+            <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-1">
+                <CalendarClock className="w-4 h-4" />
+                <span>
+                  {formatDistance(new Date(task.due_date), new Date(), {
+                    addSuffix: true,
+                    locale: getLocale(),
+                  })}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-400 dark:text-gray-500">—</span>
+          )}
+        </td>
+        <td className="px-4 py-4 align-top">
+          {renderTaskActions(task, true)}
+        </td>
+      </>
+    );
+  };
+
+  const emptyMessage = tableState.search || filterStatus !== 'all'
+    ? t('tasks.listPage.empty.filtered', 'No tasks match your filters.')
+    : t('tasks.listPage.empty.description');
 
   return (
     <ListPageLayout
@@ -465,28 +930,9 @@ const TasksList = ({
         </div>
       )}
 
-      {isLoading ? (
-        <SectionLoader />
-      ) : tasks.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-12 text-center">
-          <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
-            {tableState.search || filterStatus !== 'all'
-              ? t('tasks.listPage.empty.filtered', 'No tasks match your filters.')
-              : t('tasks.listPage.empty.title')}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">{t('tasks.listPage.empty.description')}</p>
-          {onCreateTask && (
-            <Button onClick={onCreateTask} className="mt-4">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('tasks.listPage.newTask')}
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3" data-tour="task-list">
-          {/* Select All Row */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+      <div className="space-y-3" data-tour="task-list">
+        {!isLoading && tasks.length > 0 && (
+          <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg lg:hidden">
             <Checkbox
               checked={selectedTaskIds.size === tasks.length && tasks.length > 0}
               onCheckedChange={toggleAllTasks}
@@ -495,275 +941,60 @@ const TasksList = ({
               {t('tasks.selectAll', 'Select all')}
             </span>
           </div>
+        )}
 
-          {tasks.map((task) => {
-            const dueDateStatus = getDueDateStatus(task.due_date);
-            const canStart = task.status === 'pending' || task.status === 'assigned';
-            const canPause = task.status === 'in_progress';
-            const canComplete = task.status === 'in_progress' || task.status === 'paused';
-            const isSelected = selectedTaskIds.has(task.id);
-
-            return (
-              <div
-                key={task.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all cursor-pointer ${
-                  isSelected ? 'ring-2 ring-blue-500' : ''
-                }`}
-              >
-                <div className="flex items-stretch">
-                  {/* Checkbox Column */}
-                  <div className="flex items-center px-4 border-r dark:border-gray-700">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleTaskSelection(task.id)}
-                    />
-                  </div>
-
-                  {/* Main Content */}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between">
-                      <button
-                        type="button"
-                        className="flex-1 cursor-pointer text-left"
-                        onClick={() => onSelectTask?.(task.id)}
-                      >
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          {getStatusIcon(task.status)}
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            {task.title}
-                          </h3>
-                          {task.task_type === 'harvesting' && (
-                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                              <Wheat className="w-3 h-3 mr-1" />
-                              {t('tasks.type.harvesting', 'Harvest')}
-                            </span>
-                          )}
-                          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                            {getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr')}
-                          </span>
-                          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
-                            {getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr')}
-                          </span>
-                          {/* Due Date Indicator */}
-                          {dueDateStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
-                            <span className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${dueDateStatus.color}`}>
-                              <dueDateStatus.icon className="w-3 h-3 mr-1" />
-                              {dueDateStatus.label}
-                            </span>
-                          )}
-                        </div>
-
-                        {task.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                            {task.description}
-                          </p>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                          {task.worker_name && (
-                            <div className="flex items-center gap-1">
-                              <User className="w-4 h-4" />
-                              <span>{task.worker_name}</span>
-                            </div>
-                          )}
-
-                          {task.farm_name && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              <span>{task.farm_name}</span>
-                              {task.parcel_name && <span> - {task.parcel_name}</span>}
-                            </div>
-                          )}
-
-                          {task.scheduled_start && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>
-                                {formatDistance(new Date(task.scheduled_start), new Date(), {
-                                  addSuffix: true,
-                                  locale: getLocale(),
-                                })}
-                              </span>
-                            </div>
-                          )}
-
-                          {task.estimated_duration && (
-                            <div className="flex items-center gap-1">
-                              <Timer className="w-4 h-4" />
-                              <span>{task.estimated_duration}h {t('tasks.estimated', 'est.')}</span>
-                            </div>
-                          )}
-
-                          {task.actual_duration && task.actual_duration > 0 && (
-                            <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                              <Clock className="w-4 h-4" />
-                              <span>{task.actual_duration}h {t('tasks.logged', 'logged')}</span>
-                            </div>
-                          )}
-
-                          {/* Comment count */}
-                          {task.comment_count && task.comment_count > 0 && (
-                            <div className="flex items-center gap-1">
-                              <MessageSquare className="w-4 h-4" />
-                              <span>{task.comment_count}</span>
-                            </div>
-                          )}
-
-                          {/* Checklist indicator */}
-                          {task.checklist && task.checklist.length > 0 && (
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <ListChecks className="w-3.5 h-3.5" />
-                              <span className="text-xs">
-                                {task.checklist.filter((item: { completed?: boolean }) => item.completed).length}/{task.checklist.length}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Attachment count */}
-                          {task.attachments && task.attachments.length > 0 && (
-                            <div className="flex items-center gap-1 text-gray-500">
-                              <Paperclip className="w-3.5 h-3.5" />
-                              <span className="text-xs">{task.attachments.length}</span>
-                            </div>
-                          )}
-
-                          {/* Recurring indicator */}
-                          {task.repeat_pattern && (
-                            <div className="flex items-center gap-1 text-purple-500" title={`Recurring: ${task.repeat_pattern.frequency}`}>
-                              <Repeat className="w-3.5 h-3.5" />
-                            </div>
-                          )}
-
-                          {/* Parent task indicator */}
-                          {task.parent_task_id && (
-                            <div className="flex items-center gap-1 text-indigo-500" title="Part of recurring series">
-                              <GitBranch className="w-3.5 h-3.5" />
-                            </div>
-                          )}
-                        </div>
-
-                        {task.completion_percentage > 0 && task.status !== 'completed' && (
-                          <div className="mt-3">
-                            <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                              <span>{t('tasks.listPage.progress')}</span>
-                              <span>{task.completion_percentage}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                                style={{ width: `${task.completion_percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </button>
-
-                      {/* Quick Actions */}
-                      <div className="flex items-center gap-2 ml-2 sm:ml-4">
-                        {/* Show quick action buttons only on desktop */}
-                        <div className="hidden md:flex items-center gap-2">
-                          {canStart && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                              onClick={(e) => handleQuickStart(e, task.id)}
-                              disabled={updateTask.isPending}
-                            >
-                              <Play className="w-4 h-4 mr-1" />
-                              {t('tasks.start', 'Start')}
-                            </Button>
-                          )}
-
-                          {canPause && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-amber-600 border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
-                              onClick={(e) => handleQuickPause(e, task.id)}
-                              disabled={updateTask.isPending}
-                            >
-                              <Pause className="w-4 h-4 mr-1" />
-                              {t('tasks.pause', 'Pause')}
-                            </Button>
-                          )}
-
-                          {canComplete && (
-                            <Button variant="green" size="sm" onClick={(e) => handleQuickComplete(e, task)}
-                              disabled={updateTask.isPending}
-                            >
-                              <CheckCircle className="w-4 h-4 mr-1" />
-                              {task.task_type === 'harvesting'
-                                ? t('tasks.completeHarvest', 'Harvest')
-                                : t('tasks.complete', 'Complete')}
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* More Actions Dropdown - always visible */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button size="sm" variant="ghost">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onSelectTask?.(task.id)}>
-                              {t('tasks.viewDetails', 'View Details')}
-                            </DropdownMenuItem>
-                            {/* Show quick actions in dropdown on mobile */}
-                            <div className="md:hidden">
-                              <DropdownMenuSeparator />
-                              {canStart && (
-                                <DropdownMenuItem onClick={(e) => handleQuickStart(e as unknown as React.MouseEvent, task.id)}>
-                                  <Play className="w-4 h-4 mr-2 text-blue-600" />
-                                  {t('tasks.start', 'Start')}
-                                </DropdownMenuItem>
-                              )}
-                              {canPause && (
-                                <DropdownMenuItem onClick={(e) => handleQuickPause(e as unknown as React.MouseEvent, task.id)}>
-                                  <Pause className="w-4 h-4 mr-2 text-amber-600" />
-                                  {t('tasks.pause', 'Pause')}
-                                </DropdownMenuItem>
-                              )}
-                              {canComplete && (
-                                <DropdownMenuItem onClick={(e) => handleQuickComplete(e as unknown as React.MouseEvent, task)}>
-                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                  {task.task_type === 'harvesting'
-                                    ? t('tasks.completeHarvest', 'Harvest')
-                                    : t('tasks.complete', 'Complete')}
-                                </DropdownMenuItem>
-                              )}
-                            </div>
-                            <DropdownMenuSeparator />
-                            {task.status !== 'cancelled' && (
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  await updateTask.mutateAsync({
-                                    taskId: task.id,
-                                    organizationId,
-                                    updates: { status: 'cancelled' },
-                                  });
-                                  queryClient.invalidateQueries({ queryKey: ['tasks'] });
-                                }}
-                              >
-                                <AlertCircle className="w-4 h-4 mr-2" />
-                                {t('tasks.cancel', 'Cancel Task')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        <ResponsiveList
+          items={tasks}
+          isLoading={isLoading}
+          isFetching={isFetching}
+          keyExtractor={(task) => task.id}
+          renderCard={renderTaskCard}
+          renderTable={renderTaskTableRow}
+          renderTableHeader={(
+            <tr>
+              <th className="px-4 py-3 text-left w-12">
+                <Checkbox
+                  checked={selectedTaskIds.size === tasks.length && tasks.length > 0}
+                  onCheckedChange={toggleAllTasks}
+                />
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.listPage.title')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.assignee', 'Assignee & Farm')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.priority', 'Priority')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.status.label', 'Status')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.dueDate', 'Due date')}
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('common.actions', 'Actions')}
+              </th>
+            </tr>
+          )}
+          emptyIcon={ClipboardList}
+          emptyTitle={tableState.search || filterStatus !== 'all' ? undefined : t('tasks.listPage.empty.title')}
+          emptyMessage={emptyMessage}
+          emptyAction={onCreateTask && !(tableState.search || filterStatus !== 'all') ? {
+            label: t('tasks.listPage.newTask'),
+            onClick: onCreateTask,
+          } : undefined}
+          emptyExtra={tableState.search || filterStatus !== 'all' ? undefined : (
+            <EmptyState
+              variant="inline"
+              description={t('tasks.listPage.empty.description')}
+              showCircularContainer={false}
+              className="bg-transparent p-0"
+            />
+          )}
+        />
+      </div>
     </ListPageLayout>
   );
 };

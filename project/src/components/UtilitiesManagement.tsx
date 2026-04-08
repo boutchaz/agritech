@@ -1,6 +1,6 @@
-import {  useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy  } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, BookOpen, Loader2 } from 'lucide-react';
+import { Plus, X, Edit2, Trash2, Zap, Droplets, Fuel, Wifi, Phone, Grid, List, Calendar, Upload, FileText, Download, Filter, ChevronUp, ChevronDown, BarChart3, BookOpen } from 'lucide-react';
 import { storageApi } from '../lib/api/storage';
 
 // Lazy load heavy dashboard component with charts
@@ -19,7 +19,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useRoleBasedAccess, PermissionGuard } from '../hooks/useRoleBasedAccess';
 import { useCurrency } from '../hooks/useCurrency';
 import InlineFarmSelector from './InlineFarmSelector';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
 
@@ -70,7 +71,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 
 const UtilitiesManagement = () => {
   const { currentOrganization, currentFarm, user } = useAuth();
-  const { _hasPermission, _hasRole, _userRole } = useRoleBasedAccess();
+  const { hasPermission } = useRoleBasedAccess();
   const { format: formatCurrency, symbol: currency } = useCurrency();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
@@ -85,10 +86,25 @@ const UtilitiesManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUtility, setEditingUtility] = useState<Utility | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'grouped' | 'list' | 'dashboard'>('grouped');
+  const [searchTerm, setSearchTerm] = useState('');
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const navigate = useNavigate();
   const accountIdCacheRef = useRef<Record<string, string>>({});
+  const canCreateUtility = hasPermission('utilities', 'create');
+
+  const resetFilters = useCallback(() => {
+    setSearchTerm('');
+    setFilters((prev) => ({
+      dateRange: { start: '', end: '' },
+      paymentStatus: 'all',
+      utilityType: 'all',
+      isRecurring: 'all',
+      showFilters: prev.showFilters,
+    }));
+    setSortBy('billing_date');
+    setSortOrder('desc');
+  }, []);
 
   // Advanced filtering state
   const [filters, setFilters] = useState({
@@ -155,15 +171,19 @@ const UtilitiesManagement = () => {
   }, [currentOrganization?.id, currentFarm?.id]);
 
   // Helper function to calculate unit cost
-  const calculateUnitCost = (amount: number, consumptionValue?: number): string => {
+  const calculateUnitCost = useCallback((amount: number, consumptionValue?: number): string => {
     if (!consumptionValue || consumptionValue === 0) return '';
     return (amount / consumptionValue).toFixed(4);
-  };
+  }, []);
 
   // Helper function to get available units for utility type
   const getAvailableUnits = (type: string): string[] => {
     return CONSUMPTION_UNITS[type] || CONSUMPTION_UNITS.other;
   };
+
+  const getUtilityLabel = useCallback((type: string) => {
+    return UTILITY_TYPES.find((ut) => ut.value === type)?.label || type;
+  }, []);
 
    // Helper function to upload invoice file
    const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
@@ -203,13 +223,10 @@ const UtilitiesManagement = () => {
     }
   };
 
-  useEffect(() => {
-    fetchUtilities();
-  }, [currentFarm?.id]);
-
   // Filter and sort utilities
   const filteredAndSortedUtilities = useMemo(() => {
     let filtered = [...utilities];
+    const normalizedSearch = searchTerm.trim().toLowerCase();
 
     // Apply date range filter
     if (filters.dateRange.start) {
@@ -236,6 +253,30 @@ const UtilitiesManagement = () => {
       );
     }
 
+    if (normalizedSearch) {
+      filtered = filtered.filter((utility) => {
+        const searchableFields = [
+          utility.type,
+          getUtilityLabel(utility.type),
+          utility.provider,
+          utility.account_number,
+          utility.notes,
+          utility.payment_status,
+          utility.billing_date,
+          utility.consumption_unit,
+          utility.recurring_frequency,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return searchableFields.includes(normalizedSearch)
+          || utility.amount.toString().includes(normalizedSearch)
+          || utility.consumption_value?.toString().includes(normalizedSearch)
+          || new Date(utility.billing_date).toLocaleDateString('fr-FR').toLowerCase().includes(normalizedSearch);
+      });
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       let comparison = 0;
@@ -258,7 +299,7 @@ const UtilitiesManagement = () => {
     });
 
     return filtered;
-  }, [utilities, filters, sortBy, sortOrder]);
+  }, [utilities, filters, sortBy, sortOrder, searchTerm, getUtilityLabel]);
 
   // Group filtered utilities by type
   const groupedUtilities = useMemo(() => {
@@ -290,10 +331,25 @@ const UtilitiesManagement = () => {
     };
   }, [filteredAndSortedUtilities]);
 
-  // Helper function to get utility label
-  const getUtilityLabel = useCallback((type: string) => {
-    return UTILITY_TYPES.find(ut => ut.value === type)?.label || type;
-  }, []);
+  const groupedUtilityEntries = useMemo(() => (
+    Object.entries(groupedUtilities).map(([type, typeUtilities]) => ({
+      type,
+      utilities: typeUtilities,
+      total: typeUtilities.reduce((sum, utility) => sum + utility.amount, 0),
+      recurringCount: typeUtilities.filter((utility) => utility.is_recurring).length,
+    }))
+  ), [groupedUtilities]);
+
+  const hasActiveFilters = useMemo(() => (
+    Boolean(
+      searchTerm.trim()
+      || filters.dateRange.start
+      || filters.dateRange.end
+      || filters.paymentStatus !== 'all'
+      || filters.utilityType !== 'all'
+      || filters.isRecurring !== 'all'
+    )
+  ), [searchTerm, filters]);
 
   const syncUtilityJournalEntry = useCallback(async (utility: Utility) => {
     if (!currentOrganization?.id || !user?.id) {
@@ -425,7 +481,7 @@ const UtilitiesManagement = () => {
       .map(utility => ({
         name: `${getUtilityLabel(utility.type)} - ${new Date(utility.billing_date).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })}`,
         amount: utility.amount,
-        consumption: utility.consumption_value,
+        consumption: utility.consumption_value ?? 0,
         unitCost: parseFloat(calculateUnitCost(utility.amount, utility.consumption_value)),
         unit: utility.consumption_unit || '',
         type: utility.type
@@ -437,9 +493,9 @@ const UtilitiesManagement = () => {
       costByType,
       consumptionData
     };
-  }, [filteredAndSortedUtilities, getUtilityLabel]);
+  }, [filteredAndSortedUtilities, getUtilityLabel, calculateUnitCost]);
 
-  const fetchUtilities = async () => {
+  const fetchUtilities = useCallback(async () => {
     try {
       if (!currentFarm?.id || !currentOrganization?.id) {
         setUtilities([]);
@@ -455,7 +511,11 @@ const UtilitiesManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentFarm?.id, currentOrganization?.id]);
+
+  useEffect(() => {
+    fetchUtilities();
+  }, [fetchUtilities]);
 
   const handleAddUtility = async () => {
     try {
@@ -483,8 +543,9 @@ const UtilitiesManagement = () => {
 
       const createdUtility = await utilitiesApi.create(currentOrganization.id, {
         ...newUtility,
+        journal_entry_id: undefined,
         farm_id: currentFarm.id,
-        invoice_url: invoiceUrl,
+        invoice_url: invoiceUrl ?? undefined,
         type: newUtility.type as Utility['type'],
         payment_status: newUtility.payment_status as Utility['payment_status'],
         amount: newUtility.amount || 0,
@@ -578,7 +639,10 @@ const UtilitiesManagement = () => {
         currentOrganization.id,
         currentFarm.id,
         editingUtility.id,
-        editingUtility
+        {
+          ...editingUtility,
+          journal_entry_id: editingUtility.journal_entry_id ?? undefined,
+        }
       );
 
       try {
@@ -640,803 +704,418 @@ const UtilitiesManagement = () => {
     const Icon = utilityType?.icon || Plus;
     return <Icon className="h-6 w-6" />;
   };
+  const getUtilityColorClasses = (type: Utility['type']) => (
+    type === 'electricity' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' :
+    type === 'water' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' :
+    type === 'diesel' ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
+    type === 'gas' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
+    type === 'internet' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' :
+    type === 'phone' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400' :
+    'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400'
+  );
 
-  if (loading) {
-    return (
-      <SectionLoader />
-    );
-  }
+  const getPaymentStatusLabel = (status: Utility['payment_status']) => (
+    status === 'paid' ? 'Payé' : status === 'pending' ? 'En attente' : 'En retard'
+  );
+
+  const getPaymentStatusClasses = (status: Utility['payment_status']) => (
+    status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+    status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+    'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+  );
+
+  const emptyAction = !currentFarm?.id
+    ? undefined
+    : hasActiveFilters
+      ? { label: 'Réinitialiser les filtres', onClick: resetFilters, variant: 'outline' as const }
+      : canCreateUtility
+        ? { label: 'Ajouter une charge', onClick: () => setShowAddModal(true) }
+        : undefined;
+
+  const emptyTitle = hasActiveFilters ? 'Aucun résultat trouvé' : 'Aucune charge fixe';
+  const emptyMessage = hasActiveFilters
+    ? 'Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.'
+    : 'Commencez par ajouter vos premières charges fixes (électricité, eau, etc.).';
+
+  const renderUtilityActions = (utility: Utility) => (
+    <div className="flex items-center justify-end gap-2">
+      {utility.invoice_url && (
+        <Button
+          onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
+          className="text-blue-400 hover:text-blue-500"
+          title="Télécharger la facture"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+      )}
+      <PermissionGuard resource="utilities" action="update">
+        <Button onClick={() => setEditingUtility(utility)} className="text-gray-400 hover:text-gray-500">
+          <Edit2 className="h-4 w-4" />
+        </Button>
+      </PermissionGuard>
+      <PermissionGuard resource="utilities" action="delete">
+        <Button onClick={() => handleDeleteUtility(utility.id)} className="text-gray-400 hover:text-red-500">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </PermissionGuard>
+    </div>
+  );
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header with responsive layout */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="hidden sm:block text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion des Charges Fixes
-        </h2>
+    <>
+      <ListPageLayout
+      header={
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gestion des Charges Fixes</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Suivez les charges fixes, la consommation et les écritures comptables liées.
+              </p>
+            </div>
 
-        {/* Mobile: Add button at top */}
-        <div className="sm:hidden">
-          <Button
-            onClick={() => setShowAddModal(true)}
-            disabled={!currentFarm?.id}
-            variant={currentFarm?.id ? 'green' : undefined}
-            className={`w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''} shadow-md`}
-            title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
-          >
-            <Plus className="h-5 w-5" />
-            <span className="font-medium">Nouvelle Charge</span>
-          </Button>
-        </div>
+            <div className="flex flex-col gap-3 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  onClick={() => navigate({ to: '/accounting/journal' })}
+                  className="flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>Journal Comptable</span>
+                </Button>
 
-        {/* Desktop controls */}
-        <div className="hidden sm:flex items-center space-x-4">
-          <Button
-            onClick={() => navigate({ to: '/accounting-journal' })}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <BookOpen className="h-4 w-4" />
-            <span>Journal Comptable</span>
-          </Button>
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  disabled={!currentFarm?.id}
+                  variant={currentFarm?.id ? 'green' : undefined}
+                  className={!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}
+                  title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvelle Charge
+                </Button>
+              </div>
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <Button
-              onClick={() => setViewMode('grouped')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-              title="Vue groupée"
-            >
-              <Grid className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={() => setViewMode('cards')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-              title="Vue cartes"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-              title="Vue liste"
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
-            <Button
-              onClick={() => setViewMode('dashboard')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-              title="Vue tableau de bord"
-            >
-              <BarChart3 className="h-4 w-4" />
-            </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
+                  <Button onClick={() => setViewMode('grouped')} className={`p-2 ${viewMode === 'grouped' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue groupée"><Grid className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('cards')} className={`p-2 ${viewMode === 'cards' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue cartes"><List className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue liste"><Calendar className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('dashboard')} className={`p-2 ${viewMode === 'dashboard' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue tableau de bord"><BarChart3 className="h-4 w-4" /></Button>
+                </div>
+
+                <Button
+                  onClick={() => setFilters((prev) => ({ ...prev, showFilters: !prev.showFilters }))}
+                  className={`flex items-center gap-2 border px-3 py-2 ${filters.showFilters ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
+                  title="Filtres avancés"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="text-sm">Filtres</span>
+                  {filters.showFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                </Button>
+              </div>
+            </div>
           </div>
-
-          {/* Filter and Sort Controls */}
-          <Button
-            onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
-            className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'} hover:bg-blue-50 dark:hover:bg-blue-900/20`}
-            title="Filtres et tri"
-          >
-            <Filter className="h-4 w-4" />
-            <span className="text-sm">Filtres</span>
-            {filters.showFilters ? (
-              <ChevronUp className="h-3 w-3" />
-            ) : (
-              <ChevronDown className="h-3 w-3" />
-            )}
-          </Button>
-
-          <Button
-            onClick={() => setShowAddModal(true)}
-            disabled={!currentFarm?.id}
-            variant={currentFarm?.id ? 'green' : undefined}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
-            title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
-          >
-            <Plus className="h-5 w-5" />
-            <span>Nouvelle Charge</span>
-          </Button>
         </div>
-      </div>
+      }
+      filters={
+        <div className="space-y-4">
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Rechercher par type, montant, note ou date..."
+            filters={[
+              {
+                key: 'paymentStatus',
+                value: filters.paymentStatus,
+                onChange: (value) => setFilters((prev) => ({ ...prev, paymentStatus: value as typeof prev.paymentStatus })),
+                options: [
+                  { value: 'all', label: 'Tous les statuts' },
+                  { value: 'pending', label: 'En attente' },
+                  { value: 'paid', label: 'Payé' },
+                  { value: 'overdue', label: 'En retard' },
+                ],
+              },
+              {
+                key: 'utilityType',
+                value: filters.utilityType,
+                onChange: (value) => setFilters((prev) => ({ ...prev, utilityType: value })),
+                options: [
+                  { value: 'all', label: 'Tous les types' },
+                  ...UTILITY_TYPES.map((type) => ({ value: type.value, label: type.label })),
+                ],
+              },
+              {
+                key: 'isRecurring',
+                value: filters.isRecurring,
+                onChange: (value) => setFilters((prev) => ({ ...prev, isRecurring: value as typeof prev.isRecurring })),
+                options: [
+                  { value: 'all', label: 'Toutes' },
+                  { value: 'recurring', label: 'Récurrentes' },
+                  { value: 'non-recurring', label: 'Non récurrentes' },
+                ],
+              },
+            ]}
+            onClear={resetFilters}
+          />
 
-      {/* Mobile: View mode and filter toggle */}
-      <div className="sm:hidden flex items-center gap-2">
-        <div className="flex-1 flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 overflow-x-auto">
-          <Button
-            onClick={() => setViewMode('grouped')}
-            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'grouped' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-            title="Vue groupée"
-          >
-            <Grid className="h-4 w-4 mx-auto" />
-          </Button>
-          <Button
-            onClick={() => setViewMode('cards')}
-            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'cards' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-            title="Vue cartes"
-          >
-            <List className="h-4 w-4 mx-auto" />
-          </Button>
-          <Button
-            onClick={() => setViewMode('list')}
-            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-            title="Vue liste"
-          >
-            <Calendar className="h-4 w-4 mx-auto" />
-          </Button>
-          <Button
-            onClick={() => setViewMode('dashboard')}
-            className={`flex-1 p-2 rounded-md transition-colors whitespace-nowrap ${viewMode === 'dashboard' ? 'bg-white dark:bg-gray-600 shadow-sm' : ''}`}
-            title="Vue tableau de bord"
-          >
-            <BarChart3 className="h-4 w-4 mx-auto" />
-          </Button>
-        </div>
-
-        <Button
-          onClick={() => setFilters(prev => ({ ...prev, showFilters: !prev.showFilters }))}
-          className={`flex items-center space-x-2 px-3 py-2 border rounded-lg transition-colors ${filters.showFilters ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'}`}
-        >
-          <Filter className="h-4 w-4" />
-          {filters.showFilters ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
+          {filters.showFilters && (
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <label htmlFor="utility-start-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date début</label>
+                  <Input
+                    id="utility-start-date"
+                    type="date"
+                    value={filters.dateRange.start}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dateRange: { ...prev.dateRange, start: e.target.value } }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="utility-end-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date fin</label>
+                  <Input
+                    id="utility-end-date"
+                    type="date"
+                    value={filters.dateRange.end}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dateRange: { ...prev.dateRange, end: e.target.value } }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="utility-sort-by" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Trier par</label>
+                  <Select id="utility-sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+                    <option value="billing_date">Date</option>
+                    <option value="amount">Montant</option>
+                    <option value="type">Type</option>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="utility-sort-order" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Ordre</label>
+                  <Select id="utility-sort-order" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}>
+                    <option value="desc">Décroissant</option>
+                    <option value="asc">Croissant</option>
+                  </Select>
+                </div>
+              </div>
+            </div>
           )}
-        </Button>
-      </div>
-
-      {/* Advanced Filters Panel */}
-      {filters.showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* Date Range Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Période
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={filters.dateRange.start}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    dateRange: { ...prev.dateRange, start: e.target.value }
-                  }))}
-                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Du"
-                />
-                <input
-                  type="date"
-                  value={filters.dateRange.end}
-                  onChange={(e) => setFilters(prev => ({
-                    ...prev,
-                    dateRange: { ...prev.dateRange, end: e.target.value }
-                  }))}
-                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Au"
-                />
-              </div>
-            </div>
-
-            {/* Payment Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Statut de paiement
-              </label>
-              <select
-                value={filters.paymentStatus}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  paymentStatus: e.target.value as typeof filters.paymentStatus
-                }))}
-                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="all">Tous</option>
-                <option value="pending">En attente</option>
-                <option value="paid">Payé</option>
-                <option value="overdue">En retard</option>
-              </select>
-            </div>
-
-            {/* Utility Type Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Type de charge
-              </label>
-              <select
-                value={filters.utilityType}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  utilityType: e.target.value
-                }))}
-                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="all">Tous les types</option>
-                {UTILITY_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Recurring Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Récurrence
-              </label>
-              <select
-                value={filters.isRecurring}
-                onChange={(e) => setFilters(prev => ({
-                  ...prev,
-                  isRecurring: e.target.value as typeof filters.isRecurring
-                }))}
-                className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="all">Toutes</option>
-                <option value="recurring">Récurrentes</option>
-                <option value="non-recurring">Non récurrentes</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Sort Controls */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-600">
-            <div className="flex items-center space-x-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Trier par
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="billing_date">Date</option>
-                  <option value="amount">Montant</option>
-                  <option value="type">Type</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ordre
-                </label>
-                <select
-                  value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
-                  className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                >
-                  <option value="desc">Décroissant</option>
-                  <option value="asc">Croissant</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Clear Filters Button */}
-            <Button
-              onClick={() => {
-                setFilters({
-                  dateRange: { start: '', end: '' },
-                  paymentStatus: 'all',
-                  utilityType: 'all',
-                  isRecurring: 'all',
-                  showFilters: filters.showFilters
-                });
-                setSortBy('billing_date');
-                setSortOrder('desc');
-              }}
-              className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md"
-            >
-              Réinitialiser
-            </Button>
-          </div>
         </div>
-      )}
-
-      {/* Summary Cards */}
-      {utilities.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total des charges</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.total)}</p>
-              </div>
-            </div>
+      }
+      stats={
+        !loading && utilities.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20"><Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total des charges</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.total)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/20"><Calendar className="h-6 w-6 text-green-600 dark:text-green-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Charges récurrentes</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.recurring)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/20"><Edit2 className="h-6 w-6 text-yellow-600 dark:text-yellow-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">En attente</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.pending)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/20"><List className="h-6 w-6 text-purple-600 dark:text-purple-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nombre total</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.count}</p></div></div></div>
           </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <Calendar className="h-6 w-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Charges récurrentes</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.recurring)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
-                <Edit2 className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">En attente</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.pending)}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                <List className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nombre total</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.count}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
+        ) : undefined
+      }
+    >
       <InlineFarmSelector message="Sélectionnez une ferme pour gérer les charges fixes." />
 
       {error && (
-        <div className={`p-4 rounded-lg border ${
-          error.includes('✓')
-            ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700'
-            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
-        }`}>
+        <div className={`rounded-lg border p-4 ${error.includes('✓') ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20' : 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20'}`}>
           <div className="flex items-start space-x-3">
             <div className="flex-1">
-              <p className={`text-sm whitespace-pre-line ${
-                error.includes('✓')
-                  ? 'text-yellow-800 dark:text-yellow-300'
-                  : 'text-red-600 dark:text-red-400'
-              }`}>
-                {error}
-              </p>
+              <p className={`text-sm whitespace-pre-line ${error.includes('✓') ? 'text-yellow-800 dark:text-yellow-300' : 'text-red-600 dark:text-red-400'}`}>{error}</p>
               {error.includes('plan comptable') && (
                 <div className="mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate({ to: '/accounting-accounts' })}
-                    className="border-yellow-600 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-500 dark:text-yellow-400"
-                  >
-                    <BookOpen className="h-4 w-4 mr-2" />
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: '/accounting/accounts' })} className="border-yellow-600 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-500 dark:text-yellow-400">
+                    <BookOpen className="mr-2 h-4 w-4" />
                     Ouvrir le Plan Comptable
                   </Button>
                 </div>
               )}
             </div>
-            <Button
-              onClick={() => setError(null)}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <Button onClick={() => setError(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"><X className="h-5 w-5" /></Button>
           </div>
         </div>
       )}
 
-      {/* Empty State - No utilities at all */}
-      {utilities.length === 0 && !loading && currentFarm?.id && (
-        <div className="text-center py-12">
-          <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-            <Zap className="h-12 w-12 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune charge fixe
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)
-          </p>
-          <PermissionGuard resource="utilities" action="create">
-            <Button variant="green"
-              onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter une charge
-            </Button>
-          </PermissionGuard>
-        </div>
-      )}
-
-      {/* Empty State - No results after filtering */}
-      {utilities.length > 0 && filteredAndSortedUtilities.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-            <Filter className="h-12 w-12 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucun résultat trouvé
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">
-            Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.
-          </p>
-          <Button
-            onClick={() => {
-              setFilters({
-                dateRange: { start: '', end: '' },
-                paymentStatus: 'all',
-                utilityType: 'all',
-                isRecurring: 'all',
-                showFilters: filters.showFilters
-              });
-              setSortBy('billing_date');
-              setSortOrder('desc');
-            }}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            Réinitialiser les filtres
-          </Button>
-        </div>
-      )}
-
-      {/* Utilities Display */}
-      {viewMode === 'grouped' && (
-        <div className="space-y-6">
-          {Object.entries(groupedUtilities).map(([type, typeUtilities]) => {
-            const typeTotal = typeUtilities.reduce((sum, u) => sum + u.amount, 0);
-            const typeRecurring = typeUtilities.filter(u => u.is_recurring).length;
-
-            return (
-              <div key={type} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${
-                        type === 'electricity' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                        type === 'water' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' :
-                        type === 'diesel' ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                        type === 'gas' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
-                        type === 'internet' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' :
-                        type === 'phone' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400' :
-                        'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400'
-                      }`}>
-                        {getUtilityIcon(type)}
-                      </div>
+      {!currentFarm?.id ? null : viewMode === 'grouped' ? (
+        loading && groupedUtilityEntries.length === 0 ? (
+          <ResponsiveList
+            items={[]}
+            isLoading
+            keyExtractor={() => ''}
+            renderCard={() => null}
+            renderTable={() => null}
+            emptyIcon={Zap}
+            emptyMessage={emptyMessage}
+          />
+        ) : groupedUtilityEntries.length === 0 ? (
+          <ResponsiveList
+            items={[]}
+            keyExtractor={() => ''}
+            renderCard={() => null}
+            renderTable={() => null}
+            emptyIcon={hasActiveFilters ? Filter : Zap}
+            emptyTitle={emptyTitle}
+            emptyMessage={emptyMessage}
+            emptyAction={emptyAction}
+          />
+        ) : (
+          <div className="space-y-6">
+            {groupedUtilityEntries.map((group) => (
+              <div key={group.type} className="rounded-lg bg-white shadow-sm dark:bg-gray-800">
+                <div className="border-b border-gray-200 p-4 dark:border-gray-700">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`rounded-lg p-2 ${getUtilityColorClasses(group.type as Utility['type'])}`}>{getUtilityIcon(group.type)}</div>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {getUtilityLabel(type)}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {typeUtilities.length} entrée{typeUtilities.length !== 1 ? 's' : ''}
-                          {typeRecurring > 0 && ` • ${typeRecurring} récurrente${typeRecurring !== 1 ? 's' : ''}`}
-                        </p>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{getUtilityLabel(group.type)}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{group.utilities.length} entrée{group.utilities.length !== 1 ? 's' : ''}{group.recurringCount > 0 ? ` • ${group.recurringCount} récurrente${group.recurringCount !== 1 ? 's' : ''}` : ''}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(typeTotal)}
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Total
-                      </p>
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(group.total)}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
                     </div>
                   </div>
                 </div>
-                <div className="p-4 space-y-3">
-                  {typeUtilities.map(utility => (
-                    <div key={utility.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {formatCurrency(utility.amount)}
-                          </span>
-                          {utility.is_recurring && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Récurrent
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {new Date(utility.billing_date).toLocaleDateString()}
-                          {utility.consumption_value && utility.consumption_value > 0 &&
-                            ` • ${utility.consumption_value} ${utility.consumption_unit}`}
-                          {utility.consumption_value && utility.consumption_value > 0 &&
-                            ` • ${calculateUnitCost(utility.amount, utility.consumption_value)} ${currency}/${utility.consumption_unit}`}
-                          {utility.notes && ` • ${utility.notes}`}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        {utility.invoice_url && (
-                          <Button
-                            onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
-                            className="text-blue-400 hover:text-blue-500"
-                            title="Télécharger la facture"
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <PermissionGuard resource="utilities" action="update">
-                          <Button
-                            onClick={() => setEditingUtility(utility)}
-                            className="text-gray-400 hover:text-gray-500"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </PermissionGuard>
-                        <PermissionGuard resource="utilities" action="delete">
-                          <Button
-                            onClick={() => handleDeleteUtility(utility.id)}
-                            className="text-gray-400 hover:text-red-500"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </PermissionGuard>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
 
-      {viewMode === 'cards' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedUtilities.map(utility => (
-            <div
-              key={utility.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className={`p-2 rounded-lg ${
-                    utility.type === 'electricity' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                    utility.type === 'water' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' :
-                    utility.type === 'diesel' ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                    utility.type === 'gas' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
-                    utility.type === 'internet' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' :
-                    utility.type === 'phone' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400' :
-                    'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400'
-                  }`}>
-                    {getUtilityIcon(utility.type)}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {getUtilityLabel(utility.type)}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(utility.billing_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <PermissionGuard resource="utilities" action="update">
-                    <Button
-                      onClick={() => setEditingUtility(utility)}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <Edit2 className="h-5 w-5" />
-                    </Button>
-                  </PermissionGuard>
-                  <PermissionGuard resource="utilities" action="delete">
-                    <Button
-                      onClick={() => handleDeleteUtility(utility.id)}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </PermissionGuard>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600 dark:text-gray-400">Montant</span>
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</span>
-                </div>
-                {utility.consumption_value && utility.consumption_value > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-500 dark:text-gray-500 text-sm">Consommation</span>
-                    <span className="text-sm text-gray-700 dark:text-gray-300">
-                      {utility.consumption_value} {utility.consumption_unit}
-                    </span>
-                  </div>
-                )}
-                {utility.consumption_value && utility.consumption_value > 0 && (
-                  <div className="flex justify-between items-center bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                    <span className="text-blue-700 dark:text-blue-400 text-sm font-medium">Coût unitaire</span>
-                    <span className="text-blue-800 dark:text-blue-300 font-semibold">
-                      {calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}
-                    </span>
-                  </div>
-                )}
-                {utility.is_recurring && (
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm text-green-600 dark:text-green-400">
-                      Récurrent ({utility.recurring_frequency})
-                    </span>
-                  </div>
-                )}
-                {utility.notes && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                    {utility.notes}
-                  </p>
-                )}
-                {utility.invoice_url && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <FileText className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    <Button
-                      onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Télécharger la facture
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {viewMode === 'list' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-          <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <TableHeader className="bg-gray-50 dark:bg-gray-700">
-              <TableRow>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Type
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Montant
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Consommation
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Date
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Statut
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredAndSortedUtilities.map(utility => (
-                <TableRow key={utility.id}>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className={`p-2 rounded-lg mr-3 ${
-                        utility.type === 'electricity' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                        utility.type === 'water' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' :
-                        utility.type === 'diesel' ? 'bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' :
-                        utility.type === 'gas' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400' :
-                        utility.type === 'internet' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' :
-                        utility.type === 'phone' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400' :
-                        'bg-gray-100 text-gray-600 dark:bg-gray-900/20 dark:text-gray-400'
-                      }`}>
-                        {getUtilityIcon(utility.type)}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {getUtilityLabel(utility.type)}
-                        </div>
-                        {utility.is_recurring && (
-                          <div className="text-xs text-green-600 dark:text-green-400">
-                            Récurrent ({utility.recurring_frequency})
+                <div className="p-4">
+                  <ResponsiveList
+                    items={group.utilities}
+                    keyExtractor={(utility) => utility.id}
+                    renderCard={(utility) => (
+                      <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</span>
+                              {utility.is_recurring && <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900/20 dark:text-green-400"><Calendar className="mr-1 h-3 w-3" />Récurrent</span>}
+                              <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}{utility.consumption_value && utility.consumption_value > 0 ? ` • ${utility.consumption_value} ${utility.consumption_unit}` : ''}{utility.consumption_value && utility.consumption_value > 0 ? ` • ${calculateUnitCost(utility.amount, utility.consumption_value)} ${currency}/${utility.consumption_unit}` : ''}{utility.notes ? ` • ${utility.notes}` : ''}</p>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {formatCurrency(utility.amount)}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {utility.consumption_value && utility.consumption_value > 0 ? (
-                      <div>
-                        <div>{utility.consumption_value} {utility.consumption_unit}</div>
-                        <div className="text-xs text-blue-600 dark:text-blue-400">
-                          {calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}
+                          {renderUtilityActions(utility)}
                         </div>
                       </div>
-                    ) : (
-                      <span className="text-gray-400">-</span>
                     )}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(utility.billing_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      utility.payment_status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                      utility.payment_status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                      'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                    }`}>
-                      {utility.payment_status === 'paid' ? 'Payé' :
-                       utility.payment_status === 'pending' ? 'En attente' : 'En retard'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      {utility.invoice_url && (
-                        <Button
-                          onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
-                          className="text-blue-400 hover:text-blue-500"
-                          title="Télécharger la facture"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <PermissionGuard resource="utilities" action="update">
-                        <Button
-                          onClick={() => setEditingUtility(utility)}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                      </PermissionGuard>
-                      <PermissionGuard resource="utilities" action="delete">
-                        <Button
-                          onClick={() => handleDeleteUtility(utility.id)}
-                          className="text-gray-400 hover:text-red-500"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </PermissionGuard>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Dashboard View */}
-      {viewMode === 'dashboard' && (
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600 dark:text-gray-400">Chargement du tableau de bord...</span>
+                    renderTableHeader={
+                      <TableRow>
+                        <TableHead className="px-6 py-3">Montant</TableHead>
+                        <TableHead className="px-6 py-3">Détails</TableHead>
+                        <TableHead className="px-6 py-3">Statut</TableHead>
+                        <TableHead className="px-6 py-3 text-right">Actions</TableHead>
+                      </TableRow>
+                    }
+                    renderTable={(utility) => (
+                      <>
+                        <TableCell className="px-6 py-4 font-medium text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</TableCell>
+                        <TableCell className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}{utility.consumption_value && utility.consumption_value > 0 ? <div className="text-xs text-blue-600 dark:text-blue-400">{utility.consumption_value} {utility.consumption_unit} • {calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}</div> : null}{utility.notes ? <div className="text-xs text-gray-500 dark:text-gray-400">{utility.notes}</div> : null}</TableCell>
+                        <TableCell className="px-6 py-4"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span></TableCell>
+                        <TableCell className="px-6 py-4">{renderUtilityActions(utility)}</TableCell>
+                      </>
+                    )}
+                    emptyIcon={Zap}
+                    emptyMessage={emptyMessage}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : viewMode === 'cards' ? (
+        <ResponsiveList
+          items={filteredAndSortedUtilities}
+          isLoading={loading}
+          keyExtractor={(utility) => utility.id}
+          renderCard={(utility) => (
+            <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+              <div className="mb-4 flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-lg p-2 ${getUtilityColorClasses(utility.type)}`}>{getUtilityIcon(utility.type)}</div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{getUtilityLabel(utility.type)}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}</p>
+                  </div>
+                </div>
+                {renderUtilityActions(utility)}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between"><span className="text-gray-600 dark:text-gray-400">Montant</span><span className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</span></div>
+                {utility.consumption_value && utility.consumption_value > 0 ? <div className="flex items-center justify-between"><span className="text-sm text-gray-500 dark:text-gray-500">Consommation</span><span className="text-sm text-gray-700 dark:text-gray-300">{utility.consumption_value} {utility.consumption_unit}</span></div> : null}
+                {utility.consumption_value && utility.consumption_value > 0 ? <div className="rounded bg-blue-50 p-2 dark:bg-blue-900/20"><div className="flex items-center justify-between"><span className="text-sm font-medium text-blue-700 dark:text-blue-400">Coût unitaire</span><span className="font-semibold text-blue-800 dark:text-blue-300">{calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}</span></div></div> : null}
+                <div className="flex items-center justify-between"><span className="text-sm text-gray-500 dark:text-gray-500">Statut</span><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span></div>
+                {utility.is_recurring ? <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-green-600 dark:text-green-400" /><span className="text-sm text-green-600 dark:text-green-400">Récurrent ({utility.recurring_frequency})</span></div> : null}
+                {utility.notes ? <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{utility.notes}</p> : null}
+                {utility.invoice_url ? <div className="mt-2 flex items-center gap-2"><FileText className="h-4 w-4 text-green-600 dark:text-green-400" /><span className="text-sm text-gray-600 dark:text-gray-300">Facture attachée</span></div> : null}
+              </div>
             </div>
-          }
-        >
+          )}
+          renderTableHeader={<TableRow><TableHead className="px-6 py-3">Type</TableHead><TableHead className="px-6 py-3">Montant</TableHead><TableHead className="px-6 py-3">Consommation</TableHead><TableHead className="px-6 py-3">Statut</TableHead><TableHead className="px-6 py-3 text-right">Actions</TableHead></TableRow>}
+          renderTable={(utility) => (
+            <>
+              <TableCell className="px-6 py-4"><div className="flex items-center gap-3"><div className={`rounded-lg p-2 ${getUtilityColorClasses(utility.type)}`}>{getUtilityIcon(utility.type)}</div><div><div className="font-medium text-gray-900 dark:text-white">{getUtilityLabel(utility.type)}</div><div className="text-xs text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}</div></div></div></TableCell>
+              <TableCell className="px-6 py-4 font-medium text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</TableCell>
+              <TableCell className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{utility.consumption_value && utility.consumption_value > 0 ? <div><div>{utility.consumption_value} {utility.consumption_unit}</div><div className="text-xs text-blue-600 dark:text-blue-400">{calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}</div></div> : '-'}</TableCell>
+              <TableCell className="px-6 py-4"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span></TableCell>
+              <TableCell className="px-6 py-4">{renderUtilityActions(utility)}</TableCell>
+            </>
+          )}
+          emptyIcon={hasActiveFilters ? Filter : Zap}
+          emptyTitle={emptyTitle}
+          emptyMessage={emptyMessage}
+          emptyAction={emptyAction}
+        />
+      ) : viewMode === 'list' ? (
+        <ResponsiveList
+          items={filteredAndSortedUtilities}
+          isLoading={loading}
+          keyExtractor={(utility) => utility.id}
+          renderCard={(utility) => (
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 gap-3">
+                  <div className={`rounded-lg p-2 ${getUtilityColorClasses(utility.type)}`}>{getUtilityIcon(utility.type)}</div>
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-gray-900 dark:text-white">{getUtilityLabel(utility.type)}</span>{utility.is_recurring ? <span className="text-xs text-green-600 dark:text-green-400">Récurrent ({utility.recurring_frequency})</span> : null}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{utility.consumption_value && utility.consumption_value > 0 ? `${utility.consumption_value} ${utility.consumption_unit} • ${calculateUnitCost(utility.amount, utility.consumption_value)} ${currency}/${utility.consumption_unit}` : 'Aucune consommation renseignée'}</div>
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span>
+                  </div>
+                </div>
+                {renderUtilityActions(utility)}
+              </div>
+            </div>
+          )}
+          renderTableHeader={<TableRow><TableHead className="px-6 py-3">Type</TableHead><TableHead className="px-6 py-3">Montant</TableHead><TableHead className="px-6 py-3">Consommation</TableHead><TableHead className="px-6 py-3">Date</TableHead><TableHead className="px-6 py-3">Statut</TableHead><TableHead className="px-6 py-3 text-right">Actions</TableHead></TableRow>}
+          renderTable={(utility) => (
+            <>
+              <TableCell className="px-6 py-4"><div className="flex items-center gap-3"><div className={`rounded-lg p-2 ${getUtilityColorClasses(utility.type)}`}>{getUtilityIcon(utility.type)}</div><div><div className="text-sm font-medium text-gray-900 dark:text-white">{getUtilityLabel(utility.type)}</div>{utility.is_recurring ? <div className="text-xs text-green-600 dark:text-green-400">Récurrent ({utility.recurring_frequency})</div> : null}</div></div></TableCell>
+              <TableCell className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{formatCurrency(utility.amount)}</TableCell>
+              <TableCell className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{utility.consumption_value && utility.consumption_value > 0 ? <div><div>{utility.consumption_value} {utility.consumption_unit}</div><div className="text-xs text-blue-600 dark:text-blue-400">{calculateUnitCost(utility.amount, utility.consumption_value)} {currency}/{utility.consumption_unit}</div></div> : <span className="text-gray-400">-</span>}</TableCell>
+              <TableCell className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{new Date(utility.billing_date).toLocaleDateString('fr-FR')}</TableCell>
+              <TableCell className="px-6 py-4"><span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getPaymentStatusClasses(utility.payment_status)}`}>{getPaymentStatusLabel(utility.payment_status)}</span></TableCell>
+              <TableCell className="px-6 py-4">{renderUtilityActions(utility)}</TableCell>
+            </>
+          )}
+          emptyIcon={hasActiveFilters ? Filter : Zap}
+          emptyTitle={emptyTitle}
+          emptyMessage={emptyMessage}
+          emptyAction={emptyAction}
+        />
+      ) : (
+        <Suspense fallback={<SectionLoader />}>
           <PermissionGuard
             resource="utilities"
             action="read"
             fallback={
-              <div className="text-center py-12">
-                <div className="mx-auto w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-4">
-                  <BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                  Accès limité au tableau de bord
-                </h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Votre rôle ne permet pas d'accéder aux analyses financières détaillées.
-                </p>
+              <div className="py-12 text-center">
+                <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"><BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500" /></div>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Accès limité au tableau de bord</h3>
+                <p className="text-gray-500 dark:text-gray-400">Votre rôle ne permet pas d'accéder aux analyses financières détaillées.</p>
               </div>
             }
           >
-            <UtilitiesDashboard
-              chartData={chartData}
-              utilities={utilities}
-              currency={currency}
-            />
+            {loading ? <SectionLoader /> : <UtilitiesDashboard chartData={chartData} utilities={utilities} currency={currency} />}
           </PermissionGuard>
         </Suspense>
       )}
+      </ListPageLayout>
 
       {/* Add/Edit Modal */}
       <ResponsiveDialog
@@ -1530,9 +1209,9 @@ const UtilitiesManagement = () => {
               {/* Consumption Tracking Fields - OPTIONAL */}
               <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Détails de consommation (optionnel)
-                  </label>
+                  </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     Laissez vide si non disponible
                   </span>
@@ -1709,9 +1388,9 @@ const UtilitiesManagement = () => {
 
               {/* Invoice File Upload */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Facture (PDF, Image)
-                </label>
+                 <div className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                   Facture (PDF, Image)
+                 </div>
                 {!editingUtility && (
                   <div className="mt-1 flex items-center space-x-4">
                     <input
@@ -1736,7 +1415,7 @@ const UtilitiesManagement = () => {
                     {selectedFile && (
                       <div className="flex items-center space-x-2">
                         <FileText className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-gray-600">{selectedFile.name}</span>
+                         <span className="text-sm text-gray-600">{selectedFile?.name}</span>
                         <Button
                           type="button"
                           onClick={() => setSelectedFile(null)}
@@ -1754,7 +1433,11 @@ const UtilitiesManagement = () => {
                     <span className="text-sm text-gray-600">Facture attachée</span>
                     <Button
                       type="button"
-                      onClick={() => downloadInvoice(editingUtility.invoice_url!, `facture-${editingUtility.type}-${editingUtility.billing_date}.pdf`)}
+                       onClick={() => {
+                         if (editingUtility?.invoice_url) {
+                           downloadInvoice(editingUtility.invoice_url, `facture-${editingUtility.type}-${editingUtility.billing_date}.pdf`);
+                         }
+                       }}
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <Download className="h-4 w-4" />
@@ -1772,7 +1455,7 @@ const UtilitiesManagement = () => {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </div>
+    </>
   );
 };
 

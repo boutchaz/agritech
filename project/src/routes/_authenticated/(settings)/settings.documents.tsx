@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { FileText, Plus, Edit2, Trash2, Star, StarOff, Eye } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { SectionLoader } from '@/components/ui/loader';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/documents')({
   component: DocumentSettingsPage,
@@ -41,6 +41,13 @@ function DocumentSettingsPage() {
   const [deletingTemplate, setDeletingTemplate] = useState<string | null>(null);
 
   const { data: templates, isLoading } = useDocumentTemplates(selectedType);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredTemplates = useMemo(() => {
+    if (!searchTerm.trim()) return templates;
+    const q = searchTerm.toLowerCase();
+    return templates?.filter((t) => t.name.toLowerCase().includes(q)) ?? [];
+  }, [templates, searchTerm]);
   const deleteTemplate = useDeleteDocumentTemplate();
   const setDefault = useSetDefaultTemplate();
 
@@ -98,32 +105,37 @@ function DocumentSettingsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('documents.title')}</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
-          {t('documents.description')}
-        </p>
-      </div>
-
-      {/* Document Type Selector */}
-      <div className="flex gap-2 flex-wrap">
-        {documentTypes.map((type) => {
-          const Icon = type.icon;
-          return (
-            <Button
-              key={type.value}
-              variant={selectedType === type.value ? 'default' : 'outline'}
-              onClick={() => setSelectedType(type.value)}
-              className="gap-2"
-            >
-              <Icon className="h-4 w-4" />
-              {type.label}
-            </Button>
-          );
-        })}
-      </div>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('documents.title')}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              {t('documents.description')}
+            </p>
+          </div>
+          <Button onClick={handleCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t('documents.create')}
+          </Button>
+        </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('documents.searchPlaceholder', 'Search templates...')}
+          statusFilters={documentTypes.map((type) => ({
+            value: type.value,
+            label: type.label,
+          }))}
+          activeStatus={selectedType}
+          onStatusChange={(v) => setSelectedType(v as DocumentType)}
+          onClear={() => { setSearchTerm(''); }}
+        />
+      }
+    >
 
       {/* Templates List */}
       <Card>
@@ -131,29 +143,28 @@ function DocumentSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>
-                {t('documents.templates.title', { type: documentTypes.find((t) => t.value === selectedType)?.label })}
+                {t('documents.templates.title', { type: documentTypes.find((dt) => dt.value === selectedType)?.label })}
               </CardTitle>
               <CardDescription>
-                {t('documents.templates.description', { type: documentTypes.find((t) => t.value === selectedType)?.label.toLowerCase() })}
+                {t('documents.templates.description', { type: documentTypes.find((dt) => dt.value === selectedType)?.label.toLowerCase() })}
               </CardDescription>
             </div>
-            <Button onClick={handleCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
-              {t('documents.create')}
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <SectionLoader className="py-8" />
-          ) : templates && templates.length > 0 ? (
-            <div className="space-y-3">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-600 transition-colors bg-white dark:bg-gray-800"
-                >
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
+          <ResponsiveList
+            items={filteredTemplates ?? []}
+            isLoading={isLoading}
+            keyExtractor={(template) => template.id}
+            emptyIcon={FileText}
+            emptyMessage={t('documents.empty.description')}
+            emptyAction={{
+              label: t('documents.create'),
+              onClick: handleCreate,
+            }}
+            renderCard={(template) => (
+                <div className="flex flex-col gap-3 p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-600 transition-colors bg-white dark:bg-gray-800">
+                  <div className="flex items-start gap-3 min-w-0">
                     <div className="flex-shrink-0 mt-1">
                       <FileText className="h-5 w-5 text-gray-400" />
                     </div>
@@ -169,15 +180,15 @@ function DocumentSettingsPage() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                        <span>{t('documents.header')}: {template.header_enabled ? t('documents.enabled') : t('documents.disabled')}</span>
+                      <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
+                        <span>{t('documents.header')}: {template.header_html ? t('documents.enabled') : t('documents.disabled')}</span>
                         <span>•</span>
-                        <span>{t('documents.footer')}: {template.footer_enabled ? t('documents.enabled') : t('documents.disabled')}</span>
+                        <span>{t('documents.footer')}: {template.footer_html ? t('documents.enabled') : t('documents.disabled')}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 flex-shrink-0 flex-wrap">
+                  <div className="flex items-center gap-1 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -186,7 +197,7 @@ function DocumentSettingsPage() {
                       title={t('documents.actions.preview')}
                     >
                       <Eye className="h-4 w-4" />
-                      <span className="hidden lg:inline">{t('documents.actions.preview')}</span>
+                      <span>{t('documents.actions.preview')}</span>
                     </Button>
 
                     {!template.is_default && (
@@ -198,7 +209,7 @@ function DocumentSettingsPage() {
                         title={t('documents.actions.setDefault')}
                       >
                         <StarOff className="h-4 w-4" />
-                        <span className="hidden lg:inline">{t('documents.actions.setDefault')}</span>
+                        <span>{t('documents.actions.setDefault')}</span>
                       </Button>
                     )}
 
@@ -210,7 +221,7 @@ function DocumentSettingsPage() {
                       title={t('documents.actions.edit')}
                     >
                       <Edit2 className="h-4 w-4" />
-                      <span className="hidden lg:inline">{t('documents.actions.edit')}</span>
+                      <span>{t('documents.actions.edit')}</span>
                     </Button>
 
                     <Button
@@ -221,29 +232,97 @@ function DocumentSettingsPage() {
                       title={t('documents.actions.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
-                      <span className="hidden lg:inline">{t('documents.actions.delete')}</span>
+                      <span>{t('documents.actions.delete')}</span>
                     </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                {t('documents.empty.title')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                {t('documents.empty.description')}
-              </p>
-              <Button onClick={handleCreate} className="gap-2">
-                <Plus className="h-4 w-4" />
-                {t('documents.create')}
-              </Button>
-            </div>
-          )}
+              )}
+              renderTableHeader={
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">{t('documents.templates.name', 'Name')}</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">{t('documents.templates.settings', 'Settings')}</th>
+                  <th className="px-4 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">{t('documents.templates.actions', 'Actions')}</th>
+                </tr>
+              }
+              renderTable={(template) => (
+                <>
+                  <td className="px-4 py-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="h-5 w-5 text-gray-400 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-gray-900 dark:text-white truncate">{template.name}</span>
+                          {template.is_default && (
+                            <Badge variant="default" className="gap-1 flex-shrink-0">
+                              <Star className="h-3 w-3 fill-current" />
+                              {t('documents.default')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="flex flex-col gap-1">
+                      <span>{t('documents.header')}: {template.header_html ? t('documents.enabled') : t('documents.disabled')}</span>
+                      <span>{t('documents.footer')}: {template.footer_html ? t('documents.enabled') : t('documents.disabled')}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="flex justify-end items-center gap-1 flex-wrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreview(template.id)}
+                        className="gap-1.5"
+                        title={t('documents.actions.preview')}
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span>{t('documents.actions.preview')}</span>
+                      </Button>
+
+                      {!template.is_default && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSetDefault(template.id)}
+                          className="gap-1.5"
+                          title={t('documents.actions.setDefault')}
+                        >
+                          <StarOff className="h-4 w-4" />
+                          <span>{t('documents.actions.setDefault')}</span>
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(template.id)}
+                        className="gap-1.5"
+                        title={t('documents.actions.edit')}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                        <span>{t('documents.actions.edit')}</span>
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(template.id)}
+                        className="gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title={t('documents.actions.delete')}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>{t('documents.actions.delete')}</span>
+                      </Button>
+                    </div>
+                  </td>
+                </>
+              )}
+            />
         </CardContent>
       </Card>
+    </ListPageLayout>
 
       {/* Template Editor Dialog */}
       <DocumentTemplateEditor
@@ -286,6 +365,6 @@ function DocumentSettingsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

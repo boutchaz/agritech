@@ -1,11 +1,14 @@
 
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from '@tanstack/react-router';
-import { Loader2, Banknote } from 'lucide-react';
+import { Banknote } from 'lucide-react';
 import { usePayments } from '@/hooks/usePayments';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SectionLoader } from '@/components/ui/loader';
+import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { formatCurrency, getPaymentTypeLabel, getPaymentStatusLabel } from '@/types/payments';
 import type { PaymentRecord } from '@/types/payments';
 import { format } from 'date-fns';
@@ -18,8 +21,61 @@ type PaymentRow = PaymentRecord & { period_start?: string; period_end?: string }
 
 const WorkersPaymentsList = ({ organizationId }: WorkersPaymentsListProps) => {
   const { t, i18n } = useTranslation();
-  const { data: payments = [], isLoading } = usePayments(organizationId);
+  const [search, setSearch] = useState('');
+  const { data: payments = [], isLoading, isFetching } = usePayments(organizationId);
   const language = i18n.language.startsWith('fr') ? 'fr' : 'en';
+
+  const filteredPayments = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return payments;
+    }
+
+    return payments.filter((payment: PaymentRow) => {
+      const workerName = payment.worker_name?.toLowerCase() ?? '';
+      const paymentType = payment.payment_type?.toLowerCase() ?? '';
+      const paymentTypeLabel = payment.payment_type
+        ? getPaymentTypeLabel(payment.payment_type, language).toLowerCase()
+        : '';
+
+      return workerName.includes(normalizedSearch)
+        || paymentType.includes(normalizedSearch)
+        || paymentTypeLabel.includes(normalizedSearch);
+    });
+  }, [language, payments, search]);
+
+  const formatPaymentDate = (payment: PaymentRow) => (
+    payment.payment_date
+      ? format(new Date(payment.payment_date), 'dd/MM/yyyy')
+      : payment.period_end
+        ? format(new Date(payment.period_end), 'dd/MM/yyyy')
+        : '-'
+  );
+
+  const formatPaymentPeriod = (payment: PaymentRow) => (
+    payment.period_start && payment.period_end
+      ? `${format(new Date(payment.period_start), 'dd/MM/yy')} - ${format(new Date(payment.period_end), 'dd/MM/yy')}`
+      : '-'
+  );
+
+  const renderWorker = (payment: PaymentRow) => {
+    const workerName = payment.worker_name || t('workers.payments.unknownWorker');
+
+    if (!payment.worker_id) {
+      return workerName;
+    }
+
+    return (
+      <Link
+        to="/workers/$workerId"
+        params={{ workerId: payment.worker_id }}
+        className="text-emerald-600 hover:underline"
+      >
+        {workerName}
+      </Link>
+    );
+  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -36,95 +92,123 @@ const WorkersPaymentsList = ({ organizationId }: WorkersPaymentsListProps) => {
     }
   };
 
+  if (isLoading) {
+    return <SectionLoader />;
+  }
+
+  if (payments.length === 0) {
+    return (
+      <EmptyState
+        variant="card"
+        icon={Banknote}
+        title={t('workers.payments.overviewTitle')}
+        description={t('workers.payments.empty')}
+      />
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Banknote className="w-5 h-5 text-emerald-600" />
-          {t('workers.payments.overviewTitle')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            <p>{t('workers.payments.empty')}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow className="border-b border-gray-200 dark:border-gray-700">
-                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.date')}
-                  </TableHead>
-                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.worker')}
-                  </TableHead>
-                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.type')}
-                  </TableHead>
-                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.period')}
-                  </TableHead>
-                  <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.amount')}
-                  </TableHead>
-                  <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
-                    {t('workers.payments.status')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((payment: PaymentRow) => (
-                  <TableRow key={payment.id} className="border-b border-gray-100 dark:border-gray-800">
-                    <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
-                      {payment.payment_date
-                        ? format(new Date(payment.payment_date), 'dd/MM/yyyy')
-                        : payment.period_end
-                          ? format(new Date(payment.period_end), 'dd/MM/yyyy')
-                          : '-'}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {payment.worker_id ? (
-                        <Link
-                          to="/workers/$workerId"
-                          params={{ workerId: payment.worker_id }}
-                          className="text-emerald-600 hover:underline"
-                        >
-                          {payment.worker_name || t('workers.payments.unknownWorker')}
-                        </Link>
-                      ) : (
-                        payment.worker_name || t('workers.payments.unknownWorker')
-                      )}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {payment.payment_type ? getPaymentTypeLabel(payment.payment_type, language) : '-'}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
-                      {payment.period_start && payment.period_end
-                        ? `${format(new Date(payment.period_start), 'dd/MM/yy')} - ${format(new Date(payment.period_end), 'dd/MM/yy')}`
-                        : '-'}
-                    </TableCell>
-                    <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
-                      {formatCurrency(payment.net_amount || 0)}
-                    </TableCell>
-                    <TableCell className="py-3 px-4">
-                      <Badge className={getStatusColor(payment.status)}>
-                        {payment.status ? getPaymentStatusLabel(payment.status, language) : '-'}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+    <div className="space-y-4">
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={t('workers.payments.searchPlaceholder', 'Search by worker or payment type...')}
+      />
+
+      <ResponsiveList
+        items={filteredPayments}
+        isLoading={false}
+        isFetching={isFetching}
+        keyExtractor={(payment) => payment.id}
+        emptyIcon={Banknote}
+        emptyTitle={t('workers.payments.emptyFilteredTitle', 'No matching payments')}
+        emptyMessage={t('workers.payments.emptyFiltered', 'No payments match your search.')}
+        renderCard={(payment: PaymentRow) => (
+          <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {renderWorker(payment)}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  {formatPaymentDate(payment)}
+                </p>
+              </div>
+              <Badge variant="outline" className="shrink-0">
+                {payment.payment_type ? getPaymentTypeLabel(payment.payment_type, language) : '-'}
+              </Badge>
+            </div>
+
+            <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              <div className="flex items-center justify-between gap-3">
+                <span>{t('workers.payments.period')}</span>
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {formatPaymentPeriod(payment)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span>{t('workers.payments.amount')}</span>
+                <span className="font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(payment.net_amount || 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Badge className={getStatusColor(payment.status)}>
+                {payment.status ? getPaymentStatusLabel(payment.status, language) : '-'}
+              </Badge>
+            </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+        renderTableHeader={
+          <TableRow className="border-b border-gray-200 dark:border-gray-700">
+            <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.date')}
+            </TableHead>
+            <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.worker')}
+            </TableHead>
+            <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.type')}
+            </TableHead>
+            <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.period')}
+            </TableHead>
+            <TableHead className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.amount')}
+            </TableHead>
+            <TableHead className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">
+              {t('workers.payments.status')}
+            </TableHead>
+          </TableRow>
+        }
+        renderTable={(payment: PaymentRow) => (
+          <>
+            <TableCell className="py-3 px-4 text-gray-900 dark:text-white">
+              {formatPaymentDate(payment)}
+            </TableCell>
+            <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
+              {renderWorker(payment)}
+            </TableCell>
+            <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
+              {payment.payment_type ? getPaymentTypeLabel(payment.payment_type, language) : '-'}
+            </TableCell>
+            <TableCell className="py-3 px-4 text-gray-600 dark:text-gray-300">
+              {formatPaymentPeriod(payment)}
+            </TableCell>
+            <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
+              {formatCurrency(payment.net_amount || 0)}
+            </TableCell>
+            <TableCell className="py-3 px-4">
+              <Badge className={getStatusColor(payment.status)}>
+                {payment.status ? getPaymentStatusLabel(payment.status, language) : '-'}
+              </Badge>
+            </TableCell>
+          </>
+        )}
+      />
+    </div>
   );
 };
 

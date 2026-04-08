@@ -1013,6 +1013,7 @@ export class ItemsService {
           usage_count: 0,
           total_quantity_used: 0,
           task_ids: [],
+          tasks: [],
         });
       }
 
@@ -1073,6 +1074,9 @@ export class ItemsService {
       if (!farmUsage.task_ids.includes(app.task_id)) {
         farmUsage.task_ids.push(app.task_id);
         if (app.task) {
+          if (!farmUsage.tasks) {
+            farmUsage.tasks = [];
+          }
           farmUsage.tasks.push({ id: app.task.id, title: app.task.title });
         }
       }

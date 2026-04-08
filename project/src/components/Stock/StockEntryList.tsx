@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useStockEntries,
@@ -7,16 +7,20 @@ import {
   useDeleteStockEntry,
 } from '@/hooks/useStockEntries';
 import {
-  Table,
-  TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import {
+  DataTablePagination,
+  FilterBar,
+  ListPageLayout,
+  ResponsiveList,
+} from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SectionLoader } from '@/components/ui/loader';
 import {
   Select,
   SelectContent,
@@ -51,7 +55,9 @@ import {
   CheckCircle,
   XCircle,
   Download,
-  Loader2
+  CalendarDays,
+  Hash,
+  MapPin,
 } from 'lucide-react';
 import type {
   StockEntry,
@@ -70,10 +76,32 @@ interface StockEntryListProps {
   onViewClick: (entry: StockEntry) => void;
 }
 
+type StockEntryListItem = StockEntry & {
+  from_warehouse?: { id: string; name: string } | null;
+  to_warehouse?: { id: string; name: string } | null;
+  farm_name?: string | null;
+  farm?: { name?: string | null } | string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  item_name?: string | null;
+  product_name?: string | null;
+  items?: Array<{
+    quantity?: number | null;
+    unit?: string | null;
+    item_name?: string | null;
+    product_name?: string | null;
+    item?: { item_name?: string | null; default_unit?: string | null } | null;
+    farm?: { name?: string | null } | string | null;
+    farm_name?: string | null;
+  }>;
+};
+
 export default function StockEntryList({ onCreateClick, onViewClick }: StockEntryListProps) {
   const { t } = useTranslation('stock');
   const [filters, setFilters] = useState<StockEntryFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [confirmAction, setConfirmAction] = useState<{
     entry: StockEntry;
     action: 'post' | 'cancel' | 'delete';
@@ -85,10 +113,27 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
   const deleteEntry = useDeleteStockEntry();
 
   // Filter entries by search term
-  const filteredEntries = entries.filter((entry) =>
-    entry.entry_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) =>
+        entry.entry_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [entries, searchTerm],
   );
+
+  const totalItems = filteredEntries.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const paginatedEntries = useMemo(
+    () => filteredEntries.slice((page - 1) * pageSize, page * pageSize),
+    [filteredEntries, page, pageSize],
+  );
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const handlePost = async (entryId: string) => {
     try {
@@ -146,13 +191,121 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     }
   };
 
-  if (isLoading) {
+  const getWarehouseDisplay = (entry: StockEntryListItem) => {
+    const fromWarehouse = entry.from_warehouse;
+    const toWarehouse = entry.to_warehouse;
+
+    if (fromWarehouse && toWarehouse) {
+      return (
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('stockEntries.table.from')}: {fromWarehouse.name}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('stockEntries.table.to')}: {toWarehouse.name}
+          </span>
+        </div>
+      );
+    }
+
+    if (fromWarehouse) {
+      return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
+    }
+
+    if (toWarehouse) {
+      return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
+    }
+
+    return '-';
+  };
+
+  const getPrimaryItem = (entry: StockEntryListItem) => entry.items?.[0];
+
+  const getProductName = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">{t('stockEntries.loading')}</span>
-      </div>
+      primaryItem?.item?.item_name ||
+      primaryItem?.item_name ||
+      primaryItem?.product_name ||
+      entry.item_name ||
+      entry.product_name ||
+      t('stockEntries.card.productFallback', '—')
     );
+  };
+
+  const getFarmName = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    const farm = primaryItem?.farm ?? entry.farm;
+
+    if (typeof farm === 'string') {
+      return farm;
+    }
+
+    return primaryItem?.farm_name || entry.farm_name || farm?.name || t('stockEntries.card.farmFallback', '—');
+  };
+
+  const getQuantityValue = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    return primaryItem?.quantity ?? entry.quantity;
+  };
+
+  const getUnitValue = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    return primaryItem?.unit || primaryItem?.item?.default_unit || entry.unit;
+  };
+
+  const renderActions = (entry: StockEntry) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onViewClick(entry)}>
+          <Eye className="w-4 h-4 mr-2" />
+          {t('stockEntries.actions.viewDetails')}
+        </DropdownMenuItem>
+
+        {entry.status === 'Draft' && (
+          <>
+            <DropdownMenuItem>
+              <Edit className="w-4 h-4 mr-2" />
+              {t('stockEntries.actions.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setConfirmAction({ entry, action: 'post' })}>
+              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+              {t('stockEntries.actions.postEntry')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setConfirmAction({ entry, action: 'delete' })}
+              className="text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('stockEntries.actions.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {entry.status === 'Posted' && (
+          <DropdownMenuItem onClick={() => setConfirmAction({ entry, action: 'cancel' })}>
+            <XCircle className="w-4 h-4 mr-2 text-orange-600" />
+            {t('stockEntries.actions.cancelEntry')}
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Download className="w-4 h-4 mr-2" />
+          {t('stockEntries.actions.exportPdf')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  if (isLoading) {
+    return <SectionLoader />;
   }
 
   return (
@@ -176,7 +329,10 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <div className="md:col-span-2">
                 <FilterBar
                   searchValue={searchTerm}
-                  onSearchChange={setSearchTerm}
+                  onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setPage(1);
+                  }}
                   searchPlaceholder={t('stockEntries.searchPlaceholder')}
                 />
               </div>
@@ -184,12 +340,13 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <div>
                 <Select
                   value={filters.entry_type || 'all'}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setFilters({
                       ...filters,
                       entry_type: value === 'all' ? undefined : (value as StockEntryType),
-                    })
-                  }
+                    });
+                    setPage(1);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('stockEntries.allTypes')} />
@@ -208,12 +365,13 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <div>
                 <Select
                   value={filters.status || 'all'}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setFilters({
                       ...filters,
                       status: value === 'all' ? undefined : (value as StockEntryStatus),
-                    })
-                  }
+                    });
+                    setPage(1);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('stockEntries.allStatuses')} />
@@ -250,10 +408,105 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
             })}
           </div>
         }
+        pagination={
+          totalItems > 0 ? (
+            <DataTablePagination
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          ) : null
+        }
       >
-        <div className="overflow-hidden rounded-lg border bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <Table>
-            <TableHeader>
+        {filteredEntries.length === 0 ? (
+          <EmptyState
+            variant="card"
+            icon={Package}
+            title={t('stockEntries.noEntries')}
+            description={t('stockEntries.noEntriesHint')}
+            action={{
+              label: t('stockEntries.newEntry'),
+              onClick: onCreateClick,
+            }}
+          />
+        ) : (
+          <ResponsiveList
+            items={paginatedEntries}
+            isLoading={isLoading}
+            keyExtractor={(item) => item.id}
+            emptyIcon={Package}
+            emptyMessage={t('stockEntries.noEntries')}
+            renderCard={(entry) => {
+              const listEntry = entry as StockEntryListItem;
+              const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
+              const quantity = getQuantityValue(listEntry);
+              const unit = getUnitValue(listEntry);
+
+              return (
+                <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white">
+                        {getProductName(listEntry)}
+                      </p>
+                      <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
+                        {getFarmName(listEntry)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {entry.entry_number}
+                      </p>
+                    </div>
+                    <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>{entry.status}</Badge>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        {t('stockEntries.table.type')}
+                      </span>
+                      <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
+                        {entry.entry_type}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {t('stockEntries.card.quantity', 'Quantity')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {quantity != null ? `${quantity} ${unit || ''}`.trim() : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" />
+                        {t('stockEntries.table.date')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {new Date(entry.entry_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{getWarehouseDisplay(listEntry)}</div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <Button variant="outline" size="sm" onClick={() => onViewClick(entry)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('stockEntries.actions.viewDetails')}
+                    </Button>
+                    {renderActions(entry)}
+                  </div>
+                </div>
+              );
+            }}
+            renderTableHeader={
               <TableRow>
                 <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
                 <TableHead>{t('stockEntries.table.date')}</TableHead>
@@ -263,118 +516,33 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                 <TableHead>{t('stockEntries.table.status')}</TableHead>
                 <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEntries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                    <Package className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-                    <p>{t('stockEntries.noEntries')}</p>
-                    <p className="mt-1 text-sm">{t('stockEntries.noEntriesHint')}</p>
+            }
+            renderTable={(entry) => {
+              const listEntry = entry as StockEntryListItem;
+              const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
+
+              return (
+                <>
+                  <TableCell className="font-medium">{entry.entry_number}</TableCell>
+                  <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
+                      {entry.entry_type}
+                    </Badge>
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredEntries.map((entry) => {
-                  const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
-                  return (
-                    <TableRow key={entry.id}>
-                      <TableCell className="font-medium">{entry.entry_number}</TableCell>
-                      <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
-                          {entry.entry_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                        {(() => {
-                          const fromWarehouse = (entry as unknown as { from_warehouse?: { name: string } }).from_warehouse;
-                          const toWarehouse = (entry as unknown as { to_warehouse?: { name: string } }).to_warehouse;
-
-                          if (fromWarehouse && toWarehouse) {
-                            return (
-                              <div className="flex flex-col">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.from')}: {fromWarehouse.name}</span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.to')}: {toWarehouse.name}</span>
-                              </div>
-                            );
-                          }
-                          if (fromWarehouse) {
-                            return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
-                          }
-                          if (toWarehouse) {
-                            return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
-                          }
-                          return '-';
-                        })()}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {entry.reference_number || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>
-                          {entry.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onViewClick(entry)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              {t('stockEntries.actions.viewDetails')}
-                            </DropdownMenuItem>
-
-                            {entry.status === 'Draft' && (
-                              <>
-                                <DropdownMenuItem>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  {t('stockEntries.actions.edit')}
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => setConfirmAction({ entry, action: 'post' })}
-                                >
-                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                  {t('stockEntries.actions.postEntry')}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => setConfirmAction({ entry, action: 'delete' })}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  {t('stockEntries.actions.delete')}
-                                </DropdownMenuItem>
-                              </>
-                            )}
-
-                            {entry.status === 'Posted' && (
-                              <DropdownMenuItem
-                                onClick={() => setConfirmAction({ entry, action: 'cancel' })}
-                              >
-                                <XCircle className="w-4 h-4 mr-2 text-orange-600" />
-                                {t('stockEntries.actions.cancelEntry')}
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Download className="w-4 h-4 mr-2" />
-                              {t('stockEntries.actions.exportPdf')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  <TableCell className="text-sm text-gray-600 dark:text-gray-400">
+                    {getWarehouseDisplay(listEntry)}
+                  </TableCell>
+                  <TableCell className="text-sm">{entry.reference_number || '-'}</TableCell>
+                  <TableCell>
+                    <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>{entry.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{renderActions(entry)}</TableCell>
+                </>
+              );
+            }}
+          />
+        )}
       </ListPageLayout>
 
       {confirmAction && (

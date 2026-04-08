@@ -11,7 +11,8 @@ import { Select } from './ui/Select';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { SectionLoader } from '@/components/ui/loader';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 
 
 interface Employee {
@@ -53,6 +54,7 @@ const EmployeeManagement = () => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const farmId = currentFarm?.id;
   const organizationId = currentOrganization?.id;
@@ -221,30 +223,172 @@ const EmployeeManagement = () => {
     },
   });
 
-  if (employeesQuery.isLoading) {
-    return (
-      <SectionLoader />
-    );
-  }
+  const employees = employeesQuery.data ?? [];
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredEmployees = employees.filter((employee) => {
+    if (!normalizedSearch) return true;
+
+    return [
+      employee.first_name,
+      employee.last_name,
+      employee.cin,
+      employee.phone,
+      employee.position,
+    ].some((value) => value.toLowerCase().includes(normalizedSearch));
+  });
+
+  const openAddModal = () => {
+    if (!farmId) return;
+    setEditingEmployee(null);
+    setShowAddModal(true);
+    form.reset(emptyDefaults);
+  };
+
+  const openEditModal = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setShowAddModal(true);
+  };
+
+  const renderEmployeeCard = (employee: Employee) => (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      <div className="flex justify-between items-start mb-4 gap-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {employee.first_name} {employee.last_name}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{employee.position || '—'}</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => openEditModal(employee)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            <Edit2 className="h-5 w-5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              showConfirm('Êtes-vous sûr de vouloir supprimer cet employé ?', () => {
+                deleteEmployeeMutation.mutate(employee.id);
+              });
+            }}
+            className="text-red-600 hover:text-red-800"
+          >
+            <Trash2 className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2 text-sm">
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500 dark:text-gray-400">CIN</span>
+          <span className="text-right text-gray-900 dark:text-white">{employee.cin || '—'}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Téléphone</span>
+          <span className="text-right text-gray-900 dark:text-white">{employee.phone || '—'}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Date d'embauche</span>
+          <span className="text-right text-gray-900 dark:text-white">{new Date(employee.hire_date).toLocaleDateString()}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Salaire</span>
+          <span className="text-right text-gray-900 dark:text-white">{employee.salary.toFixed(2)} {currency}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-gray-500 dark:text-gray-400">Statut</span>
+          <span className={employee.status === 'active' ? 'text-green-600' : 'text-red-600'}>
+            {employee.status === 'active' ? 'Actif' : 'Inactif'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderEmployeeTable = (employee: Employee) => (
+    <>
+      <TableCell className="px-4 py-3">
+        <div>
+          <p className="font-medium text-gray-900 dark:text-white">
+            {employee.first_name} {employee.last_name}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{employee.position || '—'}</p>
+        </div>
+      </TableCell>
+      <TableCell className="px-4 py-3">{employee.cin || '—'}</TableCell>
+      <TableCell className="px-4 py-3">{employee.phone || '—'}</TableCell>
+      <TableCell className="px-4 py-3">{new Date(employee.hire_date).toLocaleDateString()}</TableCell>
+      <TableCell className="px-4 py-3">{employee.salary.toFixed(2)} {currency}</TableCell>
+      <TableCell className="px-4 py-3">
+        <span className={employee.status === 'active' ? 'text-green-600' : 'text-red-600'}>
+          {employee.status === 'active' ? 'Actif' : 'Inactif'}
+        </span>
+      </TableCell>
+      <TableCell className="px-4 py-3">
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => openEditModal(employee)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            <Edit2 className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              showConfirm('Êtes-vous sûr de vouloir supprimer cet employé ?', () => {
+                deleteEmployeeMutation.mutate(employee.id);
+              });
+            }}
+            className="text-red-600 hover:text-red-800"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </>
+  );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion des Salariés
-        </h2>
-        <Button variant="green"
-          type="button"
-          onClick={() => { if (!farmId) return; setEditingEmployee(null); setShowAddModal(true); form.reset(emptyDefaults); }}
-          disabled={!farmId}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${ farmId ? '' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-          title={!farmId ? 'Sélectionnez une ferme pour ajouter un salarié' : undefined}
-        >
-          <Plus className="h-5 w-5" />
-          <span>Nouveau Salarié</span>
-        </Button>
-      </div>
+    <ListPageLayout
+      className="p-6"
+      header={
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Gestion des Salariés
+          </h2>
+          <Button
+            variant="green"
+            type="button"
+            onClick={openAddModal}
+            disabled={!farmId}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${farmId ? '' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
+            title={!farmId ? 'Sélectionnez une ferme pour ajouter un salarié' : undefined}
+          >
+            <Plus className="h-5 w-5" />
+            <span>Nouveau Salarié</span>
+          </Button>
+        </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder="Rechercher un salarié..."
+          isSearching={employeesQuery.isFetching}
+        />
+      }
+    >
       {!farmId && (
         <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
           Sélectionnez une ferme pour gérer les salariés.
@@ -257,87 +401,36 @@ const EmployeeManagement = () => {
         </div>
       )}
 
-      {employeesQuery.data && employeesQuery.data.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-          <Calendar className="h-12 w-12 text-gray-400" />
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun salarié pour l’instant.</p>
-          <Button variant="green"
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="mt-6 px-4 py-2 rounded-md"
-          >
-            Ajouter votre premier salarié
-          </Button>
-        </div>
-      )}
-
-      {/* Employees List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {employeesQuery.data?.map(employee => (
-          <div
-            key={employee.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold">
-                  {employee.first_name} {employee.last_name}
-                </h3>
-                <p className="text-sm text-gray-500">{employee.position}</p>
-              </div>
-              <div className="flex space-x-2">
-                 <Button
-                  type="button"
-                   onClick={() => { setShowAddModal(true); setEditingEmployee(employee); }}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  <Edit2 className="h-5 w-5" />
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    showConfirm('Êtes-vous sûr de vouloir supprimer cet employé ?', () => {
-                      deleteEmployeeMutation.mutate(employee.id);
-                    })
-                  }}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">CIN</span>
-                <span>{employee.cin}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Téléphone</span>
-                <span>{employee.phone}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Date d'embauche</span>
-                <span>{new Date(employee.hire_date).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Salaire</span>
-                <span>{employee.salary.toFixed(2)} {currency}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Statut</span>
-                <span className={`${
-                  employee.status === 'active' 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
-                }`}>
-                  {employee.status === 'active' ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <ResponsiveList
+        items={filteredEmployees}
+        isLoading={employeesQuery.isLoading}
+        isFetching={employeesQuery.isFetching}
+        keyExtractor={(employee) => employee.id}
+        renderCard={renderEmployeeCard}
+        renderTableHeader={(
+          <TableRow>
+            <TableHead className="px-4 py-3 text-left font-medium">Salarié</TableHead>
+            <TableHead className="px-4 py-3 text-left font-medium">CIN</TableHead>
+            <TableHead className="px-4 py-3 text-left font-medium">Téléphone</TableHead>
+            <TableHead className="px-4 py-3 text-left font-medium">Date d'embauche</TableHead>
+            <TableHead className="px-4 py-3 text-left font-medium">Salaire</TableHead>
+            <TableHead className="px-4 py-3 text-left font-medium">Statut</TableHead>
+            <TableHead className="px-4 py-3 text-right font-medium">Actions</TableHead>
+          </TableRow>
+        )}
+        renderTable={renderEmployeeTable}
+        emptyIcon={Calendar}
+        emptyTitle={!farmId ? 'Aucune ferme sélectionnée' : 'Aucun salarié'}
+        emptyMessage={!farmId
+          ? 'Sélectionnez une ferme pour gérer les salariés.'
+          : normalizedSearch
+            ? 'Aucun salarié ne correspond à votre recherche.'
+            : 'Aucun salarié pour l’instant.'}
+        emptyAction={farmId && !normalizedSearch ? {
+          label: 'Ajouter votre premier salarié',
+          onClick: openAddModal,
+        } : undefined}
+      />
 
       {/* Add/Edit Employee Modal */}
       {(showAddModal || editingEmployee) && (
@@ -428,7 +521,7 @@ const EmployeeManagement = () => {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </div>
+    </ListPageLayout>
   );
 };
 

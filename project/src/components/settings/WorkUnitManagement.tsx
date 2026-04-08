@@ -22,7 +22,8 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { Switch } from '@/components/ui/switch';
@@ -30,6 +31,7 @@ import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import {
@@ -111,7 +113,7 @@ export function WorkUnitManagement() {
   // DATA FETCHING
   // =====================================================
 
-  const { data: workUnits = [], isLoading } = useQuery({
+  const { data: workUnits = [], isLoading, isFetching } = useQuery({
     queryKey: ['work-units', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
@@ -308,6 +310,103 @@ export function WorkUnitManagement() {
     return acc;
   }, {} as Record<UnitCategory, WorkUnit[]>);
 
+  const renderActions = (unit: WorkUnit, buttonSize: 'sm' | 'icon' = 'icon') => (
+    <div className="flex justify-end gap-2">
+      <Button
+        size={buttonSize}
+        variant="ghost"
+        onClick={() => handleOpenDialog(unit)}
+        className="h-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-emerald-600 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <Edit2 className="h-4 w-4" />
+      </Button>
+      <Button
+        size={buttonSize}
+        variant="ghost"
+        onClick={() => handleDelete(unit.id)}
+        disabled={unit.usage_count > 0}
+        className="h-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-rose-600 disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
+  const renderCard = (unit: WorkUnit) => (
+    <Card className="group/unit rounded-3xl border-slate-100 shadow-sm transition-all hover:shadow-md dark:border-slate-700">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div className="flex items-center gap-2">
+              <h4 className="truncate font-black uppercase tracking-tight text-slate-900 dark:text-white">{unit.name}</h4>
+              {!unit.is_active && (
+                <Badge className="h-4 border-none bg-rose-50 px-1.5 py-0 text-[8px] font-black tracking-widest text-rose-600">INACTIVE</Badge>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-0.5">
+                <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">{t('workUnits.code')}</span>
+                <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
+              </div>
+              {unit.usage_count > 0 && (
+                <div className="space-y-0.5">
+                  <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">Usage</span>
+                  <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-300">{t('workUnits.used', { count: unit.usage_count })}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              {unit.name_fr && (
+                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">FR: {unit.name_fr}</Badge>
+              )}
+              {unit.name_ar && (
+                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">AR: {unit.name_ar}</Badge>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {renderActions(unit)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderTableHeader = (
+    <TableRow>
+      <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.form.nameEn')}</TableHead>
+      <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.code')}</TableHead>
+      <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.form.nameFr')}</TableHead>
+      <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.form.nameAr')}</TableHead>
+      <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.stats.active')}</TableHead>
+      <TableHead className="py-3 px-4 text-left font-medium">Usage</TableHead>
+      <TableHead className="py-3 px-4 text-right font-medium">{t('common.actions', 'Actions')}</TableHead>
+    </TableRow>
+  );
+
+  const renderTable = (unit: WorkUnit) => (
+    <>
+      <TableCell className="py-3 px-4 font-medium">{unit.name}</TableCell>
+      <TableCell className="py-3 px-4">
+        <span className="font-mono text-xs font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
+      </TableCell>
+      <TableCell className="py-3 px-4 text-muted-foreground">{unit.name_fr || '-'}</TableCell>
+      <TableCell className="py-3 px-4 text-muted-foreground">{unit.name_ar || '-'}</TableCell>
+      <TableCell className="py-3 px-4">
+        <Badge variant={unit.is_active ? 'default' : 'secondary'}>
+          {unit.is_active ? t('workUnits.stats.active') : t('common.inactive', 'Inactive')}
+        </Badge>
+      </TableCell>
+      <TableCell className="py-3 px-4 text-muted-foreground">
+        {unit.usage_count > 0 ? t('workUnits.used', { count: unit.usage_count }) : '-'}
+      </TableCell>
+      <TableCell className="py-3 px-4">{renderActions(unit, 'sm')}</TableCell>
+    </>
+  );
+
   // =====================================================
   // RENDER
   // =====================================================
@@ -315,9 +414,12 @@ export function WorkUnitManagement() {
   if (!isAdmin) {
     return (
       <Card className="rounded-3xl border-slate-100 p-8 shadow-sm">
-        <p className="text-slate-500 font-medium">
-          {t('workUnits.accessDenied')}
-        </p>
+        <EmptyState
+          variant="inline"
+          icon={Boxes}
+          title={t('workUnits.title')}
+          description={t('workUnits.accessDenied')}
+        />
       </Card>
     );
   }
@@ -424,15 +526,16 @@ export function WorkUnitManagement() {
             <SectionLoader />
           </div>
         ) : filteredUnits.length === 0 ? (
-          <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-100 bg-slate-50/30 p-12 text-center dark:border-slate-800 dark:bg-slate-900/30">
-            <Boxes className="mx-auto mb-4 h-12 w-12 text-slate-200 dark:text-slate-700" />
-            <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
-              {t('workUnits.empty')}
-            </h3>
-            <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-400">
-              {workUnits.length === 0 && t('workUnits.emptyHint')}
-            </p>
-          </Card>
+          <EmptyState
+            variant="card"
+            icon={Boxes}
+            title={t('workUnits.empty')}
+            description={workUnits.length === 0 ? t('workUnits.emptyHint') : t('workUnits.searchPlaceholder')}
+            action={workUnits.length === 0 ? {
+              label: t('workUnits.addUnit'),
+              onClick: () => handleOpenDialog(),
+            } : undefined}
+          />
         ) : (
           <div className="space-y-10">
             {Object.entries(unitsByCategory).map(([category, units]) => (
@@ -445,66 +548,17 @@ export function WorkUnitManagement() {
                   <Badge variant="secondary" className="h-5 bg-slate-100 px-2 py-0 text-[9px] font-black text-slate-500 dark:bg-slate-800">{units.length}</Badge>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {units.map((unit) => (
-                    <Card key={unit.id} className="group/unit rounded-3xl border-slate-100 shadow-sm transition-all hover:shadow-md dark:border-slate-700">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1 space-y-3">
-                            <div className="flex items-center gap-2">
-                              <h4 className="truncate font-black uppercase tracking-tight text-slate-900 dark:text-white">{unit.name}</h4>
-                              {!unit.is_active && (
-                                <Badge className="h-4 border-none bg-rose-50 px-1.5 py-0 text-[8px] font-black tracking-widest text-rose-600">INACTIVE</Badge>
-                              )}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-0.5">
-                                <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">{t('workUnits.code')}</span>
-                                <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
-                              </div>
-                              {unit.usage_count > 0 && (
-                                <div className="space-y-0.5">
-                                  <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">Usage</span>
-                                  <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-300">{t('workUnits.used', { count: unit.usage_count })}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              {unit.name_fr && (
-                                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">FR: {unit.name_fr}</Badge>
-                              )}
-                              {unit.name_ar && (
-                                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">AR: {unit.name_ar}</Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleOpenDialog(unit)}
-                              className="h-9 w-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-emerald-600 dark:border-slate-800 dark:bg-slate-900"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDelete(unit.id)}
-                              disabled={unit.usage_count > 0}
-                              className="h-9 w-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-rose-600 disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                <ResponsiveList
+                  items={units}
+                  isLoading={isLoading}
+                  isFetching={isFetching}
+                  keyExtractor={(unit) => unit.id}
+                  renderCard={renderCard}
+                  renderTable={renderTable}
+                  renderTableHeader={renderTableHeader}
+                  emptyIcon={Boxes}
+                  emptyMessage={t('workUnits.empty')}
+                />
               </div>
             ))}
           </div>

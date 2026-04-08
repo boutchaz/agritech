@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,6 +27,9 @@ import { Switch } from '@/components/ui/switch';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -67,7 +70,8 @@ const campaignSchema = z.object({
   secondary_fiscal_year_id: z.string().optional(),
 });
 
-type CampaignFormData = z.infer<typeof campaignSchema>;
+type CampaignFormData = z.input<typeof campaignSchema>;
+type CampaignFormValues = z.output<typeof campaignSchema>;
 
 export function CampaignManagement() {
   const { hasRole, currentOrganization } = useAuth();
@@ -75,6 +79,9 @@ export function CampaignManagement() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<AgriculturalCampaign | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('all');
 
   const isAdmin = hasRole(['organization_admin', 'system_admin', 'farm_manager']);
 
@@ -92,7 +99,7 @@ export function CampaignManagement() {
 
   const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
-  const form = useForm<CampaignFormData>({
+  const form = useForm<CampaignFormData, unknown, CampaignFormValues>({
     resolver: zodResolver(campaignSchema),
     defaultValues: {
       name: '',
@@ -141,7 +148,7 @@ export function CampaignManagement() {
     form.reset();
   };
 
-  const onSubmit = async (data: CampaignFormData) => {
+  const onSubmit = async (data: CampaignFormValues) => {
     try {
       if (editingCampaign) {
         await updateMutation.mutateAsync({
@@ -195,6 +202,150 @@ export function CampaignManagement() {
     return campaignSummaries.find(s => s.id === campaignId);
   };
 
+  const filteredCampaigns = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return campaigns.filter((campaign) => {
+      const matchesSearch = !normalizedSearch || [campaign.name, campaign.code, campaign.description ?? '']
+        .some((value) => value.toLowerCase().includes(normalizedSearch));
+      const matchesStatus = selectedStatusFilter === 'all' || campaign.status === selectedStatusFilter;
+      const matchesType = selectedTypeFilter === 'all' || campaign.campaign_type === selectedTypeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [campaigns, searchQuery, selectedStatusFilter, selectedTypeFilter]);
+
+  const hasActiveFilters = !!searchQuery.trim() || selectedStatusFilter !== 'all' || selectedTypeFilter !== 'all';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedStatusFilter('all');
+    setSelectedTypeFilter('all');
+  };
+
+  const renderCampaignActions = (campaign: AgriculturalCampaign) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="icon">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuItem onClick={() => handleOpenDialog(campaign)}>
+          <Edit2 className="h-4 w-4 mr-2" />
+          {t('common.edit', 'Edit')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate({ to: '/crop-cycles', search: { campaign_id: campaign.id } })}>
+          <ExternalLink className="h-4 w-4 mr-2" />
+          {t('campaigns.actions.openCycles', 'Open cycles')}
+        </DropdownMenuItem>
+        {campaign.status === 'planned' && (
+          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'active' })}>
+            <Play className="h-4 w-4 mr-2" />
+            {t('campaigns.actions.activate', 'Activate')}
+          </DropdownMenuItem>
+        )}
+        {campaign.status === 'active' && (
+          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'completed' })}>
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {t('campaigns.actions.complete', 'Complete')}
+          </DropdownMenuItem>
+        )}
+        {(campaign.status === 'planned' || campaign.status === 'active') && (
+          <DropdownMenuItem onClick={() => {
+            setConfirmAction({
+              title: t('campaigns.actions.cancelConfirm', 'Cancel this campaign?'),
+              description: t('campaigns.actions.cancelDescription', 'This will mark the campaign as cancelled.'),
+              onConfirm: () => statusMutation.mutate({ id: campaign.id, status: 'cancelled' }),
+            });
+            setConfirmOpen(true);
+          }}>
+            <XCircle className="h-4 w-4 mr-2" />
+            {t('campaigns.actions.cancel', 'Cancel')}
+          </DropdownMenuItem>
+        )}
+        {campaign.status !== 'active' && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive"
+              onClick={() => {
+                setConfirmAction({
+                  title: t('campaigns.actions.deleteConfirm', 'Delete this campaign?'),
+                  description: t('campaigns.actions.deleteDescription', 'This action cannot be undone.'),
+                  variant: 'destructive',
+                  onConfirm: () => deleteMutation.mutate(campaign.id),
+                });
+                setConfirmOpen(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {t('common.delete', 'Delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderCampaignCard = (campaign: AgriculturalCampaign) => {
+    const summary = getSummaryForCampaign(campaign.id);
+
+    return (
+      <Card
+        className="cursor-pointer transition-shadow hover:shadow-md"
+        onClick={() => navigate({ to: '/crop-cycles', search: { campaign_id: campaign.id } })}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-1 text-lg">
+                {campaign.name}
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </CardTitle>
+              <CardDescription>
+                <code className="rounded bg-muted px-1 text-xs">{campaign.code}</code>
+              </CardDescription>
+            </div>
+            {renderCampaignActions(campaign)}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            {new Date(campaign.start_date).toLocaleDateString()} - {new Date(campaign.end_date).toLocaleDateString()}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {getStatusBadge(campaign.status, campaign.is_current)}
+            {getCampaignTypeBadge(campaign.campaign_type)}
+          </div>
+
+          {summary && (
+            <div className="space-y-1 border-t pt-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t('campaigns.cycles', 'Cycles')}</span>
+                <span className="font-medium">{summary.total_cycles}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t('campaigns.area', 'Area')}</span>
+                <span className="font-medium">{summary.total_planted_area?.toFixed(1) || 0} ha</span>
+              </div>
+              {summary.net_profit !== null && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t('campaigns.profit', 'Net Profit')}</span>
+                  <span className={`font-medium ${(summary.net_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {currencySymbol} {(summary.net_profit || 0).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (!isAdmin) {
     return (
       <Card>
@@ -224,130 +375,149 @@ export function CampaignManagement() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {t('campaigns.loading', 'Loading campaigns...')}
-        </div>
-      ) : campaigns.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            {t('campaigns.empty', 'No campaigns yet. Create your first agricultural campaign to get started.')}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {campaigns.map((campaign) => {
-            const summary = getSummaryForCampaign(campaign.id);
-            return (
-              <Card key={campaign.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate({ to: '/crop-cycles', search: { campaign_id: campaign.id } })}>
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-lg flex items-center gap-1">
-                        {campaign.name}
-                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                      </CardTitle>
-                      <CardDescription>
-                        <code className="text-xs bg-muted px-1 rounded">{campaign.code}</code>
-                      </CardDescription>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => handleOpenDialog(campaign)}>
-                          <Edit2 className="h-4 w-4 mr-2" />
-                          {t('common.edit', 'Edit')}
-                        </DropdownMenuItem>
-                        {campaign.status === 'planned' && (
-                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'active' })}>
-                            <Play className="h-4 w-4 mr-2" />
-                            {t('campaigns.actions.activate', 'Activate')}
-                          </DropdownMenuItem>
-                        )}
-                        {campaign.status === 'active' && (
-                          <DropdownMenuItem onClick={() => statusMutation.mutate({ id: campaign.id, status: 'completed' })}>
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            {t('campaigns.actions.complete', 'Complete')}
-                          </DropdownMenuItem>
-                        )}
-                        {(campaign.status === 'planned' || campaign.status === 'active') && (
-                          <DropdownMenuItem onClick={() => {
-                            setConfirmAction({
-                              title: t('campaigns.actions.cancelConfirm', 'Cancel this campaign?'),
-                              description: t('campaigns.actions.cancelDescription', 'This will mark the campaign as cancelled.'),
-                              onConfirm: () => statusMutation.mutate({ id: campaign.id, status: 'cancelled' }),
-                            });
-                            setConfirmOpen(true);
-                          }}>
-                            <XCircle className="h-4 w-4 mr-2" />
-                            {t('campaigns.actions.cancel', 'Cancel')}
-                          </DropdownMenuItem>
-                        )}
-                        {campaign.status !== 'active' && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setConfirmAction({
-                                  title: t('campaigns.actions.deleteConfirm', 'Delete this campaign?'),
-                                  description: t('campaigns.actions.deleteDescription', 'This action cannot be undone.'),
-                                  variant: 'destructive',
-                                  onConfirm: () => deleteMutation.mutate(campaign.id),
-                                });
-                                setConfirmOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t('common.delete', 'Delete')}
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(campaign.start_date).toLocaleDateString()} - {new Date(campaign.end_date).toLocaleDateString()}
-                  </div>
-                  
-                  <div className="flex gap-2 flex-wrap">
-                    {getStatusBadge(campaign.status, campaign.is_current)}
-                    {getCampaignTypeBadge(campaign.campaign_type)}
-                  </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('campaigns.listTitle', 'Campaign List')}</CardTitle>
+          <CardDescription>
+            {t('campaigns.listDescription', 'Total: {{count}} campaigns', { count: filteredCampaigns.length })}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <FilterBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t('campaigns.filters.searchPlaceholder', 'Search by name, code, or description')}
+            filters={[
+              {
+                key: 'status',
+                value: selectedStatusFilter,
+                onChange: setSelectedStatusFilter,
+                options: [
+                  { value: 'all', label: t('campaigns.filters.allStatuses', 'All statuses') },
+                  { value: 'planned', label: t('campaigns.status.planned', 'Planned') },
+                  { value: 'active', label: t('campaigns.status.active', 'Active') },
+                  { value: 'completed', label: t('campaigns.status.completed', 'Completed') },
+                  { value: 'cancelled', label: t('campaigns.status.cancelled', 'Cancelled') },
+                ],
+                className: 'w-full sm:w-44',
+              },
+              {
+                key: 'type',
+                value: selectedTypeFilter,
+                onChange: setSelectedTypeFilter,
+                options: [
+                  { value: 'all', label: t('campaigns.filters.allTypes', 'All types') },
+                  { value: 'general', label: t('campaigns.type.general', 'General') },
+                  { value: 'rainfed', label: t('campaigns.type.rainfed', 'Rainfed') },
+                  { value: 'irrigated', label: t('campaigns.type.irrigated', 'Irrigated') },
+                  { value: 'greenhouse', label: t('campaigns.type.greenhouse', 'Greenhouse') },
+                ],
+                className: 'w-full sm:w-44',
+              },
+            ]}
+            onClear={clearFilters}
+          />
 
-                  {summary && (
-                    <div className="pt-2 border-t space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('campaigns.cycles', 'Cycles')}</span>
-                        <span className="font-medium">{summary.total_cycles}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{t('campaigns.area', 'Area')}</span>
-                        <span className="font-medium">{summary.total_planted_area?.toFixed(1) || 0} ha</span>
-                      </div>
-                      {summary.net_profit !== null && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{t('campaigns.profit', 'Net Profit')}</span>
-                          <span className={`font-medium ${(summary.net_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {currencySymbol} {(summary.net_profit || 0).toLocaleString()}
-                          </span>
+          <ResponsiveList
+            items={filteredCampaigns}
+            isLoading={isLoading}
+            keyExtractor={(campaign) => campaign.id}
+            renderCard={renderCampaignCard}
+            renderTableHeader={(
+              <TableRow className="border-b">
+                <TableHead className="px-4 py-3 text-left font-medium">{t('campaigns.table.code', 'Code')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('campaigns.table.name', 'Name')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('campaigns.table.period', 'Period')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('campaigns.table.type', 'Type')}</TableHead>
+                <TableHead className="px-4 py-3 text-center font-medium">{t('campaigns.table.status', 'Status')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('campaigns.table.summary', 'Summary')}</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">{t('campaigns.table.actions', 'Actions')}</TableHead>
+              </TableRow>
+            )}
+            renderTable={(campaign) => {
+              const summary = getSummaryForCampaign(campaign.id);
+
+              return (
+                <>
+                  <TableCell className="px-4 py-3 align-top">
+                    <code className="rounded bg-muted px-2 py-1 text-sm">{campaign.code}</code>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 align-top">
+                    <div className="font-medium">{campaign.name}</div>
+                    {campaign.description && (
+                      <div className="max-w-md truncate text-sm text-muted-foreground">{campaign.description}</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 align-top text-sm text-muted-foreground">
+                    {new Date(campaign.start_date).toLocaleDateString()} - {new Date(campaign.end_date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 align-top">{getCampaignTypeBadge(campaign.campaign_type)}</TableCell>
+                  <TableCell className="px-4 py-3 align-top text-center">{getStatusBadge(campaign.status, campaign.is_current)}</TableCell>
+                  <TableCell className="px-4 py-3 align-top text-sm">
+                    {summary ? (
+                      <div className="space-y-1">
+                        <div>
+                          <span className="text-muted-foreground">{t('campaigns.cycles', 'Cycles')}:</span>{' '}
+                          <span className="font-medium">{summary.total_cycles}</span>
                         </div>
-                      )}
+                        <div>
+                          <span className="text-muted-foreground">{t('campaigns.area', 'Area')}:</span>{' '}
+                          <span className="font-medium">{summary.total_planted_area?.toFixed(1) || 0} ha</span>
+                        </div>
+                        {summary.net_profit !== null && (
+                          <div>
+                            <span className="text-muted-foreground">{t('campaigns.profit', 'Net Profit')}:</span>{' '}
+                            <span className={`font-medium ${(summary.net_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {currencySymbol} {(summary.net_profit || 0).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">{t('common.notAvailable', '-')}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 align-top text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate({ to: '/crop-cycles', search: { campaign_id: campaign.id } })}
+                        title={t('campaigns.actions.openCycles', 'Open cycles')}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </Button>
+                      {renderCampaignActions(campaign)}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                  </TableCell>
+                </>
+              );
+            }}
+            emptyIcon={Leaf}
+            emptyMessage={hasActiveFilters
+              ? t('campaigns.emptyFiltered', 'No campaigns match your search or filters.')
+              : t('campaigns.empty', 'No campaigns yet. Create your first agricultural campaign to get started.')}
+            emptyAction={hasActiveFilters
+              ? {
+                label: t('common.clearFilters', 'Clear filters'),
+                onClick: clearFilters,
+                variant: 'outline',
+              }
+              : {
+                label: t('campaigns.addNew', 'New Campaign'),
+                onClick: () => handleOpenDialog(),
+              }}
+            emptyExtra={hasActiveFilters ? (
+              <EmptyState
+                variant="inline"
+                icon={Leaf}
+                description={t('campaigns.emptyFilteredHint', 'Try adjusting or clearing your filters to see more campaigns.')}
+                showCircularContainer={false}
+              />
+            ) : undefined}
+          />
+        </CardContent>
+      </Card>
 
       <ResponsiveDialog
         open={isDialogOpen}

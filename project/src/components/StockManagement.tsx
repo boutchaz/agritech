@@ -33,10 +33,9 @@ import { suppliersApi } from "@/lib/api/suppliers";
 import { warehousesApi } from "@/lib/api/warehouses";
 import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { SectionLoader } from '@/components/ui/loader';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 
 
 interface Product {
@@ -177,7 +176,7 @@ void _showConfirm;
   const [_products, _setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
-  const [loading, _setLoading] = useState(true);
+  const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // showAddPurchase removed - purchases now handled via Stock Entries
   const [showAddSupplier, setShowAddSupplier] = useState(false);
@@ -487,12 +486,6 @@ void _showConfirm;
       warehouse.manager_name?.toLowerCase().includes(normalizedSearchTerm),
   );
 
-  if (loading) {
-    return (
-      <SectionLoader />
-    );
-  }
-
   return (
     <div className="p-3 sm:p-4 lg:p-6">
       <ListPageLayout
@@ -542,345 +535,384 @@ void _showConfirm;
 
         {/* Suppliers Tab */}
         {activeTab === "suppliers" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredSuppliers.map((supplier) => (
-                   <div key={supplier.id} className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {supplier.name}
-                          </div>
-                          {supplier.payment_terms && (
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {supplier.payment_terms}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200 min-h-[44px] min-w-[44px]"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => openEditSupplierModal(supplier)}
-                          >
-                            <Pencil className="mr-2 h-4 w-4" />
-                            {t('stockManagement.edit')}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteSupplier(supplier.id)}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {t('stockManagement.archive')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          <ResponsiveList
+            items={filteredSuppliers}
+            isLoading={loading}
+            keyExtractor={(supplier) => supplier.id}
+            emptyIcon={Users}
+            emptyTitle={t('stockManagement.noSuppliers')}
+            emptyMessage={t('stockManagement.noSuppliersHint')}
+            renderCard={(supplier) => (
+              <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      {supplier.contact_person && (
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400 block text-xs">
-                            {t('stockManagement.supplierTable.contact')}
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {supplier.contact_person}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block text-xs">
-                          {t('stockManagement.supplierTable.location')}
-                        </span>
-                        <span className="text-gray-900 dark:text-white">
-                          {supplier.city && supplier.country
-                            ? `${supplier.city}, ${supplier.country}`
-                            : supplier.country || supplier.city || "-"}
-                        </span>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {supplier.name}
                       </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
-                      {supplier.email && (
-                        <div className="flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5" />
-                          <span>{supplier.email}</span>
-                        </div>
-                      )}
-                      {supplier.phone && (
-                        <div className="flex items-center gap-1">
-                          <Phone className="h-3.5 w-3.5" />
-                          <span>{supplier.phone}</span>
+                      {supplier.payment_terms && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {supplier.payment_terms}
                         </div>
                       )}
                     </div>
                   </div>
-                ))}
-              {filteredSuppliers.length === 0 && (
-                <div className="text-center py-12">
-                  <Users className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    {t('stockManagement.noSuppliers')}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t('stockManagement.noSuppliersHint')}
-                  </p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              )}
-            </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden md:block">
-              <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <TableHeader className="bg-gray-50 dark:bg-gray-700">
-                  <TableRow>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('stockManagement.supplierTable.supplier')}
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('stockManagement.supplierTable.contact')}
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {supplier.contact_person && (
+                    <div>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">
+                        {t('stockManagement.supplierTable.contact')}
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        {supplier.contact_person}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
                       {t('stockManagement.supplierTable.location')}
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('stockManagement.supplierTable.actions')}
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredSuppliers.map((supplier) => (
-                      <TableRow key={supplier.id}>
-                        <TableCell className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0">
-                              <Building2 className="h-6 w-6 text-gray-400" />
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {supplier.name}
-                              </div>
-                              {supplier.payment_terms && (
-                                <div className="text-sm text-gray-500 dark:text-gray-400">
-                                  {supplier.payment_terms}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900 dark:text-white">
-                            {supplier.contact_person}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                            {supplier.email && (
-                              <div className="flex items-center">
-                                <Mail className="h-3 w-3 mr-1" />
-                                {supplier.email}
-                              </div>
-                            )}
-                            {supplier.phone && (
-                              <div className="flex items-center">
-                                <Phone className="h-3 w-3 mr-1" />
-                                {supplier.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {supplier.city && supplier.country
-                              ? `${supplier.city}, ${supplier.country}`
-                              : supplier.country || supplier.city || "-"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => openEditSupplierModal(supplier)}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                {t('stockManagement.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleDeleteSupplier(supplier.id)
-                                }
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                {t('stockManagement.archive')}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-
-              {filteredSuppliers.length === 0 && (
-                <div className="text-center py-12">
-                  <Users className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                    {t('stockManagement.noSuppliers')}
-                  </h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {t('stockManagement.noSuppliersHint')}
-                  </p>
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {supplier.city && supplier.country
+                        ? `${supplier.city}, ${supplier.country}`
+                        : supplier.country || supplier.city || "-"}
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
+
+                <div className="flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
+                  {supplier.email && (
+                    <div className="flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>{supplier.email}</span>
+                    </div>
+                  )}
+                  {supplier.phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5" />
+                      <span>{supplier.phone}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            renderTableHeader={
+              <TableRow>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.supplier')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.contact')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.location')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.actions')}
+                </TableHead>
+              </TableRow>
+            }
+            renderTable={(supplier) => (
+              <>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Building2 className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {supplier.name}
+                      </div>
+                      {supplier.payment_terms && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {supplier.payment_terms}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {supplier.contact_person}
+                  </div>
+                  <div className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    {supplier.email && (
+                      <div className="flex items-center">
+                        <Mail className="mr-1 h-3 w-3" />
+                        {supplier.email}
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div className="flex items-center">
+                        <Phone className="mr-1 h-3 w-3" />
+                        {supplier.phone}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {supplier.city && supplier.country
+                      ? `${supplier.city}, ${supplier.country}`
+                      : supplier.country || supplier.city || "-"}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </>
+            )}
+          />
         )}
 
         {/* Warehouses Tab */}
         {activeTab === "warehouses" && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <TableHeader className="bg-gray-50 dark:bg-gray-700">
-                <TableRow>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('stockManagement.warehouseTable.warehouse')}
-                  </TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('stockManagement.warehouseTable.capacity')}
-                  </TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('stockManagement.warehouseTable.manager')}
-                  </TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('stockManagement.warehouseTable.conditions')}
-                  </TableHead>
-                  <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    {t('stockManagement.warehouseTable.actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredWarehouses.map((warehouse) => (
-                    <TableRow key={warehouse.id}>
-                      <TableCell className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <Warehouse className="h-6 w-6 text-gray-400" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {warehouse.name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {warehouse.location || warehouse.city || "-"}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.capacity
-                            ? `${warehouse.capacity} ${warehouse.capacity_unit}`
-                            : "-"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.manager_name || "-"}
-                        </div>
-                        {warehouse.manager_phone && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {warehouse.manager_phone}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-xs space-y-1">
-                          {warehouse.temperature_controlled && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                              {t('stockManagement.tempControlled')}
-                            </span>
-                          )}
-                          {warehouse.humidity_controlled && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              {t('stockManagement.humidityControlled')}
-                            </span>
-                          )}
-                          <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                            {t('stockManagement.security')}{warehouse.security_level}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => openEditWarehouseModal(warehouse)}
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              {t('stockManagement.edit')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handleDeleteWarehouse(warehouse.id)
-                              }
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              {t('stockManagement.archive')}
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
+          <ResponsiveList
+            items={filteredWarehouses}
+            isLoading={loading}
+            keyExtractor={(warehouse) => warehouse.id}
+            emptyIcon={Warehouse}
+            emptyTitle={t('stockManagement.noWarehouses')}
+            emptyMessage={t('stockManagement.noWarehousesHint')}
+            renderCard={(warehouse) => (
+              <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Warehouse className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {warehouse.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {warehouse.location || warehouse.city || "-"}
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteWarehouse(warehouse.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-            {filteredWarehouses.length === 0 && (
-              <div className="text-center py-12">
-                <Warehouse className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                  {t('stockManagement.noWarehouses')}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t('stockManagement.noWarehousesHint')}
-                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.warehouseTable.capacity')}
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {warehouse.capacity
+                        ? `${warehouse.capacity} ${warehouse.capacity_unit}`
+                        : "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.warehouseTable.manager')}
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {warehouse.manager_name || "-"}
+                    </span>
+                  </div>
+                </div>
+
+                {warehouse.manager_phone && (
+                  <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{warehouse.manager_phone}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {warehouse.temperature_controlled && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {t('stockManagement.tempControlled')}
+                    </span>
+                  )}
+                  {warehouse.humidity_controlled && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                      {t('stockManagement.humidityControlled')}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 font-medium capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    {t('stockManagement.security')}{warehouse.security_level}
+                  </span>
+                </div>
               </div>
             )}
-          </div>
+            renderTableHeader={
+              <TableRow>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.warehouse')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.capacity')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.manager')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.conditions')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.actions')}
+                </TableHead>
+              </TableRow>
+            }
+            renderTable={(warehouse) => (
+              <>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Warehouse className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {warehouse.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {warehouse.location || warehouse.city || "-"}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {warehouse.capacity
+                      ? `${warehouse.capacity} ${warehouse.capacity_unit}`
+                      : "-"}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {warehouse.manager_name || "-"}
+                  </div>
+                  {warehouse.manager_phone && (
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <Phone className="mr-1 h-3 w-3" />
+                      {warehouse.manager_phone}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="space-y-1 text-xs">
+                    {warehouse.temperature_controlled && (
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {t('stockManagement.tempControlled')}
+                      </span>
+                    )}
+                    {warehouse.humidity_controlled && (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                        {t('stockManagement.humidityControlled')}
+                      </span>
+                    )}
+                    <div className="text-xs capitalize text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.security')}{warehouse.security_level}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteWarehouse(warehouse.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </>
+            )}
+          />
         )}
       </ListPageLayout>
 

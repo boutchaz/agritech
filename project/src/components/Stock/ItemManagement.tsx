@@ -20,7 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
@@ -66,6 +66,7 @@ import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -1259,7 +1260,12 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
             ) : variants.length === 0 ? (
-              <p className="text-sm text-gray-500">{t('items.variants.empty', 'No variants yet')}</p>
+              <EmptyState
+                variant="inline"
+                icon={Layers}
+                title={t('items.variants.emptyTitle', 'No variants yet')}
+                description={t('items.variants.empty', 'No variants yet')}
+              />
             ) : (
               <div className="border rounded-lg overflow-hidden">
                 <Table className="w-full">
@@ -1570,172 +1576,208 @@ export default function ItemManagement() {
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border">
-            <div className="overflow-x-auto">
-              <Table className="w-full min-w-[800px]">
-                <TableHeader className="bg-gray-50 dark:bg-gray-800 border-b">
-                <TableRow>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.itemCode')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.itemName')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.group')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.defaultUnit')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.standardRate')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.stockLevel')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.status')}
-                  </TableHead>
-                  <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                    {t('items.actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
-                      {t('items.noItemsFound')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredItems.map((item) => {
-                    const stockLevel = stockLevels[item.id];
-                    const isLowStock = stockLevel?.is_low_stock || 
-                      (item.minimum_stock_level && stockLevel && 
-                       stockLevel.total_quantity < item.minimum_stock_level);
-                    
-                    return (
-                      <TableRow
-                        key={item.id}
-                        className="hover:bg-gray-50 dark:hover:bg-gray-800"
+          <ResponsiveList
+            items={filteredItems}
+            keyExtractor={(item) => item.id}
+            emptyIcon={Package}
+            emptyTitle={t('items.noItemsTitle', 'No items found')}
+            emptyMessage={t('items.noItemsFound')}
+            emptyAction={!searchTerm && selectedFarm === 'all' && !lowStockOnly ? {
+              label: t('items.createItem'),
+              onClick: handleCreate,
+            } : undefined}
+            renderCard={(item) => {
+              const stockLevel = stockLevels[item.id];
+              const isLowStock = stockLevel?.is_low_stock ||
+                (item.minimum_stock_level && stockLevel && stockLevel.total_quantity < item.minimum_stock_level);
+
+              return (
+                <Card className="border shadow-sm">
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-semibold text-gray-900 dark:text-white">{item.item_name}</p>
+                          {isLowStock && <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />}
+                        </div>
+                        <p className="text-sm text-gray-500">{item.item_code}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          item.is_active
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                        }`}>
+                          {item.is_active ? t('items.active') : t('items.inactive')}
+                        </span>
+                        {isLowStock && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            {t('items.lowStock', 'Low Stock')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.group')}:</span> {item.item_group?.name || '-'}</div>
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.defaultUnit')}:</span> {item.default_unit}</div>
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.standardRate')}:</span> {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}</div>
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-white">{t('items.stockLevel')}:</span>{' '}
+                        {stockLevel ? `${stockLevel.total_quantity.toFixed(3)} ${item.default_unit}` : t('items.noStock')}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVariants(item)}
+                        className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
+                        title={t('items.variants.title', 'Variants')}
                       >
-                        <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                          <div className="flex items-center gap-2">
-                            {item.item_code}
-                            {isLowStock && (
-                              <div title={t('items.lowStock', 'Low Stock')}>
-                                <AlertTriangle className="w-4 h-4 text-amber-500" />
-                              </div>
+                        <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedItemForDetails(item)}
+                        className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
+                        title={t('items.viewDetails', 'View Details')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="p-1 sm:p-2">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(item)}
+                        className="p-1 text-red-600 hover:text-red-700 sm:p-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }}
+            renderTableHeader={(
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.itemCode')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.itemName')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.group')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.defaultUnit')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.standardRate')}</TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.stockLevel')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.status')}</TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.actions')}</TableHead>
+              </TableRow>
+            )}
+            renderTable={(item) => {
+              const stockLevel = stockLevels[item.id];
+              const isLowStock = stockLevel?.is_low_stock ||
+                (item.minimum_stock_level && stockLevel && stockLevel.total_quantity < item.minimum_stock_level);
+
+              return (
+                <>
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-2">
+                      {item.item_code}
+                      {isLowStock && (
+                        <div title={t('items.lowStock', 'Low Stock')}>
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.item_name}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{item.item_group?.name || '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{item.default_unit}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.standard_rate ? formatCurrency(item.standard_rate) : '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
+                    {stockLevel ? (
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1">
+                          <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                            {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500">{formatCurrency(stockLevel.total_value)}</span>
+                        {stockLevel.warehouses && stockLevel.warehouses.length > 0 && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            {stockLevel.warehouses.length} {t('items.warehouse', 'warehouse(s)')}
+                            {selectedFarm === 'all' && stockLevel.warehouses.some((wh: { farm_name?: string | null }) => wh.farm_name) && (
+                              <span className="ml-1">
+                                ({stockLevel.warehouses
+                                  .filter((wh: { farm_name?: string | null }) => wh.farm_name)
+                                  .map((wh: { farm_name?: string | null }) => wh.farm_name)
+                                  .join(', ')})
+                              </span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {item.item_name}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {item.item_group?.name || '-'}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {item.default_unit}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                          {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                          {stockLevel ? (
-                            <div className="flex flex-col items-end">
-                              <div className="flex items-center gap-1">
-                                <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                                  {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
-                                </span>
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {formatCurrency(stockLevel.total_value)}
-                              </span>
-                              {stockLevel.warehouses && stockLevel.warehouses.length > 0 && (
-                                <div className="mt-1 text-xs text-gray-500">
-                                  {stockLevel.warehouses.length} {t('items.warehouse', 'warehouse(s)')}
-                                  {selectedFarm === 'all' && stockLevel.warehouses.some((wh: { farm_name?: string | null }) => wh.farm_name) && (
-                                    <span className="ml-1">
-                                      ({stockLevel.warehouses
-                                        .filter((wh: { farm_name?: string | null }) => wh.farm_name)
-                                        .map((wh: { farm_name?: string | null }) => wh.farm_name)
-                                        .join(', ')})
-                                    </span>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">{t('items.noStock')}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-sm">
-                          <div className="flex flex-col gap-1">
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                item.is_active
-                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                              }`}
-                            >
-                              {item.is_active ? t('items.active') : t('items.inactive')}
-                            </span>
-                            {isLowStock && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                {t('items.lowStock', 'Low Stock')}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-1 sm:gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleVariants(item)}
-                              className="text-emerald-600 hover:text-emerald-700 p-1 sm:p-2"
-                              title={t('items.variants.title', 'Variants')}
-                            >
-                              <Layers className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedItemForDetails(item)}
-                              className="text-blue-600 hover:text-blue-700 p-1 sm:p-2"
-                              title={t('items.viewDetails', 'View Details')}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(item)}
-                              className="p-1 sm:p-2"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(item)}
-                              className="text-red-600 hover:text-red-700 p-1 sm:p-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-              </Table>
-            </div>
-          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">{t('items.noStock')}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        item.is_active
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                      }`}>
+                        {item.is_active ? t('items.active') : t('items.inactive')}
+                      </span>
+                      {isLowStock && (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                          <AlertTriangle className="mr-1 h-3 w-3" />
+                          {t('items.lowStock', 'Low Stock')}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVariants(item)}
+                        className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
+                        title={t('items.variants.title', 'Variants')}
+                      >
+                        <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedItemForDetails(item)}
+                        className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
+                        title={t('items.viewDetails', 'View Details')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="p-1 sm:p-2">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(item)}
+                        className="p-1 text-red-600 hover:text-red-700 sm:p-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </>
+              );
+            }}
+          />
         )}
       </ListPageLayout>
 
