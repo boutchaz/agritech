@@ -134,4 +134,37 @@ export class ReferentialService {
 
     return { success: true, crop, section };
   }
+
+  create(
+    crop: string,
+    data: Record<string, unknown>,
+  ): { success: boolean; crop: string; fileName: string } {
+    const dir = this.discoverDir();
+    if (!dir) {
+      throw new NotFoundException('Referentials directory not found');
+    }
+
+    const normalized = crop.toLowerCase().replace(/\s+/g, '_');
+    const fileName = `DATA_${normalized.toUpperCase()}.json`;
+    const filePath = path.join(dir, fileName);
+
+    if (fs.existsSync(filePath)) {
+      throw new BadRequestException(`Referential already exists: ${fileName}`);
+    }
+
+    // Ensure metadata
+    if (!data.metadata || typeof data.metadata !== 'object') {
+      data.metadata = {};
+    }
+    const meta = data.metadata as Record<string, unknown>;
+    meta.version = meta.version ?? '1.0';
+    meta.date = meta.date ?? new Date().toISOString().slice(0, 7);
+    meta.culture = normalized;
+    meta.pays = meta.pays ?? 'Maroc';
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    this.logger.log(`Created referential ${fileName}`);
+
+    return { success: true, crop: normalized, fileName };
+  }
 }

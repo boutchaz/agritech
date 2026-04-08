@@ -1,13 +1,49 @@
-import { createFileRoute, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
-import { Leaf, ArrowRight, RefreshCw } from 'lucide-react';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Leaf, ArrowRight, RefreshCw, Plus, X } from 'lucide-react';
 import { referentialApi, getCropLabel } from '@/lib/referentiels';
+import { toast } from 'sonner';
 
 function ReferentielsDashboard() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [showCreate, setShowCreate] = useState(false);
+  const [newCropName, setNewCropName] = useState('');
+
   const { data: crops, isLoading, refetch } = useQuery({
     queryKey: ['referentials-list'],
     queryFn: () => referentialApi.list(),
   });
+
+  const createMutation = useMutation({
+    mutationFn: (crop: string) =>
+      referentialApi.create(crop, {
+        metadata: {
+          version: '1.0',
+          date: new Date().toISOString().slice(0, 7),
+          culture: crop.toLowerCase().replace(/\s+/g, '_'),
+          pays: 'Maroc',
+        },
+      }),
+    onSuccess: (result) => {
+      toast.success(`Referential "${result.crop}" created`);
+      queryClient.invalidateQueries({ queryKey: ['referentials-list'] });
+      setShowCreate(false);
+      setNewCropName('');
+      navigate({ to: '/referentiels/$crop', params: { crop: result.crop } });
+    },
+    onError: (err: Error) => {
+      toast.error(`Creation failed: ${err.message}`);
+    },
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newCropName.trim();
+    if (!name) return;
+    createMutation.mutate(name);
+  };
 
   return (
     <div className="p-8">
@@ -18,15 +54,67 @@ function ReferentielsDashboard() {
             Inspect, validate and update agronomic reference data
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            New Referential
+          </button>
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {/* Create dialog */}
+      {showCreate && (
+        <div className="mb-6 bg-white rounded-lg border border-emerald-200 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-medium text-gray-900">New Referential</h3>
+            <button
+              onClick={() => {
+                setShowCreate(false);
+                setNewCropName('');
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <form onSubmit={handleCreate} className="flex items-end gap-3">
+            <div className="flex-1 max-w-xs">
+              <label className="block text-sm text-gray-600 mb-1">
+                Crop name
+              </label>
+              <input
+                type="text"
+                value={newCropName}
+                onChange={(e) => setNewCropName(e.target.value)}
+                placeholder="e.g. grenadier, figuier..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                autoFocus
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Creates DATA_{'<NAME>'}.json with empty metadata
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={!newCropName.trim() || createMutation.isPending}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {createMutation.isPending ? 'Creating...' : 'Create'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
@@ -36,7 +124,7 @@ function ReferentielsDashboard() {
         <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed border-gray-300">
           <p className="text-gray-500">No referential files found</p>
           <p className="text-sm text-gray-400 mt-1">
-            Place DATA_*.json files in agritech-api/referentials/
+            Click "New Referential" to create one
           </p>
         </div>
       ) : (

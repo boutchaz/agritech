@@ -1,27 +1,29 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ArrowLeft,
   RefreshCw,
   ChevronRight,
   ChevronDown,
-  Pencil,
   Save,
   X,
   Check,
   Leaf,
+  Pencil,
 } from 'lucide-react';
 import { referentialApi, getCropLabel, getSectionLabel } from '@/lib/referentiels';
 import { toast } from 'sonner';
+
+type JsonPath = (string | number)[];
 
 function CropDetailPage() {
   const { crop } = Route.useParams();
   const queryClient = useQueryClient();
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [editJson, setEditJson] = useState('');
-  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [sectionDraft, setSectionDraft] = useState<unknown>(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['referential', crop],
@@ -32,10 +34,11 @@ function CropDetailPage() {
     mutationFn: ({ section, value }: { section: string; value: unknown }) =>
       referentialApi.updateSection(crop, section, value),
     onSuccess: (_, vars) => {
-      toast.success(`Section "${vars.section}" updated`);
+      toast.success(`"${getSectionLabel(vars.section)}" saved`);
       queryClient.invalidateQueries({ queryKey: ['referential', crop] });
       setEditingSection(null);
-      setEditJson('');
+      setSectionDraft(null);
+      setHasChanges(false);
     },
     onError: (err: Error) => {
       toast.error(`Update failed: ${err.message}`);
@@ -54,20 +57,36 @@ function CropDetailPage() {
   const startEdit = (section: string) => {
     if (!data) return;
     setEditingSection(section);
-    setEditJson(JSON.stringify(data[section], null, 2));
-    setJsonError(null);
+    setSectionDraft(structuredClone(data[section]));
+    setHasChanges(false);
+    if (!expandedSections.has(section)) {
+      toggleSection(section);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingSection(null);
+    setSectionDraft(null);
+    setHasChanges(false);
   };
 
   const saveEdit = () => {
-    if (!editingSection) return;
-    try {
-      const parsed = JSON.parse(editJson);
-      setJsonError(null);
-      updateMutation.mutate({ section: editingSection, value: parsed });
-    } catch (e) {
-      setJsonError((e as Error).message);
-    }
+    if (!editingSection || !sectionDraft) return;
+    updateMutation.mutate({ section: editingSection, value: sectionDraft });
   };
+
+  const updateValue = useCallback((path: JsonPath, newValue: unknown) => {
+    setSectionDraft((prev: unknown) => {
+      const clone = structuredClone(prev);
+      let target: any = clone;
+      for (let i = 0; i < path.length - 1; i++) {
+        target = target[path[i]];
+      }
+      target[path[path.length - 1]] = newValue;
+      return clone;
+    });
+    setHasChanges(true);
+  }, []);
 
   const sections = data ? Object.keys(data) : [];
   const metadata = data?.metadata as Record<string, unknown> | undefined;
@@ -126,20 +145,22 @@ function CropDetailPage() {
           {sections.map((section) => {
             const isExpanded = expandedSections.has(section);
             const isEditing = editingSection === section;
-            const value = data[section];
+            const value = isEditing ? sectionDraft : data[section];
             const isMetadata = section === 'metadata';
 
             return (
               <div
                 key={section}
-                className="bg-white rounded-lg border border-gray-200 overflow-hidden"
+                className={`bg-white rounded-lg border overflow-hidden ${
+                  isEditing ? 'border-emerald-300 ring-1 ring-emerald-200' : 'border-gray-200'
+                }`}
               >
                 {/* Section header */}
-                <button
-                  onClick={() => toggleSection(section)}
-                  className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={() => toggleSection(section)}
+                    className="flex items-center gap-3 flex-1"
+                  >
                     {isExpanded ? (
                       <ChevronDown className="h-4 w-4 text-gray-400" />
                     ) : (
@@ -149,72 +170,48 @@ function CropDetailPage() {
                       {getSectionLabel(section)}
                     </span>
                     <span className="text-xs text-gray-400">{section}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <TypeBadge value={value} />
-                    {!isMetadata && !isEditing && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          startEdit(section);
-                          if (!isExpanded) toggleSection(section);
-                        }}
-                        className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={saveEdit}
+                          disabled={updateMutation.isPending || !hasChanges}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded text-xs hover:bg-gray-50"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Cancel
+                        </button>
+                      </>
+                    ) : !isMetadata ? (
+                      <button
+                        onClick={() => startEdit(section)}
+                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"
+                        title="Edit values"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </span>
-                    )}
+                      </button>
+                    ) : null}
                   </div>
-                </button>
+                </div>
 
                 {/* Section content */}
                 {isExpanded && (
-                  <div className="border-t border-gray-200">
-                    {isEditing ? (
-                      <div className="p-4">
-                        <textarea
-                          value={editJson}
-                          onChange={(e) => {
-                            setEditJson(e.target.value);
-                            setJsonError(null);
-                          }}
-                          className={`w-full h-96 font-mono text-sm p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                            jsonError ? 'border-red-300' : 'border-gray-300'
-                          }`}
-                          spellCheck={false}
-                        />
-                        {jsonError && (
-                          <p className="text-sm text-red-600 mt-1">
-                            Invalid JSON: {jsonError}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-3">
-                          <button
-                            onClick={saveEdit}
-                            disabled={updateMutation.isPending}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700 disabled:opacity-50"
-                          >
-                            <Save className="h-4 w-4" />
-                            Save
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditingSection(null);
-                              setEditJson('');
-                              setJsonError(null);
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50"
-                          >
-                            <X className="h-4 w-4" />
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-4 overflow-x-auto">
-                        <JsonTree value={value} />
-                      </div>
-                    )}
+                  <div className="border-t border-gray-200 p-4 overflow-x-auto">
+                    <JsonTree
+                      value={value}
+                      path={[]}
+                      editable={isEditing}
+                      onValueChange={updateValue}
+                    />
                   </div>
                 )}
               </div>
@@ -225,6 +222,8 @@ function CropDetailPage() {
     </div>
   );
 }
+
+// --- Components ---
 
 function TypeBadge({ value }: { value: unknown }) {
   let label = '';
@@ -247,6 +246,8 @@ function TypeBadge({ value }: { value: unknown }) {
     color = 'bg-pink-50 text-pink-600';
   }
 
+  if (!label) return null;
+
   return (
     <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${color}`}>
       {label}
@@ -254,77 +255,134 @@ function TypeBadge({ value }: { value: unknown }) {
   );
 }
 
-function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
+interface JsonTreeProps {
+  value: unknown;
+  path: JsonPath;
+  depth?: number;
+  editable: boolean;
+  onValueChange: (path: JsonPath, value: unknown) => void;
+}
+
+function JsonTree({ value, path, depth = 0, editable, onValueChange }: JsonTreeProps) {
   if (value === null || value === undefined) {
-    return <span className="text-gray-400 italic">null</span>;
+    return <span className="text-gray-400 italic text-sm">null</span>;
   }
 
+  // Leaf values — editable inline
   if (typeof value === 'boolean') {
+    if (editable) {
+      return (
+        <button
+          onClick={() => onValueChange(path, !value)}
+          className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 rounded px-1 -mx-1"
+        >
+          {value ? (
+            <Check className="h-3.5 w-3.5 text-emerald-600" />
+          ) : (
+            <X className="h-3.5 w-3.5 text-gray-400" />
+          )}
+          <span className={value ? 'text-emerald-700 text-sm' : 'text-gray-500 text-sm'}>
+            {String(value)}
+          </span>
+        </button>
+      );
+    }
     return (
       <span className="flex items-center gap-1">
-        {value ? (
-          <Check className="h-3.5 w-3.5 text-emerald-600" />
-        ) : (
-          <X className="h-3.5 w-3.5 text-gray-400" />
-        )}
-        <span className={value ? 'text-emerald-700' : 'text-gray-500'}>
-          {String(value)}
-        </span>
+        {value ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <X className="h-3.5 w-3.5 text-gray-400" />}
+        <span className={value ? 'text-emerald-700 text-sm' : 'text-gray-500 text-sm'}>{String(value)}</span>
       </span>
     );
   }
 
   if (typeof value === 'number') {
+    if (editable) {
+      return (
+        <InlineNumberEditor
+          value={value}
+          onChange={(v) => onValueChange(path, v)}
+        />
+      );
+    }
     return <span className="text-amber-700 font-mono text-sm">{value}</span>;
   }
 
   if (typeof value === 'string') {
-    if (value.length > 200) {
+    if (editable) {
       return (
-        <span className="text-green-700 text-sm block max-w-2xl">
-          "{value.slice(0, 200)}..."
-        </span>
+        <InlineStringEditor
+          value={value}
+          onChange={(v) => onValueChange(path, v)}
+        />
       );
+    }
+    if (value.length > 200) {
+      return <span className="text-green-700 text-sm block max-w-2xl">"{value.slice(0, 200)}..."</span>;
     }
     return <span className="text-green-700 text-sm">"{value}"</span>;
   }
 
-  if (Array.isArray(value)) {
-    // Compact display for simple arrays
-    if (
-      value.length <= 6 &&
-      value.every((v) => typeof v === 'number' || typeof v === 'string')
-    ) {
+  // Compact simple arrays
+  if (
+    Array.isArray(value) &&
+    value.length <= 6 &&
+    value.every((v) => typeof v === 'number' || typeof v === 'string')
+  ) {
+    if (editable) {
       return (
-        <span className="font-mono text-sm">
-          [
+        <div className="flex flex-wrap items-center gap-1 font-mono text-sm">
+          <span>[</span>
           {value.map((v, i) => (
-            <span key={i}>
-              {i > 0 && ', '}
-              {typeof v === 'string' ? (
-                <span className="text-green-700">"{v}"</span>
+            <span key={i} className="flex items-center gap-0.5">
+              {i > 0 && <span>, </span>}
+              {typeof v === 'number' ? (
+                <InlineNumberEditor
+                  value={v}
+                  onChange={(nv) => onValueChange([...path, i], nv)}
+                />
               ) : (
-                <span className="text-amber-700">{v}</span>
+                <InlineStringEditor
+                  value={v as string}
+                  onChange={(nv) => onValueChange([...path, i], nv)}
+                />
               )}
             </span>
           ))}
-          ]
-        </span>
+          <span>]</span>
+        </div>
       );
     }
+    return (
+      <span className="font-mono text-sm">
+        [{value.map((v, i) => (
+          <span key={i}>
+            {i > 0 && ', '}
+            {typeof v === 'string' ? (
+              <span className="text-green-700">"{v}"</span>
+            ) : (
+              <span className="text-amber-700">{v}</span>
+            )}
+          </span>
+        ))}]
+      </span>
+    );
+  }
 
+  // Complex arrays
+  if (Array.isArray(value)) {
     return (
       <div className={depth > 2 ? 'ml-3' : ''}>
         {value.map((item, i) => (
           <div key={i} className="border-l-2 border-gray-200 pl-4 py-1 my-1">
             <span className="text-xs text-gray-400 mr-2">[{i}]</span>
-            <JsonTree value={item} depth={depth + 1} />
+            <JsonTree value={item} path={[...path, i]} depth={depth + 1} editable={editable} onValueChange={onValueChange} />
           </div>
         ))}
       </div>
     );
   }
 
+  // Objects
   if (typeof value === 'object') {
     const entries = Object.entries(value as Record<string, unknown>);
 
@@ -334,21 +392,25 @@ function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
           <tbody>
             {entries.map(([key, val]) => {
               const isComplex =
-                (typeof val === 'object' && val !== null) ||
-                (Array.isArray(val) && val.length > 6);
+                (typeof val === 'object' && val !== null && !Array.isArray(val)) ||
+                (Array.isArray(val) && (val.length > 6 || val.some((v) => typeof v === 'object')));
 
               return (
                 <tr key={key} className="border-b border-gray-100 last:border-0">
                   <td className="py-1.5 pr-4 align-top whitespace-nowrap">
-                    <span className="text-sm font-medium text-gray-700">
-                      {key}
-                    </span>
+                    <span className="text-sm font-medium text-gray-700">{key}</span>
                   </td>
                   <td className="py-1.5 align-top">
                     {isComplex ? (
-                      <CollapsibleValue label={key} value={val} depth={depth} />
+                      <CollapsibleValue
+                        value={val}
+                        path={[...path, key]}
+                        depth={depth}
+                        editable={editable}
+                        onValueChange={onValueChange}
+                      />
                     ) : (
-                      <JsonTree value={val} depth={depth + 1} />
+                      <JsonTree value={val} path={[...path, key]} depth={depth + 1} editable={editable} onValueChange={onValueChange} />
                     )}
                   </td>
                 </tr>
@@ -365,11 +427,16 @@ function JsonTree({ value, depth = 0 }: { value: unknown; depth?: number }) {
 
 function CollapsibleValue({
   value,
+  path,
   depth,
+  editable,
+  onValueChange,
 }: {
-  label: string;
   value: unknown;
+  path: JsonPath;
   depth: number;
+  editable: boolean;
+  onValueChange: (path: JsonPath, value: unknown) => void;
 }) {
   const [open, setOpen] = useState(depth < 1);
 
@@ -379,19 +446,123 @@ function CollapsibleValue({
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
       >
-        {open ? (
-          <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
-        )}
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         <TypeBadge value={value} />
       </button>
       {open && (
         <div className="mt-1">
-          <JsonTree value={value} depth={depth + 1} />
+          <JsonTree value={value} path={path} depth={depth + 1} editable={editable} onValueChange={onValueChange} />
         </div>
       )}
     </div>
+  );
+}
+
+// --- Inline editors ---
+
+function InlineNumberEditor({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  if (!editing) {
+    return (
+      <span
+        onClick={() => {
+          setDraft(String(value));
+          setEditing(true);
+        }}
+        className="text-amber-700 font-mono text-sm cursor-pointer hover:bg-amber-50 rounded px-1 -mx-1"
+        title="Click to edit"
+      >
+        {value}
+      </span>
+    );
+  }
+
+  return (
+    <input
+      type="number"
+      step="any"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        const num = Number(draft);
+        if (!isNaN(num)) onChange(num);
+        setEditing(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          const num = Number(draft);
+          if (!isNaN(num)) onChange(num);
+          setEditing(false);
+        }
+        if (e.key === 'Escape') setEditing(false);
+      }}
+      autoFocus
+      className="font-mono text-sm text-amber-700 border border-amber-300 rounded px-1 py-0.5 w-24 focus:outline-none focus:ring-1 focus:ring-amber-400"
+    />
+  );
+}
+
+function InlineStringEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+
+  if (!editing) {
+    return (
+      <span
+        onClick={() => {
+          setDraft(value);
+          setEditing(true);
+        }}
+        className="text-green-700 text-sm cursor-pointer hover:bg-green-50 rounded px-1 -mx-1 truncate max-w-md inline-block"
+        title="Click to edit"
+      >
+        "{value}"
+      </span>
+    );
+  }
+
+  const isLong = value.length > 80;
+
+  if (isLong) {
+    return (
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          onChange(draft);
+          setEditing(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') setEditing(false);
+        }}
+        autoFocus
+        rows={3}
+        className="text-sm text-green-700 border border-green-300 rounded px-2 py-1 w-full max-w-lg focus:outline-none focus:ring-1 focus:ring-green-400"
+      />
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        onChange(draft);
+        setEditing(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          onChange(draft);
+          setEditing(false);
+        }
+        if (e.key === 'Escape') setEditing(false);
+      }}
+      autoFocus
+      className="text-sm text-green-700 border border-green-300 rounded px-1 py-0.5 w-64 focus:outline-none focus:ring-1 focus:ring-green-400"
+    />
   );
 }
 

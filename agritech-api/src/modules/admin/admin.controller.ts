@@ -163,4 +163,9 @@ export class AdminController {
   ) {
     return this.referentialService.updateSection(crop, section, body);
   }
+
+  @Post('referentials')
+  async createReferential(@Body() body: { crop: string; data: Record<string, unknown> }) {
+    return this.referentialService.create(body.crop, body.data);
+  }
 }

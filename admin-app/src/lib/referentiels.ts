@@ -27,6 +27,13 @@ export const referentialApi = {
       body: JSON.stringify(value),
     });
   },
+
+  create(crop: string, data: Record<string, unknown>): Promise<{ success: boolean; crop: string }> {
+    return apiRequest<{ success: boolean; crop: string }>('/api/v1/admin/referentials', {
+      method: 'POST',
+      body: JSON.stringify({ crop, data }),
+    });
+  },
 };
 
 const CROP_LABELS: Record<string, string> = {
