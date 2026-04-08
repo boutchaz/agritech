@@ -13,7 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
-import { Route as AuthenticatedReferentielsTableRouteImport } from './routes/_authenticated/referentiels/$table'
+import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,10 +34,10 @@ const AuthenticatedRdvRoute = AuthenticatedRdvRouteImport.update({
   path: '/rdv',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedReferentielsTableRoute =
-  AuthenticatedReferentielsTableRouteImport.update({
-    id: '/referentiels/$table',
-    path: '/referentiels/$table',
+const AuthenticatedReferentielsCropRoute =
+  AuthenticatedReferentielsCropRouteImport.update({
+    id: '/referentiels/$crop',
+    path: '/referentiels/$crop',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -45,13 +45,13 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/rdv': typeof AuthenticatedRdvRoute
-  '/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
+  '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/': typeof AuthenticatedIndexRoute
-  '/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
+  '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,20 +59,20 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/referentiels/$table': typeof AuthenticatedReferentielsTableRoute
+  '/_authenticated/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/rdv' | '/referentiels/$table'
+  fullPaths: '/' | '/login' | '/rdv' | '/referentiels/$crop'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/rdv' | '/' | '/referentiels/$table'
+  to: '/login' | '/rdv' | '/' | '/referentiels/$crop'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/rdv'
     | '/_authenticated/'
-    | '/_authenticated/referentiels/$table'
+    | '/_authenticated/referentiels/$crop'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -110,11 +110,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRdvRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/referentiels/$table': {
-      id: '/_authenticated/referentiels/$table'
-      path: '/referentiels/$table'
-      fullPath: '/referentiels/$table'
-      preLoaderRoute: typeof AuthenticatedReferentielsTableRouteImport
+    '/_authenticated/referentiels/$crop': {
+      id: '/_authenticated/referentiels/$crop'
+      path: '/referentiels/$crop'
+      fullPath: '/referentiels/$crop'
+      preLoaderRoute: typeof AuthenticatedReferentielsCropRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
@@ -123,13 +123,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedReferentielsTableRoute: typeof AuthenticatedReferentielsTableRoute
+  AuthenticatedReferentielsCropRoute: typeof AuthenticatedReferentielsCropRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedReferentielsTableRoute: AuthenticatedReferentielsTableRoute,
+  AuthenticatedReferentielsCropRoute: AuthenticatedReferentielsCropRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

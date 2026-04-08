@@ -7,7 +7,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
-interface ReferentialSummary {
+export interface ReferentialSummary {
   crop: string;
   fileName: string;
   version: string;
