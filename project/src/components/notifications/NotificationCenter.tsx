@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, Loader2, Inbox, Clock, Filter } from 'lucide-react';
+import { Loader2, Inbox, Clock, Filter } from 'lucide-react';
+import { FilterBar } from '@/components/ui/data-table';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Input } from '../ui/Input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
 import { NotificationItem } from './NotificationItem';
@@ -356,13 +356,11 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
           </div>
 
           {/* Search bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notifications..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+          <div className="mb-4">
+            <FilterBar
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchPlaceholder="Search notifications..."
             />
           </div>
 

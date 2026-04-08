@@ -13,7 +13,6 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Search,
   Building2,
   MapPin,
   FolderTree,
@@ -23,6 +22,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -72,7 +72,8 @@ const costCenterSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-type CostCenterFormData = z.infer<typeof costCenterSchema>;
+type CostCenterFormInput = z.input<typeof costCenterSchema>;
+type CostCenterFormData = z.output<typeof costCenterSchema>;
 
 export function CostCenterManagement() {
   const { hasRole } = useAuth();
@@ -103,7 +104,7 @@ export function CostCenterManagement() {
   const deleteMutation = useDeleteCostCenter();
 
   // Form handling
-  const form = useForm<CostCenterFormData>({
+  const form = useForm<CostCenterFormInput, unknown, CostCenterFormData>({
     resolver: zodResolver(costCenterSchema),
     defaultValues: {
       code: '',
@@ -168,7 +169,7 @@ export function CostCenterManagement() {
         parent_id: data.parent_id || undefined,
         farm_id: data.farm_id || undefined,
         parcel_id: data.parcel_id || undefined,
-        is_active: data.is_active,
+        is_active: data.is_active ?? true,
       };
 
       if (editingCostCenter) {
@@ -251,52 +252,51 @@ export function CostCenterManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t('costCenters.title', 'Cost Centers')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('costCenters.description', 'Manage cost centers for expense tracking and profitability analysis.')}
-          </p>
-        </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('costCenters.addNew', 'Add Cost Center')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('costCenters.searchPlaceholder', 'Search by code or name...')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <>
+      <ListPageLayout
+        header={
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {t('costCenters.title', 'Cost Centers')}
+              </h2>
+              <p className="text-muted-foreground">
+                {t('costCenters.description', 'Manage cost centers for expense tracking and profitability analysis.')}
+              </p>
             </div>
-            <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t('costCenters.filterStatus', 'Filter by status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('costCenters.allStatus', 'All Status')}</SelectItem>
-                <SelectItem value="active">{t('costCenters.activeOnly', 'Active Only')}</SelectItem>
-                <SelectItem value="inactive">{t('costCenters.inactiveOnly', 'Inactive Only')}</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('costCenters.addNew', 'Add Cost Center')}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Cost Centers List */}
-      <Card>
+        }
+        filters={
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="flex-1">
+                  <FilterBar
+                    searchValue={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    searchPlaceholder={t('costCenters.searchPlaceholder', 'Search by code or name...')}
+                  />
+                </div>
+                <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder={t('costCenters.filterStatus', 'Filter by status')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('costCenters.allStatus', 'All Status')}</SelectItem>
+                    <SelectItem value="active">{t('costCenters.activeOnly', 'Active Only')}</SelectItem>
+                    <SelectItem value="inactive">{t('costCenters.inactiveOnly', 'Inactive Only')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        }
+      >
+        <Card>
         <CardHeader>
           <CardTitle>{t('costCenters.listTitle', 'Cost Center List')}</CardTitle>
           <CardDescription>
@@ -407,7 +407,8 @@ export function CostCenterManagement() {
             </div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      </ListPageLayout>
 
       {/* Create/Edit Dialog */}
       <ResponsiveDialog
@@ -599,6 +600,6 @@ export function CostCenterManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

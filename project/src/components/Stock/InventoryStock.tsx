@@ -9,9 +9,9 @@ import { useWarehouses } from '@/hooks/useWarehouses';
 import { itemsApi } from '@/lib/api/items';
 import type { ItemStockLevelsResponse, ItemStockLevelWarehouse } from '@/types/items';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/Input';
-import { Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface InventoryStockLevel {
   item_id: string;
@@ -161,43 +161,39 @@ export default function InventoryStock() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <ListPageLayout
+      header={
         <div>
           <h2 className="text-2xl font-bold">{t('inventoryStock.title')}</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             {t('inventoryStock.subtitle')}
           </p>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder={t('inventoryStock.searchPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <select
-          value={selectedWarehouse}
-          onChange={(e) => setSelectedWarehouse(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-        >
-          <option value="all">{t('inventoryStock.allWarehouses')}</option>
-          {warehouses.map((wh) => (
-            <option key={wh.id} value={wh.id}>
-              {wh.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Inventory Table */}
-      <div className="border rounded-lg overflow-hidden">
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('inventoryStock.searchPlaceholder')}
+          filters={[
+            {
+              key: 'warehouse',
+              value: selectedWarehouse,
+              onChange: setSelectedWarehouse,
+              options: [
+                { value: 'all', label: t('inventoryStock.allWarehouses') },
+                ...warehouses.map((warehouse) => ({
+                  value: warehouse.id,
+                  label: warehouse.name,
+                })),
+              ],
+              className: 'w-full sm:w-52',
+            },
+          ]}
+        />
+      }
+    >
+      <div className="overflow-hidden rounded-lg border">
         <Table className="w-full">
           <TableHeader className="bg-gray-50 dark:bg-gray-800 border-b">
             <TableRow>
@@ -287,6 +283,6 @@ export default function InventoryStock() {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </ListPageLayout>
   );
 }

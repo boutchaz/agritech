@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter, Database as DatabaseIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Filter, Database as DatabaseIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
+import { FilterBar } from '@/components/ui/data-table';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { seedChartOfAccounts, type SupportedCountry } from '@/lib/seed-chart-of-accounts';
@@ -377,22 +378,12 @@ export const ChartOfAccounts = () => {
           </div>
         </CardHeader>
         <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
-          {/* Filters */}
           <div className="flex flex-col gap-3 mb-6">
-            {/* Search Bar - Full width on mobile */}
-            <div className="w-full">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={t('accountingModule.accounts.searchPlaceholder')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
-            </div>
-
-            {/* Type Filter and Show Inactive */}
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={t('accountingModule.accounts.searchPlaceholder')}
+            />
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
               <Select value={filterType} onValueChange={(val) => setFilterType(val as AccountType | 'all')}>
                 <SelectTrigger className="w-full sm:w-[220px]">

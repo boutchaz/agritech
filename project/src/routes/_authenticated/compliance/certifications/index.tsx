@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createFileRoute } from '@tanstack/react-router';
-import { Search, Filter, Award, Building2 } from 'lucide-react';
+import { Filter, Award, Building2 } from 'lucide-react';
 
-import { Input } from '@/components/ui/Input';
 import {
   Select,
   SelectContent,
@@ -16,6 +15,7 @@ import { CreateCertificationDialog } from '@/components/compliance/CreateCertifi
 import { Skeleton } from '@/components/ui/skeleton';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLayout } from '@/components/PageLayout';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 
 import { useCertifications } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,98 +61,97 @@ function CertificationsPage() {
         />
       }
     >
-    <div className="container mx-auto px-4 py-6 space-y-8">
+    <div className="container mx-auto px-4 py-6">
+      <ListPageLayout
+        filters={
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="flex-1">
+              <FilterBar
+                searchValue={search}
+                onSearchChange={setSearch}
+                searchPlaceholder={t('certifications.searchPlaceholder')}
+              />
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder="Type" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('certifications.allTypes')}</SelectItem>
+                  {Object.values(CertificationType).map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t('certifications.searchPlaceholder')}
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <SelectValue placeholder="Type" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('certifications.allTypes')}</SelectItem>
-              {Object.values(CertificationType).map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder={t('table.status')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('certifications.allStatuses')}</SelectItem>
-              <SelectItem value={CertificationStatus.ACTIVE}>{t('status.active')}</SelectItem>
-              <SelectItem value={CertificationStatus.PENDING_RENEWAL}>{t('status.pendingRenewal')}</SelectItem>
-              <SelectItem value={CertificationStatus.EXPIRED}>{t('status.expired')}</SelectItem>
-              <SelectItem value={CertificationStatus.SUSPENDED}>{t('status.suspended')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* List */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((skIdx) => (
-            <div key={"sk-" + skIdx} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-9 w-9 rounded-lg" />
-                  <div>
-                    <Skeleton className="h-5 w-28 mb-1" />
-                    <Skeleton className="h-3 w-20" />
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder={t('table.status')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('certifications.allStatuses')}</SelectItem>
+                  <SelectItem value={CertificationStatus.ACTIVE}>{t('status.active')}</SelectItem>
+                  <SelectItem value={CertificationStatus.PENDING_RENEWAL}>{t('status.pendingRenewal')}</SelectItem>
+                  <SelectItem value={CertificationStatus.EXPIRED}>{t('status.expired')}</SelectItem>
+                  <SelectItem value={CertificationStatus.SUSPENDED}>{t('status.suspended')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        }
+      >
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((skIdx) => (
+              <div key={"sk-" + skIdx} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-9 w-9 rounded-lg" />
+                    <div>
+                      <Skeleton className="h-5 w-28 mb-1" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-20 rounded-full" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between py-1">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <Skeleton className="h-4 w-18" />
+                    <Skeleton className="h-4 w-20" />
                   </div>
                 </div>
-                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-9 w-full rounded-md" />
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between py-1">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-                <div className="flex justify-between py-1">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-                <div className="flex justify-between py-1">
-                  <Skeleton className="h-4 w-18" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              </div>
-              <Skeleton className="h-9 w-full rounded-md" />
-            </div>
-          ))}
-        </div>
-      ) : filteredCertifications.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCertifications.map((cert) => (
-            <CertificationCard key={cert.id} certification={cert} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
-          <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('certifications.noCertificationsFound')}</h3>
-          <p className="text-muted-foreground mt-1">
-            {t('certifications.noCertificationsHint')}
-          </p>
-        </div>
-      )}
+            ))}
+          </div>
+        ) : filteredCertifications.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCertifications.map((cert) => (
+              <CertificationCard key={cert.id} certification={cert} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
+            <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('certifications.noCertificationsFound')}</h3>
+            <p className="text-muted-foreground mt-1">
+              {t('certifications.noCertificationsHint')}
+            </p>
+          </div>
+        )}
+      </ListPageLayout>
     </div>
     </PageLayout>
   );

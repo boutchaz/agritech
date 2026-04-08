@@ -5,7 +5,6 @@ import {
   Package as _Package,
   ShoppingCart as _ShoppingCart,
   AlertTriangle as _AlertTriangle,
-  Search,
   Trash2,
   X,
   Users,
@@ -37,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 
 
 interface Product {
@@ -473,6 +473,20 @@ void _showConfirm;
     }
   };
 
+  const normalizedSearchTerm = searchTerm.toLowerCase();
+  const filteredSuppliers = suppliers.filter(
+    (supplier) =>
+      supplier.name?.toLowerCase().includes(normalizedSearchTerm) ||
+      supplier.contact_person?.toLowerCase().includes(normalizedSearchTerm) ||
+      supplier.city?.toLowerCase().includes(normalizedSearchTerm),
+  );
+  const filteredWarehouses = warehouses.filter(
+    (warehouse) =>
+      warehouse.name?.toLowerCase().includes(normalizedSearchTerm) ||
+      warehouse.location?.toLowerCase().includes(normalizedSearchTerm) ||
+      warehouse.manager_name?.toLowerCase().includes(normalizedSearchTerm),
+  );
+
   if (loading) {
     return (
       <SectionLoader />
@@ -480,77 +494,59 @@ void _showConfirm;
   }
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          {t('stockManagement.title')}
-        </h2>
-      </div>
-
-      {/* Tab Actions */}
-      {/* Stock tab is handled by InventoryStock component, so no actions needed here */}
-      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-        {/* Stock tab actions removed - handled by InventoryStock component */}
-        {activeTab === "suppliers" && (
-          <Button variant="green" onClick={openCreateSupplierModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>{t('stockManagement.newSupplier')}</span>
-          </Button>
-        )}
-        {activeTab === "warehouses" && (
-          <Button variant="green" onClick={openCreateWarehouseModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>{t('stockManagement.newWarehouse')}</span>
-          </Button>
-        )}
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Tab Content */}
-      {/* Stock tab is handled by InventoryStock component via Outlet in parent route */}
-      {/* Stock tab content removed - now handled by InventoryStock component using items table */}
-
-      {/* Suppliers Tab */}
-      {activeTab === "suppliers" && (
-        <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder={t('stockManagement.searchSupplier')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+    <div className="p-3 sm:p-4 lg:p-6">
+      <ListPageLayout
+        header={
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              {t('stockManagement.title')}
+            </h2>
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
+              {activeTab === "suppliers" && (
+                <Button variant="green" onClick={openCreateSupplierModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>{t('stockManagement.newSupplier')}</span>
+                </Button>
+              )}
+              {activeTab === "warehouses" && (
+                <Button variant="green" onClick={openCreateWarehouseModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>{t('stockManagement.newWarehouse')}</span>
+                </Button>
+              )}
+            </div>
           </div>
+        }
+        filters={
+          activeTab === "suppliers" || activeTab === "warehouses" ? (
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={
+                activeTab === "suppliers"
+                  ? t('stockManagement.searchSupplier')
+                  : t('stockManagement.searchWarehouse')
+              }
+            />
+          ) : undefined
+        }
+      >
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
 
-          {/* Suppliers List */}
+        {/* Stock tab is handled by InventoryStock component via Outlet in parent route */}
+        {/* Stock tab content removed - now handled by InventoryStock component using items table */}
+
+        {/* Suppliers Tab */}
+        {activeTab === "suppliers" && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             {/* Mobile Card View */}
             <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
-              {suppliers
-                .filter(
-                  (supplier) =>
-                    supplier.name
-                      ?.toLowerCase()
-                      .includes(searchTerm.toLowerCase()) ||
-                    supplier.contact_person
-                      ?.toLowerCase()
-                      .includes(searchTerm.toLowerCase()) ||
-                    supplier.city
-                      ?.toLowerCase()
-                      .includes(searchTerm.toLowerCase()),
-                )
-                .map((supplier) => (
-                  <div key={supplier.id} className="p-4 space-y-3">
+              {filteredSuppliers.map((supplier) => (
+                   <div key={supplier.id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
@@ -634,18 +630,7 @@ void _showConfirm;
                     </div>
                   </div>
                 ))}
-              {suppliers.filter(
-                (supplier) =>
-                  supplier.name
-                    ?.toLowerCase()
-                    .includes(searchTerm.toLowerCase()) ||
-                  supplier.contact_person
-                    ?.toLowerCase()
-                    .includes(searchTerm.toLowerCase()) ||
-                  supplier.city
-                    ?.toLowerCase()
-                    .includes(searchTerm.toLowerCase()),
-              ).length === 0 && (
+              {filteredSuppliers.length === 0 && (
                 <div className="text-center py-12">
                   <Users className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -678,20 +663,7 @@ void _showConfirm;
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {suppliers
-                    .filter(
-                      (supplier) =>
-                        supplier.name
-                          ?.toLowerCase()
-                          .includes(searchTerm.toLowerCase()) ||
-                        supplier.contact_person
-                          ?.toLowerCase()
-                          .includes(searchTerm.toLowerCase()) ||
-                        supplier.city
-                          ?.toLowerCase()
-                          .includes(searchTerm.toLowerCase()),
-                    )
-                    .map((supplier) => (
+                  {filteredSuppliers.map((supplier) => (
                       <TableRow key={supplier.id}>
                         <TableCell className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -771,7 +743,7 @@ void _showConfirm;
                 </TableBody>
               </Table>
 
-              {suppliers.length === 0 && (
+              {filteredSuppliers.length === 0 && (
                 <div className="text-center py-12">
                   <Users className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -784,25 +756,10 @@ void _showConfirm;
               )}
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* Warehouses Tab */}
-      {activeTab === "warehouses" && (
-        <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder={t('stockManagement.searchWarehouse')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          {/* Warehouses List */}
+        {/* Warehouses Tab */}
+        {activeTab === "warehouses" && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <TableHeader className="bg-gray-50 dark:bg-gray-700">
@@ -825,20 +782,7 @@ void _showConfirm;
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {warehouses
-                  .filter(
-                    (warehouse) =>
-                      warehouse.name
-                        ?.toLowerCase()
-                        .includes(searchTerm.toLowerCase()) ||
-                      warehouse.location
-                        ?.toLowerCase()
-                        .includes(searchTerm.toLowerCase()) ||
-                      warehouse.manager_name
-                        ?.toLowerCase()
-                        .includes(searchTerm.toLowerCase()),
-                  )
-                  .map((warehouse) => (
+                {filteredWarehouses.map((warehouse) => (
                     <TableRow key={warehouse.id}>
                       <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -925,7 +869,7 @@ void _showConfirm;
               </TableBody>
             </Table>
 
-            {warehouses.length === 0 && (
+            {filteredWarehouses.length === 0 && (
               <div className="text-center py-12">
                 <Warehouse className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
@@ -937,8 +881,8 @@ void _showConfirm;
               </div>
             )}
           </div>
-        </>
-      )}
+        )}
+      </ListPageLayout>
 
       {/* Removed Add Product Modal - Products are now created automatically during purchase */}
       {/* {showAddProduct && (

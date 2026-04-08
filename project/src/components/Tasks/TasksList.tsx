@@ -4,7 +4,6 @@ import {
   Clock,
   AlertCircle,
   Plus,
-  Search,
   Calendar,
   User,
   MapPin,
@@ -37,7 +36,13 @@ import {
 import { formatDistance, differenceInDays, isToday, isTomorrow, isPast } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
-import { useServerTableState, DataTablePagination } from '@/components/ui/data-table';
+import {
+  useServerTableState,
+  DataTablePagination,
+  FilterBar,
+  ListPageLayout,
+  ListPageHeader,
+} from '@/components/ui/data-table';
 import { Button } from '../ui/button';
 import {
   DropdownMenu,
@@ -235,130 +240,181 @@ const TasksList = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('tasks.listPage.title')}
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('tasks.listPage.tasksCount', { count: totalItems })}
-          </p>
-        </div>
-        {onCreateTask && (
-          <Button
-            data-tour="task-create"
-            onClick={onCreateTask}
-          >
-            <Plus className="w-5 h-5" />
-            {t('tasks.listPage.newTask')}
-          </Button>
-        )}
-      </div>
-
-      {/* Enhanced Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
-        {/* Pending */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{t('tasks.stats.pending')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+    <ListPageLayout
+      header={
+        <ListPageHeader
+          title={t('tasks.listPage.title')}
+          subtitle={t('tasks.listPage.tasksCount', { count: totalItems })}
+          actions={onCreateTask ? (
+            <Button data-tour="task-create" onClick={onCreateTask}>
+              <Plus className="w-5 h-5" />
+              {t('tasks.listPage.newTask')}
+            </Button>
+          ) : undefined}
+        />
+      }
+      stats={
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{t('tasks.stats.pending')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hidden sm:block">
+                <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500" />
+              </div>
             </div>
-            <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hidden sm:block">
-              <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500" />
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-400">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-500 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.assigned', 'Assigned')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.assigned}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
+                <User className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-purple-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.in_progress}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg hidden sm:block">
+                <Play className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-green-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide truncate">{t('tasks.stats.completed')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg hidden sm:block">
+                <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-amber-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">{t('tasks.stats.onHold', 'On Hold')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.on_hold}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg hidden sm:block">
+                <Pause className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide truncate">{t('tasks.stats.overdue')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
+                <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-emerald-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide truncate">{t('tasks.stats.completionRate', 'Completion')}</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
+              </div>
+              <div className="p-1.5 sm:p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hidden sm:block">
+                <Target className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-600" />
+              </div>
+            </div>
+            <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+              <div
+                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${stats.completionRate}%` }}
+              />
             </div>
           </div>
         </div>
+      }
+      filters={
+        <div className="space-y-4">
+          <FilterBar
+            searchValue={tableState.search}
+            onSearchChange={(value) => tableState.setSearch(value)}
+            searchPlaceholder={t('tasks.listPage.searchPlaceholder')}
+            isSearching={isFetching}
+          />
 
-        {/* Assigned */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-blue-500 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.assigned', 'Assigned')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.assigned}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
-              <User className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={filterStatus === 'all' ? 'default' : 'outline'}
+              onClick={() => handleStatusFilter('all')}
+            >
+              {t('tasks.listPage.filters.all')}
+            </Button>
+            {(['pending', 'assigned', 'in_progress', 'completed', 'paused', 'overdue'] as TaskStatus[]).map(status => (
+              <Button
+                key={status}
+                size="sm"
+                variant={filterStatus === status ? 'default' : 'outline'}
+                onClick={() => handleStatusFilter(status)}
+              >
+                {t(`tasks.listPage.filters.${status}`)}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 text-sm overflow-x-auto pb-1">
+            <span className="text-gray-600 dark:text-gray-400 flex-shrink-0">{t('tasks.listPage.sortBy')}:</span>
+            <Button
+              size="sm"
+              variant={tableState.sortConfig.key === 'scheduled_start' ? 'default' : 'ghost'}
+              onClick={() => tableState.handleSort('scheduled_start')}
+            >
+              <Calendar className="w-4 h-4" />
+              {t('tasks.listPage.sortOptions.scheduledStart')}
+            </Button>
+            <Button
+              size="sm"
+              variant={tableState.sortConfig.key === 'priority' ? 'default' : 'ghost'}
+              onClick={() => tableState.handleSort('priority')}
+            >
+              {t('tasks.listPage.sortOptions.priority')}
+            </Button>
+            <Button
+              size="sm"
+              variant={tableState.sortConfig.key === 'created_at' ? 'default' : 'ghost'}
+              onClick={() => tableState.handleSort('created_at')}
+            >
+              {t('tasks.listPage.sortOptions.createdAt')}
+            </Button>
           </div>
         </div>
-
-        {/* In Progress */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-purple-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.in_progress}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg hidden sm:block">
-              <Play className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Completed */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide truncate">{t('tasks.stats.completed')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg hidden sm:block">
-              <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* On Hold (Paused) */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-amber-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">{t('tasks.stats.onHold', 'On Hold')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.on_hold}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg hidden sm:block">
-              <Pause className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Overdue */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide truncate">{t('tasks.stats.overdue')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
-              <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Completion Rate */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-emerald-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide truncate">{t('tasks.stats.completionRate', 'Completion')}</p>
-              <p className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
-            </div>
-            <div className="p-1.5 sm:p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hidden sm:block">
-              <Target className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-600" />
-            </div>
-          </div>
-          {/* Mini progress bar */}
-          <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-            <div
-              className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-              style={{ width: `${stats.completionRate}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Bulk Actions Bar */}
+      }
+      pagination={
+        !isLoading && totalItems > 0 ? (
+          <DataTablePagination
+            page={tableState.page}
+            totalPages={totalPages}
+            pageSize={tableState.pageSize}
+            totalItems={totalItems}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
+          />
+        ) : undefined
+      }
+    >
       {selectedTaskIds.size > 0 && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -409,73 +465,6 @@ const TasksList = ({
         </div>
       )}
 
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder={t('tasks.listPage.searchPlaceholder')}
-            value={tableState.search}
-            onChange={(e) => tableState.setSearch(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-          {isFetching && (
-            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
-          )}
-        </div>
-
-        {/* Status filters */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={filterStatus === 'all' ? 'default' : 'outline'}
-            onClick={() => handleStatusFilter('all')}
-          >
-            {t('tasks.listPage.filters.all')}
-          </Button>
-          {(['pending', 'assigned', 'in_progress', 'completed', 'paused', 'overdue'] as TaskStatus[]).map(status => (
-            <Button
-              key={status}
-              size="sm"
-              variant={filterStatus === status ? 'default' : 'outline'}
-              onClick={() => handleStatusFilter(status)}
-            >
-              {t(`tasks.listPage.filters.${status}`)}
-            </Button>
-          ))}
-        </div>
-
-        {/* Sorting controls */}
-        <div className="flex items-center gap-2 text-sm overflow-x-auto pb-1">
-          <span className="text-gray-600 dark:text-gray-400 flex-shrink-0">{t('tasks.listPage.sortBy')}:</span>
-          <Button
-            size="sm"
-            variant={tableState.sortConfig.key === 'scheduled_start' ? 'default' : 'ghost'}
-            onClick={() => tableState.handleSort('scheduled_start')}
-          >
-            <Calendar className="w-4 h-4" />
-            {t('tasks.listPage.sortOptions.scheduledStart')}
-          </Button>
-          <Button
-            size="sm"
-            variant={tableState.sortConfig.key === 'priority' ? 'default' : 'ghost'}
-            onClick={() => tableState.handleSort('priority')}
-          >
-            {t('tasks.listPage.sortOptions.priority')}
-          </Button>
-          <Button
-            size="sm"
-            variant={tableState.sortConfig.key === 'created_at' ? 'default' : 'ghost'}
-            onClick={() => tableState.handleSort('created_at')}
-          >
-            {t('tasks.listPage.sortOptions.createdAt')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Tasks List */}
       {isLoading ? (
         <SectionLoader />
       ) : tasks.length === 0 ? (
@@ -523,13 +512,7 @@ const TasksList = ({
               >
                 <div className="flex items-stretch">
                   {/* Checkbox Column */}
-                  <div
-                    className="flex items-center px-4 border-r dark:border-gray-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleTaskSelection(task.id);
-                    }}
-                  >
+                  <div className="flex items-center px-4 border-r dark:border-gray-700">
                     <Checkbox
                       checked={isSelected}
                       onCheckedChange={() => toggleTaskSelection(task.id)}
@@ -537,12 +520,13 @@ const TasksList = ({
                   </div>
 
                   {/* Main Content */}
-                  <div
-                    className="flex-1 p-4"
-                    onClick={() => onSelectTask?.(task.id)}
-                  >
+                  <div className="flex-1 p-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex-1">
+                      <button
+                        type="button"
+                        className="flex-1 cursor-pointer text-left"
+                        onClick={() => onSelectTask?.(task.id)}
+                      >
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {getStatusIcon(task.status)}
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -672,10 +656,10 @@ const TasksList = ({
                             </div>
                           </div>
                         )}
-                      </div>
+                      </button>
 
                       {/* Quick Actions */}
-                      <div className="flex items-center gap-2 ml-2 sm:ml-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2 ml-2 sm:ml-4">
                         {/* Show quick action buttons only on desktop */}
                         <div className="hidden md:flex items-center gap-2">
                           {canStart && (
@@ -780,21 +764,7 @@ const TasksList = ({
           })}
         </div>
       )}
-
-      {/* Pagination Controls */}
-      {!isLoading && totalItems > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow">
-          <DataTablePagination
-            page={tableState.page}
-            totalPages={totalPages}
-            pageSize={tableState.pageSize}
-            totalItems={totalItems}
-            onPageChange={tableState.setPage}
-            onPageSizeChange={tableState.setPageSize}
-          />
-        </div>
-      )}
-    </div>
+    </ListPageLayout>
   );
 };
 

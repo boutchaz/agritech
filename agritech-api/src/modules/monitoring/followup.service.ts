@@ -12,6 +12,7 @@ interface ExecutedRecommendationRow {
   parcel_id: string;
   status: string;
   action: string | null;
+  bloc_3_action: Record<string, unknown> | null;
   alert_code: string | null;
   executed_at: string | null;
   evaluation_window_days: number | null;
@@ -80,12 +81,14 @@ export class FollowupService {
       return 'pending';
     }
 
+    const action =
+      recommendation.action ?? this.extractActionFromBloc(recommendation.bloc_3_action);
     const indicator =
-      recommendation.evaluation_indicator ?? this.inferIndicator(recommendation.alert_code, recommendation.action);
+      recommendation.evaluation_indicator ?? this.inferIndicator(recommendation.alert_code, action);
     const expectedResponse =
       recommendation.expected_response ?? this.inferExpectedResponse(indicator);
     const evaluationWindowDays =
-      recommendation.evaluation_window_days ?? this.inferWindowDays(indicator, recommendation.action);
+      recommendation.evaluation_window_days ?? this.inferWindowDays(indicator, action);
 
     const evaluationEnd = new Date(executedAt);
     evaluationEnd.setUTCDate(evaluationEnd.getUTCDate() + evaluationWindowDays);
@@ -187,7 +190,7 @@ export class FollowupService {
     const { data, error } = await supabase
       .from('ai_recommendations')
       .select(
-        'id, organization_id, parcel_id, status, action, alert_code, executed_at, evaluation_window_days, evaluation_indicator, expected_response, efficacy',
+        'id, organization_id, parcel_id, status, bloc_3_action, alert_code, executed_at, evaluation_window_days, evaluation_indicator, expected_response, efficacy',
       )
       .eq('status', 'executed')
       .not('executed_at', 'is', null)
@@ -287,6 +290,24 @@ export class FollowupService {
     }
 
     return 10;
+  }
+
+  private extractActionFromBloc(bloc: Record<string, unknown> | null): string | null {
+    if (!bloc || typeof bloc !== 'object') {
+      return null;
+    }
+
+    const action = bloc.action;
+    if (typeof action === 'string' && action.trim().length > 0) {
+      return action;
+    }
+
+    const description = bloc.description;
+    if (typeof description === 'string' && description.trim().length > 0) {
+      return description;
+    }
+
+    return null;
   }
 
   private classifyEfficacy(

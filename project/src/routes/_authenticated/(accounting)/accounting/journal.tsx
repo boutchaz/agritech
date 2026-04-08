@@ -8,7 +8,6 @@ import {
   Building2,
   BookOpen,
   Plus,
-  Filter,
   CheckCircle2,
   Clock,
   XCircle,
@@ -18,7 +17,6 @@ import {
   MoreHorizontal,
   X,
   AlertCircle,
-  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,8 +58,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   useServerTableState,
   SortableHeader,
-  DateRangeFilter,
   DataTablePagination,
+  FilterBar,
+  ListPageLayout,
+  ListPageHeader,
 } from "@/components/ui/data-table";
 import { PageLoader } from '@/components/ui/loader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -94,7 +94,6 @@ const AppContent = () => {
     setConfirmOpen(true);
   };
 
-  const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<
     "all" | "draft" | "posted" | "cancelled"
   >("all");
@@ -127,7 +126,7 @@ const AppContent = () => {
 
   const { data: accounts = [] } = useAccounts();
   const activeAccounts = useMemo(
-    () => accounts.filter((a: { is_active?: boolean; is_group?: boolean }) => a.is_active && !a.is_group),
+    () => accounts.filter((account) => Boolean(account.is_active) && !account.is_group),
     [accounts],
   );
 
@@ -330,6 +329,8 @@ const AppContent = () => {
     tableState.resetFilters();
   };
 
+  void _clearFilters;
+
   if (!currentOrganization || isLoading) {
     return (
       <PageLoader />
@@ -378,416 +379,101 @@ const AppContent = () => {
           />
         }
       >
-        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
-          {/* Header Actions */}
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="hidden sm:block">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Écritures Comptables
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  Consultez et gérez vos écritures du grand livre
-                </p>
-              </div>
-
-              {/* Mobile: Add button at top */}
-              <div className="sm:hidden">
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  className="w-full shadow-md"
-                >
-                  <Plus className="mr-2 h-5 w-5" />
-                  <span className="font-medium">Nouvelle Écriture</span>
-                </Button>
-              </div>
-
-              {/* Desktop controls */}
-              <div className="hidden sm:flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={
-                    showFilters
-                      ? "bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700"
-                      : ""
-                  }
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  Filtres
-                </Button>
-                <Button onClick={() => setShowCreateModal(true)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Nouvelle Écriture
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Rechercher par numéro ou référence..."
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className="pl-10"
-                />
-                {isFetching && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
-              />
-              <select
-                value={filterStatus}
-                onChange={(e) =>
-                  setFilterStatus(e.target.value as typeof filterStatus)
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+          <ListPageLayout
+            header={
+              <ListPageHeader
+                title="Écritures Comptables"
+                subtitle="Consultez et gérez vos écritures du grand livre"
+                actions={
+                  <Button
+                    onClick={() => setShowCreateModal(true)}
+                    className="w-full sm:w-auto shadow-md sm:shadow-none"
+                  >
+                    <Plus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="font-medium">Nouvelle Écriture</span>
+                  </Button>
                 }
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm w-full sm:w-40"
-              >
-                <option value="all">Tous statuts</option>
-                <option value="draft">Brouillon</option>
-                <option value="posted">Comptabilisé</option>
-                <option value="cancelled">Annulé</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Écritures
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold">
-                  {stats.total}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Comptabilisées
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-green-600">
-                  {stats.posted}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Brouillons
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-600">
-                  {stats.draft}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Total Débits
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-base sm:text-xl md:text-2xl font-bold">
-                  MAD {stats.totalDebit.toLocaleString("fr-FR")}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Journal Entry List */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg sm:text-xl">
-                Toutes les Écritures
-              </CardTitle>
-              <CardDescription className="text-sm">
-                Consultez et gérez vos écritures du grand livre
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="md:hidden space-y-3">
-                {journalEntries.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    {tableState.search ||
-                    filterStatus !== "all" ||
-                    tableState.datePreset !== "all"
-                      ? "Aucune écriture ne correspond à vos filtres."
-                      : "Aucune écriture comptable trouvée."}
-                  </div>
-                ) : (
-                  journalEntries.map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {entry.entry_number}
-                          </span>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}
-                        >
-                          {getStatusIcon(entry.status)}
-                          {getStatusLabel(entry.status)}
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Date:{" "}
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {formatDate(entry.entry_date)}
-                          </span>
-                        </div>
-                        {entry.posted_at && (
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Comptabilisé:{" "}
-                            </span>
-                            <span className="text-gray-900 dark:text-white">
-                              {formatDate(entry.posted_at)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {(entry.reference_type || entry.reference_number) && (
-                        <div className="text-sm">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Réf:{" "}
-                          </span>
-                          <span className="text-gray-900 dark:text-white">
-                            {entry.reference_type || ""}
-                            {entry.reference_number
-                              ? ` - ${entry.reference_number}`
-                              : ""}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-                        <div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 block">
-                            Débit
-                          </span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {formatAmount(entry.total_debit)}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs text-gray-500 dark:text-gray-400 block">
-                            Crédit
-                          </span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {formatAmount(entry.total_credit)}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 pt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEntryId(entry.id)}
-                          className="min-h-[44px]"
-                        >
-                          Voir
-                        </Button>
-                        {entry.status === "draft" && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePostEntry(entry.id)}
-                              disabled={postMutation.isPending}
-                              className="min-h-[44px]"
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteEntry(entry.id)}
-                              className="text-red-600 min-h-[44px]"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
+              />
+            }
+            filters={
+              <FilterBar
+                searchValue={tableState.search}
+                onSearchChange={(value) => tableState.setSearch(value)}
+                searchPlaceholder="Rechercher par numéro ou référence..."
+                isSearching={isFetching}
+                filters={[
+                  {
+                    key: "status",
+                    value: filterStatus,
+                    onChange: (value) =>
+                      setFilterStatus(value as typeof filterStatus),
+                    options: [
+                      { value: "all", label: "Tous statuts" },
+                      { value: "draft", label: "Brouillon" },
+                      { value: "posted", label: "Comptabilisé" },
+                      { value: "cancelled", label: "Annulé" },
+                    ],
+                    placeholder: "Tous statuts",
+                  },
+                ]}
+                datePreset={tableState.datePreset}
+                onDatePresetChange={(preset) => tableState.setDatePreset(preset as Parameters<typeof tableState.setDatePreset>[0])}
+              />
+            }
+            stats={
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Écritures
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold">
+                      {stats.total}
                     </div>
-                  ))
-                )}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Comptabilisées
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">
+                      {stats.posted}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Brouillons
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-xl sm:text-2xl font-bold text-gray-600 dark:text-gray-600">
+                      {stats.draft}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Total Débits
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-base sm:text-xl md:text-2xl font-bold">
+                      MAD {stats.totalDebit.toLocaleString("fr-FR")}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-
-              <div className="hidden md:block overflow-x-auto -mx-3 sm:mx-0">
-                <Table className="w-full min-w-[800px]">
-                  <TableHeader>
-                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
-                      <SortableHeader
-                        label="N° Écriture"
-                        sortKey="entry_number"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                      />
-                      <SortableHeader
-                        label="Date"
-                        sortKey="entry_date"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                      />
-                      <SortableHeader
-                        label="Comptabilisé le"
-                        sortKey="posted_at"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                      />
-                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Référence
-                      </TableHead>
-                      <SortableHeader
-                        label="Débit"
-                        sortKey="total_debit"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                        align="right"
-                      />
-                      <SortableHeader
-                        label="Crédit"
-                        sortKey="total_credit"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                        align="right"
-                      />
-                      <SortableHeader
-                        label="Statut"
-                        sortKey="status"
-                        currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
-                      />
-                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {journalEntries.map((entry) => (
-                      <TableRow
-                        key={entry.id}
-                        className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                      >
-                        <TableCell className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <BookOpen className="h-4 w-4 text-gray-400" />
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              {entry.entry_number}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {formatDate(entry.entry_date)}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                          {formatDate(entry.posted_at)}
-                        </TableCell>
-                        <TableCell className="py-3 px-4">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-sm text-gray-900 dark:text-white">
-                              {entry.reference_type || "-"}
-                            </span>
-                            {entry.reference_number && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {entry.reference_number}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
-                          {formatAmount(entry.total_debit)}
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
-                          {formatAmount(entry.total_credit)}
-                        </TableCell>
-                        <TableCell className="py-3 px-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}
-                          >
-                            {getStatusIcon(entry.status)}
-                            {getStatusLabel(entry.status)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedEntryId(entry.id)}
-                            >
-                              Voir
-                            </Button>
-                            {entry.status === "draft" && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => handlePostEntry(entry.id)}
-                                  >
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Comptabiliser
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => handleDeleteEntry(entry.id)}
-                                    className="text-red-600"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Supprimer
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {journalEntries.length === 0 && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="py-8 text-center text-gray-500 dark:text-gray-400"
-                        >
-                          {tableState.search ||
-                          filterStatus !== "all" ||
-                          tableState.datePreset !== "all"
-                            ? "Aucune écriture ne correspond à vos filtres."
-                            : 'Aucune écriture comptable trouvée. Les écritures sont créées automatiquement lors de la comptabilisation des factures et paiements, ou manuellement via le bouton "Nouvelle Écriture".'}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            }
+            pagination={
               <DataTablePagination
                 page={tableState.page}
                 totalPages={totalPages}
@@ -796,29 +482,312 @@ const AppContent = () => {
                 onPageChange={tableState.setPage}
                 onPageSizeChange={tableState.setPageSize}
               />
-            </CardContent>
-          </Card>
+            }
+          >
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg sm:text-xl">
+                    Toutes les Écritures
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Consultez et gérez vos écritures du grand livre
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="md:hidden space-y-3">
+                    {journalEntries.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                        {tableState.search ||
+                        filterStatus !== "all" ||
+                        tableState.datePreset !== "all"
+                          ? "Aucune écriture ne correspond à vos filtres."
+                          : "Aucune écriture comptable trouvée."}
+                      </div>
+                    ) : (
+                      journalEntries.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="h-4 w-4 text-gray-400" />
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {entry.entry_number}
+                              </span>
+                            </div>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}
+                            >
+                              {getStatusIcon(entry.status)}
+                              {getStatusLabel(entry.status)}
+                            </span>
+                          </div>
 
-          {/* Info Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Double-Entry Principle */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Comptabilité en Partie Double
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Toutes les écritures suivent le principe de la partie double:{" "}
-                  <strong>Total Débits = Total Crédits</strong>. Cela garantit
-                  que vos livres sont toujours équilibrés et maintient
-                  l'équation comptable.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            <div>
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Date:{" "}
+                              </span>
+                              <span className="text-gray-900 dark:text-white">
+                                {formatDate(entry.entry_date)}
+                              </span>
+                            </div>
+                            {entry.posted_at && (
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Comptabilisé:{" "}
+                                </span>
+                                <span className="text-gray-900 dark:text-white">
+                                  {formatDate(entry.posted_at)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {(entry.reference_type || entry.reference_number) && (
+                            <div className="text-sm">
+                              <span className="text-gray-500 dark:text-gray-400">
+                                Réf:{" "}
+                              </span>
+                              <span className="text-gray-900 dark:text-white">
+                                {entry.reference_type || ""}
+                                {entry.reference_number
+                                  ? ` - ${entry.reference_number}`
+                                  : ""}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <div>
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block">
+                                Débit
+                              </span>
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                {formatAmount(entry.total_debit)}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-gray-500 dark:text-gray-400 block">
+                                Crédit
+                              </span>
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                {formatAmount(entry.total_credit)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedEntryId(entry.id)}
+                              className="min-h-[44px]"
+                            >
+                              Voir
+                            </Button>
+                            {entry.status === "draft" && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePostEntry(entry.id)}
+                                  disabled={postMutation.isPending}
+                                  className="min-h-[44px]"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteEntry(entry.id)}
+                                  className="text-red-600 min-h-[44px]"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <div className="hidden md:block overflow-x-auto -mx-3 sm:mx-0">
+                    <Table className="w-full min-w-[800px]">
+                      <TableHeader>
+                        <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                          <SortableHeader
+                            label="N° Écriture"
+                            sortKey="entry_number"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                          />
+                          <SortableHeader
+                            label="Date"
+                            sortKey="entry_date"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                          />
+                          <SortableHeader
+                            label="Comptabilisé le"
+                            sortKey="posted_at"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                          />
+                          <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                            Référence
+                          </TableHead>
+                          <SortableHeader
+                            label="Débit"
+                            sortKey="total_debit"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                            align="right"
+                          />
+                          <SortableHeader
+                            label="Crédit"
+                            sortKey="total_credit"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                            align="right"
+                          />
+                          <SortableHeader
+                            label="Statut"
+                            sortKey="status"
+                            currentSort={tableState.sortConfig}
+                            onSort={(key) => tableState.handleSort(String(key))}
+                          />
+                          <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {journalEntries.map((entry) => (
+                          <TableRow
+                            key={entry.id}
+                            className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                          >
+                            <TableCell className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4 text-gray-400" />
+                                <span className="font-medium text-gray-900 dark:text-white">
+                                  {entry.entry_number}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                              {formatDate(entry.entry_date)}
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                              {formatDate(entry.posted_at)}
+                            </TableCell>
+                            <TableCell className="py-3 px-4">
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm text-gray-900 dark:text-white">
+                                  {entry.reference_type || "-"}
+                                </span>
+                                {entry.reference_number && (
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                                    {entry.reference_number}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
+                              {formatAmount(entry.total_debit)}
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-sm text-right font-medium text-gray-900 dark:text-white">
+                              {formatAmount(entry.total_credit)}
+                            </TableCell>
+                            <TableCell className="py-3 px-4">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}
+                              >
+                                {getStatusIcon(entry.status)}
+                                {getStatusLabel(entry.status)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setSelectedEntryId(entry.id)}
+                                >
+                                  Voir
+                                </Button>
+                                {entry.status === "draft" && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={() => handlePostEntry(entry.id)}
+                                      >
+                                        <Send className="mr-2 h-4 w-4" />
+                                        Comptabiliser
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleDeleteEntry(entry.id)}
+                                        className="text-red-600"
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Supprimer
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {journalEntries.length === 0 && (
+                          <TableRow>
+                            <TableCell
+                              colSpan={8}
+                              className="py-8 text-center text-gray-500 dark:text-gray-400"
+                            >
+                              {tableState.search ||
+                              filterStatus !== "all" ||
+                              tableState.datePreset !== "all"
+                                ? "Aucune écriture ne correspond à vos filtres."
+                                : 'Aucune écriture comptable trouvée. Les écritures sont créées automatiquement lors de la comptabilisation des factures et paiements, ou manuellement via le bouton "Nouvelle Écriture".'}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BookOpen className="h-5 w-5" />
+                      Comptabilité en Partie Double
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Toutes les écritures suivent le principe de la partie double:{" "}
+                      <strong>Total Débits = Total Crédits</strong>. Cela garantit
+                      que vos livres sont toujours équilibrés et maintient
+                      l'équation comptable.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          </ListPageLayout>
         </div>
       </PageLayout>
 
@@ -850,16 +819,16 @@ const AppContent = () => {
             {isEntryLoading ? (
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  {Array.from({ length: 4 }).map((_, skIdx) => (
-                    <div key={"sk-" + skIdx} className="space-y-2">
+                  {['meta-1', 'meta-2', 'meta-3', 'meta-4'].map((skeletonKey) => (
+                    <div key={skeletonKey} className="space-y-2">
                       <div className="h-3 w-16 bg-muted animate-pulse rounded" />
                       <div className="h-4 w-24 bg-muted animate-pulse rounded" />
                     </div>
                   ))}
                 </div>
                 <div className="h-px bg-gray-200 dark:bg-gray-700" />
-                {Array.from({ length: 3 }).map((_, skIdx) => (
-                  <div key={"sk-" + skIdx} className="flex items-center gap-4 p-3 border-b border-gray-100 dark:border-gray-700">
+                  {['line-1', 'line-2', 'line-3'].map((skeletonKey) => (
+                    <div key={skeletonKey} className="flex items-center gap-4 p-3 border-b border-gray-100 dark:border-gray-700">
                     <div className="h-4 flex-1 bg-muted animate-pulse rounded" />
                     <div className="h-4 w-20 bg-muted animate-pulse rounded" />
                     <div className="h-4 w-20 bg-muted animate-pulse rounded" />
@@ -1154,10 +1123,11 @@ const AppContent = () => {
                     className="grid grid-cols-12 gap-2 items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
                   >
                     <div className="col-span-5">
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label htmlFor={`line-account-${line.id}`} className="block text-xs text-gray-500 mb-1">
                         Compte
                       </label>
                       <select
+                        id={`line-account-${line.id}`}
                         value={line.account_id}
                         onChange={(e) =>
                           updateLine(index, "account_id", e.target.value)
@@ -1173,10 +1143,11 @@ const AppContent = () => {
                       </select>
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label htmlFor={`line-debit-${line.id}`} className="block text-xs text-gray-500 mb-1">
                         Débit
                       </label>
                       <input
+                        id={`line-debit-${line.id}`}
                         type="number"
                         min="0"
                         step="0.01"
@@ -1193,10 +1164,11 @@ const AppContent = () => {
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label htmlFor={`line-credit-${line.id}`} className="block text-xs text-gray-500 mb-1">
                         Crédit
                       </label>
                       <input
+                        id={`line-credit-${line.id}`}
                         type="number"
                         min="0"
                         step="0.01"
@@ -1213,10 +1185,11 @@ const AppContent = () => {
                       />
                     </div>
                     <div className="col-span-2">
-                      <label className="block text-xs text-gray-500 mb-1">
+                      <label htmlFor={`line-description-${line.id}`} className="block text-xs text-gray-500 mb-1">
                         Description
                       </label>
                       <input
+                        id={`line-description-${line.id}`}
                         type="text"
                         value={line.description}
                         onChange={(e) =>

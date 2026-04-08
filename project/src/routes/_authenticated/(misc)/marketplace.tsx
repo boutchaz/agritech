@@ -8,13 +8,12 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/Input';
+import { FilterBar } from '@/components/ui/data-table';
 import {
   Plus,
   ShoppingBag,
   TrendingUp,
   Package,
-  Search,
   Grid,
   List,
   Edit,
@@ -242,13 +241,11 @@ function MarketplacePage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 w-full md:w-auto">
-                <div className="relative flex-1 md:w-64">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder={t('marketplace.search', 'Search products...')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
+                <div className="flex-1 md:w-64">
+                  <FilterBar
+                    searchValue={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder={t('marketplace.search', 'Search products...')}
                   />
                 </div>
                 <div className="flex border rounded-md">

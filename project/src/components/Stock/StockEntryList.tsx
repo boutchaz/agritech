@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/Input';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import {
   Select,
   SelectContent,
@@ -50,7 +50,7 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
-  Search, Download,
+  Download,
   Loader2
 } from 'lucide-react';
 import type {
@@ -156,233 +156,227 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
-          <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
-        </div>
-        <Button onClick={onCreateClick}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('stockEntries.newEntry')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder={t('stockEntries.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <>
+      <ListPageLayout
+        header={
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
+              <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
             </div>
+            <Button onClick={onCreateClick}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('stockEntries.newEntry')}
+            </Button>
           </div>
+        }
+        filters={
+          <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <div className="md:col-span-2">
+                <FilterBar
+                  searchValue={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  searchPlaceholder={t('stockEntries.searchPlaceholder')}
+                />
+              </div>
 
-          {/* Entry Type Filter */}
-          <div>
-            <Select
-              value={filters.entry_type || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  entry_type: value === 'all' ? undefined : (value as StockEntryType),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('stockEntries.allTypes')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('stockEntries.allTypes')}</SelectItem>
-                {Object.values(STOCK_ENTRY_TYPES).map((type) => (
-                  <SelectItem key={type.type} value={type.type}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Select
+                  value={filters.entry_type || 'all'}
+                  onValueChange={(value) =>
+                    setFilters({
+                      ...filters,
+                      entry_type: value === 'all' ? undefined : (value as StockEntryType),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('stockEntries.allTypes')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('stockEntries.allTypes')}</SelectItem>
+                    {Object.values(STOCK_ENTRY_TYPES).map((type) => (
+                      <SelectItem key={type.type} value={type.type}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* Status Filter */}
-          <div>
-            <Select
-              value={filters.status || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  status: value === 'all' ? undefined : (value as StockEntryStatus),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('stockEntries.allStatuses')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
-                <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
-                <SelectItem value="Submitted">{t('stockEntries.status.submitted')}</SelectItem>
-                <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
-                <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {Object.values(STOCK_ENTRY_TYPES).map((type) => {
-          const count = entries.filter((e) => e.entry_type === type.type).length;
-          return (
-            <div key={type.type} className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{type.label}</p>
-                  <p className="text-2xl font-bold mt-1">{count}</p>
-                </div>
-                <div className={`w-12 h-12 rounded-full bg-${type.color}-100 flex items-center justify-center`}>
-                  <Package className={`w-6 h-6 text-${type.color}-600`} />
-                </div>
+              <div>
+                <Select
+                  value={filters.status || 'all'}
+                  onValueChange={(value) =>
+                    setFilters({
+                      ...filters,
+                      status: value === 'all' ? undefined : (value as StockEntryStatus),
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('stockEntries.allStatuses')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
+                    <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
+                    <SelectItem value="Submitted">{t('stockEntries.status.submitted')}</SelectItem>
+                    <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
+                    <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
-              <TableHead>{t('stockEntries.table.date')}</TableHead>
-              <TableHead>{t('stockEntries.table.type')}</TableHead>
-              <TableHead>{t('stockEntries.table.warehouse')}</TableHead>
-              <TableHead>{t('stockEntries.table.reference')}</TableHead>
-              <TableHead>{t('stockEntries.table.status')}</TableHead>
-              <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredEntries.length === 0 ? (
+          </div>
+        }
+        stats={
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            {Object.values(STOCK_ENTRY_TYPES).map((type) => {
+              const count = entries.filter((e) => e.entry_type === type.type).length;
+              return (
+                <div key={type.type} className="rounded-lg border bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">{type.label}</p>
+                      <p className="mt-1 text-2xl font-bold">{count}</p>
+                    </div>
+                    <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-${type.color}-100`}>
+                      <Package className={`h-6 w-6 text-${type.color}-600`} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        }
+      >
+        <div className="overflow-hidden rounded-lg border bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>{t('stockEntries.noEntries')}</p>
-                  <p className="text-sm mt-1">{t('stockEntries.noEntriesHint')}</p>
-                </TableCell>
+                <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
+                <TableHead>{t('stockEntries.table.date')}</TableHead>
+                <TableHead>{t('stockEntries.table.type')}</TableHead>
+                <TableHead>{t('stockEntries.table.warehouse')}</TableHead>
+                <TableHead>{t('stockEntries.table.reference')}</TableHead>
+                <TableHead>{t('stockEntries.table.status')}</TableHead>
+                <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
               </TableRow>
-            ) : (
-              filteredEntries.map((entry) => {
-                const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
-                return (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.entry_number}</TableCell>
-                    <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
-                        {entry.entry_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const fromWarehouse = (entry as unknown as { from_warehouse?: { name: string } }).from_warehouse;
-                        const toWarehouse = (entry as unknown as { to_warehouse?: { name: string } }).to_warehouse;
-                        
-                        if (fromWarehouse && toWarehouse) {
-                          return (
-                            <div className="flex flex-col">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.from')}: {fromWarehouse.name}</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.to')}: {toWarehouse.name}</span>
-                            </div>
-                          );
-                        }
-                        if (fromWarehouse) {
-                          return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
-                        }
-                        if (toWarehouse) {
-                          return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
-                        }
-                        return '-';
-                      })()}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {entry.reference_number || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>
-                        {entry.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onViewClick(entry)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            {t('stockEntries.actions.viewDetails')}
-                          </DropdownMenuItem>
+            </TableHeader>
+            <TableBody>
+              {filteredEntries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                    <Package className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                    <p>{t('stockEntries.noEntries')}</p>
+                    <p className="mt-1 text-sm">{t('stockEntries.noEntriesHint')}</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredEntries.map((entry) => {
+                  const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
+                  return (
+                    <TableRow key={entry.id}>
+                      <TableCell className="font-medium">{entry.entry_number}</TableCell>
+                      <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
+                          {entry.entry_type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600 dark:text-gray-400">
+                        {(() => {
+                          const fromWarehouse = (entry as unknown as { from_warehouse?: { name: string } }).from_warehouse;
+                          const toWarehouse = (entry as unknown as { to_warehouse?: { name: string } }).to_warehouse;
 
-                          {entry.status === 'Draft' && (
-                            <>
-                              <DropdownMenuItem>
-                                <Edit className="w-4 h-4 mr-2" />
-                                {t('stockEntries.actions.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => setConfirmAction({ entry, action: 'post' })}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                {t('stockEntries.actions.postEntry')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setConfirmAction({ entry, action: 'delete' })}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {t('stockEntries.actions.delete')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-
-                          {entry.status === 'Posted' && (
-                            <DropdownMenuItem
-                              onClick={() => setConfirmAction({ entry, action: 'cancel' })}
-                            >
-                              <XCircle className="w-4 h-4 mr-2 text-orange-600" />
-                              {t('stockEntries.actions.cancelEntry')}
+                          if (fromWarehouse && toWarehouse) {
+                            return (
+                              <div className="flex flex-col">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.from')}: {fromWarehouse.name}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.to')}: {toWarehouse.name}</span>
+                              </div>
+                            );
+                          }
+                          if (fromWarehouse) {
+                            return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
+                          }
+                          if (toWarehouse) {
+                            return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
+                          }
+                          return '-';
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {entry.reference_number || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>
+                          {entry.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onViewClick(entry)}>
+                              <Eye className="w-4 h-4 mr-2" />
+                              {t('stockEntries.actions.viewDetails')}
                             </DropdownMenuItem>
-                          )}
 
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            {t('stockEntries.actions.exportPdf')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                            {entry.status === 'Draft' && (
+                              <>
+                                <DropdownMenuItem>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  {t('stockEntries.actions.edit')}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onClick={() => setConfirmAction({ entry, action: 'post' })}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                                  {t('stockEntries.actions.postEntry')}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setConfirmAction({ entry, action: 'delete' })}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  {t('stockEntries.actions.delete')}
+                                </DropdownMenuItem>
+                              </>
+                            )}
 
-      {/* Confirmation Dialog */}
+                            {entry.status === 'Posted' && (
+                              <DropdownMenuItem
+                                onClick={() => setConfirmAction({ entry, action: 'cancel' })}
+                              >
+                                <XCircle className="w-4 h-4 mr-2 text-orange-600" />
+                                {t('stockEntries.actions.cancelEntry')}
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <Download className="w-4 h-4 mr-2" />
+                              {t('stockEntries.actions.exportPdf')}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </ListPageLayout>
+
       {confirmAction && (
         <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
           <AlertDialogContent>
@@ -415,6 +409,6 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </>
   );
 }

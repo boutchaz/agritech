@@ -8,14 +8,14 @@ import ModuleView from '@/components/ModuleView'
 import { CATEGORY_LABELS } from '@/lib/polar'
 import type { Module } from '@/types'
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/Input';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { SectionLoader } from '@/components/ui/loader';
 import {
   Leaf, Package, MapPin, ShoppingCart, Truck, Receipt, Users, Satellite,
   Building, BarChart3, FileText, Calculator, ClipboardList, Wheat, Box,
   Droplets, Sprout, TreeDeciduous, Activity, Settings, Home, Globe,
   FlaskConical as Flask, Beaker, TrendingUp, DollarSign,
-  Search, ArrowLeft, type LucideIcon,
+  ArrowLeft, type LucideIcon,
 } from 'lucide-react';
 const MODULE_ICONS: Record<string, LucideIcon> = {
   Leaf, Package, MapPin, ShoppingCart, Truck, Receipt, Users, Satellite,
@@ -162,70 +162,73 @@ function ModuleNotFound({ moduleId, activeModules }: { moduleId: string; activeM
 
         {activeModules.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 shadow-lg border border-gray-200 dark:border-gray-700 text-left">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('moduleView.availableModules')}
-            </h3>
+            <ListPageLayout
+              header={
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('moduleView.availableModules')}
+                </h3>
+              }
+              filters={
+                <div className="space-y-4">
+                  <FilterBar
+                    searchValue={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    searchPlaceholder={t('moduleView.searchModules')}
+                  />
 
-            <div className="relative mb-4">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('moduleView.searchModules')}
-                className="ps-9"
-              />
-            </div>
-
-            {categories.length > 1 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                <Button
-                  variant={selectedCategory === null ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                  className="text-xs"
-                >
-                  {t('moduleView.allCategories')}
-                </Button>
-                {categories.map((cat) => (
-                  <Button
-                    key={cat}
-                    variant={selectedCategory === cat ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSelectedCategory(cat)}
-                    className="text-xs"
-                  >
-                    {CATEGORY_LABELS[cat] ?? cat}
-                  </Button>
-                ))}
-              </div>
-            )}
-
-            {filteredModules.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                {filteredModules.map((mod) => {
-                  const Icon = resolveIcon(mod.icon);
-                  return (
-                    <Button
-                      key={mod.id}
-                      onClick={() => navigate({ to: `/${mod.id}` })}
-                      variant="outline"
-                      className="px-3 py-3 h-auto text-start rounded-lg border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
-                        <span className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 truncate">
-                          {mod.name}
-                        </span>
-                      </div>
-                    </Button>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
-                {t('moduleView.noModulesMatch')}
-              </p>
-            )}
+                  {categories.length > 1 && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={selectedCategory === null ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSelectedCategory(null)}
+                        className="text-xs"
+                      >
+                        {t('moduleView.allCategories')}
+                      </Button>
+                      {categories.map((cat) => (
+                        <Button
+                          key={cat}
+                          variant={selectedCategory === cat ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setSelectedCategory(cat)}
+                          className="text-xs"
+                        >
+                          {CATEGORY_LABELS[cat] ?? cat}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              {filteredModules.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                  {filteredModules.map((mod) => {
+                    const Icon = resolveIcon(mod.icon);
+                    return (
+                      <Button
+                        key={mod.id}
+                        onClick={() => navigate({ to: `/${mod.id}` })}
+                        variant="outline"
+                        className="px-3 py-3 h-auto text-start rounded-lg border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all duration-200 group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4 flex-shrink-0 text-gray-500 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
+                          <span className="font-medium text-gray-900 dark:text-white group-hover:text-green-600 dark:group-hover:text-green-400 truncate">
+                            {mod.name}
+                          </span>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
+                  {t('moduleView.noModulesMatch')}
+                </p>
+              )}
+            </ListPageLayout>
           </div>
         )}
 

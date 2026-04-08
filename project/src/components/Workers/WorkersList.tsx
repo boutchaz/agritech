@@ -5,8 +5,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Users,
   Plus,
-  Search,
-  Filter,
   Edit,
   Trash2,
   CheckCircle,
@@ -25,6 +23,7 @@ import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageHeader, ListPageLayout } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader } from '@/components/ui/loader';
@@ -40,11 +39,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<WorkerType | 'all'>('all');
@@ -59,7 +54,8 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
   // Ensure farms is always an array
   const farmsArray = Array.isArray(farms) ? farms : [];
 
-  const { data: workers = [], isLoading } = useWorkers(organizationId);
+  const { data: workersData = [], isLoading } = useWorkers(organizationId);
+  const workers = workersData as Worker[];
   const deactivateWorker = useDeactivateWorker();
   const deleteWorker = useDeleteWorker();
   const { can } = useCan();
@@ -130,151 +126,125 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="mb-1 flex items-center gap-2.5 sm:mb-2">
-            <Users className="h-5 w-5 shrink-0 text-blue-600 sm:h-6 sm:w-6" />
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {t('workers.list.title')}
-            </h1>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('workers.list.subtitle')}
-          </p>
-        </div>
-        <Can
-          I="create"
-          a="Worker"
-          fallback={
-            <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed text-sm">
-              <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>{t('workers.list.restrictedAccess')}</span>
-            </div>
+    <ListPageLayout
+      header={
+        <ListPageHeader
+          title={t('workers.list.title')}
+          subtitle={t('workers.list.subtitle')}
+          icon={<Users className="h-5 w-5 shrink-0 text-blue-600 sm:h-6 sm:w-6" />}
+          actions={
+            <Can
+              I="create"
+              a="Worker"
+              fallback={
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 text-gray-500 rounded-lg cursor-not-allowed text-sm">
+                  <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>{t('workers.list.restrictedAccess')}</span>
+                </div>
+              }
+            >
+              <Button
+                variant="blue"
+                data-tour="worker-add"
+                onClick={() => {
+                  setSelectedWorker(null);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>{t('workers.list.addWorker')}</span>
+              </Button>
+            </Can>
           }
-        >
-          <Button variant="blue"
-            data-tour="worker-add"
-            onClick={() => {
-              setSelectedWorker(null);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
-          >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>{t('workers.list.addWorker')}</span>
-          </Button>
-        </Can>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow">
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{t('workers.stats.total')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{workers.length}</p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4">
-          <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mb-1">{t('workers.stats.fixedSalary')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
-            {workers.filter(w => w.worker_type === 'fixed_salary').length}
-          </p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4">
-          <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 mb-1">{t('workers.stats.dailyWorkers')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">
-            {workers.filter(w => w.worker_type === 'daily_worker').length}
-          </p>
-        </div>
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 sm:p-4">
-          <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 mb-1">{t('workers.stats.sharecropping')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">
-            {workers.filter(w => w.worker_type === 'metayage').length}
-          </p>
-        </div>
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-4 col-span-2 sm:col-span-1">
-          <p className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 mb-1">{t('workers.stats.platformAccess')}</p>
-          <p className="text-xl sm:text-2xl font-bold text-indigo-900 dark:text-indigo-100">
-            {workers.filter(w => w.user_id).length}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-          {/* Search */}
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:h-5 sm:w-5" />
-            <input
-              type="text"
-              placeholder={t('workers.list.search')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 py-2 pe-3 ps-9 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:ps-10"
-            />
+        />
+      }
+      stats={
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 sm:p-4 shadow">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-1">{t('workers.stats.total')}</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{workers.length}</p>
           </div>
-
-          {/* Type Filter */}
-          <div className="relative">
-            <Filter className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 sm:h-5 sm:w-5" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as WorkerType | 'all')}
-              className="w-full appearance-none rounded-lg border border-gray-300 py-2 pe-3 ps-9 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:ps-10"
-            >
-              <option value="all">{t('workers.filters.allTypes')}</option>
-              <option value="fixed_salary">{t('workers.filters.fixedSalary')}</option>
-              <option value="daily_worker">{t('workers.filters.dailyWorker')}</option>
-              <option value="metayage">{t('workers.filters.metayage')}</option>
-            </select>
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 mb-1">{t('workers.stats.fixedSalary')}</p>
+            <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {workers.filter(w => w.worker_type === 'fixed_salary').length}
+            </p>
           </div>
-
-          {/* Farm Filter */}
-          <div>
-            <select
-              value={selectedFarm}
-              onChange={(e) => setSelectedFarm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-            >
-              <option value="all">{t('workers.filters.allFarms')}</option>
-              {farmsArray.map(farm => (
-                <option key={farm.id} value={farm.id}>
-                  {farm.name}
-                </option>
-              ))}
-            </select>
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-green-600 dark:text-green-400 mb-1">{t('workers.stats.dailyWorkers')}</p>
+            <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">
+              {workers.filter(w => w.worker_type === 'daily_worker').length}
+            </p>
           </div>
-
-          {/* Active Filter */}
-          <div>
-            <select
-              value={filterActive === 'all' ? 'all' : filterActive.toString()}
-              onChange={(e) => setFilterActive(e.target.value === 'all' ? 'all' : e.target.value === 'true')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-            >
-              <option value="all">{t('workers.filters.all')}</option>
-              <option value="true">{t('workers.filters.active')}</option>
-              <option value="false">{t('workers.filters.inactive')}</option>
-            </select>
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-400 mb-1">{t('workers.stats.sharecropping')}</p>
+            <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {workers.filter(w => w.worker_type === 'metayage').length}
+            </p>
           </div>
-
-          {/* Platform Access Filter */}
-          <div>
-            <select
-              value={filterPlatformAccess}
-              onChange={(e) => setFilterPlatformAccess(e.target.value as 'all' | 'with' | 'without')}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white text-sm"
-            >
-              <option value="all">{t('workers.filters.allPlatformAccess')}</option>
-              <option value="with">{t('workers.filters.withAccess')}</option>
-              <option value="without">{t('workers.filters.withoutAccess')}</option>
-            </select>
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 sm:p-4 col-span-2 sm:col-span-1">
+            <p className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-400 mb-1">{t('workers.stats.platformAccess')}</p>
+            <p className="text-xl sm:text-2xl font-bold text-indigo-900 dark:text-indigo-100">
+              {workers.filter(w => w.user_id).length}
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Workers List - Mobile Cards / Desktop Table */}
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('workers.list.search')}
+          filters={[
+            {
+              key: 'type',
+              value: filterType,
+              onChange: (v) => setFilterType(v as WorkerType | 'all'),
+              options: [
+                { value: 'all', label: t('workers.filters.allTypes') },
+                { value: 'fixed_salary', label: t('workers.filters.fixedSalary') },
+                { value: 'daily_worker', label: t('workers.filters.dailyWorker') },
+                { value: 'metayage', label: t('workers.filters.metayage') },
+              ],
+              placeholder: t('workers.filters.allTypes'),
+            },
+            {
+              key: 'farm',
+              value: selectedFarm,
+              onChange: setSelectedFarm,
+              options: [
+                { value: 'all', label: t('workers.filters.allFarms') },
+                ...farmsArray.map(farm => ({ value: farm.id, label: farm.name })),
+              ],
+              placeholder: t('workers.filters.allFarms'),
+            },
+            {
+              key: 'active',
+              value: filterActive === 'all' ? 'all' : filterActive.toString(),
+              onChange: (v) => setFilterActive(v === 'all' ? 'all' : v === 'true'),
+              options: [
+                { value: 'all', label: t('workers.filters.all') },
+                { value: 'true', label: t('workers.filters.active') },
+                { value: 'false', label: t('workers.filters.inactive') },
+              ],
+              placeholder: t('workers.filters.all'),
+            },
+            {
+              key: 'platformAccess',
+              value: filterPlatformAccess,
+              onChange: (v) => setFilterPlatformAccess(v as 'all' | 'with' | 'without'),
+              options: [
+                { value: 'all', label: t('workers.filters.allPlatformAccess') },
+                { value: 'with', label: t('workers.filters.withAccess') },
+                { value: 'without', label: t('workers.filters.withoutAccess') },
+              ],
+              placeholder: t('workers.filters.allPlatformAccess'),
+            },
+          ]}
+        />
+      }
+    >
       {isLoading ? (
         <SectionLoader />
       ) : filteredWorkers.length === 0 ? (
@@ -290,65 +260,70 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
               <div
                 key={worker.id}
                 className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {worker.first_name} {worker.last_name}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {worker.position || t('workers.table.notSpecified')}
-                    </p>
-                    {worker.cin && (
-                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                        CIN: {worker.cin}
+                <button
+                  type="button"
+                  className="w-full text-left"
+                  onClick={() => navigate({ to: '/workers/$workerId', params: { workerId: worker.id } })}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {worker.first_name} {worker.last_name}
                       </p>
-                    )}
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {worker.position || t('workers.table.notSpecified')}
+                      </p>
+                      {worker.cin && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          CIN: {worker.cin}
+                        </p>
+                      )}
+                    </div>
+                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getWorkerTypeColor(worker.worker_type)}`}>
+                      {getWorkerTypeLabel(worker.worker_type)}
+                    </span>
                   </div>
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getWorkerTypeColor(worker.worker_type)}`}>
-                    {getWorkerTypeLabel(worker.worker_type)}
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.compensation')}</p>
-                    <p className="text-gray-900 dark:text-white">{getCompensationDisplay(worker)}</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.compensation')}</p>
+                      <p className="text-gray-900 dark:text-white">{getCompensationDisplay(worker)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.farm')}</p>
+                      <p className="text-gray-900 dark:text-white">{worker.farm_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.cnss')}</p>
+                      {worker.is_cnss_declared ? (
+                        <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
+                          <CheckCircle className="w-3 h-3" />
+                          <span className="text-xs">{t('workers.table.declared')}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <XCircle className="w-3 h-3" />
+                          <span className="text-xs">{t('workers.table.notDeclared')}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.status')}</p>
+                      {worker.is_active ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 rounded-full">
+                          <CheckCircle className="w-3 h-3" />
+                          {t('workers.table.active')}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 rounded-full">
+                          <UserX className="w-3 h-3" />
+                          {t('workers.table.inactive')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.farm')}</p>
-                    <p className="text-gray-900 dark:text-white">{worker.farm_name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.cnss')}</p>
-                    {worker.is_cnss_declared ? (
-                      <div className="flex items-center gap-1 text-green-600 dark:text-green-400">
-                        <CheckCircle className="w-3 h-3" />
-                        <span className="text-xs">{t('workers.table.declared')}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 text-gray-400">
-                        <XCircle className="w-3 h-3" />
-                        <span className="text-xs">{t('workers.table.notDeclared')}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400 text-xs">{t('workers.table.status')}</p>
-                    {worker.is_active ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 rounded-full">
-                        <CheckCircle className="w-3 h-3" />
-                        {t('workers.table.active')}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200 rounded-full">
-                        <UserX className="w-3 h-3" />
-                        {t('workers.table.inactive')}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                </button>
 
                 {/* Platform Access */}
                 <div className="mb-3">
@@ -382,10 +357,13 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700 rtl:flex-row-reverse" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-200 dark:border-gray-700 rtl:flex-row-reverse">
                   <Can I="create" a="Payment">
                     <Button
-                      onClick={() => handlePayWorker(worker)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePayWorker(worker);
+                      }}
                       className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg"
                       title={t('workers.actions.paySalary')}
                     >
@@ -394,7 +372,10 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                   </Can>
                   <Can I="update" a="Worker">
                     <Button
-                      onClick={() => handleEdit(worker)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(worker);
+                      }}
                       className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg"
                       title={t('workers.actions.edit')}
                     >
@@ -404,7 +385,10 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                   {worker.is_active && (
                     <Can I="deactivate" a="Worker">
                       <Button
-                        onClick={() => handleDeactivate(worker.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeactivate(worker.id);
+                        }}
                         className="p-2 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg"
                         title={t('workers.actions.deactivate')}
                       >
@@ -414,7 +398,10 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                   )}
                   <Can I="delete" a="Worker">
                     <Button
-                      onClick={() => handleDelete(worker.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(worker.id);
+                      }}
                       className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                       title={t('workers.actions.delete')}
                     >
@@ -657,7 +644,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </div>
+    </ListPageLayout>
   );
 };
 

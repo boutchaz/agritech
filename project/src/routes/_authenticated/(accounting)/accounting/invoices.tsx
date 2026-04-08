@@ -6,12 +6,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send, Loader2 } from 'lucide-react';
+import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -30,7 +28,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -159,9 +157,9 @@ const AppContent = () => {
         />
       }
     >
-      <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6", isRTL && "text-right")}>
-          {/* Header with Search and Filters */}
-          <div className="flex flex-col gap-4">
+      <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6", isRTL && "text-right")}>
+        <ListPageLayout
+          header={
             <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
               <div className="min-w-0">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('invoices.allInvoices', 'All Invoices')}</h2>
@@ -177,51 +175,45 @@ const AppContent = () => {
                 </Button>
               </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
-                <Input
-                  placeholder={t('invoices.search.placeholder', 'Search invoices by number or customer...')}
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className={isRTL ? "pr-10" : "pl-10"}
-                />
-                {isFetching && (
-                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
-              />
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as 'all' | 'sales' | 'purchase')}
-                className="w-full sm:w-40"
-              >
-                <option value="all">{t('invoices.filter.allTypes', 'All Types')}</option>
-                <option value="sales">{t('invoices.filter.sales', 'Sales')}</option>
-                <option value="purchase">{t('invoices.filter.purchase', 'Purchase')}</option>
-              </Select>
-              <Select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full sm:w-40"
-              >
-                <option value="all">{t('invoices.filter.allStatus', 'All Status')}</option>
-                <option value="draft">{t('invoices.status.draft', 'Draft')}</option>
-                <option value="submitted">{t('invoices.status.submitted', 'Submitted')}</option>
-                <option value="paid">{t('invoices.status.paid', 'Paid')}</option>
-                <option value="partially_paid">{t('invoices.status.partiallyPaid', 'Partially Paid')}</option>
-                <option value="overdue">{t('invoices.status.overdue', 'Overdue')}</option>
-                <option value="cancelled">{t('invoices.status.cancelled', 'Cancelled')}</option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" data-tour="billing-stats">
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={tableState.setSearch}
+              searchPlaceholder={t('invoices.search.placeholder', 'Search invoices by number or customer...')}
+              isSearching={isFetching}
+              filters={[
+                {
+                  key: 'type',
+                  value: filterType,
+                  onChange: (v) => setFilterType(v as 'all' | 'sales' | 'purchase'),
+                  options: [
+                    { value: 'all', label: t('invoices.filter.allTypes', 'All Types') },
+                    { value: 'sales', label: t('invoices.filter.sales', 'Sales') },
+                    { value: 'purchase', label: t('invoices.filter.purchase', 'Purchase') },
+                  ],
+                },
+                {
+                  key: 'status',
+                  value: filterStatus,
+                  onChange: (v) => setFilterStatus(v),
+                  options: [
+                    { value: 'all', label: t('invoices.filter.allStatus', 'All Status') },
+                    { value: 'draft', label: t('invoices.status.draft', 'Draft') },
+                    { value: 'submitted', label: t('invoices.status.submitted', 'Submitted') },
+                    { value: 'paid', label: t('invoices.status.paid', 'Paid') },
+                    { value: 'partially_paid', label: t('invoices.status.partiallyPaid', 'Partially Paid') },
+                    { value: 'overdue', label: t('invoices.status.overdue', 'Overdue') },
+                    { value: 'cancelled', label: t('invoices.status.cancelled', 'Cancelled') },
+                  ],
+                },
+              ]}
+              datePreset={tableState.datePreset}
+              onDatePresetChange={tableState.setDatePreset}
+            />
+          }
+          stats={
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -269,7 +261,8 @@ const AppContent = () => {
               </CardContent>
             </Card>
           </div>
-
+          }
+        >
           {/* Invoice List - Desktop Table View */}
           <Card className="hidden md:block" data-tour="billing-invoices">
             <CardHeader>
@@ -576,6 +569,7 @@ const AppContent = () => {
               />
             )}
           </div>
+        </ListPageLayout>
 
         {/* Invoice Creation/Edit Dialog */}
         <InvoiceForm

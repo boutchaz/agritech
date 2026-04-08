@@ -7,10 +7,9 @@ import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, Search } from 'lucide-react';
+import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -29,8 +28,7 @@ import { QuoteDetailDialog } from '@/components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
-import { Loader2 } from 'lucide-react';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader, type DatePreset as FilterDatePreset } from '@/components/ui/data-table';
 import { toast } from 'sonner';
 import { SectionLoader } from '@/components/ui/loader';
 
@@ -234,111 +232,115 @@ const AppContent = () => {
         />
       }
     >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
-              <div className="min-w-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('quotes.allQuotes')}</h2>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                  {t('quotes.description')}
-                </p>
-              </div>
-              <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              title={t('quotes.allQuotes')}
+              subtitle={t('quotes.description')}
+              actions={
                 <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
                   <span className="hidden sm:inline">{t('quotes.actions.newQuote')}</span>
                   <span className="sm:hidden">New</span>
                 </Button>
-              </div>
+              }
+              className={isRTL ? 'sm:flex-row-reverse' : undefined}
+            />
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={(value) => tableState.setSearch(value)}
+              searchPlaceholder={t('quotes.search', 'Search by quote number or customer...')}
+              isSearching={isFetching}
+              datePreset={tableState.datePreset as FilterDatePreset}
+              onDatePresetChange={(preset) => {
+                if (preset !== 'custom') {
+                  tableState.setDatePreset(preset);
+                }
+              }}
+            />
+          }
+          stats={
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4" data-tour="billing-stats">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.total')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.draft')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.draft}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.sent')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.sent}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.accepted')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.converted')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">{stats.converted}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.totalValue')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">
+                    {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
-                <Input
-                  placeholder={t('quotes.search', 'Search by quote number or customer...')}
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className={isRTL ? "pr-10" : "pl-10"}
-                />
-                {isFetching && (
-                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
+          }
+          pagination={
+            <div className="hidden md:block">
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
               />
             </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4" data-tour="billing-stats">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.total')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.draft')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.draft}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.sent')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.sent}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.accepted')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.converted')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{stats.converted}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.totalValue')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">
-                  {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quote List - Desktop Table View */}
+          }
+        >
           <Card className="hidden md:block" data-tour="billing-quotes">
             <CardHeader>
               <CardTitle>{t('quotes.allQuotes')}</CardTitle>
@@ -355,38 +357,38 @@ const AppContent = () => {
                         label={t('quotes.table.quoteNumber')}
                         sortKey="quote_number"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.customer')}
                         sortKey="customer_name"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.date')}
                         sortKey="quote_date"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.validUntil')}
                         sortKey="valid_until"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.amount')}
                         sortKey="grand_total"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                         align="right"
                       />
                       <SortableHeader
                         label={t('quotes.table.status')}
                         sortKey="status"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <TableHead className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.table.actions')}
@@ -527,14 +529,6 @@ const AppContent = () => {
                   </TableBody>
                 </Table>
               </div>
-              <DataTablePagination
-                page={tableState.page}
-                totalPages={totalPages}
-                pageSize={tableState.pageSize}
-                totalItems={totalItems}
-                onPageChange={tableState.setPage}
-                onPageSizeChange={tableState.setPageSize}
-              />
             </CardContent>
           </Card>
 
@@ -704,6 +698,8 @@ const AppContent = () => {
               />
             )}
           </div>
+
+        </ListPageLayout>
 
         {/* Create Quote Dialog */}
         <QuoteForm

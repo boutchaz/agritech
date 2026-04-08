@@ -16,13 +16,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/radix-select';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -42,13 +35,13 @@ import {
 import {
   useServerTableState,
   DataTablePagination,
+  FilterBar,
+  ListPageLayout,
 } from '@/components/ui/data-table';
 import {
   ClipboardCheck,
   MoreVertical,
   Trash2,
-  Search,
-  Loader2,
   TrendingUp,
   BarChart3,
   Clock,
@@ -141,133 +134,162 @@ export default function QualityControlList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         <span className="ml-3 text-gray-600">{t('production.qualityControl.loadingOrganization', 'Loading...')}</span>
       </div>
     );
   }
 
+  const emptyMessage = tableState.search
+    ? t('production.qualityControl.list.empty.searchTitle', 'No results found')
+    : t('production.qualityControl.list.empty.title', 'No inspections yet');
+
+  const renderActions = (inspectionId: string, canDelete: boolean) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
+          <Eye className="w-4 h-4 mr-2" />
+          {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
+        </DropdownMenuItem>
+        {canDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setConfirmDelete(inspectionId)}
+              className="text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('production.qualityControl.list.actions.delete', 'Delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <ListPageLayout
+      header={
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{t('production.qualityControl.list.title', 'Quality Inspections')}</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {t('production.qualityControl.list.title', 'Quality Inspections')}
+          </h2>
           <p className="text-gray-600">
             {totalItems > 0
               ? t('production.qualityControl.list.subtitle', { count: totalItems })
               : t('production.qualityControl.list.subtitleEmpty', 'No inspections yet')}
           </p>
         </div>
-      </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={tableState.search}
+          onSearchChange={tableState.setSearch}
+          searchPlaceholder={t('production.qualityControl.list.search', 'Search inspections...')}
+          isSearching={isFetching}
+          filters={[
+            {
+              key: 'type',
+              value: filterType,
+              onChange: (v) => setFilterType(v as InspectionType | 'all'),
+              options: [
+                { value: 'all', label: t('production.qualityControl.list.filters.allTypes', 'All Types') },
+                { value: 'pre_harvest', label: t('production.qualityControl.list.filters.type.preHarvest', 'Pre-Harvest') },
+                { value: 'post_harvest', label: t('production.qualityControl.list.filters.type.postHarvest', 'Post-Harvest') },
+                { value: 'storage', label: t('production.qualityControl.list.filters.type.storage', 'Storage') },
+                { value: 'transport', label: t('production.qualityControl.list.filters.type.transport', 'Transport') },
+                { value: 'processing', label: t('production.qualityControl.list.filters.type.processing', 'Processing') },
+              ],
+            },
+            {
+              key: 'status',
+              value: filterStatus,
+              onChange: (v) => setFilterStatus(v as InspectionStatus | 'all'),
+              options: [
+                { value: 'all', label: t('production.qualityControl.list.filters.allStatuses', 'All Statuses') },
+                { value: 'scheduled', label: t('production.qualityControl.list.filters.status.scheduled', 'Scheduled') },
+                { value: 'in_progress', label: t('production.qualityControl.list.filters.status.inProgress', 'In Progress') },
+                { value: 'completed', label: t('production.qualityControl.list.filters.status.completed', 'Completed') },
+                { value: 'failed', label: t('production.qualityControl.list.filters.status.failed', 'Failed') },
+                { value: 'cancelled', label: t('production.qualityControl.list.filters.status.cancelled', 'Cancelled') },
+              ],
+            },
+          ]}
+        />
+      }
+      stats={
+        stats && (
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {t('production.qualityControl.list.stats.total', 'Total Inspections')}
+                </CardTitle>
+                <ClipboardCheck className="w-4 h-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
 
-      {stats && (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {t('production.qualityControl.list.stats.total', 'Total Inspections')}
-              </CardTitle>
-              <ClipboardCheck className="w-4 h-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {t('production.qualityControl.list.stats.avgScore', 'Average Score')}
+                </CardTitle>
+                <TrendingUp className="w-4 h-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${getScoreColor(stats.averageScore)}`}>
+                  {stats.averageScore}/100
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {t('production.qualityControl.list.stats.avgScore', 'Average Score')}
-              </CardTitle>
-              <TrendingUp className="w-4 h-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${getScoreColor(stats.averageScore)}`}>
-                {stats.averageScore}/100
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {t('production.qualityControl.list.stats.completed', 'Completed')}
+                </CardTitle>
+                <BarChart3 className="w-4 h-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.byStatus?.completed || 0}</div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {t('production.qualityControl.list.stats.completed', 'Completed')}
-              </CardTitle>
-              <BarChart3 className="w-4 h-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.byStatus?.completed || 0}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                {t('production.qualityControl.list.stats.inProgress', 'In Progress')}
-              </CardTitle>
-              <Clock className="w-4 h-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.byStatus?.in_progress || 0}</div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <div className="bg-white p-4 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder={t('production.qualityControl.list.search', 'Search inspections...')}
-                value={tableState.search}
-                onChange={(e) => tableState.setSearch(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
-              />
-              {isFetching && (
-                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-              )}
-            </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {t('production.qualityControl.list.stats.inProgress', 'In Progress')}
+                </CardTitle>
+                <Clock className="w-4 h-4 text-yellow-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.byStatus?.in_progress || 0}</div>
+              </CardContent>
+            </Card>
           </div>
-
-          <Select
-            value={filterType}
-            onValueChange={(value) => setFilterType(value as InspectionType | 'all')}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t('production.qualityControl.list.filters.allTypes', 'All Types')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('production.qualityControl.list.filters.allTypes', 'All Types')}</SelectItem>
-              <SelectItem value="pre_harvest">{t('production.qualityControl.list.filters.type.preHarvest', 'Pre-Harvest')}</SelectItem>
-              <SelectItem value="post_harvest">{t('production.qualityControl.list.filters.type.postHarvest', 'Post-Harvest')}</SelectItem>
-              <SelectItem value="storage">{t('production.qualityControl.list.filters.type.storage', 'Storage')}</SelectItem>
-              <SelectItem value="transport">{t('production.qualityControl.list.filters.type.transport', 'Transport')}</SelectItem>
-              <SelectItem value="processing">{t('production.qualityControl.list.filters.type.processing', 'Processing')}</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={filterStatus}
-            onValueChange={(value) => setFilterStatus(value as InspectionStatus | 'all')}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t('production.qualityControl.list.filters.allStatuses', 'All Statuses')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('production.qualityControl.list.filters.allStatuses', 'All Statuses')}</SelectItem>
-              <SelectItem value="scheduled">{t('production.qualityControl.list.filters.status.scheduled', 'Scheduled')}</SelectItem>
-              <SelectItem value="in_progress">{t('production.qualityControl.list.filters.status.inProgress', 'In Progress')}</SelectItem>
-              <SelectItem value="completed">{t('production.qualityControl.list.filters.status.completed', 'Completed')}</SelectItem>
-              <SelectItem value="failed">{t('production.qualityControl.list.filters.status.failed', 'Failed')}</SelectItem>
-              <SelectItem value="cancelled">{t('production.qualityControl.list.filters.status.cancelled', 'Cancelled')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
+        )
+      }
+      pagination={
+        totalItems > 0 ? (
+          <DataTablePagination
+            page={tableState.page}
+            pageSize={tableState.pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
+          />
+        ) : undefined
+      }
+    >
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         <div className="hidden md:block">
           <Table>
@@ -286,15 +308,11 @@ export default function QualityControlList() {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                     <ClipboardCheck className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                    <p>{tableState.search
-                      ? t('production.qualityControl.list.empty.searchTitle', 'No results found')
-                      : t('production.qualityControl.list.empty.title', 'No inspections yet')
-                    }</p>
+                    <p>{emptyMessage}</p>
                     <p className="text-sm mt-1">
                       {tableState.search
                         ? t('production.qualityControl.list.empty.searchDescription', 'Try adjusting your search')
-                        : t('production.qualityControl.list.empty.description', 'Quality inspections will appear here once created')
-                      }
+                        : t('production.qualityControl.list.empty.description', 'Quality inspections will appear here once created')}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -332,31 +350,7 @@ export default function QualityControlList() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
-                          </DropdownMenuItem>
-                          {inspection.status !== 'in_progress' && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => setConfirmDelete(inspection.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {t('production.qualityControl.list.actions.delete', 'Delete')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      {renderActions(inspection.id, inspection.status !== 'in_progress')}
                     </TableCell>
                   </TableRow>
                 ))
@@ -369,7 +363,7 @@ export default function QualityControlList() {
           {inspections.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <ClipboardCheck className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-              <p>{t('production.qualityControl.list.mobile.empty', 'No inspections yet')}</p>
+              <p>{emptyMessage}</p>
             </div>
           ) : (
             inspections.map((inspection) => (
@@ -389,31 +383,7 @@ export default function QualityControlList() {
                       {inspection.parcel?.name && ` — ${inspection.parcel.name}`}
                     </p>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
-                      </DropdownMenuItem>
-                      {inspection.status !== 'in_progress' && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setConfirmDelete(inspection.id)}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            {t('production.qualityControl.list.actions.delete', 'Delete')}
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {renderActions(inspection.id, inspection.status !== 'in_progress')}
                 </div>
 
                 <div className="flex items-center gap-3 text-sm mt-2">
@@ -428,17 +398,6 @@ export default function QualityControlList() {
           )}
         </div>
       </div>
-
-      {totalItems > 0 && (
-        <DataTablePagination
-          page={tableState.page}
-          pageSize={tableState.pageSize}
-          totalItems={totalItems}
-          totalPages={totalPages}
-          onPageChange={tableState.setPage}
-          onPageSizeChange={tableState.setPageSize}
-        />
-      )}
 
       {confirmDelete && (
         <AlertDialog
@@ -466,6 +425,6 @@ export default function QualityControlList() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </ListPageLayout>
   );
 }

@@ -1415,7 +1415,7 @@ export class AIReportsService {
 
     const { data: activeRecommendations } = await supabase
       .from('ai_recommendations')
-      .select('status, action, created_at, valid_until, alert_code')
+      .select('status, bloc_3_action, created_at, expires_at, alert_code')
       .eq('organization_id', organizationId)
       .eq('parcel_id', parcelId)
       .in('status', ['pending', 'validated'])
@@ -1541,16 +1541,14 @@ export class AIReportsService {
               ? recommendation.alert_code
               : 'general',
           title:
-            typeof recommendation.action === 'string'
-              ? recommendation.action
-              : 'Recommendation active',
+            this.extractRecommendationActionText(recommendation) ?? 'Recommendation active',
           issuedDate:
             typeof recommendation.created_at === 'string'
               ? recommendation.created_at
               : defaultEndDate,
           evaluationDeadline:
-            typeof recommendation.valid_until === 'string'
-              ? recommendation.valid_until
+            typeof recommendation.expires_at === 'string'
+              ? recommendation.expires_at
               : defaultEndDate,
         }),
       ),
@@ -1658,7 +1656,7 @@ export class AIReportsService {
 
     const { data: activeRecommendations } = await supabase
       .from('ai_recommendations')
-      .select('status, action, created_at, valid_until, alert_code')
+      .select('status, bloc_3_action, created_at, expires_at, alert_code')
       .eq('organization_id', organizationId)
       .eq('parcel_id', parcelId)
       .in('status', ['pending', 'validated'])
@@ -1801,16 +1799,14 @@ export class AIReportsService {
               ? recommendation.alert_code
               : 'general',
           title:
-            typeof recommendation.action === 'string'
-              ? recommendation.action
-              : 'Recommendation active',
+            this.extractRecommendationActionText(recommendation) ?? 'Recommendation active',
           issuedDate:
             typeof recommendation.created_at === 'string'
               ? recommendation.created_at
               : generationDateStr,
           evaluationDeadline:
-            typeof recommendation.valid_until === 'string'
-              ? recommendation.valid_until
+            typeof recommendation.expires_at === 'string'
+              ? recommendation.expires_at
               : generationDateStr,
         }),
       ),
@@ -2589,6 +2585,57 @@ export class AIReportsService {
     return labels[Math.max(0, Math.min(labels.length - 1, month - 1))];
   }
 
+  private extractRecommendationActionText(
+    recommendation: Record<string, unknown>,
+  ): string | null {
+    if (typeof recommendation.action === 'string' && recommendation.action.trim().length > 0) {
+      return recommendation.action;
+    }
+
+    const bloc3 = recommendation.bloc_3_action;
+    if (!bloc3 || typeof bloc3 !== 'object' || Array.isArray(bloc3)) {
+      return null;
+    }
+
+    const bloc3Data = bloc3 as Record<string, unknown>;
+    if (typeof bloc3Data.action === 'string' && bloc3Data.action.trim().length > 0) {
+      return bloc3Data.action;
+    }
+
+    if (typeof bloc3Data.description === 'string' && bloc3Data.description.trim().length > 0) {
+      return bloc3Data.description;
+    }
+
+    return null;
+  }
+
+  private extractRecommendationDiagnosticText(
+    recommendation: Record<string, unknown>,
+  ): string | null {
+    if (
+      typeof recommendation.diagnostic === 'string' &&
+      recommendation.diagnostic.trim().length > 0
+    ) {
+      return recommendation.diagnostic;
+    }
+
+    const bloc2 = recommendation.bloc_2_diagnostic;
+    if (!bloc2 || typeof bloc2 !== 'object' || Array.isArray(bloc2)) {
+      return null;
+    }
+
+    const bloc2Data = bloc2 as Record<string, unknown>;
+    const keys = ['diagnostic', 'summary', 'hypothesis'];
+    for (const key of keys) {
+      const value = bloc2Data[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
   private async aggregateFollowUpData(
     organizationId: string,
     parcelId: string,
@@ -2606,7 +2653,7 @@ export class AIReportsService {
     const { data: recommendation } = await supabase
       .from('ai_recommendations')
       .select(
-        'id, status, action, diagnostic, created_at, executed_at, execution_notes, valid_until, evaluation_window_days, evaluation_indicator, expected_response, alert_code, priority',
+        'id, status, bloc_3_action, bloc_2_diagnostic, created_at, executed_at, execution_notes, expires_at, evaluation_window_days, evaluation_indicator, expected_response, alert_code, priority',
       )
       .eq('organization_id', organizationId)
       .eq('parcel_id', parcelId)
@@ -2626,6 +2673,12 @@ export class AIReportsService {
       typeof recommendation.created_at === 'string'
         ? recommendation.created_at
         : new Date().toISOString();
+    const recommendationAction = this.extractRecommendationActionText(
+      recommendation as Record<string, unknown>,
+    );
+    const recommendationDiagnostic = this.extractRecommendationDiagnosticText(
+      recommendation as Record<string, unknown>,
+    );
     const executedDate =
       typeof recommendation.executed_at === 'string' ? recommendation.executed_at : undefined;
     const evaluationWindowDays =
@@ -2634,7 +2687,7 @@ export class AIReportsService {
         typeof recommendation.evaluation_indicator === 'string'
           ? recommendation.evaluation_indicator
           : null,
-        typeof recommendation.action === 'string' ? recommendation.action : null,
+        recommendationAction,
       );
     const evaluationAnchor = executedDate ?? issuedDate;
     const evaluationDeadline = new Date(evaluationAnchor);
@@ -2690,21 +2743,14 @@ export class AIReportsService {
             ? recommendation.alert_code
             : 'general',
         title:
-          typeof recommendation.action === 'string'
-            ? recommendation.action
-            : 'Recommendation sans titre',
+          recommendationAction ?? 'Recommendation sans titre',
         initialDiagnosis:
-          typeof recommendation.diagnostic === 'string'
-            ? recommendation.diagnostic
-            : 'Diagnostic non disponible',
+          recommendationDiagnostic ?? 'Diagnostic non disponible',
         diagnosticConfidence: this.classifyConfidenceLevel(
           calibration?.confidence_score,
         ),
         action: {
-          method:
-            typeof recommendation.action === 'string'
-              ? recommendation.action
-              : undefined,
+          method: recommendationAction ?? undefined,
         },
         issuedDate,
         executedDate,

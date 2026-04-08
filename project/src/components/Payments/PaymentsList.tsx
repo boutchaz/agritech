@@ -4,7 +4,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Search,
   Download,
 } from 'lucide-react';
 import { usePayments } from '../../hooks/usePayments';
@@ -18,6 +17,7 @@ import {
 import { format } from 'date-fns';
 import { SectionLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageHeader, ListPageLayout } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface PaymentsListProps {
@@ -69,88 +69,76 @@ const PaymentsList = ({
     .reduce((sum, p) => sum + p.net_amount, 0);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Gestion des Paiements
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {filteredPayments.length} paiement{filteredPayments.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <Button variant="secondary">
-          <Download className="w-5 h-5" />
-          Exporter
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <p className="text-sm text-green-600 dark:text-green-400 mb-1">Total payé</p>
-          <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-            {formatCurrency(totalPaid)}
-          </p>
-        </div>
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-          <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-1">En attente</p>
-          <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-            {formatCurrency(totalPending)}
-          </p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <p className="text-sm text-blue-600 dark:text-blue-400 mb-1">Ce mois</p>
-          <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-            {filteredPayments.filter(p => 
-              new Date(p.period_end).getMonth() === new Date().getMonth()
-            ).length}
-          </p>
-        </div>
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-          <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">Travailleurs</p>
-          <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-            {new Set(filteredPayments.map(p => p.worker_id)).size}
-          </p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Rechercher par travailleur..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        {/* Status filters */}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="blue"
-            onClick={() => handleStatusFilter('all')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ !filters.status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-          >
-            Tous
-          </Button>
-          {(['pending', 'approved', 'paid'] as PaymentStatus[]).map(status => (
-            <Button variant="blue"
-              key={status}
-              onClick={() => handleStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ filters.status === status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-            >
-              {getPaymentStatusLabel(status, 'fr')}
+    <ListPageLayout
+      header={
+        <ListPageHeader
+          title="Gestion des Paiements"
+          subtitle={`${filteredPayments.length} paiement${filteredPayments.length !== 1 ? 's' : ''}`}
+          actions={
+            <Button variant="secondary">
+              <Download className="w-5 h-5" />
+              Exporter
             </Button>
-          ))}
+          }
+        />
+      }
+      stats={
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+            <p className="text-sm text-green-600 dark:text-green-400 mb-1">Total payé</p>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {formatCurrency(totalPaid)}
+            </p>
+          </div>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mb-1">En attente</p>
+            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+              {formatCurrency(totalPending)}
+            </p>
+          </div>
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <p className="text-sm text-blue-600 dark:text-blue-400 mb-1">Ce mois</p>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {filteredPayments.filter(p => 
+                new Date(p.period_end).getMonth() === new Date().getMonth()
+              ).length}
+            </p>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+            <p className="text-sm text-purple-600 dark:text-purple-400 mb-1">Travailleurs</p>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {new Set(filteredPayments.map(p => p.worker_id)).size}
+            </p>
+          </div>
         </div>
-      </div>
-
-      {/* Payments Table */}
+      }
+      filters={
+        <div className="space-y-4">
+          <FilterBar
+            searchValue={searchTerm}
+            onSearchChange={setSearchTerm}
+            searchPlaceholder="Rechercher par travailleur..."
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button variant="blue"
+              onClick={() => handleStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ !filters.status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+            >
+              Tous
+            </Button>
+            {(['pending', 'approved', 'paid'] as PaymentStatus[]).map(status => (
+              <Button variant="blue"
+                key={status}
+                onClick={() => handleStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium ${ filters.status === status ? '' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+              >
+                {getPaymentStatusLabel(status, 'fr')}
+              </Button>
+            ))}
+          </div>
+        </div>
+      }
+    >
       {isLoading ? (
         <SectionLoader />
       ) : filteredPayments.length === 0 ? (
@@ -243,7 +231,7 @@ const PaymentsList = ({
           </div>
         </div>
       )}
-    </div>
+    </ListPageLayout>
   );
 };
 

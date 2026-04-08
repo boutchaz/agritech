@@ -8,13 +8,12 @@ import {
   Truck,
   Home,
   Clock,
-  Search,
   XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/Input';
+import { FilterBar } from '@/components/ui/data-table';
 import {
   Select,
   SelectContent,
@@ -276,16 +275,14 @@ function SellerOrdersPage() {
       </div>
 
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder={t(
+        <div className="flex-1">
+          <FilterBar
+            searchValue={searchQuery}
+            onSearchChange={setSearchQuery}
+            searchPlaceholder={t(
               'marketplace.orders.search',
               'Rechercher une commande...',
             )}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
           />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>

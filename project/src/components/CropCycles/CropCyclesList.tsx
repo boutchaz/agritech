@@ -14,7 +14,6 @@ import {
   Pause,
   TrendingUp,
   TrendingDown,
-  Filter,
   MoreHorizontal,
   LayoutList,
   GanttChartSquare,
@@ -52,6 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ListPageLayout } from "@/components/ui/data-table";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -101,7 +101,7 @@ const cropCycleSchema = z.object({
   is_perennial: z.boolean().optional(),
 });
 
-type CropCycleFormData = z.infer<typeof cropCycleSchema>;
+type CropCycleFormData = z.input<typeof cropCycleSchema>;
 
 interface CropCyclesListProps {
   initialCampaignId?: string;
@@ -193,21 +193,26 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   });
 
   const watchedFarmId = form.watch("farm_id");
+  const watchedTemplateId = form.watch("template_id");
+  const watchedPlantingDate = form.watch("planting_date");
+  const watchedExpectedHarvestStart = form.watch("expected_harvest_start");
+  const watchedExpectedHarvestEnd = form.watch("expected_harvest_end");
+  const watchedParcelId = form.watch("parcel_id");
 
   if (watchedFarmId && watchedFarmId !== selectedFarmId) {
     setSelectedFarmId(watchedFarmId);
   }
 
   useEffect(() => {
-    const templateId = form.watch("template_id");
-    const plantingDate = form.watch("planting_date");
-    const harvestStart = form.watch("expected_harvest_start");
-    const harvestEnd = form.watch("expected_harvest_end");
-
-    if (templateId && plantingDate && !harvestStart && !harvestEnd) {
-      const template = templates.find((t) => t.id === templateId);
+    if (
+      watchedTemplateId &&
+      watchedPlantingDate &&
+      !watchedExpectedHarvestStart &&
+      !watchedExpectedHarvestEnd
+    ) {
+      const template = templates.find((t) => t.id === watchedTemplateId);
       if (template && template.typical_duration_months) {
-        const plantDate = new Date(plantingDate);
+        const plantDate = new Date(watchedPlantingDate);
         const harvestStartDate = new Date(plantDate);
         harvestStartDate.setMonth(
           harvestStartDate.getMonth() + template.typical_duration_months,
@@ -222,19 +227,22 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
         setDatesAutoCalculated(true);
       }
     }
-  }, [form.watch("template_id"), form.watch("planting_date"), templates, form]);
+  }, [
+    form,
+    templates,
+    watchedExpectedHarvestEnd,
+    watchedExpectedHarvestStart,
+    watchedPlantingDate,
+    watchedTemplateId,
+  ]);
 
   useEffect(() => {
-    const parcelId = form.watch("parcel_id");
-    const plantingDate = form.watch("planting_date");
-    const harvestEnd = form.watch("expected_harvest_end");
-
-    if (parcelId && plantingDate && harvestEnd) {
-      const newCycleStart = new Date(plantingDate);
-      const newCycleEnd = new Date(harvestEnd);
+    if (watchedParcelId && watchedPlantingDate && watchedExpectedHarvestEnd) {
+      const newCycleStart = new Date(watchedPlantingDate);
+      const newCycleEnd = new Date(watchedExpectedHarvestEnd);
 
       const overlappingCycle = cropCycles.find((cycle) => {
-        if (cycle.parcel_id !== parcelId) return false;
+        if (cycle.parcel_id !== watchedParcelId) return false;
         if (editingCycle && cycle.id === editingCycle.id) return false;
         if (
           !["land_prep", "growing", "harvesting", "planned"].includes(
@@ -272,11 +280,11 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
       setOverlapWarning(null);
     }
   }, [
-    form.watch("parcel_id"),
-    form.watch("planting_date"),
-    form.watch("expected_harvest_end"),
     cropCycles,
     editingCycle,
+    watchedExpectedHarvestEnd,
+    watchedParcelId,
+    watchedPlantingDate,
   ]);
 
   const handleOpenDialog = (cycle?: CropCycle) => {
@@ -405,10 +413,19 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               crop.name?.toLowerCase().includes(data.crop_type.toLowerCase()) ||
               crop.crop_type?.toLowerCase() === data.crop_type.toLowerCase(),
           );
-          if (matchingCrop) {
-            cropId = matchingCrop.id;
-          }
+        if (matchingCrop) {
+          cropId = matchingCrop.id;
         }
+      }
+
+        const plantedAreaHa =
+          typeof data.planted_area_ha === "number"
+            ? data.planted_area_ha
+            : undefined;
+        const expectedYieldPerHa =
+          typeof data.expected_yield_per_ha === "number"
+            ? data.expected_yield_per_ha
+            : undefined;
 
         await createMutation.mutateAsync({
           ...data,
@@ -422,11 +439,11 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
           planting_date: data.planting_date || undefined,
           expected_harvest_start: data.expected_harvest_start || undefined,
           expected_harvest_end: data.expected_harvest_end || undefined,
-          planted_area_ha: data.planted_area_ha,
-          expected_yield_per_ha: data.expected_yield_per_ha,
+          planted_area_ha: plantedAreaHa,
+          expected_yield_per_ha: expectedYieldPerHa,
           expected_total_yield:
-            data.planted_area_ha && data.expected_yield_per_ha
-              ? data.planted_area_ha * data.expected_yield_per_ha
+            plantedAreaHa && expectedYieldPerHa
+              ? plantedAreaHa * expectedYieldPerHa
               : undefined,
           notes: data.notes || undefined,
           template_id: data.template_id || undefined,
@@ -539,203 +556,210 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     }),
     { area: 0, costs: 0, revenue: 0, profit: 0 },
   );
+  const timelineMonths = Array.from(
+    { length: 12 },
+    (_, month) => new Date(2000, month, 1),
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Sprout className="h-6 w-6 text-green-600" />
-            {t("cropCycles.title", "Crop Cycles")}
-          </h2>
-          <p className="text-muted-foreground">
-            {t(
-              "cropCycles.description",
-              "Track production cycles from planting to harvest with full cost attribution.",
-            )}
-          </p>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Sprout className="h-6 w-6 text-green-600" />
+              {t("cropCycles.title", "Crop Cycles")}
+            </h2>
+            <p className="text-muted-foreground">
+              {t(
+                "cropCycles.description",
+                "Track production cycles from planting to harvest with full cost attribution.",
+              )}
+            </p>
+          </div>
+          {canManage && (
+            <Button onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("cropCycles.addNew", "New Cycle")}
+            </Button>
+          )}
         </div>
-        {canManage && (
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("cropCycles.addNew", "New Cycle")}
-          </Button>
-        )}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>
-              {t("cropCycles.metrics.totalArea", "Total Area")}
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              {totals.area.toFixed(1)} ha
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>
-              {t("cropCycles.metrics.totalCosts", "Total Costs")}
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              {currencySymbol} {totals.costs.toLocaleString()}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>
-              {t("cropCycles.metrics.totalRevenue", "Total Revenue")}
-            </CardDescription>
-            <CardTitle className="text-2xl">
-              {currencySymbol} {totals.revenue.toLocaleString()}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>
-              {t("cropCycles.metrics.netProfit", "Net Profit")}
-            </CardDescription>
-            <CardTitle
-              className={`text-2xl ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
+      }
+      stats={
+        <div className="grid gap-4 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {t("cropCycles.metrics.totalArea", "Total Area")}
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {totals.area.toFixed(1)} ha
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {t("cropCycles.metrics.totalCosts", "Total Costs")}
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {currencySymbol} {totals.costs.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {t("cropCycles.metrics.totalRevenue", "Total Revenue")}
+              </CardDescription>
+              <CardTitle className="text-2xl">
+                {currencySymbol} {totals.revenue.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>
+                {t("cropCycles.metrics.netProfit", "Net Profit")}
+              </CardDescription>
+              <CardTitle
+                className={`text-2xl ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
+                {currencySymbol} {totals.profit.toLocaleString()}
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </div>
+      }
+      filters={
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
+          <div className="flex flex-wrap gap-4 flex-1">
+            <Select
+              value={filterCampaignId || "__all__"}
+              onValueChange={(v) => setFilterCampaignId(v === "__all__" ? "" : v)}
             >
-              {currencySymbol} {totals.profit.toLocaleString()}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-end">
-        <div className="flex flex-wrap gap-4 flex-1">
-          <Select
-            value={filterCampaignId || "__all__"}
-            onValueChange={(v) => setFilterCampaignId(v === "__all__" ? "" : v)}
-          >
-            <SelectTrigger className="w-[200px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue
-                placeholder={t("cropCycles.filter.campaign", "All Campaigns")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("cropCycles.filter.allCampaigns", "All Campaigns")}
-              </SelectItem>
-              {campaigns.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+              <SelectTrigger className="w-[200px]">
+                <SelectValue
+                  placeholder={t("cropCycles.filter.campaign", "All Campaigns")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("cropCycles.filter.allCampaigns", "All Campaigns")}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          <Select
-            value={filterStatus || "__all__"}
-            onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue
-                placeholder={t("cropCycles.filter.status", "All Statuses")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("cropCycles.filter.allStatuses", "All Statuses")}
-              </SelectItem>
-              <SelectItem value="planned">
-                {t("cropCycles.status.planned", "Planned")}
-              </SelectItem>
-              <SelectItem value="growing">
-                {t("cropCycles.status.growing", "Growing")}
-              </SelectItem>
-              <SelectItem value="harvesting">
-                {t("cropCycles.status.harvesting", "Harvesting")}
-              </SelectItem>
-              <SelectItem value="completed">
-                {t("cropCycles.status.completed", "Completed")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <Select
+              value={filterStatus || "__all__"}
+              onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue
+                  placeholder={t("cropCycles.filter.status", "All Statuses")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("cropCycles.filter.allStatuses", "All Statuses")}
+                </SelectItem>
+                <SelectItem value="planned">
+                  {t("cropCycles.status.planned", "Planned")}
+                </SelectItem>
+                <SelectItem value="growing">
+                  {t("cropCycles.status.growing", "Growing")}
+                </SelectItem>
+                <SelectItem value="harvesting">
+                  {t("cropCycles.status.harvesting", "Harvesting")}
+                </SelectItem>
+                <SelectItem value="completed">
+                  {t("cropCycles.status.completed", "Completed")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select
-            value={filterCycleType || "__all__"}
-            onValueChange={(v) => setFilterCycleType(v === "__all__" ? "" : v)}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue
-                placeholder={t("cropCycles.filter.type", "All Types")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("common.all", "All Types")}
-              </SelectItem>
-              <SelectItem value="annual">
-                {t("cropCycles.type.annual", "Annual")}
-              </SelectItem>
-              <SelectItem value="perennial">
-                {t("cropCycles.type.perennial", "Perennial")}
-              </SelectItem>
-              <SelectItem value="multi_harvest">
-                {t("cropCycles.type.multiHarvest", "Multi-Harvest")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <Select
+              value={filterCycleType || "__all__"}
+              onValueChange={(v) => setFilterCycleType(v === "__all__" ? "" : v)}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue
+                  placeholder={t("cropCycles.filter.type", "All Types")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("common.all", "All Types")}
+                </SelectItem>
+                <SelectItem value="annual">
+                  {t("cropCycles.type.annual", "Annual")}
+                </SelectItem>
+                <SelectItem value="perennial">
+                  {t("cropCycles.type.perennial", "Perennial")}
+                </SelectItem>
+                <SelectItem value="multi_harvest">
+                  {t("cropCycles.type.multiHarvest", "Multi-Harvest")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          <Select
-            value={filterSeason || "__all__"}
-            onValueChange={(v) => setFilterSeason(v === "__all__" ? "" : v)}
-          >
-            <SelectTrigger className="w-[150px]">
-              <SelectValue
-                placeholder={t("cropCycles.filter.season", "All Seasons")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">
-                {t("common.all", "All Seasons")}
-              </SelectItem>
-              <SelectItem value="spring">
-                {t("seasons.spring", "Spring")}
-              </SelectItem>
-              <SelectItem value="summer">
-                {t("seasons.summer", "Summer")}
-              </SelectItem>
-              <SelectItem value="autumn">
-                {t("seasons.autumn", "Autumn")}
-              </SelectItem>
-              <SelectItem value="winter">
-                {t("seasons.winter", "Winter")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <Select
+              value={filterSeason || "__all__"}
+              onValueChange={(v) => setFilterSeason(v === "__all__" ? "" : v)}
+            >
+              <SelectTrigger className="w-[150px]">
+                <SelectValue
+                  placeholder={t("cropCycles.filter.season", "All Seasons")}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">
+                  {t("common.all", "All Seasons")}
+                </SelectItem>
+                <SelectItem value="spring">
+                  {t("seasons.spring", "Spring")}
+                </SelectItem>
+                <SelectItem value="summer">
+                  {t("seasons.summer", "Summer")}
+                </SelectItem>
+                <SelectItem value="autumn">
+                  {t("seasons.autumn", "Autumn")}
+                </SelectItem>
+                <SelectItem value="winter">
+                  {t("seasons.winter", "Winter")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === "list" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="gap-2"
+            >
+              <LayoutList className="h-4 w-4" />
+              {t("common.list", "List")}
+            </Button>
+            <Button
+              variant={viewMode === "timeline" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("timeline")}
+              className="gap-2"
+            >
+              <GanttChartSquare className="h-4 w-4" />
+              {t("common.timeline", "Timeline")}
+            </Button>
+          </div>
         </div>
-
-        <div className="flex bg-muted rounded-lg p-1">
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="gap-2"
-          >
-            <LayoutList className="h-4 w-4" />
-            {t("common.list", "List")}
-          </Button>
-          <Button
-            variant={viewMode === "timeline" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewMode("timeline")}
-            className="gap-2"
-          >
-            <GanttChartSquare className="h-4 w-4" />
-            {t("common.timeline", "Timeline")}
-          </Button>
-        </div>
-      </div>
-
+      }
+    >
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">
           {t("cropCycles.loading", "Loading crop cycles...")}
@@ -930,9 +954,9 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
             <div className="hidden md:block overflow-x-auto">
               <div className="min-w-[800px]">
                 <div className="grid grid-cols-12 gap-1 mb-4 border-b pb-2 text-sm font-medium text-muted-foreground text-center">
-                  {Array.from({ length: 12 }).map((_, monthIdx) => (
-                    <div key={"month-" + monthIdx}>
-                      {new Date(0, monthIdx).toLocaleString("default", {
+                  {timelineMonths.map((monthDate) => (
+                    <div key={monthDate.toISOString()}>
+                      {monthDate.toLocaleString("default", {
                         month: "short",
                       })}
                     </div>
@@ -1468,6 +1492,6 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
             </div>
           </form>
       </ResponsiveDialog>
-    </div>
+    </ListPageLayout>
   );
 }

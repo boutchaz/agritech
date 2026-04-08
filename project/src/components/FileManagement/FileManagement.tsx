@@ -8,8 +8,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
+import { FilterBar } from '@/components/ui/data-table';
 import {
   Select,
   SelectContent,
@@ -41,7 +41,6 @@ import {
   Image,
   File,
   Trash2,
-  Search,
   AlertTriangle, ExternalLink,
   HardDrive,
   RefreshCw
@@ -323,15 +322,11 @@ export function FileManagement() {
         <CardContent className="space-y-4">
           <div className="flex gap-4">
             <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Rechercher un fichier..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+              <FilterBar
+                searchValue={searchQuery}
+                onSearchChange={setSearchQuery}
+                searchPlaceholder="Rechercher un fichier..."
+              />
             </div>
             <Select value={selectedBucket} onValueChange={setSelectedBucket}>
               <SelectTrigger className="w-[200px]">

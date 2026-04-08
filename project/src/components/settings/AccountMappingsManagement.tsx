@@ -13,7 +13,6 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Search,
   Link2,
   ToggleLeft,
   ToggleRight,
@@ -23,8 +22,8 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -299,96 +298,96 @@ export function AccountMappingsManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t('accountMappings.title', 'Account Mappings')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('accountMappings.description', 'Configure how business events map to GL accounts for automatic journal entries.')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleInitializeDefaults} disabled={initializeMutation.isPending}>
-            <Download className="h-4 w-4 mr-2" />
-            {t('accountMappings.initializeDefaults', 'Initialize Defaults')}
-          </Button>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('accountMappings.addNew', 'Add Mapping')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Info Alert */}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>{t('accountMappings.infoTitle', 'How Account Mappings Work')}</AlertTitle>
-        <AlertDescription>
-          {t('accountMappings.infoDescription', 'Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.')}
-        </AlertDescription>
-      </Alert>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t('accountMappings.searchPlaceholder', 'Search by key or account...')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <>
+      <ListPageLayout
+        header={
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {t('accountMappings.title', 'Account Mappings')}
+              </h2>
+              <p className="text-muted-foreground">
+                {t('accountMappings.description', 'Configure how business events map to GL accounts for automatic journal entries.')}
+              </p>
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t('accountMappings.filterType', 'Filter by type')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('accountMappings.allTypes', 'All Types')}</SelectItem>
-                {mappingTypeOptions.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder={t('accountMappings.filterStatus', 'Status')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('accountMappings.allStatus', 'All Status')}</SelectItem>
-                <SelectItem value="active">{t('accountMappings.activeOnly', 'Active')}</SelectItem>
-                <SelectItem value="inactive">{t('accountMappings.inactiveOnly', 'Inactive')}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleInitializeDefaults} disabled={initializeMutation.isPending}>
+                <Download className="h-4 w-4 mr-2" />
+                {t('accountMappings.initializeDefaults', 'Initialize Defaults')}
+              </Button>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('accountMappings.addNew', 'Add Mapping')}
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        }
+        filters={
+          <>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('accountMappings.infoTitle', 'How Account Mappings Work')}</AlertTitle>
+              <AlertDescription>
+                {t('accountMappings.infoDescription', 'Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.')}
+              </AlertDescription>
+            </Alert>
 
-      {/* Mappings List */}
-      {isLoading ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            {t('accountMappings.loading', 'Loading account mappings...')}
-          </CardContent>
-        </Card>
-      ) : filteredMappings.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            {searchTerm || filterType !== 'all'
-              ? t('accountMappings.noSearchResults', 'No mappings found matching your filters.')
-              : t('accountMappings.empty', 'No account mappings configured. Click "Initialize Defaults" to set up standard mappings, or add them manually.')}
-          </CardContent>
-        </Card>
-      ) : (
-        Object.entries(groupedMappings).map(([type, typeMappings]) => (
-          <Card key={type}>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <div className="flex-1">
+                    <FilterBar
+                      searchValue={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      searchPlaceholder={t('accountMappings.searchPlaceholder', 'Search by key or account...')}
+                    />
+                  </div>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder={t('accountMappings.filterType', 'Filter by type')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('accountMappings.allTypes', 'All Types')}</SelectItem>
+                      {mappingTypeOptions.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={filterActive} onValueChange={(value: 'all' | 'active' | 'inactive') => setFilterActive(value)}>
+                    <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectValue placeholder={t('accountMappings.filterStatus', 'Status')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('accountMappings.allStatus', 'All Status')}</SelectItem>
+                      <SelectItem value="active">{t('accountMappings.activeOnly', 'Active')}</SelectItem>
+                      <SelectItem value="inactive">{t('accountMappings.inactiveOnly', 'Inactive')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        }
+      >
+        {isLoading ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              {t('accountMappings.loading', 'Loading account mappings...')}
+            </CardContent>
+          </Card>
+        ) : filteredMappings.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              {searchTerm || filterType !== 'all'
+                ? t('accountMappings.noSearchResults', 'No mappings found matching your filters.')
+                : t('accountMappings.empty', 'No account mappings configured. Click "Initialize Defaults" to set up standard mappings, or add them manually.')}
+            </CardContent>
+          </Card>
+        ) : (
+          Object.entries(groupedMappings).map(([type, typeMappings]) => (
+            <Card key={type}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Link2 className="h-5 w-5" />
@@ -477,9 +476,10 @@ export function AccountMappingsManagement() {
                 </Table>
               </div>
             </CardContent>
-          </Card>
-        ))
-      )}
+            </Card>
+          ))
+        )}
+      </ListPageLayout>
 
       {/* Create/Edit Dialog */}
       <ResponsiveDialog
@@ -635,6 +635,6 @@ export function AccountMappingsManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 }

@@ -1,20 +1,18 @@
-import {  useState  } from "react";
+import { useState } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, CreditCard, Plus, CheckCircle2, Clock, XCircle, Eye, Search, Loader2 } from 'lucide-react';
+import { Building2, CreditCard, Plus, CheckCircle2, Clock, XCircle, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog } from '@/components/ui/dialog';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { usePaginatedPayments, usePaymentStats, type Payment } from '@/hooks/useAccountingPayments';
 import { PaymentForm } from '@/components/Accounting/PaymentForm';
 import { PaymentDetailDialog } from '@/components/Accounting/PaymentDetailDialog';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader } from '@/components/ui/data-table';
 import { PageLoader } from '@/components/ui/loader';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
@@ -37,7 +35,7 @@ const AppContent = () => {
   const totalItems = paginatedData?.total ?? 0;
   const totalPages = paginatedData?.totalPages ?? 0;
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case 'submitted':
         return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
@@ -50,13 +48,13 @@ const AppContent = () => {
     }
   };
 
-  const getTypeColor = (type: string) => {
-    return type === 'received'
+  const getTypeColor = (type: string | null) => {
+    return type === 'receive'
       ? 'text-green-600 dark:text-green-400'
       : 'text-red-600 dark:text-red-400';
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string | null) => {
     switch (status) {
       case 'submitted':
         return <CheckCircle2 className="h-4 w-4" />;
@@ -101,309 +99,80 @@ const AppContent = () => {
         />
       }
     >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
-        {/* Header Actions */}
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">All Payments</h2>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                Track and manage your payment transactions
-              </p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
-                <Plus className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Record Payment</span>
-                <span className="sm:hidden">New</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search by payment number or party..."
-                value={tableState.search}
-                onChange={(e) => tableState.setSearch(e.target.value)}
-                className="pl-10"
-              />
-              {isFetching && (
-                <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-              )}
-            </div>
-            <DateRangeFilter
-              value={tableState.datePreset}
-              onChange={tableState.setDatePreset}
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              title="All Payments"
+              subtitle="Track and manage your payment transactions"
+              actions={
+                <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Record Payment</span>
+                  <span className="sm:hidden">New</span>
+                </Button>
+              }
             />
-          </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Total Payments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Received
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                MAD {stats.totalReceived.toLocaleString('fr-FR')}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Paid Out
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                MAD {stats.totalPaid.toLocaleString('fr-FR')}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                Draft
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.draft}</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="hidden md:block">
-          <CardHeader>
-            <CardTitle>All Payments</CardTitle>
-            <CardDescription>
-              View and manage your payment transactions
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow className="border-b border-gray-200 dark:border-gray-700">
-                    <SortableHeader
-                      label="Payment #"
-                      sortKey="payment_number"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <SortableHeader
-                      label="Type"
-                      sortKey="payment_type"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <SortableHeader
-                      label="Party"
-                      sortKey="party_name"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <SortableHeader
-                      label="Date"
-                      sortKey="payment_date"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <SortableHeader
-                      label="Method"
-                      sortKey="payment_method"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <SortableHeader
-                      label="Amount"
-                      sortKey="amount"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                      align="right"
-                    />
-                    <SortableHeader
-                      label="Status"
-                      sortKey="status"
-                      currentSort={tableState.sortConfig}
-                      onSort={tableState.handleSort}
-                    />
-                    <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <TableCell className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {payment.payment_number}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <span className={`text-sm font-medium capitalize ${getTypeColor(payment.payment_type)}`}>
-                          {payment.payment_type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-sm text-gray-900 dark:text-white">
-                        {payment.party_name}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                        {payment.payment_method}
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-sm text-right font-medium">
-                        <span className={getTypeColor(payment.payment_type)}>
-                          {payment.payment_type === 'received' ? '+' : '-'} MAD {Number(payment.amount).toLocaleString('fr-FR')}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
-                          {getStatusIcon(payment.status)}
-                          {payment.status}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPayment(payment);
-                              setDetailDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {payments.length === 0 && !isLoading && (
-                    <TableRow>
-                      <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                        {tableState.search || tableState.datePreset !== 'all'
-                          ? 'No payments match your filters.'
-                          : 'No payments found. Create your first payment to get started.'}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            <DataTablePagination
-              page={tableState.page}
-              totalPages={totalPages}
-              pageSize={tableState.pageSize}
-              totalItems={totalItems}
-              onPageChange={tableState.setPage}
-              onPageSizeChange={tableState.setPageSize}
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={(value) => tableState.setSearch(value)}
+              searchPlaceholder="Search by payment number or party..."
+              isSearching={isFetching}
+              datePreset={tableState.datePreset}
+              onDatePresetChange={(preset) => tableState.setDatePreset(preset as Parameters<typeof tableState.setDatePreset>[0])}
             />
-          </CardContent>
-        </Card>
-
-        <div className="md:hidden space-y-3">
-          {payments.length === 0 && !isLoading ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">
-                  {tableState.search || tableState.datePreset !== 'all'
-                    ? 'No payments match your filters.'
-                    : 'No payments found. Create your first payment to get started.'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            payments.map((payment) => (
-              <Card key={payment.id} className="overflow-hidden">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <CreditCard className="h-5 w-5 text-gray-400 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-bold text-gray-900 dark:text-white truncate">
-                          {payment.payment_number}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {payment.party_name}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(payment.status)}`}>
-                      {getStatusIcon(payment.status)}
-                      {payment.status}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Type</p>
-                      <p className={`font-medium capitalize ${getTypeColor(payment.payment_type)}`}>
-                        {payment.payment_type}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Date</p>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Method</p>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {payment.payment_method}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Amount</p>
-                      <p className={`text-lg font-bold ${getTypeColor(payment.payment_type)}`}>
-                        {payment.payment_type === 'received' ? '+' : '-'} MAD {Number(payment.amount).toLocaleString('fr-FR')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setSelectedPayment(payment);
-                        setDetailDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
+          }
+          stats={
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Total Payments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Received
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    MAD {stats.totalReceived.toLocaleString('fr-FR')}
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-          {payments.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Paid Out
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    MAD {stats.totalPaid.toLocaleString('fr-FR')}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Draft
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.draft}</div>
+                </CardContent>
+              </Card>
+            </div>
+          }
+          pagination={
             <DataTablePagination
               page={tableState.page}
               totalPages={totalPages}
@@ -412,8 +181,229 @@ const AppContent = () => {
               onPageChange={tableState.setPage}
               onPageSizeChange={tableState.setPageSize}
             />
-          )}
-        </div>
+          }
+        >
+          <>
+            <Card className="hidden md:block">
+              <CardHeader>
+                <CardTitle>All Payments</CardTitle>
+                <CardDescription>
+                  View and manage your payment transactions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                        <SortableHeader
+                          label="Payment #"
+                          sortKey="payment_number"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <SortableHeader
+                          label="Type"
+                          sortKey="payment_type"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <SortableHeader
+                          label="Party"
+                          sortKey="party_name"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <SortableHeader
+                          label="Date"
+                          sortKey="payment_date"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <SortableHeader
+                          label="Method"
+                          sortKey="payment_method"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <SortableHeader
+                          label="Amount"
+                          sortKey="amount"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                          align="right"
+                        />
+                        <SortableHeader
+                          label="Status"
+                          sortKey="status"
+                          currentSort={tableState.sortConfig}
+                          onSort={(key) => tableState.handleSort(String(key))}
+                        />
+                        <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((payment) => (
+                        <TableRow key={payment.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                          <TableCell className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="h-4 w-4 text-gray-400" />
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {payment.payment_number}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <span className={`text-sm font-medium capitalize ${getTypeColor(payment.payment_type)}`}>
+                              {payment.payment_type}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-900 dark:text-white">
+                            {payment.party_name}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
+                            {payment.payment_method}
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-sm text-right font-medium">
+                            <span className={getTypeColor(payment.payment_type)}>
+                              {payment.payment_type === 'receive' ? '+' : '-'} MAD {Number(payment.amount).toLocaleString('fr-FR')}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(payment.status)}`}>
+                              {getStatusIcon(payment.status)}
+                              {payment.status ?? '-'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedPayment(payment);
+                                  setDetailDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4 mr-1" />
+                                View
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {payments.length === 0 && !isLoading && (
+                        <TableRow>
+                          <TableCell colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            {tableState.search || tableState.datePreset !== 'all'
+                              ? 'No payments match your filters.'
+                              : 'No payments found. Create your first payment to get started.'}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="md:hidden space-y-3">
+              {payments.length === 0 && !isLoading ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 dark:text-gray-400">
+                      {tableState.search || tableState.datePreset !== 'all'
+                        ? 'No payments match your filters.'
+                        : 'No payments found. Create your first payment to get started.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                payments.map((payment) => (
+                  <Card key={payment.id} className="overflow-hidden">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <CreditCard className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 dark:text-white truncate">
+                              {payment.payment_number}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                              {payment.party_name}
+                            </p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getStatusColor(payment.status)}`}>
+                          {getStatusIcon(payment.status)}
+                          {payment.status ?? '-'}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Type</p>
+                          <p className={`font-medium capitalize ${getTypeColor(payment.payment_type)}`}>
+                            {payment.payment_type}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Date</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Method</p>
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {payment.payment_method}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mb-1">Amount</p>
+                          <p className={`text-lg font-bold ${getTypeColor(payment.payment_type)}`}>
+                            {payment.payment_type === 'receive' ? '+' : '-'} MAD {Number(payment.amount).toLocaleString('fr-FR')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setDetailDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+              {payments.length > 0 && (
+                <DataTablePagination
+                  page={tableState.page}
+                  totalPages={totalPages}
+                  pageSize={tableState.pageSize}
+                  totalItems={totalItems}
+                  onPageChange={tableState.setPage}
+                  onPageSizeChange={tableState.setPageSize}
+                />
+              )}
+            </div>
+          </>
+        </ListPageLayout>
       </div>
 
       {/* Create Payment Dialog */}

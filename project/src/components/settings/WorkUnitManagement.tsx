@@ -15,7 +15,6 @@ import {
   Edit2,
   Trash2,
   Check,
-  Search,
   Filter,
   BarChart3,
   Boxes,
@@ -23,7 +22,7 @@ import {
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { Switch } from '@/components/ui/switch';
@@ -33,7 +32,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { workUnitsApi } from '@/lib/api/work-units';
+import {
+  workUnitsApi,
+  type CreateWorkUnitInput,
+  type UpdateWorkUnitInput,
+  type UnitCategory as ApiUnitCategory,
+} from '@/lib/api/work-units';
 import { SectionLoader } from '@/components/ui/loader';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -61,7 +65,8 @@ const _baseWorkUnitSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-type WorkUnitFormData = z.infer<typeof _baseWorkUnitSchema>;
+type WorkUnitFormInput = z.input<typeof _baseWorkUnitSchema>;
+type WorkUnitFormData = z.output<typeof _baseWorkUnitSchema>;
 
 // =====================================================
 // MAIN COMPONENT
@@ -71,13 +76,6 @@ export function WorkUnitManagement() {
   const { currentOrganization, hasRole } = useAuth();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
-
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
-    setConfirmAction({title, onConfirm, ...opts});
-    setConfirmOpen(true);
-  };
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<WorkUnit | null>(null);
@@ -132,13 +130,13 @@ export function WorkUnitManagement() {
     mutationFn: async (data: WorkUnitFormData) => {
       if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
-      const createData = {
-        code: data.code,
-        name: data.name,
-        unit_category: data.unit_category,
-        description: undefined,
-        base_rate: undefined,
-        is_active: data.is_active ?? true,
+        const createData: CreateWorkUnitInput = {
+          code: data.code,
+          name: data.name,
+          unit_category: data.unit_category as ApiUnitCategory,
+          description: undefined,
+          base_rate: undefined,
+          is_active: data.is_active ?? true,
       };
 
       return await workUnitsApi.create(createData, currentOrganization.id);
@@ -160,9 +158,9 @@ export function WorkUnitManagement() {
     mutationFn: async ({ id, data }: { id: string; data: WorkUnitFormData }) => {
       if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
-      const updateData = {
+      const updateData: UpdateWorkUnitInput = {
         name: data.name,
-        unit_category: data.unit_category,
+        unit_category: data.unit_category as ApiUnitCategory,
         is_active: data.is_active,
       };
 
@@ -203,17 +201,16 @@ export function WorkUnitManagement() {
       if (!currentOrganization?.id) throw new Error(t('workUnits.errors.noOrganization'));
 
       const { DEFAULT_WORK_UNITS } = await import('@/types/work-units');
-      const promises = DEFAULT_WORK_UNITS.map((unit) =>
-        workUnitsApi.create(
-          {
-            code: unit.code,
-            name: unit.name,
-            unit_category: unit.unit_category,
-            is_active: true,
-          },
-          currentOrganization.id
-        )
-      );
+      const promises = DEFAULT_WORK_UNITS.map((unit) => {
+        const payload: CreateWorkUnitInput = {
+          code: unit.code,
+          name: unit.name,
+          unit_category: unit.unit_category as ApiUnitCategory,
+          is_active: true,
+        };
+
+        return workUnitsApi.create(payload, currentOrganization.id);
+      });
 
       await Promise.all(promises);
     },
@@ -232,7 +229,7 @@ export function WorkUnitManagement() {
   // FORM HANDLING
   // =====================================================
 
-  const form = useForm<WorkUnitFormData>({
+  const form = useForm<WorkUnitFormInput, unknown, WorkUnitFormData>({
     resolver: zodResolver(workUnitSchemaWithTranslations),
     defaultValues: {
       code: '',
@@ -326,81 +323,56 @@ export function WorkUnitManagement() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
-              <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
-              {t('workUnits.title')}
-            </h2>
-          </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            {t('workUnits.description')}
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          {workUnits.length === 0 && (
-            <Button
-              variant="outline"
-              onClick={() => seedDefaultUnitsMutation.mutate()}
-              disabled={seedDefaultUnitsMutation.isPending}
-              className="h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              {t('workUnits.loadDefaults')}
-            </Button>
-          )}
-          <Button 
-            variant="default"
-            onClick={() => handleOpenDialog()}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t('workUnits.addUnit')}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filters & Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Stats Column */}
-        <div className="lg:col-span-4 grid grid-cols-1 gap-4 order-2 lg:order-1">
-          {[
-            { label: t('workUnits.stats.totalUnits'), value: workUnits.length, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30' },
-            { label: t('workUnits.stats.active'), value: workUnits.filter((u) => u.is_active).length, icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
-            { label: t('workUnits.stats.categories'), value: Object.keys(unitsByCategory).length, icon: Filter, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30' },
-          ].map((stat, idx) => (
-            <Card key={stat.label} className="rounded-3xl border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden group hover:shadow-md transition-all">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={cn("p-2.5 rounded-2xl shadow-sm border border-transparent group-hover:scale-110 transition-transform duration-500", stat.bg)}>
-                    <stat.icon className={cn("h-5 w-5", stat.color)} />
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">{stat.label}</span>
-                    <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums">{stat.value}</div>
-                  </div>
+    <>
+      <ListPageLayout
+        className="space-y-8 animate-in fade-in duration-500"
+        header={
+          <div className="flex flex-col justify-between gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
+                  <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                  {t('workUnits.title')}
+                </h2>
+              </div>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                {t('workUnits.description')}
+              </p>
+            </div>
 
-        {/* Filters Column */}
-        <div className="lg:col-span-8 order-1 lg:order-2 space-y-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-              <Input
-                placeholder={t('workUnits.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-14 pl-11 pr-5 rounded-2xl bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm focus:ring-emerald-500/20 font-bold"
+            <div className="flex flex-wrap items-center gap-3">
+              {workUnits.length === 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => seedDefaultUnitsMutation.mutate()}
+                  disabled={seedDefaultUnitsMutation.isPending}
+                  className="h-12 rounded-2xl border-slate-200 px-6 text-xs font-black uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('workUnits.loadDefaults')}
+                </Button>
+              )}
+              <Button
+                variant="default"
+                onClick={() => handleOpenDialog()}
+                className="h-12 rounded-2xl bg-emerald-600 px-8 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {t('workUnits.addUnit')}
+              </Button>
+            </div>
+          </div>
+        }
+        filters={
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex-1">
+              <FilterBar
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                searchPlaceholder={t('workUnits.searchPlaceholder')}
+                className="w-full"
               />
             </div>
             <div className="sm:w-64">
@@ -408,7 +380,7 @@ export function WorkUnitManagement() {
                 value={filterCategory}
                 onValueChange={(val) => setFilterCategory(val as UnitCategory | 'all')}
               >
-                <SelectTrigger className="h-14 rounded-2xl bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm font-black uppercase tracking-widest text-[10px]">
+                <SelectTrigger className="h-14 rounded-2xl bg-white text-[10px] font-black uppercase tracking-widest shadow-sm border-slate-100 dark:border-slate-700 dark:bg-slate-800">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200">
@@ -422,100 +394,122 @@ export function WorkUnitManagement() {
               </Select>
             </div>
           </div>
-
-          {/* Units List */}
-          {isLoading ? (
-            <div className="py-20">
-              <SectionLoader />
-            </div>
-          ) : filteredUnits.length === 0 ? (
-            <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 p-12 text-center">
-              <Boxes className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-700 mb-4" />
-              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                {t('workUnits.empty')}
-              </h3>
-              <p className="text-sm font-medium text-slate-400 mt-2 max-w-sm mx-auto">
-                {workUnits.length === 0 && t('workUnits.emptyHint')}
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-10">
-              {Object.entries(unitsByCategory).map(([category, units]) => (
-                <div key={category} className="space-y-4">
-                  <div className="flex items-center gap-3 px-1">
-                    <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
-                      {getCategoryLabel(category as UnitCategory)}
-                    </h3>
-                    <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
-                    <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-500 font-black text-[9px] px-2 py-0 h-5">{units.length}</Badge>
+        }
+        stats={
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {[
+              { label: t('workUnits.stats.totalUnits'), value: workUnits.length, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50 dark:bg-blue-900/30' },
+              { label: t('workUnits.stats.active'), value: workUnits.filter((u) => u.is_active).length, icon: Check, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-900/30' },
+              { label: t('workUnits.stats.categories'), value: Object.keys(unitsByCategory).length, icon: Filter, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-900/30' },
+            ].map((stat) => (
+              <Card key={stat.label} className="group overflow-hidden rounded-3xl border-slate-100 shadow-sm transition-all hover:shadow-md dark:border-slate-700">
+                <CardContent className="flex items-center justify-between p-5">
+                  <div className="flex items-center gap-4">
+                    <div className={cn('rounded-2xl border border-transparent p-2.5 shadow-sm transition-transform duration-500 group-hover:scale-110', stat.bg)}>
+                      <stat.icon className={cn('h-5 w-5', stat.color)} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="block text-[10px] font-black uppercase leading-none tracking-widest text-slate-400 dark:text-slate-500">{stat.label}</span>
+                      <div className="tabular-nums text-xl font-black text-slate-900 dark:text-white">{stat.value}</div>
+                    </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {units.map((unit) => (
-                      <Card key={unit.id} className="rounded-3xl border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all group/unit">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0 space-y-3">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">{unit.name}</h4>
-                                {!unit.is_active && (
-                                  <Badge className="bg-rose-50 text-rose-600 border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4">INACTIVE</Badge>
-                                )}
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-0.5">
-                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">{t('workUnits.code')}</span>
-                                  <span className="text-[10px] font-mono font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
-                                </div>
-                                {unit.usage_count > 0 && (
-                                  <div className="space-y-0.5">
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Usage</span>
-                                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">{t('workUnits.used', { count: unit.usage_count })}</span>
-                                  </div>
-                                )}
-                              </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        }
+      >
+        {isLoading ? (
+          <div className="py-20">
+            <SectionLoader />
+          </div>
+        ) : filteredUnits.length === 0 ? (
+          <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-100 bg-slate-50/30 p-12 text-center dark:border-slate-800 dark:bg-slate-900/30">
+            <Boxes className="mx-auto mb-4 h-12 w-12 text-slate-200 dark:text-slate-700" />
+            <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white">
+              {t('workUnits.empty')}
+            </h3>
+            <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-400">
+              {workUnits.length === 0 && t('workUnits.emptyHint')}
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-10">
+            {Object.entries(unitsByCategory).map(([category, units]) => (
+              <div key={category} className="space-y-4">
+                <div className="flex items-center gap-3 px-1">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                    {getCategoryLabel(category as UnitCategory)}
+                  </h3>
+                  <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
+                  <Badge variant="secondary" className="h-5 bg-slate-100 px-2 py-0 text-[9px] font-black text-slate-500 dark:bg-slate-800">{units.length}</Badge>
+                </div>
 
-                              <div className="flex flex-wrap gap-2 pt-1">
-                                {unit.name_fr && (
-                                  <Badge variant="outline" className="text-[8px] font-black tracking-widest border-slate-100 text-slate-400 uppercase">FR: {unit.name_fr}</Badge>
-                                )}
-                                {unit.name_ar && (
-                                  <Badge variant="outline" className="text-[8px] font-black tracking-widest border-slate-100 text-slate-400 uppercase">AR: {unit.name_ar}</Badge>
-                                )}
-                              </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {units.map((unit) => (
+                    <Card key={unit.id} className="group/unit rounded-3xl border-slate-100 shadow-sm transition-all hover:shadow-md dark:border-slate-700">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <h4 className="truncate font-black uppercase tracking-tight text-slate-900 dark:text-white">{unit.name}</h4>
+                              {!unit.is_active && (
+                                <Badge className="h-4 border-none bg-rose-50 px-1.5 py-0 text-[8px] font-black tracking-widest text-rose-600">INACTIVE</Badge>
+                              )}
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleOpenDialog(unit)}
-                                className="h-9 w-9 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-emerald-600 border border-slate-100 dark:border-slate-800 transition-all shadow-sm"
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleDelete(unit.id)}
-                                disabled={unit.usage_count > 0}
-                                className="h-9 w-9 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-rose-600 border border-slate-100 dark:border-slate-800 transition-all shadow-sm disabled:opacity-30"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-0.5">
+                                <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">{t('workUnits.code')}</span>
+                                <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
+                              </div>
+                              {unit.usage_count > 0 && (
+                                <div className="space-y-0.5">
+                                  <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">Usage</span>
+                                  <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-300">{t('workUnits.used', { count: unit.usage_count })}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {unit.name_fr && (
+                                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">FR: {unit.name_fr}</Badge>
+                              )}
+                              {unit.name_ar && (
+                                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">AR: {unit.name_ar}</Badge>
+                              )}
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleOpenDialog(unit)}
+                              className="h-9 w-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-emerald-600 dark:border-slate-800 dark:bg-slate-900"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDelete(unit.id)}
+                              disabled={unit.usage_count > 0}
+                              className="h-9 w-9 rounded-xl border border-slate-100 bg-slate-50 text-slate-400 shadow-sm transition-all hover:text-rose-600 disabled:opacity-30 dark:border-slate-800 dark:bg-slate-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ListPageLayout>
 
       {/* Create/Edit Dialog - Redesigned Modal */}
       <ResponsiveDialog
@@ -669,14 +663,6 @@ export function WorkUnitManagement() {
             </div>
           </form>
       </ResponsiveDialog>
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={confirmAction.title}
-        description={confirmAction.description}
-        variant={confirmAction.variant}
-        onConfirm={confirmAction.onConfirm}
-      />
-    </div>
+    </>
   );
 }

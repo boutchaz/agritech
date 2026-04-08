@@ -4,17 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, ShoppingCart, Eye, CheckCircle2, Clock, XCircle, Truck, Search } from 'lucide-react';
+import { Building2, ShoppingCart, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useSalesOrders, usePaginatedSalesOrders, type SalesOrder } from '@/hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '@/components/Billing/SalesOrderDetailDialog';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
-import { Loader2 } from 'lucide-react';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader, type DatePreset as FilterDatePreset } from '@/components/ui/data-table';
 import { PageLoader, SectionLoader } from '@/components/ui/loader';
 
 
@@ -142,114 +140,115 @@ const AppContent = () => {
         />
       }
     >
-      <div className="p-6 space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
-                </p>
-              </div>
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              title={t('billingModule.salesOrders.allOrders', 'All Sales Orders')}
+              subtitle={t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
+            />
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={(value) => tableState.setSearch(value)}
+              searchPlaceholder={t('billingModule.salesOrders.search', 'Search by order number or customer...')}
+              isSearching={isFetching}
+              datePreset={tableState.datePreset as FilterDatePreset}
+              onDatePresetChange={(preset) => {
+                if (preset !== 'custom') {
+                  tableState.setDatePreset(preset);
+                }
+              }}
+            />
+          }
+          stats={
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="billing-stats">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.totalOrders', 'Total Orders')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.draft', 'Draft')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.draft}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.confirmed', 'Confirmed')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.confirmed}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.inProgress', 'In Progress')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{stats.inProgress}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.shipped', 'Shipped')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.shipped}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.completed', 'Completed')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('billingModule.salesOrders.stats.totalValue', 'Total Value')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">
+                    {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder={t('billingModule.salesOrders.search', 'Search by order number or customer...')}
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className="pl-10"
-                />
-                {isFetching && (
-                  <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
-              />
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4" data-tour="billing-stats">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.totalOrders', 'Total Orders')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.draft', 'Draft')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.draft}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.confirmed', 'Confirmed')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.confirmed}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.inProgress', 'In Progress')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{stats.inProgress}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.shipped', 'Shipped')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.shipped}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.completed', 'Completed')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('billingModule.salesOrders.stats.totalValue', 'Total Value')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">
-                  {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Order List */}
+          }
+          pagination={
+            <DataTablePagination
+              page={tableState.page}
+              totalPages={totalPages}
+              pageSize={tableState.pageSize}
+              totalItems={totalItems}
+              onPageChange={tableState.setPage}
+              onPageSizeChange={tableState.setPageSize}
+            />
+          }
+        >
           <Card data-tour="billing-orders">
             <CardHeader>
               <CardTitle>{t('billingModule.salesOrders.allOrders', 'All Sales Orders')}</CardTitle>
@@ -266,45 +265,45 @@ const AppContent = () => {
                         label={t('billingModule.salesOrders.table.orderNumber', 'Order #')}
                         sortKey="order_number"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.customer', 'Customer')}
                         sortKey="customer_name"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.orderDate', 'Order Date')}
                         sortKey="order_date"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.expectedDate', 'Expected Date')}
                         sortKey="expected_delivery_date"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.amount', 'Amount')}
                         sortKey="grand_total"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                         align="right"
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.invoiced', 'Invoiced')}
                         sortKey="invoiced_amount"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                         align="right"
                       />
                       <SortableHeader
                         label={t('billingModule.salesOrders.table.status', 'Status')}
                         sortKey="status"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('billingModule.salesOrders.table.actions', 'Actions')}
@@ -372,17 +371,10 @@ const AppContent = () => {
                   </TableBody>
                 </Table>
               </div>
-              <DataTablePagination
-                page={tableState.page}
-                totalPages={totalPages}
-                pageSize={tableState.pageSize}
-                totalItems={totalItems}
-                onPageChange={tableState.setPage}
-                onPageSizeChange={tableState.setPageSize}
-              />
             </CardContent>
           </Card>
-        </div>
+        </ListPageLayout>
+      </div>
 
         {/* Sales Order Detail Dialog */}
         <SalesOrderDetailDialog
