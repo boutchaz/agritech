@@ -1701,6 +1701,11 @@ const MapComponent = ({
                           placeholder={t('map.varietyPlaceholder', 'Saisir la variété...')}
                         />
                       )}
+                      {parcelDetails.variety === 'Menara/Haouzia' && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                          Le calibrage AgromindIA utilisera les paramètres de la variété <strong>Menara</strong>.
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1783,7 +1788,7 @@ const MapComponent = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">{t('map.select')}</option>
-                      {availablePlantingSystems.map((system, idx) => (
+                      {availablePlantingSystems.map((system) => (
                         <option key={system.type} value={system.type}>
                           {system.type} ({system.spacing})
                         </option>

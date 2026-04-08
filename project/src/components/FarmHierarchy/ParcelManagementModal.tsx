@@ -612,6 +612,11 @@ const ParcelManagementModal = ({
                                 placeholder={t("farmHierarchy.parcel.variety")}
                               />
                             )}
+                            {watch("variety") === 'Menara/Haouzia' && (
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                                Le calibrage AgromindIA utilisera les paramètres de la variété <strong>Menara</strong>.
+                              </p>
+                            )}
                           </FormField>
                         )}
 

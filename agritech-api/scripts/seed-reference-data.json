@@ -57,7 +57,9 @@
   "varieties": [
     {"value": "arbequine", "name": "Arbequine", "name_en": "Arbequina", "name_fr": "Arbequine", "name_ar": "أربيكين", "crop_type": "olivier", "origin": "Espagne", "main_use": "Huile"},
     {"value": "arbosana", "name": "Arbosana", "name_en": "Arbosana", "name_fr": "Arbosana", "name_ar": "أربوسانا", "crop_type": "olivier", "origin": "Espagne", "main_use": "Huile"},
-    {"value": "menara", "name": "Menara/Haouzia", "name_en": "Menara/Haouzia", "name_fr": "Menara/Haouzia", "name_ar": "منارة/هاوية", "crop_type": "olivier", "origin": "Maroc", "main_use": "Huile et fruit"},
+    {"value": "menara_haouzia", "name": "Menara/Haouzia", "name_en": "Menara/Haouzia", "name_fr": "Menara/Haouzia", "name_ar": "منارة/هاوزية", "crop_type": "olivier", "origin": "Maroc", "main_use": "Huile et fruit"},
+    {"value": "menara", "name": "Menara", "name_en": "Menara", "name_fr": "Menara", "name_ar": "منارة", "crop_type": "olivier", "origin": "Maroc (INRA)", "main_use": "Huile et fruit"},
+    {"value": "haouzia", "name": "Haouzia", "name_en": "Haouzia", "name_fr": "Haouzia", "name_ar": "هاوزية", "crop_type": "olivier", "origin": "Maroc (INRA)", "main_use": "Huile et fruit"},
     {"value": "picholine_marocaine", "name": "Picholine marocaine", "name_en": "Moroccan Picholine", "name_fr": "Picholine marocaine", "name_ar": "بيشولين مغربية", "crop_type": "olivier", "origin": "Maroc", "main_use": "Huile et fruit"},
     {"value": "picholine_languedoc", "name": "Picholine languedoc", "name_en": "Picholine Languedoc", "name_fr": "Picholine languedoc", "name_ar": "بيشولين لانغدوك", "crop_type": "olivier", "origin": "France", "main_use": "Huile et fruit"},
     {"value": "koroneiki", "name": "Koroneiki", "name_en": "Koroneiki", "name_fr": "Koroneiki", "name_ar": "كورونيكي", "crop_type": "olivier", "origin": "Grèce", "main_use": "Huile et fruit"},
