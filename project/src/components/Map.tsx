@@ -1719,8 +1719,8 @@ const MapComponent = ({
                     >
                       <option value="">{t('map.select')}</option>
                       {availablePlantingSystems.map((system) => (
-                        <option key={system.type} value={system.type}>
-                          {system.type} ({system.spacing})
+                        <option key={`${system.type}-${system.spacing}`} value={`${system.type} (${system.spacing})`}>
+                          {system.type} ({system.spacing}) — {system.treesPerHectare} arb/ha
                         </option>
                       ))}
                     </select>
