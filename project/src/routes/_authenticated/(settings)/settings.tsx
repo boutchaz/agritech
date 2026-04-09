@@ -43,7 +43,7 @@ const SettingsLayoutComponent = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="min-w-0 flex-1">
-              <h1 className="text-base font-black text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">
+              <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">
                 {currentOrganization.name}
               </h1>
               {currentFarm && (

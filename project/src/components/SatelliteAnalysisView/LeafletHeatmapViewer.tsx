@@ -32,6 +32,19 @@ if (typeof window !== 'undefined') {
 export type HeatmapRenderMode = 'grid' | 'smooth';
 export type ValueDisplayMode = 'interactive' | 'always';
 
+// Ray-casting point-in-polygon test (lon/lat coordinates)
+function pointInPolygon(x: number, y: number, polygon: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i][0], yi = polygon[i][1];
+    const xj = polygon[j][0], yj = polygon[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 interface LeafletHeatmapViewerProps {
   parcelId: string;
   parcelName?: string;
@@ -49,13 +62,14 @@ interface LeafletHeatmapViewerProps {
 }
 
 // Custom hook to add grid-based heatmap layer to map (like desired.png)
-export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showBorders = true }: {
+export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showBorders = true, boundary }: {
   data: HeatmapDataResponse | null;
   selectedIndex: VegetationIndexType;
   colorPalette?: ColorPalette;
   opacity?: number;
   valueDisplay?: ValueDisplayMode;
   showBorders?: boolean;
+  boundary?: [number, number][];  // [lon, lat][] — only render pixels inside this polygon
 }) => {
   const map = useMap();
   const gridLayerRef = useRef<L.LayerGroup | null>(null);
@@ -151,7 +165,12 @@ export const GridHeatmapLayer = ({ data, selectedIndex, colorPalette = 'red-gree
       labelLayerRef.current.addTo(map);
     }
 
+    const clipPolygon = boundary || (data.aoi_boundary?.length ? data.aoi_boundary as [number, number][] : undefined);
+
     sortedPixels.forEach((point) => {
+      // Skip pixels outside parcel boundary
+      if (clipPolygon && !pointInPolygon(point.lon, point.lat, clipPolygon)) return;
+
       const color = getColorForValue(point.value, data.statistics.min, data.statistics.max);
 
       const bounds: [number, number][] = [
@@ -235,19 +254,6 @@ function paletteColorRGB(normalized: number, colorPalette: ColorPalette): [numbe
   return [Math.round(lr + (ur-lr)*t), Math.round(lg + (ug-lg)*t), Math.round(lb + (ub-lb)*t)];
 }
 
-// Ray-casting point-in-polygon test (lon/lat coordinates)
-function pointInPolygon(x: number, y: number, polygon: [number, number][]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const xi = polygon[i][0], yi = polygon[i][1];
-    const xj = polygon[j][0], yj = polygon[j][1];
-    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
-      inside = !inside;
-    }
-  }
-  return inside;
-}
-
 // Build heatmap canvas using bilinear interpolation.
 // GEE already clips pixel_data to the AOI — pixels outside = NaN in the grid.
 // Additional polygon clipping ensures clean edges matching the AOI boundary.
@@ -258,17 +264,65 @@ function buildHeatmapCanvas(
   colorPalette: ColorPalette, opacity: number,
   aoiPolygon?: [number, number][],
 ): string {
-  const SCALE = 8;
+  // Target ~3000px on the longest side for smooth rendering at any zoom
+  const maxDim = Math.max(nCols, nRows);
+  const SCALE = Math.max(40, Math.ceil(3000 / maxDim));
   const cW = nCols * SCALE;
   const cH = nRows * SCALE;
   const degPerPx = pxDeg / SCALE;
   const bMinLon = minLon - pxDeg / 2;
   const bMaxLat = maxLat + pxDeg / 2;
 
-  const canvas = document.createElement('canvas');
-  canvas.width = cW; canvas.height = cH;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(cW, cH);
+  // Safe grid accessor — returns NaN for out-of-bounds
+  const G = (r: number, c: number): number =>
+    r >= 0 && r < nRows && c >= 0 && c < nCols ? grid[r * nCols + c] : NaN;
+
+  // Cubic Hermite basis (Catmull-Rom spline, a = -0.5)
+  const cubic = (t: number): [number, number, number, number] => {
+    const t2 = t * t, t3 = t2 * t;
+    return [
+      -0.5*t3 + t2 - 0.5*t,         // w(-1)
+       1.5*t3 - 2.5*t2 + 1,          // w(0)
+      -1.5*t3 + 2*t2 + 0.5*t,        // w(1)
+       0.5*t3 - 0.5*t2,              // w(2)
+    ];
+  };
+
+  // Bicubic interpolation using 4×4 neighborhood (Catmull-Rom)
+  // Falls back to bilinear then nearest-neighbor at data boundaries (NaN cells)
+  const sampleGrid = (gxF: number, gyF: number): number => {
+    const ci = Math.floor(gxF), ri = Math.floor(gyF);
+    const fx = gxF - ci, fy = gyF - ri;
+
+    // Try bicubic (4×4 neighborhood) — all 16 cells must be valid for clean spline
+    const wx = cubic(fx), wy = cubic(fy);
+    let allValid = true;
+    let vSum = 0;
+    for (let jr = -1; jr <= 2 && allValid; jr++) {
+      for (let jc = -1; jc <= 2 && allValid; jc++) {
+        const v = G(ri + jr, ci + jc);
+        if (isNaN(v)) { allValid = false; break; }
+        vSum += v * wy[jr + 1] * wx[jc + 1];
+      }
+    }
+    if (allValid) return vSum;
+
+    // Fallback: bilinear (2×2)
+    const v00 = G(ri, ci), v10 = G(ri, ci+1), v01 = G(ri+1, ci), v11 = G(ri+1, ci+1);
+    const corners = [v00, v10, v01, v11];
+    const weights = [(1-fx)*(1-fy), fx*(1-fy), (1-fx)*fy, fx*fy];
+    let bwSum = 0, bvSum = 0;
+    for (let k = 0; k < 4; k++) {
+      if (!isNaN(corners[k])) { bwSum += weights[k]; bvSum += corners[k] * weights[k]; }
+    }
+    return bwSum > 0 ? bvSum / bwSum : NaN;
+  };
+
+  // Render interpolated pixels to a temporary canvas first
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = cW; tmpCanvas.height = cH;
+  const tmpCtx = tmpCanvas.getContext('2d')!;
+  const img = tmpCtx.createImageData(cW, cH);
   const d = img.data;
 
   for (let cy = 0; cy < cH; cy++) {
@@ -276,51 +330,49 @@ function buildHeatmapCanvas(
       const lon = bMinLon + (cx + 0.5) * degPerPx;
       const lat = bMaxLat - (cy + 0.5) * degPerPx;
 
-      // Clip to AOI polygon boundary
-      if (aoiPolygon && !pointInPolygon(lon, lat, aoiPolygon)) continue;
-
       const gxF = (lon - minLon) / pxDeg;
       const gyF = (maxLat - lat) / pxDeg;
-      const gi = Math.floor(gxF), gj = Math.floor(gyF);
-      if (gi < 0 || gj < 0 || gi >= nCols - 1 || gj >= nRows - 1) continue;
-      const gi1 = gi + 1, gj1 = gj + 1;
-      const fx = gxF - gi, fy = gyF - gj;
-      const v00 = grid[gj*nCols+gi],  v10 = grid[gj*nCols+gi1];
-      const v01 = grid[gj1*nCols+gi], v11 = grid[gj1*nCols+gi1];
-      // All 4 corners valid → smooth bilinear interpolation
-      // Some corners NaN (AOI boundary) → use nearest valid corner (no bleed outside AOI)
-      let value: number;
-      if (!isNaN(v00) && !isNaN(v10) && !isNaN(v01) && !isNaN(v11)) {
-        value = v00*(1-fx)*(1-fy) + v10*fx*(1-fy) + v01*(1-fx)*fy + v11*fx*fy;
-      } else {
-        // Bilinear weight = proximity; pick the closest valid corner
-        const corners = [v00, v10, v01, v11];
-        const weights = [(1-fx)*(1-fy), fx*(1-fy), (1-fx)*fy, fx*fy];
-        let bestW = -1, bestV = NaN;
-        for (let k = 0; k < 4; k++) {
-          if (!isNaN(corners[k]) && weights[k] > bestW) {
-            bestW = weights[k]; bestV = corners[k];
-          }
-        }
-        if (isNaN(bestV)) continue; // all corners outside AOI → skip
-        value = bestV;
-      }
+      const value = sampleGrid(gxF, gyF);
+      if (isNaN(value)) continue;
+
       const [r, g, b] = paletteColorRGB((value - min) / range, colorPalette);
       const pi = (cy * cW + cx) * 4;
       d[pi]=r; d[pi+1]=g; d[pi+2]=b; d[pi+3]=Math.round(opacity * 230);
     }
   }
-  ctx.putImageData(img, 0, 0);
+  tmpCtx.putImageData(img, 0, 0);
+
+  // Final canvas: apply vector clip path from AOI polygon, then draw the heatmap
+  const canvas = document.createElement('canvas');
+  canvas.width = cW; canvas.height = cH;
+  const ctx = canvas.getContext('2d')!;
+
+  // Helper to convert lon/lat to canvas pixel coordinates
+  const lonToCanvasX = (lon: number) => (lon - bMinLon) / degPerPx;
+  const latToCanvasY = (lat: number) => (bMaxLat - lat) / degPerPx;
+
+  if (aoiPolygon && aoiPolygon.length > 2) {
+    ctx.beginPath();
+    ctx.moveTo(lonToCanvasX(aoiPolygon[0][0]), latToCanvasY(aoiPolygon[0][1]));
+    for (let i = 1; i < aoiPolygon.length; i++) {
+      ctx.lineTo(lonToCanvasX(aoiPolygon[i][0]), latToCanvasY(aoiPolygon[i][1]));
+    }
+    ctx.closePath();
+    ctx.clip();
+  }
+
+  ctx.drawImage(tmpCanvas, 0, 0);
   return canvas.toDataURL();
 }
 
 // Smooth heatmap using Canvas ImageOverlay with bilinear interpolation + optional isolines
-export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false }: {
+export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false, boundary }: {
   data: HeatmapDataResponse | null;
   colorPalette?: ColorPalette;
   opacity?: number;
   valueDisplay?: ValueDisplayMode;
   showIsolines?: boolean;
+  boundary?: [number, number][];  // [lon, lat][] fallback for AOI clipping
 }) => {
   const map = useMap();
   const overlayRef = useRef<L.ImageOverlay | null>(null);
@@ -351,11 +403,18 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
       if (ri >= 0 && ri < nRows && ci >= 0 && ci < nCols) grid[ri * nCols + ci] = p.value;
     });
 
-    const aoiPolygon = data.aoi_boundary?.length ? data.aoi_boundary as [number, number][] : undefined;
+    const aoiPolygon = data.aoi_boundary?.length
+      ? data.aoi_boundary as [number, number][]
+      : boundary;
     const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiPolygon);
     const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
     overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
     overlayRef.current.addTo(map);
+    // Ensure smooth scaling — prevent pixelated rendering when the browser scales the image
+    const imgEl = overlayRef.current.getElement();
+    if (imgEl) {
+      imgEl.style.imageRendering = 'auto';
+    }
     map.fitBounds(bounds, { padding: [20, 20] });
 
     // Marching squares isolines
@@ -394,7 +453,7 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
       if (overlayRef.current) map.removeLayer(overlayRef.current);
       if (isolinesRef.current) map.removeLayer(isolinesRef.current);
     };
-  }, [data, colorPalette, opacity, map, showIsolines]);
+  }, [data, colorPalette, opacity, map, showIsolines, boundary]);
 
   // Click popup for interactive mode
   useEffect(() => {
@@ -673,6 +732,24 @@ const LeafletHeatmapViewer = ({
     return [];
   }, [data?.aoi_boundary, boundary]);
 
+  // Boundary in WGS84 [lon, lat] format for heatmap clipping
+  const clipBoundary: [number, number][] | undefined = useMemo(() => {
+    if (data?.aoi_boundary?.length) return data.aoi_boundary as [number, number][];
+    if (boundary?.length) {
+      // Convert from Web Mercator (EPSG:3857) to WGS84 if needed
+      return boundary.map(coord => {
+        const [x, y] = coord;
+        if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+          const lon = (x / 20037508.34) * 180;
+          const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+          return [lon, lat] as [number, number];
+        }
+        return [x, y] as [number, number];
+      });
+    }
+    return undefined;
+  }, [data?.aoi_boundary, boundary]);
+
   return (
     <div className={`bg-white rounded-lg shadow p-6 space-y-6 ${embedded ? 'p-0 shadow-none' : ''}`}>
       {!embedded && (
@@ -843,38 +920,26 @@ const LeafletHeatmapViewer = ({
               withSatelliteReferenceLabels={baseLayer === 'satellite'}
             />
 
-            {/* AOI Polygon Boundary - Matching research notebook style */}
-            {polygonPositions.length > 0 && (
-              <>
-                <Polygon
-                  key="parcel-border-outer"
-                  positions={polygonPositions}
-                  pathOptions={{
-                    color: '#000000',
-                    weight: 3,
-                    fillOpacity: 0,
-                    opacity: 0.9
-                  }}
-                />
-                <Polygon
-                  key="parcel-border-inner"
-                  positions={polygonPositions}
-                  pathOptions={{
-                    color: '#FFFFFF',
-                    weight: 1,
-                    fillOpacity: 0,
-                    opacity: 0.8
-                  }}
-                />
-              </>
-            )}
-
-            {/* Heatmap Layer — switches by renderMode */}
+            {/* Heatmap Layer — switches by renderMode, clipped to boundary */}
             {renderMode === 'grid' && (
-              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={true} />
+              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={true} boundary={clipBoundary} />
             )}
             {renderMode === 'smooth' && (
-              <SmoothHeatmapLayer key="smooth-heatmap" data={data} colorPalette={colorPalette} valueDisplay={valueDisplay} showIsolines={showIsolines} />
+              <SmoothHeatmapLayer key="smooth-heatmap" data={data} colorPalette={colorPalette} valueDisplay={valueDisplay} showIsolines={showIsolines} boundary={clipBoundary} />
+            )}
+
+            {/* Parcel border outline */}
+            {polygonPositions.length > 0 && (
+              <Polygon
+                key="parcel-border"
+                positions={polygonPositions}
+                pathOptions={{
+                  color: '#00FF00',
+                  weight: 2.5,
+                  fillOpacity: 0,
+                  opacity: 0.9,
+                }}
+              />
             )}
 
 

@@ -146,16 +146,6 @@ export function QuoteRequestsReceived() {
   return (
     <>
     <ListPageLayout
-      header={
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t('quoteRequests.receivedTitle', 'Demandes de Devis Reçues')}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2">
-            {t('quoteRequests.receivedDescription', 'Gérez les demandes de devis de vos clients')}
-          </p>
-        </div>
-      }
       filters={
         <FilterBar
           searchValue={searchTerm}

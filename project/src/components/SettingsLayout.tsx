@@ -339,7 +339,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             </button>
           </TooltipTrigger>
           <TooltipContent side="right" sideOffset={12} className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl bg-white dark:bg-slate-800 p-3">
-            <p className="font-black text-[10px] uppercase tracking-widest text-slate-900 dark:text-white">{item.name}</p>
+            <p className="font-semibold text-[10px] uppercase tracking-widest text-slate-900 dark:text-white">{item.name}</p>
             <p className="text-[10px] font-medium text-slate-400 mt-1 max-w-[180px]">{item.description}</p>
           </TooltipContent>
         </Tooltip>
@@ -366,7 +366,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           <Icon className="h-4 w-4" />
         </div>
         <div className="flex-1 min-w-0 text-left">
-          <div className="font-black text-[11px] uppercase tracking-widest truncate">
+          <div className="font-semibold text-[11px] uppercase tracking-widest truncate">
             {item.name}
           </div>
           <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-0.5">
@@ -394,7 +394,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                   !isSectionExpanded(section.id) && "-rotate-90",
                 )}
               />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100 truncate">
+              <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100 truncate">
                 {section.label}
               </span>
             </button>
@@ -461,7 +461,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                     <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400 sm:h-6 sm:w-6" />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="text-lg font-black uppercase leading-none tracking-tight text-slate-900 dark:text-white sm:text-xl">
+                    <h1 className="text-lg font-semibold uppercase leading-none tracking-tight text-slate-900 dark:text-white sm:text-xl">
                       {t("settings.title")}
                     </h1>
                     <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -514,7 +514,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
               ) : (
                 <>
                   <PanelLeftClose className="mr-2 h-5 w-5 shrink-0 sm:mr-3" />
-                  <span className="truncate text-[10px] font-black uppercase tracking-widest sm:text-[11px]">
+                  <span className="truncate text-[10px] font-medium uppercase tracking-widest sm:text-[11px]">
                     {t("sidebar.collapse", "Collapse Sidebar")}
                   </span>
                 </>
@@ -546,14 +546,14 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                       <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
                         <Icon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                      <span className="text-xs font-semibold uppercase tracking-widest text-slate-900 dark:text-white">
                         {currentItem.name}
                       </span>
                     </>
                   );
                 }
                 return (
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-900 dark:text-white">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-900 dark:text-white">
                     {t("settings.title")}
                   </span>
                 );
@@ -577,7 +577,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                   <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <DrawerTitle className="text-lg font-black uppercase tracking-tight">
+                <DrawerTitle className="text-lg font-semibold uppercase tracking-tight">
                   {t("settings.title")}
                 </DrawerTitle>
               </div>
@@ -606,7 +606,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
               <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm group-active:scale-95 transition-all">
                 <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-300" />
               </div>
-              <span className="font-black text-xs uppercase tracking-[0.15em] text-slate-900 dark:text-white">
+              <span className="font-semibold text-xs uppercase tracking-[0.15em] text-slate-900 dark:text-white">
                 {t("settings.backToDashboard", "Return to Dashboard")}
               </span>
             </button>

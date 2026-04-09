@@ -84,7 +84,7 @@ const LiveSummaryCards = ({
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
-      {cards.map((card, index) => {
+      {cards.map((card) => {
         const Icon = card.icon;
         return (
           <div
@@ -107,21 +107,21 @@ const LiveSummaryCards = ({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                     </span>
-                    <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+                    <span className="text-[8px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
                   </div>
                 )}
               </div>
 
               {/* Value */}
               <div className={cn(
-                "font-black text-slate-900 dark:text-white tabular-nums tracking-tighter",
+                "font-semibold text-slate-900 dark:text-white tabular-nums tracking-tighter",
                 card.isText ? 'text-base uppercase truncate' : 'text-3xl'
               )}>
                 {card.value}
               </div>
 
               {/* Label */}
-              <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">
+              <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">
                 {card.label}
               </div>
             </div>

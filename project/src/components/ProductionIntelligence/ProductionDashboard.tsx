@@ -36,9 +36,12 @@ interface ProductionDashboardProps {
 export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState({
-    fromDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year ago
-    toDate: new Date().toISOString().split('T')[0],
+  const [dateRange, setDateRange] = useState(() => {
+    const t = Date.now();
+    return {
+      fromDate: new Date(t - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      toDate: new Date(t).toISOString().split('T')[0],
+    };
   });
 
   // Form dialogs state
@@ -280,7 +283,7 @@ export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate({ to: '/accounting-invoices', search: { parcel_id: parcel.parcel_id } })}
+                          onClick={() => navigate({ to: '/accounting/invoices', search: { parcel_id: parcel.parcel_id } })}
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
                           View Invoices
@@ -477,7 +480,7 @@ export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate({ to: '/accounting-invoices', search: { parcel_id: alert.parcel_id } })}
+                        onClick={() => navigate({ to: '/accounting/invoices', search: { parcel_id: alert.parcel_id } })}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Reconcile Revenue

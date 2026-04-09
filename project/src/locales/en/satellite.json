@@ -13,6 +13,17 @@
       "partialDataTitle": "Data unavailable for:",
       "weatherError": "Error loading weather data"
     },
+    "calibration": {
+      "awaitingDataTitle": "Satellite data is being collected",
+      "awaitingDataDescription": "Once enough satellite imagery is available, calibration will start automatically.",
+      "readyTitle": "AI calibration is ready to run",
+      "readyDescription": "Satellite data is available. Calibration will start automatically, or you can start it manually.",
+      "startLink": "Start calibration",
+      "calibratingTitle": "Calibration in progress",
+      "calibratingDescription": "AgromindIA is analyzing satellite data for this parcel. This may take a few minutes.",
+      "syncAll": "Sync & Calibrate",
+      "syncing": "Syncing..."
+    },
     "dateRange": {
       "3months": "3 months",
       "6months": "6 months",

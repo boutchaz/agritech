@@ -114,7 +114,7 @@ const FarmActivitiesWidget = ({
           <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('liveDashboard.activities.title')}
           </h3>
         </div>
@@ -123,7 +123,7 @@ const FarmActivitiesWidget = ({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
-          <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
             {t('liveDashboard.live')}
           </span>
         </div>
@@ -134,10 +134,10 @@ const FarmActivitiesWidget = ({
         <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-12 -mt-12 group-hover/card:scale-150 transition-transform duration-700"></div>
         <div className="relative flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('liveDashboard.activities.recentActivities')}
             </span>
-            <div className="text-4xl font-black text-slate-900 dark:text-white mt-1 tabular-nums">
+            <div className="text-4xl font-bold text-slate-900 dark:text-white mt-1 tabular-nums">
               {total}
             </div>
             <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">
@@ -145,10 +145,10 @@ const FarmActivitiesWidget = ({
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {activities.length > 0 ? Math.round((total / activities.length) * 10) / 10 : 0}
             </div>
-            <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+            <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
               {t('liveDashboard.activities.perFarm')}
             </div>
           </div>
@@ -159,7 +159,7 @@ const FarmActivitiesWidget = ({
       {activities.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('liveDashboard.activities.activityFeed')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -183,7 +183,7 @@ const FarmActivitiesWidget = ({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1 gap-2">
-                        <span className={cn("text-[10px] font-black uppercase tracking-widest truncate", colors.text)}>
+                        <span className={cn("text-[10px] font-medium uppercase tracking-widest truncate", colors.text)}>
                           {activity.activityType}
                         </span>
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase flex items-center gap-1 shrink-0">
@@ -194,7 +194,7 @@ const FarmActivitiesWidget = ({
                       <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 leading-relaxed">
                         {activity.description}
                       </p>
-                      <div className="flex items-center gap-3 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      <div className="flex items-center gap-3 text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                         <span className="flex items-center gap-1 px-1.5 py-0.5 bg-white/50 dark:bg-slate-900/50 rounded-md border border-slate-100 dark:border-slate-800">
                           <MapPin className="h-2.5 w-2.5 opacity-50" />
                           {activity.farmName}
@@ -216,7 +216,7 @@ const FarmActivitiesWidget = ({
       ) : (
         <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
           <Activity className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             {t('liveDashboard.activities.noActivities')}
           </p>
         </div>

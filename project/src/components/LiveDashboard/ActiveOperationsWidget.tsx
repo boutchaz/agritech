@@ -72,7 +72,7 @@ const ActiveOperationsWidget = ({
           <div className="p-2.5 bg-orange-50 dark:bg-orange-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <Activity className="h-5 w-5 text-orange-600 dark:text-orange-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('liveDashboard.operations.title')}
           </h3>
         </div>
@@ -81,7 +81,7 @@ const ActiveOperationsWidget = ({
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
           </span>
-          <span className="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+          <span className="text-[10px] font-medium text-orange-600 dark:text-orange-400 uppercase tracking-widest">
             {total} {t('liveDashboard.operations.active')}
           </span>
         </div>
@@ -99,8 +99,8 @@ const ActiveOperationsWidget = ({
               className={cn("relative rounded-xl p-2 text-center border transition-all duration-300 hover:scale-105 shadow-sm", count > 0 ? "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-700" : "bg-slate-50 dark:bg-slate-900/30 border-transparent opacity-50")}
             >
               <Icon className={cn("h-4 w-4 mx-auto mb-1", count > 0 ? colors.text : "text-slate-400")} />
-              <div className={cn("text-base font-black tabular-nums", count > 0 ? "text-slate-900 dark:text-white" : "text-slate-400")}>{count}</div>
-              <div className="text-[7px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">
+              <div className={cn("text-base font-semibold tabular-nums", count > 0 ? "text-slate-900 dark:text-white" : "text-slate-400")}>{count}</div>
+              <div className="text-[7px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">
                 {operationTypeLabels[type]}
               </div>
             </div>
@@ -112,7 +112,7 @@ const ActiveOperationsWidget = ({
       {operations.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('liveDashboard.operations.currentOperations')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -131,7 +131,7 @@ const ActiveOperationsWidget = ({
                       <Icon className={cn("h-3.5 w-3.5", colors.text)} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
                         {operation.name}
                       </p>
                       <div className="flex items-center gap-2 text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
@@ -148,7 +148,7 @@ const ActiveOperationsWidget = ({
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-3">
-                    <Badge className={cn("border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusBadge(operation.status))}>
+                    <Badge className={cn("border-none font-semibold text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusBadge(operation.status))}>
                       {t(`liveDashboard.operations.status.${operation.status}`)}
                     </Badge>
                     {operation.progress !== undefined && (
@@ -168,7 +168,7 @@ const ActiveOperationsWidget = ({
       ) : (
         <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
           <Activity className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             {t('liveDashboard.operations.noOperations')}
           </p>
         </div>

@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useSalesOrders, usePaginatedSalesOrders, type SalesOrder } from '@/hooks/useSalesOrders';
 import { SalesOrderDetailDialog } from '@/components/Billing/SalesOrderDetailDialog';
-import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader, type DatePreset as FilterDatePreset } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, type DatePreset as FilterDatePreset } from '@/components/ui/data-table';
 import { PageLoader, SectionLoader } from '@/components/ui/loader';
 
 
@@ -142,12 +142,6 @@ const AppContent = () => {
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
-          header={
-            <ListPageHeader
-              title={t('billingModule.salesOrders.allOrders', 'All Sales Orders')}
-              subtitle={t('billingModule.salesOrders.trackOrders', 'Track orders from confirmation to completion')}
-            />
-          }
           filters={
             <FilterBar
               searchValue={tableState.search}

@@ -17924,7 +17924,7 @@ CREATE TABLE IF NOT EXISTS crop_cycles (
   is_perennial BOOLEAN DEFAULT false,
   cycle_start_year INTEGER,
   cycle_end_year INTEGER,
-  biological_asset_id UUID REFERENCES biological_assets(id) ON DELETE SET NULL,
+  biological_asset_id UUID,
   template_id UUID,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -18333,6 +18333,20 @@ CREATE INDEX IF NOT EXISTS idx_biological_assets_farm ON biological_assets(farm_
 CREATE INDEX IF NOT EXISTS idx_biological_assets_parcel ON biological_assets(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_biological_assets_type ON biological_assets(organization_id, asset_type);
 CREATE INDEX IF NOT EXISTS idx_biological_assets_status ON biological_assets(organization_id, status);
+
+-- Add foreign key constraint for crop_cycles -> biological_assets
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_crop_cycles_biological_asset_id'
+    AND conrelid = 'crop_cycles'::regclass
+  ) THEN
+    ALTER TABLE crop_cycles
+    ADD CONSTRAINT fk_crop_cycles_biological_asset_id
+    FOREIGN KEY (biological_asset_id) REFERENCES biological_assets(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Add foreign key constraint for journal_items -> biological_assets
 DO $$

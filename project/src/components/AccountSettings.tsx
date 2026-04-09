@@ -492,7 +492,7 @@ const AccountSettings = () => {
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
               <User className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
               {t('account.title', 'Account Settings')}
             </h2>
           </div>
@@ -505,7 +505,7 @@ const AccountSettings = () => {
           variant="default" 
           onClick={handleSave} 
           disabled={saving} 
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -520,7 +520,7 @@ const AccountSettings = () => {
       {error && (
         <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
           <AlertCircle className="h-4 w-4 text-rose-600" />
-          <AlertTitle className="text-sm font-black uppercase tracking-tight">Error</AlertTitle>
+          <AlertTitle className="text-sm font-semibold uppercase tracking-tight">Error</AlertTitle>
           <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
@@ -528,7 +528,7 @@ const AccountSettings = () => {
       {success && (
         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-3">
           <ShieldCheck className="h-5 w-5 text-emerald-600" />
-          <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('profile.success')}</p>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('profile.success')}</p>
         </div>
       )}
 
@@ -539,7 +539,7 @@ const AccountSettings = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all",
               activeTab === tab.id
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-100 dark:border-slate-700"
                 : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -560,7 +560,7 @@ const AccountSettings = () => {
             <div className="lg:col-span-4 space-y-8">
               <Card className="rounded-[2rem] border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
                 <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50 p-6">
-                  <CardTitle className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Profile Identity</CardTitle>
+                  <CardTitle className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Profile Identity</CardTitle>
                 </CardHeader>
                 <CardContent className="p-8 flex flex-col items-center">
                   <div className="relative group/avatar cursor-pointer mb-6" onClick={() => fileInputRef.current?.click()}>
@@ -577,7 +577,7 @@ const AccountSettings = () => {
                     
                     <div className="absolute inset-0 bg-emerald-600/60 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-[2px]">
                       <Camera className="h-8 w-8 mb-1" />
-                      <span className="text-[8px] font-black uppercase tracking-widest">Change Photo</span>
+                      <span className="text-[8px] font-medium uppercase tracking-widest">Change Photo</span>
                     </div>
 
                     {profile?.avatar_url && (
@@ -606,14 +606,14 @@ const AccountSettings = () => {
                   )}
 
                   <div className="text-center space-y-2 mb-8">
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {profile.full_name || `${profile.first_name} ${profile.last_name}`.trim() || user?.email?.split('@')[0]}
                     </h3>
                     <div className="flex flex-wrap justify-center gap-2">
-                      <Badge className={cn("border-none font-black text-[9px] tracking-[0.15em] px-3 py-1 uppercase", userRole ? getRoleBadgeStyles(userRole.role_name) : '')}>
+                      <Badge className={cn("border-none font-semibold text-[9px] tracking-[0.15em] px-3 py-1 uppercase", userRole ? getRoleBadgeStyles(userRole.role_name) : '')}>
                         {userRole ? getRoleDisplayName(userRole.role_name) : 'No Role'}
                       </Badge>
-                      <Badge variant="outline" className="text-[9px] font-black tracking-[0.15em] px-3 py-1 uppercase border-slate-200 text-slate-400">
+                      <Badge variant="outline" className="text-[9px] font-medium tracking-[0.15em] px-3 py-1 uppercase border-slate-200 text-slate-400">
                         {currentOrganization?.name || 'No Org'}
                       </Badge>
                     </div>
@@ -624,7 +624,7 @@ const AccountSettings = () => {
                       variant="outline"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingAvatar}
-                      className="w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+                      className="w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 text-[10px] font-medium uppercase tracking-widest hover:bg-slate-50 transition-all"
                     >
                       <Camera className="h-3.5 w-3.5 mr-2" />
                       {t('profile.uploadPhoto', 'Upload New')}
@@ -633,7 +633,7 @@ const AccountSettings = () => {
                       variant="ghost"
                       onClick={openCamera}
                       disabled={uploadingAvatar}
-                      className="w-full h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-all"
+                      className="w-full h-11 rounded-xl text-[10px] font-medium uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-all"
                     >
                       <Camera className="h-3.5 w-3.5 mr-2" />
                       {t('profile.takePhoto', 'Snap via Camera')}
@@ -653,7 +653,7 @@ const AccountSettings = () => {
                     <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
                       <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {t('profile.sections.personalInfo')}
                     </CardTitle>
                   </div>
@@ -661,7 +661,7 @@ const AccountSettings = () => {
                 <CardContent className="p-8 pt-4 space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Full Display Name</Label>
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Full Display Name</Label>
                       <Input
                         id="full_name"
                         value={profile.full_name || ''}
@@ -671,7 +671,7 @@ const AccountSettings = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Phone Number</Label>
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Phone Number</Label>
                       <div className="relative">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                         <Input
@@ -687,7 +687,7 @@ const AccountSettings = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">First Name</Label>
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">First Name</Label>
                       <Input
                         id="first_name"
                         value={profile.first_name || ''}
@@ -696,7 +696,7 @@ const AccountSettings = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Last Name</Label>
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Last Name</Label>
                       <Input
                         id="last_name"
                         value={profile.last_name || ''}
@@ -707,7 +707,7 @@ const AccountSettings = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Email Address</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Email Address</Label>
                     <div className="relative group">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                       <Input
@@ -743,14 +743,14 @@ const AccountSettings = () => {
                     <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                       <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {t('preferences.sections.interface')}
                     </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8 pt-4 space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('preferences.fields.language')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('preferences.fields.language')}</Label>
                     <Select
                       id="pref_language"
                       value={profile.language}
@@ -768,7 +768,7 @@ const AccountSettings = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('profile.fields.timezone')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('profile.fields.timezone')}</Label>
                     <Select
                       id="pref_timezone"
                       value={profile.timezone}
@@ -794,7 +794,7 @@ const AccountSettings = () => {
                     <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
                       <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {t('preferences.sections.dataPrivacy')}
                     </CardTitle>
                   </div>
@@ -802,7 +802,7 @@ const AccountSettings = () => {
                 <CardContent className="p-8 pt-4 space-y-6">
                   <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 group hover:border-purple-200 transition-all">
                     <div className="space-y-1">
-                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                      <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                         {t('preferences.dataPrivacy.analytics.title')}
                       </h4>
                       <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight pr-4">
@@ -828,7 +828,7 @@ const AccountSettings = () => {
                     <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {t('preferences.sections.notifications')}
                     </CardTitle>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Configure your alert delivery channels</p>
@@ -848,7 +848,7 @@ const AccountSettings = () => {
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
+                        <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
                           {t(`preferences.notifications.${key}.title`)}
                         </h4>
                         <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight max-w-[200px]">
@@ -880,7 +880,7 @@ const AccountSettings = () => {
                     <Lock className="h-5 w-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                       {t('profile.sections.security')}
                     </CardTitle>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Update your account authentication details</p>
@@ -890,7 +890,7 @@ const AccountSettings = () => {
               <CardContent className="p-8 space-y-8">
                 {/* Current Password */}
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
                     {t('profile.password.current')}
                   </Label>
                   <div className="relative">
@@ -920,7 +920,7 @@ const AccountSettings = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                   {/* New Password */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
                       {t('profile.password.new')}
                     </Label>
                     <div className="relative">
@@ -949,7 +949,7 @@ const AccountSettings = () => {
 
                   {/* Confirm Password */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
                       {t('profile.password.confirm')}
                     </Label>
                     <div className="relative">
@@ -985,7 +985,7 @@ const AccountSettings = () => {
                   passwordData.newPassword !== passwordData.confirmPassword && (
                     <div className="flex items-center gap-3 text-rose-600 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
                       <AlertCircle className="h-5 w-5 shrink-0" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{t('profile.errors.passwordMismatch')}</span>
+                      <span className="text-[10px] font-medium uppercase tracking-widest">{t('profile.errors.passwordMismatch')}</span>
                     </div>
                   )}
 
@@ -997,7 +997,7 @@ const AccountSettings = () => {
                     variant="default" 
                     onClick={handlePasswordChange} 
                     disabled={ changingPassword || !passwordData.newPassword || !passwordData.confirmPassword } 
-                    className="h-12 px-10 rounded-[1.25rem] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                    className="h-12 px-10 rounded-[1.25rem] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
                   >
                     {changingPassword ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -1024,7 +1024,7 @@ const AccountSettings = () => {
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                   <Camera className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('profile.takePhoto', 'Capture Profile')}
                 </h3>
               </div>
@@ -1051,14 +1051,14 @@ const AccountSettings = () => {
               <Button
                 onClick={stopCamera}
                 variant="ghost"
-                className="px-6 h-12 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400"
+                className="px-6 h-12 rounded-2xl text-[10px] font-medium uppercase tracking-widest text-slate-400"
               >
                 {t('app.cancel', 'Cancel')}
               </Button>
               <Button 
                 variant="default" 
                 onClick={capturePhoto} 
-                className="px-10 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none"
+                className="px-10 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none"
               >
                 <Zap className="h-4 w-4 mr-2" />
                 {t('profile.capture', 'Capture')}

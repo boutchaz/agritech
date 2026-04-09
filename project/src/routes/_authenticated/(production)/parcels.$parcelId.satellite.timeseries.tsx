@@ -18,6 +18,7 @@ const TimeSeriesPage = () => {
         parcelName={parcel.name}
         farmId={parcel.farm_id ?? undefined}
         boundary={parcel.boundary}
+        aiPhase={parcel.ai_phase ?? undefined}
       />
     </Suspense>
   );

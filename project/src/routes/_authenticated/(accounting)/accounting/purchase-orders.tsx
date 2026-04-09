@@ -215,8 +215,7 @@ const AppContent = () => {
         <ListPageLayout
           header={
             <ListPageHeader
-              title={t('billingModule.purchaseOrders.allOrders', 'All Purchase Orders')}
-              subtitle={t('billingModule.purchaseOrders.trackOrders', 'Create and track purchase orders from suppliers')}
+              variant="shell"
               actions={
                 <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 sm:mr-2" />

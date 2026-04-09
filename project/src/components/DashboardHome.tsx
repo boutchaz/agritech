@@ -81,8 +81,7 @@ const DashboardHome = () => {
       description: 'Enregistrer une nouvelle analyse',
       icon: Beaker,
       onClick: () => {
-        // Navigate to analyses page
-        window.location.href = '/analyses';
+        navigate({ to: '/analytics' });
       },
     },
     {
@@ -90,7 +89,7 @@ const DashboardHome = () => {
       description: 'Créer une nouvelle parcelle',
       icon: MapPin,
       onClick: () => {
-        window.location.href = '/parcels';
+        navigate({ to: '/parcels' });
       },
     },
     {
@@ -98,7 +97,7 @@ const DashboardHome = () => {
       description: 'Créer une nouvelle tâche',
       icon: CheckSquare,
       onClick: () => {
-        window.location.href = '/tasks';
+        navigate({ to: '/tasks' });
       },
     },
   ];
@@ -144,7 +143,7 @@ const DashboardHome = () => {
       {/* Stats Grid */}
       {!isLoading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stats.map((stat, index) => {
+          {stats.map((stat) => {
             const colors = colorClasses[stat.color] || colorClasses.green;
             return (
               <div
@@ -180,7 +179,7 @@ const DashboardHome = () => {
           Actions rapides
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {quickActions.map((action, index) => (
+          {quickActions.map((action) => (
             <Button
               key={action.title}
               variant="outline"

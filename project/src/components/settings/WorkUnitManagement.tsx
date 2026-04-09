@@ -338,31 +338,31 @@ export function WorkUnitManagement() {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-3">
             <div className="flex items-center gap-2">
-              <h4 className="truncate font-black uppercase tracking-tight text-slate-900 dark:text-white">{unit.name}</h4>
+              <h4 className="truncate font-semibold uppercase tracking-tight text-slate-900 dark:text-white">{unit.name}</h4>
               {!unit.is_active && (
-                <Badge className="h-4 border-none bg-rose-50 px-1.5 py-0 text-[8px] font-black tracking-widest text-rose-600">INACTIVE</Badge>
+                <Badge className="h-4 border-none bg-rose-50 px-1.5 py-0 text-[8px] font-medium tracking-widest text-rose-600">INACTIVE</Badge>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-0.5">
-                <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">{t('workUnits.code')}</span>
-                <span className="font-mono text-[10px] font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
+                <span className="block text-[8px] font-medium uppercase tracking-widest text-slate-400">{t('workUnits.code')}</span>
+                <span className="font-mono text-[10px] font-medium text-blue-600 dark:text-blue-400">{unit.code}</span>
               </div>
               {unit.usage_count > 0 && (
                 <div className="space-y-0.5">
-                  <span className="block text-[8px] font-black uppercase tracking-widest text-slate-400">Usage</span>
-                  <span className="text-[10px] font-black uppercase tracking-tight text-slate-700 dark:text-slate-300">{t('workUnits.used', { count: unit.usage_count })}</span>
+                  <span className="block text-[8px] font-medium uppercase tracking-widest text-slate-400">Usage</span>
+                  <span className="text-[10px] font-medium uppercase tracking-tight text-slate-700 dark:text-slate-300">{t('workUnits.used', { count: unit.usage_count })}</span>
                 </div>
               )}
             </div>
 
             <div className="flex flex-wrap gap-2 pt-1">
               {unit.name_fr && (
-                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">FR: {unit.name_fr}</Badge>
+                <Badge variant="outline" className="border-slate-100 text-[8px] font-medium uppercase tracking-widest text-slate-400">FR: {unit.name_fr}</Badge>
               )}
               {unit.name_ar && (
-                <Badge variant="outline" className="border-slate-100 text-[8px] font-black uppercase tracking-widest text-slate-400">AR: {unit.name_ar}</Badge>
+                <Badge variant="outline" className="border-slate-100 text-[8px] font-medium uppercase tracking-widest text-slate-400">AR: {unit.name_ar}</Badge>
               )}
             </div>
           </div>
@@ -391,7 +391,7 @@ export function WorkUnitManagement() {
     <>
       <TableCell className="py-3 px-4 font-medium">{unit.name}</TableCell>
       <TableCell className="py-3 px-4">
-        <span className="font-mono text-xs font-black text-blue-600 dark:text-blue-400">{unit.code}</span>
+        <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{unit.code}</span>
       </TableCell>
       <TableCell className="py-3 px-4 text-muted-foreground">{unit.name_fr || '-'}</TableCell>
       <TableCell className="py-3 px-4 text-muted-foreground">{unit.name_ar || '-'}</TableCell>
@@ -435,7 +435,7 @@ export function WorkUnitManagement() {
                 <div className="rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
                   <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h2 className="text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                <h2 className="text-3xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">
                   {t('workUnits.title')}
                 </h2>
               </div>
@@ -450,7 +450,7 @@ export function WorkUnitManagement() {
                   variant="outline"
                   onClick={() => seedDefaultUnitsMutation.mutate()}
                   disabled={seedDefaultUnitsMutation.isPending}
-                  className="h-12 rounded-2xl border-slate-200 px-6 text-xs font-black uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700"
+                  className="h-12 rounded-2xl border-slate-200 px-6 text-xs font-semibold uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('workUnits.loadDefaults')}
@@ -459,7 +459,7 @@ export function WorkUnitManagement() {
               <Button
                 variant="default"
                 onClick={() => handleOpenDialog()}
-                className="h-12 rounded-2xl bg-emerald-600 px-8 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none"
+                className="h-12 rounded-2xl bg-emerald-600 px-8 text-xs font-semibold uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 {t('workUnits.addUnit')}
@@ -482,7 +482,7 @@ export function WorkUnitManagement() {
                 value={filterCategory}
                 onValueChange={(val) => setFilterCategory(val as UnitCategory | 'all')}
               >
-                <SelectTrigger className="h-14 rounded-2xl bg-white text-[10px] font-black uppercase tracking-widest shadow-sm border-slate-100 dark:border-slate-700 dark:bg-slate-800">
+                <SelectTrigger className="h-14 rounded-2xl bg-white text-[10px] font-medium uppercase tracking-widest shadow-sm border-slate-100 dark:border-slate-700 dark:bg-slate-800">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-200">
@@ -511,8 +511,8 @@ export function WorkUnitManagement() {
                       <stat.icon className={cn('h-5 w-5', stat.color)} />
                     </div>
                     <div className="space-y-0.5">
-                      <span className="block text-[10px] font-black uppercase leading-none tracking-widest text-slate-400 dark:text-slate-500">{stat.label}</span>
-                      <div className="tabular-nums text-xl font-black text-slate-900 dark:text-white">{stat.value}</div>
+                      <span className="block text-[10px] font-medium uppercase leading-none tracking-widest text-slate-400 dark:text-slate-500">{stat.label}</span>
+                      <div className="tabular-nums text-xl font-semibold text-slate-900 dark:text-white">{stat.value}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -541,11 +541,11 @@ export function WorkUnitManagement() {
             {Object.entries(unitsByCategory).map(([category, units]) => (
               <div key={category} className="space-y-4">
                 <div className="flex items-center gap-3 px-1">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
+                  <h3 className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
                     {getCategoryLabel(category as UnitCategory)}
                   </h3>
                   <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800" />
-                  <Badge variant="secondary" className="h-5 bg-slate-100 px-2 py-0 text-[9px] font-black text-slate-500 dark:bg-slate-800">{units.length}</Badge>
+                  <Badge variant="secondary" className="h-5 bg-slate-100 px-2 py-0 text-[9px] font-medium text-slate-500 dark:bg-slate-800">{units.length}</Badge>
                 </div>
 
                 <ResponsiveList
@@ -577,7 +577,7 @@ export function WorkUnitManagement() {
               <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
                 <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <DialogTitle className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
                 {editingUnit ? t('workUnits.dialog.editTitle') : t('workUnits.dialog.createTitle')}
               </DialogTitle>
             </div>
@@ -590,7 +590,7 @@ export function WorkUnitManagement() {
                 name="code"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.code')} *</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.code')} *</Label>
                     <Input {...field} placeholder={t('workUnits.form.codePlaceholder')} maxLength={20} className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 font-bold px-5 focus:ring-emerald-500/20" />
                     {form.formState.errors.code && (
                       <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tight">
@@ -606,7 +606,7 @@ export function WorkUnitManagement() {
                 name="unit_category"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.category')} *</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.category')} *</Label>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 font-bold px-5 text-xs uppercase tracking-tight">
                         <SelectValue />
@@ -629,7 +629,7 @@ export function WorkUnitManagement() {
               name="name"
               render={({ field }) => (
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameEn')} *</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameEn')} *</Label>
                   <Input {...field} placeholder={t('workUnits.form.nameEnPlaceholder')} className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 font-bold px-5 focus:ring-emerald-500/20" />
                   {form.formState.errors.name && (
                     <p className="text-[10px] font-bold text-rose-500 mt-1 uppercase tracking-tight">
@@ -646,7 +646,7 @@ export function WorkUnitManagement() {
                 name="name_fr"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameFr')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameFr')}</Label>
                     <Input {...field} placeholder={t('workUnits.form.nameFrPlaceholder')} className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 font-bold px-5 focus:ring-emerald-500/20" />
                   </div>
                 )}
@@ -657,7 +657,7 @@ export function WorkUnitManagement() {
                 name="name_ar"
                 render={({ field }) => (
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameAr')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('workUnits.form.nameAr')}</Label>
                     <Input {...field} placeholder={t('workUnits.form.nameArPlaceholder')} dir="rtl" className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-950 border-slate-100 dark:border-slate-800 font-bold px-5 focus:ring-emerald-500/20" />
                   </div>
                 )}
@@ -670,7 +670,7 @@ export function WorkUnitManagement() {
                 name="allow_decimal"
                 render={({ field }) => (
                   <div className="flex items-center justify-between group">
-                    <Label htmlFor="allow_decimal" className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest cursor-pointer group-hover:text-emerald-600 transition-colors">
+                    <Label htmlFor="allow_decimal" className="text-[10px] font-medium text-slate-600 dark:text-slate-400 uppercase tracking-widest cursor-pointer group-hover:text-emerald-600 transition-colors">
                       {t('workUnits.form.allowDecimal')}
                     </Label>
                     <Switch
@@ -688,7 +688,7 @@ export function WorkUnitManagement() {
                 name="is_active"
                 render={({ field }) => (
                   <div className="flex items-center justify-between group">
-                    <Label htmlFor="is_active" className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest cursor-pointer group-hover:text-emerald-600 transition-colors">
+                    <Label htmlFor="is_active" className="text-[10px] font-medium text-slate-600 dark:text-slate-400 uppercase tracking-widest cursor-pointer group-hover:text-emerald-600 transition-colors">
                       {t('workUnits.form.active')}
                     </Label>
                     <Switch
@@ -703,13 +703,13 @@ export function WorkUnitManagement() {
             </div>
 
             <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 border-t border-slate-50 dark:border-slate-800">
-              <Button type="button" variant="ghost" onClick={handleCloseDialog} className="h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <Button type="button" variant="ghost" onClick={handleCloseDialog} className="h-12 px-8 rounded-2xl text-[10px] font-medium uppercase tracking-widest text-slate-400">
                 {t('workUnits.cancel')}
               </Button>
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
-                className="h-12 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
+                className="h-12 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
               >
                 <Check className="h-4 w-4 mr-2" />
                 {editingUnit ? t('workUnits.updateLabel') : t('workUnits.createLabel')}

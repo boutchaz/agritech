@@ -220,7 +220,9 @@ const IndicesCalculator = ({
              },
              organizationId
            );
-         } catch (_saveError) {}
+         } catch {
+           void 0; /* optional persist failure — index still computed */
+         }
        }
 
       await refetchCache();
@@ -488,7 +490,7 @@ const IndicesCalculator = ({
                         </Tooltip>
                         </div>
                         <div className="flex items-end gap-1">
-                          <span className="text-2xl font-black text-slate-800 tabular-nums tracking-tighter">
+                          <span className="text-2xl font-bold text-slate-800 tabular-nums tracking-tighter">
                             {result.value.toFixed(3)}
                           </span>
                           <Activity className="w-4 h-4 text-emerald-500 mb-1 opacity-40" />

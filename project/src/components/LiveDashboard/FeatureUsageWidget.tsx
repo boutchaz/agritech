@@ -1,6 +1,6 @@
 
 import { cn } from '@/lib/utils';
-import { BarChart3, TrendingUp, TrendingDown, Minus, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ChartSkeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -20,15 +20,6 @@ const FeatureUsageWidget = ({
   if (isLoading) {
     return <ChartSkeleton height="h-64" />;
   }
-
-  const getTrendIcon = (trend: FeatureUsage['trend']) => {
-    const icons = {
-      up: <TrendingUp className="h-4 w-4 text-green-500" />,
-      down: <TrendingDown className="h-4 w-4 text-red-500" />,
-      stable: <Minus className="h-4 w-4 text-gray-500" />,
-    };
-    return icons[trend];
-  };
 
   const getTrendColor = (trend: FeatureUsage['trend']) => {
     const colors = {
@@ -63,12 +54,12 @@ const FeatureUsageWidget = ({
           <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <BarChart3 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('liveDashboard.featureUsage.title')}
           </h3>
         </div>
         <div className="bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full border border-indigo-100 dark:border-indigo-800">
-          <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
+          <span className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
             {t('liveDashboard.featureUsage.realTime')}
           </span>
         </div>
@@ -80,15 +71,16 @@ const FeatureUsageWidget = ({
           <div key={feature.feature} className="space-y-3 group/item">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight group-hover/item:text-indigo-600 transition-colors">
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-tight group-hover/item:text-indigo-600 transition-colors">
                   {feature.feature}
                 </span>
-                <Badge variant="outline" className={cn("border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4 uppercase", getTrendColor(feature.trend))}>
-                  {feature.trend === 'up' ? '+' : feature.trend === 'down' ? '-' : ''}{Math.abs(Math.floor(Math.random() * 15) + 1)}%
+                <Badge variant="outline" className={cn("border-none font-semibold text-[8px] tracking-widest px-1.5 py-0 h-4 uppercase", getTrendColor(feature.trend))}>
+                  {feature.trend === 'up' ? '+' : feature.trend === 'down' ? '-' : ''}
+                  {Math.round(feature.percentage)}%
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
+                <span className="text-xs font-semibold text-slate-900 dark:text-white tabular-nums">
                   {feature.count}
                 </span>
                 <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase">
@@ -110,16 +102,16 @@ const FeatureUsageWidget = ({
       <div className="mt-auto pt-6 border-t border-slate-50 dark:border-slate-700/50">
         <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('liveDashboard.featureUsage.mostPopular')}:
             </span>
-            <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tight">
+            <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-tight">
               {features[0]?.feature || '-'}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <span className={cn(
-              "text-[10px] font-black tabular-nums uppercase tracking-widest",
+              "text-[10px] font-medium tabular-nums uppercase tracking-widest",
               features[0]?.trend === 'up' ? 'text-emerald-600' : features[0]?.trend === 'down' ? 'text-rose-600' : 'text-slate-500'
             )}>
               {features[0]?.count || 0} {t('liveDashboard.featureUsage.usages')}

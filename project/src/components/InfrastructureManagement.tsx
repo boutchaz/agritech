@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageHeader, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 
 
 // Use the API Structure type
@@ -857,21 +857,20 @@ const InfrastructureManagement = () => {
     <>
     <ListPageLayout
       header={
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="hidden sm:block">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('infrastructure.title')}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('infrastructure.subtitle')}</p>
-          </div>
-          <Button
-            variant="green"
-            data-tour="infrastructure-add"
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center justify-center space-x-2 px-4 py-2.5 rounded-lg transition-colors shadow-md hover:shadow-lg w-full sm:w-auto"
-          >
-            <Plus className="h-5 w-5" />
-            <span className="font-medium">{t('infrastructure.actions.new')}</span>
-          </Button>
-        </div>
+        <ListPageHeader
+          variant="shell"
+          actions={
+            <Button
+              variant="green"
+              data-tour="infrastructure-add"
+              onClick={() => setShowAddModal(true)}
+              className="flex w-full items-center justify-center space-x-2 px-4 py-2.5 rounded-lg transition-colors shadow-md hover:shadow-lg sm:w-auto"
+            >
+              <Plus className="h-5 w-5" />
+              <span className="font-medium">{t('infrastructure.actions.new')}</span>
+            </Button>
+          }
+        />
       }
       filters={
         <FilterBar

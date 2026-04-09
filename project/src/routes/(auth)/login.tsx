@@ -142,10 +142,10 @@ function LoginPage() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
+            <div className="w-full border-t border-slate-200/90" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className="bg-white px-4 text-slate-500">{t('auth.orContinueWith')}</span>
+            <span className="bg-white px-4 font-medium text-slate-600">{t('auth.orContinueWith')}</span>
           </div>
         </div>
 
@@ -179,20 +179,19 @@ function LoginPage() {
             </FormField>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-200"
-            />
-            {t('auth.rememberMe', 'Remember me')}
-          </label>
-
-          <div className="flex justify-end text-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-200"
+              />
+              {t('auth.rememberMe', 'Remember me')}
+            </label>
             <Link
               to="/forgot-password"
-              className="font-medium text-emerald-600 transition hover:text-emerald-500"
+              className="text-sm font-medium text-emerald-600 transition hover:text-emerald-500 sm:self-auto sm:shrink-0"
             >
               {t('auth.forgotPassword')}
             </Link>
@@ -207,7 +206,7 @@ function LoginPage() {
           <Button
             type="submit"
             disabled={isLoading || isOAuthLoading}
-            className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:from-emerald-700 hover:to-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? t('auth.signingIn') : t('auth.signIn.button')}
           </Button>

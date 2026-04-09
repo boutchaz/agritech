@@ -138,12 +138,7 @@ const PaymentsList = ({
     <ListPageLayout
       header={
         <ListPageHeader
-          title={t('payments.list.title', 'Gestion des Paiements')}
-          subtitle={t('payments.list.subtitle', {
-            count: totalItems,
-            defaultValue: '{{count}} paiement',
-            defaultValue_plural: '{{count}} paiements',
-          })}
+          variant="shell"
           actions={
             <Button variant="secondary">
               <Download className="w-5 h-5" />

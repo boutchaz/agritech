@@ -229,4 +229,18 @@ export class ParcelsController {
   async restoreParcel(@Request() req, @Param('id') parcelId: string) {
     return this.parcelsService.restoreParcel(req.user.id, parcelId);
   }
+
+  @Post(':id/sync-and-calibrate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Trigger full satellite sync and auto-calibration for a parcel',
+    description: 'Syncs all core satellite indices and starts calibration if data is sufficient.',
+  })
+  @ApiParam({ name: 'id', description: 'Parcel ID', type: String })
+  @ApiResponse({ status: 200, description: 'Sync and calibration triggered' })
+  async syncAndCalibrate(@Request() req, @Param('id') parcelId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.parcelsService.triggerFullSyncAndCalibration(parcelId, organizationId);
+  }
 }

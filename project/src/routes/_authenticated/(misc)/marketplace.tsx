@@ -176,8 +176,7 @@ function MarketplacePage() {
         <ListPageLayout
           header={
             <ListPageHeader
-              title={t('marketplace.title', 'Marketplace')}
-              subtitle={t('marketplace.subtitle', 'Manage your products available for sale')}
+              variant="shell"
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex border rounded-md overflow-hidden">

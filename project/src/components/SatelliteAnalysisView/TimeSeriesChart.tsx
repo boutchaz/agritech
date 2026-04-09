@@ -18,7 +18,6 @@ import {
   Minus, 
   BarChart3, 
   Check, 
-  Database, 
   Satellite, 
   RefreshCw, 
   Thermometer, 
@@ -26,7 +25,6 @@ import {
   Calendar as CalendarIcon,
   Layers,
   Info,
-  X,
   Zap
 } from 'lucide-react';
 import {
@@ -44,11 +42,9 @@ import { useAuth } from '../../hooks/useAuth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../lib/api-client';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { StatusDot } from '@/components/ui/status-dot';
-import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
+import { SectionLoader } from '@/components/ui/loader';
 import { useTranslation } from 'react-i18next';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +54,6 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-
 const formatTooltipValue = (value: number) => {
   return value?.toFixed(3) ?? 'N/A';
 };
@@ -72,13 +67,12 @@ function localCalendarISODate(): string {
   return `${y}-${m}-${day}`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const CustomTooltip = ({ active, payload, label, showTemperature, t }: {
+ 
+const CustomTooltip = ({ active, payload, label, showTemperature }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; name?: string; value: number; color?: string }>;
   label?: string;
   showTemperature?: boolean;
-  t: (key: string, fallback?: string) => string;
 }) => {
   if (active && payload && payload.length) {
     return (
@@ -90,7 +84,6 @@ const CustomTooltip = ({ active, payload, label, showTemperature, t }: {
           </span>
         </div>
         <CardContent className="p-3 space-y-2">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {payload.map((entry) => {
             const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             if (isTemp && !showTemperature) return null;
@@ -142,6 +135,7 @@ interface TimeSeriesChartProps {
   farmId?: string;
   boundary?: number[][];
   defaultIndex?: TimeSeriesIndexType;
+  aiPhase?: string;
 }
 
 interface MultiIndexData {
@@ -175,10 +169,11 @@ const TimeSeriesChart = ({
   parcelName,
   farmId,
   boundary,
-  defaultIndex = 'NIRv'
+  defaultIndex = 'NIRv',
+  aiPhase,
 }: TimeSeriesChartProps) => {
   const { currentOrganization } = useAuth();
-  const { t, i18n } = useTranslation('satellite');
+  const { t } = useTranslation('satellite');
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
@@ -198,12 +193,13 @@ const TimeSeriesChart = ({
         fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
         if (parsedStart >= fiveYearsAgo) return start;
       }
-    } catch (_e) {}
+    } catch {
+      void 0;
+    }
     return getDateRangeLastNDays(730).start_date;
   });
   const [endDate, setEndDate] = useState(() => localCalendarISODate());
 
-  const [showIndexSelector, setShowIndexSelector] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{
     totalIndices: number;
@@ -211,12 +207,28 @@ const TimeSeriesChart = ({
     currentIndex: string | null;
   } | null>(null);
   const [showTemperature, setShowTemperature] = useState(false);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  const triggerFullSync = useCallback(async () => {
+    if (!organizationId || isSyncingAll) return;
+    setIsSyncingAll(true);
+    try {
+      await apiRequest(`/api/v1/parcels/${parcelId}/sync-and-calibrate`, {
+        method: 'POST',
+      }, organizationId);
+    } catch (err) {
+      console.error('Failed to trigger full sync:', err);
+    }
+    setIsSyncingAll(false);
+  }, [organizationId, parcelId, isSyncingAll]);
 
   useEffect(() => {
     if (startDate) {
       try {
         localStorage.setItem(DATE_RANGE_STORAGE_KEY, JSON.stringify({ start: startDate }));
-      } catch (_e) {}
+      } catch {
+        void 0;
+      }
     }
   }, [startDate, DATE_RANGE_STORAGE_KEY]);
 
@@ -394,19 +406,19 @@ const TimeSeriesChart = ({
             setIsSyncing(false);
             setSyncProgress(null);
           }
-        } catch (pollErr) {
+        } catch (_pollErr) {
           if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           setIsSyncing(false);
           setSyncProgress(null);
         }
       }, 5000);
-    } catch (err) {
+    } catch (_err) {
       setIsSyncing(false);
       setSyncProgress(null);
     }
   }, [boundary, organizationId, selectedIndices, startDate, endDate, cloudCoverage, parcelId, farmId, parcelName, refetchCache, queryClient]);
 
-  const { data: weatherData, isLoading: isLoadingWeather, error: weatherError } = useQuery({
+  const { data: weatherData } = useQuery({
     queryKey: ['weather-history', organizationId, parcelId, startDate, endDate],
     queryFn: async () => {
       if (!parcelId || !startDate || !endDate) return [];
@@ -598,6 +610,50 @@ const TimeSeriesChart = ({
           </div>
         )}
 
+        {/* Calibration banner — shown for pre-calibration and in-progress phases */}
+        {aiPhase && (aiPhase === 'awaiting_data' || aiPhase === 'ready_calibration') && (
+          <Alert className="bg-indigo-50 border-indigo-200 text-indigo-800">
+            <Zap className="h-4 w-4 text-indigo-600" />
+            <AlertTitle className="text-sm font-bold">
+              {aiPhase === 'awaiting_data'
+                ? t('timeSeries.calibration.awaitingDataTitle', 'Satellite data is being collected')
+                : t('timeSeries.calibration.readyTitle', 'AI calibration is ready to run')}
+            </AlertTitle>
+            <AlertDescription className="text-xs mt-1 flex items-center gap-3">
+              <span>
+                {aiPhase === 'awaiting_data'
+                  ? t('timeSeries.calibration.awaitingDataDescription', 'Once enough satellite imagery is available, calibration will start automatically.')
+                  : t('timeSeries.calibration.readyDescription', 'Satellite data is available. Calibration will start automatically, or you can start it manually.')}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                onClick={triggerFullSync}
+                disabled={isSyncingAll}
+              >
+                {isSyncingAll ? (
+                  <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t('timeSeries.calibration.syncing', 'Syncing...')}</>
+                ) : (
+                  <><Satellite className="w-3.5 h-3.5 mr-1.5" />{t('timeSeries.calibration.syncAll', 'Sync & Calibrate')}</>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {aiPhase && aiPhase === 'calibrating' && (
+          <Alert className="bg-blue-50 border-blue-200 text-blue-800">
+            <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+            <AlertTitle className="text-sm font-bold">
+              {t('timeSeries.calibration.calibratingTitle', 'Calibration in progress')}
+            </AlertTitle>
+            <AlertDescription className="text-xs mt-1">
+              {t('timeSeries.calibration.calibratingDescription', 'AgromindIA is analyzing satellite data for this parcel. This may take a few minutes.')}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Chart Area */}
           <div className="lg:col-span-8 space-y-6">
@@ -709,7 +765,7 @@ const TimeSeriesChart = ({
                             domain={['auto', 'auto']}
                           />
                         )}
-                        <Tooltip content={<CustomTooltip showTemperature={showTemperature} t={t} />} />
+                        <Tooltip content={<CustomTooltip showTemperature={showTemperature} />} />
                         <Legend 
                           verticalAlign="top" 
                           align="right" 

@@ -394,6 +394,17 @@ function SelectTrialPage() {
         type: 'active'
       })
 
+      // If modules were already selected in modular mode, save them and skip the modules onboarding step
+      if (trialMode === 'modular' && selectedModules.length > 0) {
+        const moduleMap: Record<string, boolean> = {}
+        selectedModules.forEach((id) => { moduleMap[id] = true })
+        useOnboardingStore.getState().updateModuleSelection(moduleMap)
+        // Skip to step 5 (complete) since modules were already picked
+        useOnboardingStore.getState().setCurrentStep(5)
+        window.location.href = '/onboarding/complete'
+        return
+      }
+
       window.location.href = '/onboarding'
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create trial subscription'

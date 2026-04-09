@@ -794,12 +794,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     <ListPageLayout
       header={
         <ListPageHeader
-          title={t("cropCycles.title", "Crop Cycles")}
-          subtitle={t(
-            "cropCycles.description",
-            "Track production cycles from planting to harvest with full cost attribution.",
-          )}
-          icon={<Sprout className="h-6 w-6 text-green-600" />}
+          variant="shell"
           actions={
             canManage ? (
               <Button onClick={() => handleOpenDialog()}>

@@ -72,15 +72,6 @@ const DashboardSkeleton = () => {
 
       {/* ===== CONTENT SKELETON ===== */}
       <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8">
-        {/* Unified view heading */}
-        <div className="border-b border-slate-100 dark:border-slate-800 pb-6 flex justify-between items-end">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48 rounded-lg" />
-            <Skeleton className="h-4 w-72 rounded-md" />
-          </div>
-          <Skeleton className="h-8 w-40 rounded-full" />
-        </div>
-
         <div className="space-y-8">
           {/* Farm selector skeleton */}
           <Skeleton className="h-20 w-full rounded-3xl" />

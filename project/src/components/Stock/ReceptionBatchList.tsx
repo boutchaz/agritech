@@ -230,10 +230,7 @@ export default function ReceptionBatchList({
     <ListPageLayout
       header={
         <ListPageHeader
-          title={t('receptionBatches.list.title')}
-          subtitle={totalItems > 0
-            ? t('receptionBatches.list.subtitle', { count: totalItems })
-            : t('receptionBatches.list.subtitleEmpty')}
+          variant="shell"
           actions={
             <Button onClick={onCreateClick} className="w-full sm:w-auto justify-center">
               <Plus className="w-4 h-4 mr-2" />

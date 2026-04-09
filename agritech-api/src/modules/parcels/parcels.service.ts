@@ -473,6 +473,10 @@ export class ParcelsService {
         soil_type,
         irrigation_type,
         is_active,
+        ai_phase,
+        ai_enabled,
+        ai_observation_only,
+        ai_nutrition_option,
         created_at,
         updated_at,
         farms!inner (
@@ -750,7 +754,7 @@ export class ParcelsService {
   ) {
     const age = plantingYear ? new Date().getFullYear() - plantingYear : null;
     const isJuvenile = age !== null && age <= 5;
-    const monthsToSync = isJuvenile ? 6 : 24;
+    const monthsToSync = isJuvenile ? 12 : 24;
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - monthsToSync);
 
@@ -786,6 +790,9 @@ export class ParcelsService {
               this.logger.log(
                 `Parcel ${parcelId} transitioned to ready_calibration after satellite sync`,
               );
+
+              // Auto-start calibration now that satellite data is ready
+              this.triggerAutoCalibration(parcelId, organizationId);
             }
           }
         } catch (err) {
@@ -806,6 +813,96 @@ export class ParcelsService {
         const message = err instanceof Error ? err.message : "unknown error";
         this.logger.warn(
           `Satellite download failed for parcel ${parcelId}: ${message}`,
+        );
+      });
+  }
+
+  /**
+   * Public entry point: sync all core satellite indices for a parcel,
+   * transition to ready_calibration, and auto-start calibration.
+   * Returns immediately — work runs in the background.
+   */
+  async triggerFullSyncAndCalibration(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{ status: string; message: string }> {
+    const { data: parcel } = await this.supabaseAdmin
+      .from("parcels")
+      .select("boundary, planting_year")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (
+      !parcel?.boundary ||
+      !Array.isArray(parcel.boundary) ||
+      parcel.boundary.length < 3
+    ) {
+      return { status: "skipped", message: "Parcel has no valid boundary" };
+    }
+
+    // Reset to awaiting_data so the full flow runs
+    await this.supabaseAdmin
+      .from("parcels")
+      .update({ ai_phase: "awaiting_data" })
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
+
+    // Always sync at least 24 months for a complete dataset
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 24);
+
+    void this.satelliteCacheService
+      .syncParcelSatelliteData(parcelId, organizationId, undefined, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+        indices: CORE_INDICES,
+      })
+      .then(async (syncResult) => {
+        this.logger.log(
+          `Full sync completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
+        );
+
+        await this.supabaseAdmin
+          .from("parcels")
+          .update({ ai_phase: "ready_calibration" })
+          .eq("id", parcelId)
+          .eq("organization_id", organizationId)
+          .eq("ai_phase", "awaiting_data");
+
+        this.triggerAutoCalibration(parcelId, organizationId);
+      })
+      .catch((err) => {
+        this.logger.warn(
+          `Full sync failed for parcel ${parcelId}: ${err instanceof Error ? err.message : err}`,
+        );
+      });
+
+    return {
+      status: "started",
+      message: "Satellite sync started (24 months). Calibration will follow automatically.",
+    };
+  }
+
+  /**
+   * Auto-start calibration after satellite data is ready.
+   * Fire-and-forget — failures are logged but don't block the flow.
+   */
+  private triggerAutoCalibration(
+    parcelId: string,
+    organizationId: string,
+  ): void {
+    void this.calibrationService
+      .startCalibration(parcelId, organizationId, { mode_calibrage: "full" }, { skipReadinessCheck: true })
+      .then((record) => {
+        this.logger.log(
+          `Auto-calibration started for parcel ${parcelId}: calibration ${record.id}`,
+        );
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "unknown error";
+        this.logger.warn(
+          `Auto-calibration failed to start for parcel ${parcelId}: ${message}`,
         );
       });
   }
@@ -894,7 +991,7 @@ export class ParcelsService {
     const { data: profileBefore } = await this.supabaseAdmin
       .from("parcels")
       .select(
-        "crop_type, variety, planting_system, irrigation_type, water_source, density_per_hectare, plant_count, ai_phase, ai_enabled, ai_observation_only, ai_calibration_id",
+        "crop_type, variety, planting_system, irrigation_type, water_source, density_per_hectare, plant_count, ai_phase, ai_enabled, ai_observation_only, ai_calibration_id, boundary, planting_year",
       )
       .eq("id", parcelId)
       .maybeSingle();
@@ -954,6 +1051,28 @@ export class ParcelsService {
     }
 
     this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
+
+    // Trigger satellite download when boundary is set/changed
+    const boundaryChanged =
+      dto.boundary !== undefined &&
+      Array.isArray(dto.boundary) &&
+      dto.boundary.length >= 3;
+    const hadNoBoundaryBefore =
+      !profileBefore?.boundary ||
+      !Array.isArray(profileBefore.boundary) ||
+      (profileBefore.boundary as unknown[]).length < 3;
+
+    if (boundaryChanged && hadNoBoundaryBefore) {
+      const plantingYear =
+        dto.planting_year ??
+        (profileBefore?.planting_year as number | null) ??
+        null;
+      this.triggerProactiveSatelliteDownload(
+        parcelId,
+        organizationId,
+        plantingYear,
+      );
+    }
 
     if (
       profileBefore &&

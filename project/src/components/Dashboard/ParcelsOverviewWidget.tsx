@@ -1,14 +1,12 @@
 
 import { useNavigate } from '@tanstack/react-router';
-import { MapPin, TrendingUp, ChevronRight, Layers } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useFarms, useParcelsByFarms } from '../../hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-
 const ParcelsOverviewWidget = () => {
   const navigate = useNavigate();
   const { currentOrganization, currentFarm } = useAuth();
@@ -70,7 +68,7 @@ const ParcelsOverviewWidget = () => {
           <div className="p-2.5 bg-green-50 dark:bg-green-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.parcels.title')}
           </h3>
         </div>
@@ -89,8 +87,8 @@ const ParcelsOverviewWidget = () => {
         <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative min-w-0">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.parcels.total')}</span>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.parcels.total')}</span>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
               {parcels.length}
             </div>
             <div className="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1 uppercase tracking-tight leading-tight break-words">
@@ -102,8 +100,8 @@ const ParcelsOverviewWidget = () => {
         <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative min-w-0">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.parcels.surface')}</span>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.parcels.surface')}</span>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
               {totalArea.toFixed(1)}
             </div>
             <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tight leading-tight break-words">
@@ -117,7 +115,7 @@ const ParcelsOverviewWidget = () => {
       {topCrops.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.parcels.topCrops')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>

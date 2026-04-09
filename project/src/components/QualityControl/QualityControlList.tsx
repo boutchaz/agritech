@@ -171,18 +171,6 @@ export default function QualityControlList() {
 
   return (
     <ListPageLayout
-      header={
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
-            {t('production.qualityControl.list.title', 'Quality Inspections')}
-          </h2>
-          <p className="text-gray-600">
-            {totalItems > 0
-              ? t('production.qualityControl.list.subtitle', { count: totalItems })
-              : t('production.qualityControl.list.subtitleEmpty', 'No inspections yet')}
-          </p>
-        </div>
-      }
       filters={
         <FilterBar
           searchValue={tableState.search}

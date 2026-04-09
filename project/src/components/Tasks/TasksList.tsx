@@ -62,6 +62,17 @@ interface TasksListProps {
   onCreateTask?: () => void;
 }
 
+/** Maps TaskStatus (API snake_case) to keys under tasks.listPage.filters (in_progress → inProgress). */
+const TASK_LIST_FILTER_I18N_KEY: Record<TaskStatus, string> = {
+  pending: 'pending',
+  assigned: 'assigned',
+  in_progress: 'inProgress',
+  paused: 'paused',
+  completed: 'completed',
+  cancelled: 'cancelled',
+  overdue: 'overdue',
+};
+
 // Helper to get due date urgency indicator
 const getDueDateStatus = (dueDate: string | null | undefined) => {
   if (!dueDate) return null;
@@ -708,8 +719,7 @@ const TasksList = ({
     <ListPageLayout
       header={
         <ListPageHeader
-          title={t('tasks.listPage.title')}
-          subtitle={t('tasks.listPage.tasksCount', { count: totalItems })}
+          variant="shell"
           actions={onCreateTask ? (
             <Button data-tour="task-create" onClick={onCreateTask}>
               <Plus className="w-5 h-5" />
@@ -835,7 +845,7 @@ const TasksList = ({
                 variant={filterStatus === status ? 'default' : 'outline'}
                 onClick={() => handleStatusFilter(status)}
               >
-                {t(`tasks.listPage.filters.${status}`)}
+                {t(`tasks.listPage.filters.${TASK_LIST_FILTER_I18N_KEY[status]}`)}
               </Button>
             ))}
           </div>

@@ -211,7 +211,7 @@ const SubscriptionSettings = () => {
               <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
                 <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
                 {t('subscription.modular.title', 'Choose Your Modules')}
               </h2>
             </div>
@@ -433,7 +433,7 @@ const SubscriptionSettings = () => {
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
               <CreditCard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
               {t('subscription.title', 'Subscription')}
             </h2>
           </div>
@@ -447,7 +447,7 @@ const SubscriptionSettings = () => {
             <Button
               variant="default"
               onClick={() => setShowModularPicker(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               {t('subscription.modular.changeModules', 'Change modules')}
@@ -457,7 +457,7 @@ const SubscriptionSettings = () => {
               <Button
                 variant="outline"
                 onClick={() => setShowModularPicker(true)}
-                className="h-12 px-6 rounded-2xl font-black text-xs uppercase tracking-widest border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-all duration-300"
+                className="h-12 px-6 rounded-2xl font-semibold text-xs uppercase tracking-widest border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-all duration-300"
               >
                 <Package className="h-4 w-4 mr-2" />
                 {t('subscription.modular.switchToModular', 'Switch to modular')}
@@ -465,7 +465,7 @@ const SubscriptionSettings = () => {
               <Button
                 variant="default"
                 onClick={() => setShowPlans(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 {t('subscription.changePlan', 'Change plan')}
@@ -481,7 +481,7 @@ const SubscriptionSettings = () => {
             <AlertCircle className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h3 className="text-lg font-black text-blue-900 dark:text-blue-100 uppercase tracking-tight">
+            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-tight">
               {t('subscription.trial.active', 'Trial Period Active')}
             </h3>
             <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mt-1">
@@ -504,7 +504,7 @@ const SubscriptionSettings = () => {
                   <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                     <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('subscription.modular.activeModules', 'Active Modules')}
                   </CardTitle>
                 </div>
@@ -515,20 +515,20 @@ const SubscriptionSettings = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-100 dark:border-slate-700/50">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                          <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
                             {t('subscription.modular.customPlan', 'Custom Plan')}
                           </h3>
-                          <Badge className="bg-emerald-500 text-white border-none font-black text-[8px] tracking-widest uppercase py-0.5">ACTIVE</Badge>
+                          <Badge className="bg-emerald-500 text-white border-none font-semibold text-[8px] tracking-widest uppercase py-0.5">ACTIVE</Badge>
                         </div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                           {subscription.selected_modules.length} {t('subscription.modular.modulesLabel', 'modules')}
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
                           {modularPricing.cycleTtc.toLocaleString()} <span className="text-sm font-bold">MAD</span>
                         </div>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
+                        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
                           {t('subscription.billedCycle', {
                             cycle: t(`subscription.billingCycles.${effectiveCycle}`),
                             defaultValue: `Billed ${effectiveCycle}`,
@@ -547,7 +547,7 @@ const SubscriptionSettings = () => {
                           <Badge
                             key={mod.id}
                             className={cn(
-                              'px-4 py-1.5 font-black text-[9px] tracking-widest uppercase border-none',
+                              'px-4 py-1.5 font-semibold text-[9px] tracking-widest uppercase border-none',
                               isBase
                                 ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                                 : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
@@ -592,7 +592,7 @@ const SubscriptionSettings = () => {
                   <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                     <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('subscription.currentContract')}
                   </CardTitle>
                 </div>
@@ -602,10 +602,10 @@ const SubscriptionSettings = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[2rem] border border-slate-100 dark:border-slate-700/50">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
                           {plan.name}
                         </h3>
-                        <Badge className="bg-emerald-500 text-white border-none font-black text-[8px] tracking-widest uppercase py-0.5">ACTIVE</Badge>
+                        <Badge className="bg-emerald-500 text-white border-none font-semibold text-[8px] tracking-widest uppercase py-0.5">ACTIVE</Badge>
                       </div>
                       <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                         {plan.description}
@@ -613,10 +613,10 @@ const SubscriptionSettings = () => {
                     </div>
                     {pricingPreview && (
                       <div className="text-right">
-                        <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
                           {pricingPreview.cycleTtc.toLocaleString()} <span className="text-sm font-bold">MAD</span>
                         </div>
-                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
+                        <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
                           {t('subscription.billedCycle', { cycle: t(`subscription.billingCycles.${effectiveCycle}`) })}
                         </p>
                       </div>
@@ -631,8 +631,8 @@ const SubscriptionSettings = () => {
                       { label: t('subscription.details.nextBilling'), value: subscription?.next_billing_at ? new Date(subscription.next_billing_at).toLocaleDateString() : '-' },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between group">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{item.label}</span>
-                        <span className={cn("text-xs font-black uppercase tracking-tight", item.color || "text-slate-700 dark:text-slate-300")}>{item.value}</span>
+                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{item.label}</span>
+                        <span className={cn("text-xs font-semibold uppercase tracking-tight", item.color || "text-slate-700 dark:text-slate-300")}>{item.value}</span>
                       </div>
                     ))}
                   </div>
@@ -647,7 +647,7 @@ const SubscriptionSettings = () => {
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
                   <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('subscription.contractTimeline')}
                 </CardTitle>
               </div>
@@ -689,7 +689,7 @@ const SubscriptionSettings = () => {
                 <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
                   <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
-                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('subscription.usageLimits')}
                 </CardTitle>
               </div>
@@ -729,7 +729,7 @@ const SubscriptionSettings = () => {
               />
 
               <div className="pt-8 border-t border-slate-50 dark:border-slate-800">
-                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Billing Portal</h4>
+                <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">Billing Portal</h4>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed mb-6">
                   {t('subscription.billingManagementDescription')}
                 </p>
@@ -742,7 +742,7 @@ const SubscriptionSettings = () => {
                       purchasePlan.mutate(targetPlan);
                     }
                   }}
-                  className="w-full h-12 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                  className="w-full h-12 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
                   disabled={purchasePlan.isPending || modularCheckout.isPending}
                 >
                   {purchasePlan.isPending || modularCheckout.isPending ? (
@@ -764,7 +764,7 @@ const SubscriptionSettings = () => {
                 <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-xl">
                   <Zap className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                 </div>
-                <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('subscription.addons.title')}
                 </CardTitle>
               </div>
@@ -781,7 +781,7 @@ const SubscriptionSettings = () => {
                       className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-900/50 rounded-[1.5rem] border border-slate-100 dark:border-slate-700/50 group hover:border-orange-200 transition-all"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-tight truncate">
                           {module.name}
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
@@ -790,14 +790,14 @@ const SubscriptionSettings = () => {
                       </div>
                       <div className="ml-4 flex-shrink-0">
                         {isActive ? (
-                          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-black text-[9px] tracking-widest px-3 py-1">
+                          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-semibold text-[9px] tracking-widest px-3 py-1">
                             {t('subscription.addons.active').toUpperCase()}
                           </Badge>
                         ) : (
                           <Button
                             variant="default"
                             onClick={() => purchaseAddon.mutate(module.id)}
-                            className="h-10 px-6 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black text-[10px] uppercase tracking-widest shadow-md transition-all"
+                            className="h-10 px-6 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[10px] uppercase tracking-widest shadow-md transition-all"
                           >
                             {t('subscription.addons.buy')}
                           </Button>
@@ -810,7 +810,7 @@ const SubscriptionSettings = () => {
 
               {coreModules.length > 0 && (
                 <div className="pt-8 border-t border-slate-50 dark:border-slate-800">
-                  <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">
+                  <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4">
                     {t('subscription.addons.coreModules')}
                   </h4>
                   <div className="flex flex-wrap gap-2">
@@ -818,7 +818,7 @@ const SubscriptionSettings = () => {
                       <Badge
                         key={module.slug}
                         variant="secondary"
-                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-none font-black text-[9px] tracking-widest px-4 py-1.5 uppercase"
+                        className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-none font-semibold text-[9px] tracking-widest px-4 py-1.5 uppercase"
                       >
                         {module.name}
                       </Badge>
@@ -843,12 +843,12 @@ interface PricingLineProps {
 
 const PricingLine = ({ label, value, valueColor, bold }: PricingLineProps) => (
   <div className="flex flex-col gap-1">
-    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+    <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
       {label}
     </span>
     <span className={cn(
       'text-sm tabular-nums',
-      bold ? 'font-black text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300',
+      bold ? 'font-semibold text-slate-900 dark:text-white' : 'font-medium text-slate-700 dark:text-slate-300',
       valueColor,
     )}>
       {value}
@@ -891,11 +891,11 @@ const UsageBar = ({
           <div className="p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg group-hover:scale-110 transition-transform">
             {icon}
           </div>
-          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+          <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-widest">
             {label}
           </span>
         </div>
-        <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
+        <span className="text-xs font-semibold text-slate-900 dark:text-white tabular-nums">
           {current} <span className="text-slate-400 mx-1">/</span> {unlimited ? '∞' : limit}
         </span>
       </div>
@@ -921,11 +921,11 @@ const TimelineItem = ({
   value,
 }: { icon: React.ReactNode; label: string; value: string }) => (
   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50 flex flex-col gap-2">
-    <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+    <div className="flex items-center gap-2 text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
       {icon}
       <span>{label}</span>
     </div>
-    <div className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums uppercase tracking-tight">{value}</div>
+    <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums uppercase tracking-tight">{value}</div>
   </div>
 );
 

@@ -17,7 +17,7 @@ import { PageLoader } from '@/components/ui/loader';
 import type { HarvestSummary } from '@/types/harvests';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { useServerTableState, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader } from '@/components/ui/data-table';
+import { useServerTableState, DataTablePagination, FilterBar, ListPageLayout } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -171,12 +171,6 @@ function HarvestsPage() {
         </div>
 
         <ListPageLayout
-          header={
-            <ListPageHeader
-              title={t('harvests.title')}
-              subtitle={t('harvests.harvestsCount', { count: totalItems })}
-            />
-          }
           stats={statistics && <div data-tour="harvest-stats"><HarvestStatistics statistics={statistics} /></div>}
           filters={
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">

@@ -117,7 +117,7 @@ const ModulesSettings = () => {
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
               <Boxes className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
               {t('modulesSettings.title')}
             </h2>
           </div>
@@ -135,8 +135,8 @@ const ModulesSettings = () => {
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
             <div>
-              <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Subscription Power</p>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase mt-1">
+              <p className="text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none">Subscription Power</p>
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase mt-1">
                 {t('modulesSettings.currentPlan', { plan: getPlanDetails((subscription.formula || subscription.plan_type)!).name })}
               </h3>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
@@ -149,7 +149,7 @@ const ModulesSettings = () => {
           <Button 
             variant="default"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none transition-all"
+            className="h-12 px-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-blue-100 dark:shadow-none transition-all"
           >
             <span>{t('modulesSettings.viewSubscription')}</span>
             <ExternalLink className="h-4 w-4 ml-2" />
@@ -200,7 +200,7 @@ const ModulesSettings = () => {
                 <Settings2 className="h-6 w-6 text-slate-400 dark:text-slate-500" />
               </div>
               <div className="text-left space-y-1">
-                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h3 className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('modulesSettings.sections.functional')}
                 </h3>
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -223,7 +223,7 @@ const ModulesSettings = () => {
                 {Object.entries(functionalByCategory).map(([category, categoryModules]) => (
                   <div key={category} className="space-y-4">
                     <div className="flex items-center gap-3 px-1 mb-6">
-                      <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                      <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
                         {t(`modulesSettings.categories.${category}`, category)}
                       </h4>
                       <div className="h-px flex-1 bg-slate-50 dark:bg-slate-800" />
@@ -298,11 +298,11 @@ const CategorySection = ({ title, icon: Icon, description, accentColor, modules,
               <Icon className={cn("h-6 w-6", colorClasses.iconColor)} />
             </div>
             <div className="space-y-1">
-              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">{title}</h3>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{description}</p>
             </div>
           </div>
-          <Badge className={cn("border-none font-black text-[10px] tracking-widest px-4 py-1.5 rounded-xl uppercase", colorClasses.badge)}>
+          <Badge className={cn("border-none font-semibold text-[10px] tracking-widest px-4 py-1.5 rounded-xl uppercase", colorClasses.badge)}>
             {activeCount} / {modules.length} {t('liveDashboard.operations.active').toUpperCase()}
           </Badge>
         </div>
@@ -311,7 +311,7 @@ const CategorySection = ({ title, icon: Icon, description, accentColor, modules,
       {/* Modules grid */}
       <CardContent className="p-8 bg-white dark:bg-slate-800">
         {modules.length === 0 ? (
-          <p className="text-slate-400 dark:text-slate-500 text-center py-12 font-black text-[10px] uppercase tracking-[0.2em]">
+          <p className="text-slate-400 dark:text-slate-500 text-center py-12 font-semibold text-[10px] uppercase tracking-[0.2em]">
             {t('modulesSettings.noModulesInCategory')}
           </p>
         ) : (
@@ -372,7 +372,7 @@ const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onCli
           )}>
             <Icon className="h-5 w-5" />
           </div>
-          <h4 className="font-black text-slate-900 dark:text-white text-xs uppercase tracking-tight truncate">
+          <h4 className="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-tight truncate">
             {displayName}
           </h4>
         </div>
@@ -414,12 +414,12 @@ const ActivityModuleCard = ({ module, subscription, accentColor, onToggle, onCli
             window.location.href = '/settings/subscription';
           }}
           variant="ghost"
-          className="mt-auto w-full h-9 rounded-xl text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 transition-all"
+          className="mt-auto w-full h-9 rounded-xl text-[10px] font-medium uppercase tracking-widest text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 transition-all"
         >
           {t('modulesSettings.upgrade')}
         </Button>
       ) : module.is_active && (
-        <div className="mt-auto flex items-center gap-2 text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
+        <div className="mt-auto flex items-center gap-2 text-[9px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
           <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
           Module Operational
         </div>
@@ -461,7 +461,7 @@ const ModuleToggleCard = ({ module, subscription, onToggle, onClick }: { module:
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight truncate group-hover/row:text-emerald-600 transition-colors">
+            <span className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-tight truncate group-hover/row:text-emerald-600 transition-colors">
               {module.name.replace('_', ' ')}
             </span>
             {isLocked && <Lock className="h-3 w-3 text-slate-400" />}
@@ -472,11 +472,11 @@ const ModuleToggleCard = ({ module, subscription, onToggle, onClick }: { module:
       
       <div className="ml-4">
         {module.is_active ? (
-          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-black text-[8px] tracking-widest px-2 py-0.5">ACTIVE</Badge>
+          <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-semibold text-[8px] tracking-widest px-2 py-0.5">ACTIVE</Badge>
         ) : isLocked ? (
-          <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-400 border-none font-black text-[8px] tracking-widest px-2 py-0.5">LOCKED</Badge>
+          <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-400 border-none font-semibold text-[8px] tracking-widest px-2 py-0.5">LOCKED</Badge>
         ) : (
-          <Badge variant="outline" className="text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 font-black text-[8px] tracking-widest px-2 py-0.5">INACTIVE</Badge>
+          <Badge variant="outline" className="text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 font-semibold text-[8px] tracking-widest px-2 py-0.5">INACTIVE</Badge>
         )}
       </div>
     </div>
@@ -502,7 +502,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                   <TreeDeciduous className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                   {t('modulesSettings.treeManagement')}
                 </h3>
               </div>
@@ -520,7 +520,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
                 <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
                   <Wheat className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.farmManagementSettings')}</h3>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.farmManagementSettings')}</h3>
               </div>
               <div className="p-1 rounded-[2rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 shadow-inner overflow-hidden">
                 <TreeManagement />
@@ -532,7 +532,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
                 <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
                   <Settings2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.generalSettings')}</h3>
+                <h3 className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">{t('modulesSettings.generalSettings')}</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
@@ -541,7 +541,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
                   { key: 'harvest', label: t('modulesSettings.harvestForecasts') },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50 group hover:border-purple-200 transition-all">
-                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">{item.label}</span>
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-widest">{item.label}</span>
                     <Checkbox defaultChecked className="h-5 w-5 rounded-lg data-[state=checked]:bg-purple-600 border-slate-300" />
                   </div>
                 ))}
@@ -555,7 +555,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full w-fit mx-auto border border-slate-100 dark:border-slate-800">
               <Settings2 className="h-10 w-10 text-slate-200 dark:text-slate-700" />
             </div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
               {t('modulesSettings.noSettings')}
             </p>
           </div>
@@ -574,7 +574,7 @@ const ModuleSettingsPanel = ({ module, onClose }: { module: OrganizationModule;
               <Settings2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+              <h3 className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                 {t('modulesSettings.configurationOf', { name: displayName })}
               </h3>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Adjust module-specific operational parameters</p>

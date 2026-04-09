@@ -490,25 +490,22 @@ void _showConfirm;
     <div className="p-3 sm:p-4 lg:p-6">
       <ListPageLayout
         header={
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              {t('stockManagement.title')}
-            </h2>
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-              {activeTab === "suppliers" && (
+          activeTab === 'suppliers' || activeTab === 'warehouses' ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+              {activeTab === 'suppliers' && (
                 <Button variant="green" onClick={openCreateSupplierModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
                   <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>{t('stockManagement.newSupplier')}</span>
                 </Button>
               )}
-              {activeTab === "warehouses" && (
+              {activeTab === 'warehouses' && (
                 <Button variant="green" onClick={openCreateWarehouseModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
                   <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>{t('stockManagement.newWarehouse')}</span>
                 </Button>
               )}
             </div>
-          </div>
+          ) : undefined
         }
         filters={
           activeTab === "suppliers" || activeTab === "warehouses" ? (

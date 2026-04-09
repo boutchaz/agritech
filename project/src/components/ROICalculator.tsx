@@ -156,7 +156,7 @@ const ROICalculator = ({ className }: ROICalculatorProps) => {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mx-auto mb-3">
             <Mail className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
-          <CardTitle className="text-2xl sm:text-3xl font-bold">
+          <CardTitle className="text-2xl sm:text-3xl font-semibold">
             {t('common.roiCalculator.emailReportTitle')}
           </CardTitle>
           <CardDescription className="text-base">
@@ -257,7 +257,7 @@ const ROICalculator = ({ className }: ROICalculatorProps) => {
         <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mx-auto mb-3">
           <Calculator className="h-6 w-6 text-green-600 dark:text-green-400" />
         </div>
-        <CardTitle className="text-2xl sm:text-3xl font-bold">{t('common.roiCalculator.calculatorTitle')}</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-semibold">{t('common.roiCalculator.calculatorTitle')}</CardTitle>
         <CardDescription className="text-base">{t('common.roiCalculator.calculatorSubtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

@@ -2,11 +2,17 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface ListPageHeaderProps {
-  title: string;
+  /** Omit when variant is "shell" — title already shown in ModernPageHeader / PageLayout */
+  title?: string;
   subtitle?: string;
   actions?: ReactNode;
   icon?: ReactNode;
   className?: string;
+  /**
+   * Use on pages wrapped with ModernPageHeader: skips duplicate h2 title/subtitle,
+   * keeps optional actions row (toolbar) only.
+   */
+  variant?: 'default' | 'shell';
 }
 
 export function ListPageHeader({
@@ -15,7 +21,28 @@ export function ListPageHeader({
   actions,
   icon,
   className,
+  variant = 'default',
 }: ListPageHeaderProps) {
+  if (variant === 'shell') {
+    if (!actions) {
+      return null;
+    }
+    return (
+      <div
+        className={cn(
+          'flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3',
+          className,
+        )}
+      >
+        <div className="flex gap-2 flex-shrink-0 flex-wrap sm:justify-end">{actions}</div>
+      </div>
+    );
+  }
+
+  if (!title) {
+    return null;
+  }
+
   return (
     <div
       className={cn(
@@ -27,13 +54,13 @@ export function ListPageHeader({
         {icon && (
           <div className="flex items-center gap-2.5 mb-1">
             {icon}
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white truncate">
               {title}
             </h2>
           </div>
         )}
         {!icon && (
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white truncate">
             {title}
           </h2>
         )}

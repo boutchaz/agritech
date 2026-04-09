@@ -103,8 +103,7 @@ const AppContent = () => {
         <ListPageLayout
           header={
             <ListPageHeader
-              title="All Payments"
-              subtitle="Track and manage your payment transactions"
+              variant="shell"
               actions={
                 <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className="h-4 w-4 sm:mr-2" />

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/documents')({
   component: DocumentSettingsPage,
@@ -108,18 +108,15 @@ function DocumentSettingsPage() {
     <>
     <ListPageLayout
       header={
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('documents.title')}</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              {t('documents.description')}
-            </p>
-          </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('documents.create')}
-          </Button>
-        </div>
+        <ListPageHeader
+          variant="shell"
+          actions={
+            <Button onClick={handleCreate} className="gap-2">
+              <Plus className="h-4 w-4" />
+              {t('documents.create')}
+            </Button>
+          }
+        />
       }
       filters={
         <FilterBar

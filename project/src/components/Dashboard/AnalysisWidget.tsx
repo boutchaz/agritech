@@ -1,7 +1,7 @@
 import {  useMemo, useState  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
-import { TestTube, TrendingUp, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
+import { TestTube, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAnalysesByFarm } from '../../hooks/useAnalysesQuery';
 import { format, parseISO } from 'date-fns';
@@ -143,15 +143,6 @@ const AnalysisWidget = () => {
     navigate({ to: '/analytics' });
   };
 
-  const getActiveColor = () => {
-    switch (activeType) {
-      case 'soil': return 'teal';
-      case 'plant': return 'green';
-      case 'water': return 'blue';
-      default: return 'teal';
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 h-full flex flex-col gap-6">
@@ -182,8 +173,6 @@ const AnalysisWidget = () => {
     );
   }
 
-  const color = getActiveColor();
-
   return (
     <div className="bg-white dark:bg-slate-800 p-6 flex flex-col gap-6 h-full">
       {/* Header */}
@@ -192,7 +181,7 @@ const AnalysisWidget = () => {
           <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-2xl">
             <TestTube className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.analysis.title', 'Analyses')}
           </h3>
         </div>
@@ -213,7 +202,7 @@ const AnalysisWidget = () => {
             key={type}
             onClick={() => setActiveType(type)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all",
               activeType === type
                 ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-100 dark:border-slate-700"
                 : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -232,8 +221,8 @@ const AnalysisWidget = () => {
             <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
               <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.total', 'Total')}</span>
-                <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-1">{stats.total}</div>
+                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.total', 'Total')}</span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.total}</div>
                 <div className="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tighter">{t('dashboard.widgets.analysis.analyses', 'analyses')}</div>
               </div>
             </div>
@@ -241,8 +230,8 @@ const AnalysisWidget = () => {
             <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
               <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
               <div className="relative">
-                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.recent', 'Recent')}</span>
-                <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-1">{stats.recent}</div>
+                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.recent', 'Recent')}</span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.recent}</div>
                 <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">Last 30 days</div>
               </div>
             </div>
@@ -255,7 +244,7 @@ const AnalysisWidget = () => {
                 <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               <div className="flex-1">
-                <p className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest">
+                <p className="text-[10px] font-medium text-amber-800 dark:text-amber-300 uppercase tracking-widest">
                   {t('dashboard.widgets.analysis.needsAttention', { count: stats.needsAttention })}
                 </p>
                 <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tight mt-0.5">
@@ -269,7 +258,7 @@ const AnalysisWidget = () => {
           {stats.latestAnalysis && (
             <div className="mt-auto">
               <div className="flex items-center justify-between mb-3 px-1">
-                <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   {t('dashboard.widgets.analysis.latestAnalysis', 'Latest Analysis')}
                 </h4>
                 <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -277,7 +266,7 @@ const AnalysisWidget = () => {
               <div className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl shadow-sm">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
                       {t('dashboard.widgets.analysis.parcel', 'Parcel')}
                     </p>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
@@ -285,10 +274,10 @@ const AnalysisWidget = () => {
                     </p>
                   </div>
                   <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                       {getPrimaryIndicator(stats.latestAnalysis).label}
                     </div>
-                    <div className="text-lg font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none mt-1">
+                    <div className="text-lg font-semibold text-blue-600 dark:text-blue-400 tabular-nums leading-none mt-1">
                       {getPrimaryIndicator(stats.latestAnalysis).value}
                     </div>
                   </div>
@@ -296,11 +285,11 @@ const AnalysisWidget = () => {
 
                 {/* Secondary Indicators */}
                 <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-50 dark:border-slate-700/50">
-                  {getSecondaryIndicators(stats.latestAnalysis).map((indicator, idx) => (
+                  {getSecondaryIndicators(stats.latestAnalysis).map((indicator) => (
                     indicator.value !== undefined && indicator.value !== null && (
                       <div key={indicator.label} className="text-center bg-slate-50 dark:bg-slate-900/50 py-2 rounded-xl border border-slate-100 dark:border-slate-700/30">
-                        <div className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{indicator.label}</div>
-                        <div className="text-xs font-black text-slate-700 dark:text-slate-300 tabular-nums mt-0.5">
+                        <div className="text-[8px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{indicator.label}</div>
+                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 tabular-nums mt-0.5">
                           {typeof indicator.value === 'number' ? indicator.value.toFixed(1) : indicator.value}
                         </div>
                       </div>
@@ -314,14 +303,14 @@ const AnalysisWidget = () => {
           {stats.needsAttention === 0 && stats.total > 0 && (
             <div className="flex items-center justify-center gap-2 py-2 px-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-full mt-auto">
               <CheckCircle className="h-3 w-3 text-emerald-500" />
-              <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('dashboard.widgets.analysis.allInNorm')}</span>
+              <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('dashboard.widgets.analysis.allInNorm')}</span>
             </div>
           )}
         </div>
       ) : (
         <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto flex-1 flex flex-col justify-center">
           <TestTube className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.analysis.empty', 'No analyses available')}
           </p>
           <Button

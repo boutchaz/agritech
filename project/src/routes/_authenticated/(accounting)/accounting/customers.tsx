@@ -270,8 +270,7 @@ function CustomersPage() {
         <ListPageLayout
           header={
             <ListPageHeader
-              title={t('accountingModule.customers.title', 'Customers')}
-              subtitle={t('accountingModule.customers.subtitle', 'Manage your customers for sales invoices')}
+              variant="shell"
               actions={
                 <div className="flex flex-wrap items-center gap-2">
                   <Button onClick={() => handleOpenDialog()}>

@@ -1,6 +1,6 @@
 import {  useMemo  } from "react";
 import { useNavigate } from '@tanstack/react-router';
-import { Users, UserCheck, Clock, ChevronRight, Activity } from 'lucide-react';
+import { Users, ChevronRight, Activity } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useWorkers } from '../../hooks/useWorkers';
 import { useTasks } from '../../hooks/useTasks';
@@ -102,7 +102,7 @@ const WorkersActivityWidget = () => {
           <div className="p-2.5 bg-purple-50 dark:bg-purple-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.workers.title')}
           </h3>
         </div>
@@ -121,8 +121,8 @@ const WorkersActivityWidget = () => {
         <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
           <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.workers.active')}</span>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">{stats.active}</div>
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.workers.active')}</span>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.active}</div>
             <div className="text-[9px] font-bold text-purple-600 dark:text-purple-400 mt-1 uppercase tracking-tighter">{t('dashboard.widgets.workers.outOfTotal', { total: stats.total })}</div>
           </div>
         </div>
@@ -130,8 +130,8 @@ const WorkersActivityWidget = () => {
         <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.workers.today')}</span>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">{stats.workingToday}</div>
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.workers.today')}</span>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.workingToday}</div>
             <div className="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tighter">{t('dashboard.widgets.workers.activeToday')}</div>
           </div>
         </div>
@@ -144,11 +144,11 @@ const WorkersActivityWidget = () => {
             <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl group-hover/active:scale-110 transition-transform duration-500">
               <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <span className="text-[10px] font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-emerald-800 dark:text-emerald-300 uppercase tracking-widest">
               {t('dashboard.widgets.workers.tasksInProgress')}
             </span>
           </div>
-          <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
+          <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
             {stats.activeTasks}
           </span>
         </div>
@@ -162,7 +162,7 @@ const WorkersActivityWidget = () => {
       {topWorkers.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.workers.mostActive')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -175,12 +175,12 @@ const WorkersActivityWidget = () => {
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0 border border-purple-100 dark:border-purple-800">
-                    <span className="text-[10px] font-black text-purple-600 dark:text-purple-400">
+                    <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400">
                       {index + 1}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
                       {worker.first_name} {worker.last_name}
                     </p>
                     {worker.position && (
@@ -191,10 +191,10 @@ const WorkersActivityWidget = () => {
                   </div>
                 </div>
                 <div className="text-right flex-shrink-0 ml-3">
-                  <div className="text-xs font-black text-purple-600 dark:text-purple-400 tabular-nums leading-none">
+                  <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 tabular-nums leading-none">
                     {worker.taskCount}
                   </div>
-                  <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  <div className="text-[8px] font-medium text-slate-400 uppercase tracking-widest mt-1">
                     {t('dashboard.widgets.workers.tasks')}
                   </div>
                 </div>
@@ -205,7 +205,7 @@ const WorkersActivityWidget = () => {
       ) : (
         <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
           <Users className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.workers.empty')}
           </p>
           <Button

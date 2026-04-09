@@ -383,8 +383,7 @@ const AppContent = () => {
           <ListPageLayout
             header={
               <ListPageHeader
-                title="Écritures Comptables"
-                subtitle="Consultez et gérez vos écritures du grand livre"
+                variant="shell"
                 actions={
                   <Button
                     onClick={() => setShowCreateModal(true)}

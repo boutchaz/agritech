@@ -21,13 +21,8 @@ interface TileLayerOptions {
 const ESRI_REFERENCE_LABELS =
   'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
-/**
- * Esri World Imagery (Clarity) — higher-resolution, more recent imagery than
- * the standard World_Imagery service. Free for non-commercial / development use
- * under Esri’s Terms of Use.
- */
-const ESRI_CLARITY_URL =
-  'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+/** Google Satellite — no labels, most up-to-date imagery. */
+const GOOGLE_SATELLITE_URL = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
 
 function createDefaultLayers(options: TileLayerOptions): TileLayerSet {
   const streets = new TileLayer({
@@ -40,9 +35,9 @@ function createDefaultLayers(options: TileLayerOptions): TileLayerSet {
   const satellite = new TileLayer({
     preload: 0,
     source: new XYZ({
-      url: ESRI_CLARITY_URL,
-      maxZoom: 19,
-      attributions: 'Imagery \u00a9 Esri (Clarity)',
+      url: GOOGLE_SATELLITE_URL,
+      maxZoom: 20,
+      attributions: 'Imagery \u00a9 Google',
     }),
     visible: options.initialMapType === 'satellite',
     properties: { role: 'satellite' },

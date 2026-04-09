@@ -228,7 +228,7 @@ const OrganizationSettings = () => {
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
               <Building className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
               {t('organization.title')}
             </h2>
           </div>
@@ -244,7 +244,7 @@ const OrganizationSettings = () => {
               const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
-            className="h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
+            className="h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-700 text-xs font-semibold uppercase tracking-widest hover:bg-slate-50 transition-all"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Preview Marketplace</span>
@@ -256,7 +256,7 @@ const OrganizationSettings = () => {
               variant="default" 
               onClick={handleSave} 
               disabled={saving} 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -273,7 +273,7 @@ const OrganizationSettings = () => {
       {error && (
         <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
           <AlertCircle className="h-4 w-4 text-rose-600" />
-          <AlertTitle className="text-sm font-black uppercase tracking-tight">Error</AlertTitle>
+          <AlertTitle className="text-sm font-semibold uppercase tracking-tight">Error</AlertTitle>
           <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
@@ -281,7 +281,7 @@ const OrganizationSettings = () => {
       {success && (activeTab === 'general') && (
         <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-3">
           <CheckCircle className="h-5 w-5 text-emerald-600" />
-          <p className="text-sm font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('organization.success')}</p>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('organization.success')}</p>
         </div>
       )}
 
@@ -292,7 +292,7 @@ const OrganizationSettings = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all whitespace-nowrap",
               activeTab === tab.id
                 ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-100 dark:border-slate-700"
                 : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
@@ -315,7 +315,7 @@ const OrganizationSettings = () => {
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
                     <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('organization.sections.basicInfo')}
                   </CardTitle>
                 </div>
@@ -323,7 +323,7 @@ const OrganizationSettings = () => {
               <CardContent className="p-8 pt-4 space-y-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.name')} *</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.name')} *</Label>
                     <Input
                       type="text"
                       value={orgData.name}
@@ -333,7 +333,7 @@ const OrganizationSettings = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.slug')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.slug')}</Label>
                     <div className="relative">
                       <Input
                         type="text"
@@ -350,7 +350,7 @@ const OrganizationSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.description')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.description')}</Label>
                   <textarea
                     value={orgData.description || ''}
                     onChange={(e) => handleInputChange('description', e.target.value)}
@@ -369,14 +369,14 @@ const OrganizationSettings = () => {
                   <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
                     <MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('organization.sections.address')}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-8 pt-4 space-y-8">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.address')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.address')}</Label>
                   <Input
                     type="text"
                     value={orgData.address || ''}
@@ -388,7 +388,7 @@ const OrganizationSettings = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.city')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.city')}</Label>
                     <Input
                       type="text"
                       value={orgData.city || ''}
@@ -398,7 +398,7 @@ const OrganizationSettings = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.state')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.state')}</Label>
                     <Input
                       type="text"
                       value={orgData.state || ''}
@@ -411,7 +411,7 @@ const OrganizationSettings = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.postalCode')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.postalCode')}</Label>
                     <Input
                       type="text"
                       value={orgData.postal_code || ''}
@@ -421,7 +421,7 @@ const OrganizationSettings = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.country')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.country')}</Label>
                     <Select
                       value={orgData.country || undefined}
                       onValueChange={(val) => handleInputChange('country', val)}
@@ -451,14 +451,14 @@ const OrganizationSettings = () => {
                   <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-xl">
                     <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('organization.sections.contactInfo')}
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-8 pt-4 space-y-6">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.contactPerson')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.contactPerson')}</Label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                     <Input
@@ -472,7 +472,7 @@ const OrganizationSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.email')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.email')}</Label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                     <Input
@@ -486,7 +486,7 @@ const OrganizationSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.phone')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.phone')}</Label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                     <Input
@@ -500,7 +500,7 @@ const OrganizationSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.website')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.website')}</Label>
                   <div className="relative">
                     <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                     <Input
@@ -522,14 +522,14 @@ const OrganizationSettings = () => {
                   <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl">
                     <Globe className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
-                  <CardTitle className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     System Preferences
                   </CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-8 pt-4 space-y-8">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.sections.regionalSettings')}</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.sections.regionalSettings')}</Label>
                   <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                     <CurrencySelector
                       value={orgData.currency || DEFAULT_CURRENCY}
@@ -542,7 +542,7 @@ const OrganizationSettings = () => {
                 <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
                   <div className="flex items-center justify-between group">
                     <div className="space-y-1">
-                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
+                      <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
                         {t('organization.settings.allowNegativeStock', 'Allow Negative Stock')}
                       </h4>
                       <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight max-w-[200px]">
@@ -560,12 +560,12 @@ const OrganizationSettings = () => {
                 <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+                      <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
                         Current Status
                       </h4>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge className={cn(
-                          "border-none font-black text-[9px] tracking-[0.15em] px-3 py-1 uppercase",
+                          "border-none font-semibold text-[9px] tracking-[0.15em] px-3 py-1 uppercase",
                           orgData.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30'
                         )}>
                           {orgData.status === 'active' ? t('organization.status.active') : t('organization.status.suspended')}

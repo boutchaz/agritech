@@ -20,7 +20,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
@@ -1497,18 +1497,15 @@ export default function ItemManagement() {
     <>
       <ListPageLayout
         header={
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{t('items.title')}</h1>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                {t('items.subtitle')}
-              </p>
-            </div>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('items.createItem')}
-            </Button>
-          </div>
+          <ListPageHeader
+            variant="shell"
+            actions={
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('items.createItem')}
+              </Button>
+            }
+          />
         }
         filters={
           <>

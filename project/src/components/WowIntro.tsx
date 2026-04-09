@@ -1,6 +1,6 @@
-import {  useEffect, useRef, useState, useMemo, Suspense  } from "react";
+import {  useEffect, useRef, useState, Suspense  } from "react";
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars, PerspectiveCamera, Sparkles, Float, Sky, Points, PointMaterial } from '@react-three/drei';
+import { Stars, PerspectiveCamera, Sparkles, Points, PointMaterial } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
@@ -19,7 +19,7 @@ const FEATURES = [
 
 const NeuralField = ({ progress }: { progress: number }) => {
   const count = 4000;
-  const positions = useMemo(() => {
+  const [positions] = useState(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       pos[i * 3] = (Math.random() - 0.5) * 40;
@@ -27,10 +27,10 @@ const NeuralField = ({ progress }: { progress: number }) => {
       pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
     }
     return pos;
-  }, []);
+  });
 
   const pointsRef = useRef<THREE.Points>(null);
-  useFrame((state) => {
+  useFrame(() => {
     if (pointsRef.current) {
       pointsRef.current.rotation.y += 0.001;
     }
@@ -53,7 +53,7 @@ const NeuralField = ({ progress }: { progress: number }) => {
 
 const NeuralOrchard = ({ progress }: { progress: number }) => {
   const treeCount = 60;
-  const treePositions = useMemo(() => {
+  const [treePositions] = useState(() => {
     const temp: [number, number, number][] = [];
     for (let i = 0; i < treeCount; i++) {
       temp.push([
@@ -63,7 +63,7 @@ const NeuralOrchard = ({ progress }: { progress: number }) => {
       ]);
     }
     return temp;
-  }, []);
+  });
 
   return (
     <group>
@@ -92,6 +92,11 @@ const NeuralOrchard = ({ progress }: { progress: number }) => {
 
 const OrbitalNode = () => {
   const mesh = useRef<THREE.Group>(null);
+  const [ringRotations] = useState(() =>
+    [1, 1.3, 1.6].map(
+      () => [Math.random() * Math.PI, Math.random() * Math.PI, 0] as [number, number, number],
+    ),
+  );
   useFrame((state) => {
     if (mesh.current) {
       mesh.current.rotation.z += 0.01;
@@ -110,7 +115,7 @@ const OrbitalNode = () => {
       </mesh>
       {/* Orbital Rings */}
       {[1, 1.3, 1.6].map((radius, meshIdx) => (
-        <mesh key={"mesh-" + meshIdx} rotation={[Math.random() * Math.PI, Math.random() * Math.PI, 0]}>
+        <mesh key={"mesh-" + meshIdx} rotation={ringRotations[meshIdx]}>
           <torusGeometry args={[radius, 0.01, 16, 100]} />
           <meshBasicMaterial color="#10b981" transparent opacity={0.5} />
         </mesh>
@@ -243,7 +248,7 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
               Neural Network V4
             </div>
           </div>
-          <h1 className="text-8xl font-black text-white tracking-tighter mb-4 leading-none">
+          <h1 className="text-8xl font-semibold text-white tracking-tighter mb-4 leading-none">
             AGRO<span className="text-emerald-500">GINA</span>
           </h1>
           <p className="text-emerald-500/60 text-xl font-light tracking-[0.2em] max-w-md uppercase">

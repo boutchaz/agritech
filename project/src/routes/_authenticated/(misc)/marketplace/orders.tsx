@@ -253,16 +253,6 @@ function SellerOrdersPage() {
 
   return (
     <ListPageLayout
-      header={
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {t('marketplace.orders.title', 'Gestion des commandes')}
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('marketplace.orders.subtitle', 'Gérez les commandes reçues de vos clients')}
-          </p>
-        </div>
-      }
       filters={
         <FilterBar
           searchValue={searchQuery}

@@ -526,9 +526,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
     <ListPageLayout
       header={
         <ListPageHeader
-          title={t('workers.list.title')}
-          subtitle={t('workers.list.subtitle')}
-          icon={<Users className="h-5 w-5 shrink-0 text-blue-600 sm:h-6 sm:w-6" />}
+          variant="shell"
           actions={
             <Can
               I="create"

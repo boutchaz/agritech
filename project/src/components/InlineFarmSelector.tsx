@@ -1,7 +1,7 @@
 
 import { cn } from '@/lib/utils';
 import { useAuth } from '../hooks/useAuth';
-import { MapPin, ChevronDown, Check } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   Select,
@@ -52,15 +52,15 @@ const InlineFarmSelector = ({
             <MapPin className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('farmSelector.activeFarm', 'Active Farm Context')}</p>
-            <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase mt-0.5">{currentFarm.name}</h4>
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('farmSelector.activeFarm', 'Active Farm Context')}</p>
+            <h4 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase mt-0.5">{currentFarm.name}</h4>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <div className="hidden md:flex flex-col items-end px-4 border-r border-slate-100 dark:border-slate-700">
-            <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Surface</span>
-            <span className="text-sm font-black text-slate-700 dark:text-slate-300 tabular-nums">{currentFarm.total_area?.toFixed(2) || '0.00'} HA</span>
+            <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Surface</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums">{currentFarm.total_area?.toFixed(2) || '0.00'} HA</span>
           </div>
           
           <Select
@@ -82,7 +82,7 @@ const InlineFarmSelector = ({
                       <span className="font-bold uppercase tracking-tight text-xs">{farm.name}</span>
                     </div>
                     {farm.total_area && (
-                      <Badge variant="outline" className="text-[9px] font-black tabular-nums border-slate-200 text-slate-500">{farm.total_area} HA</Badge>
+                      <Badge variant="outline" className="text-[9px] font-medium tabular-nums border-slate-200 text-slate-500">{farm.total_area} HA</Badge>
                     )}
                   </div>
                 </SelectItem>
@@ -102,8 +102,8 @@ const InlineFarmSelector = ({
             <MapPin className="h-6 w-6 text-white" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">Attention Required</p>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight uppercase mt-1">
+            <p className="text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em]">Attention Required</p>
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase mt-1">
               {message || t('farmSelector.selectFarm')}
             </h3>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1 max-w-md">
@@ -120,7 +120,7 @@ const InlineFarmSelector = ({
               if (farm) setCurrentFarm(farm);
             }}
           >
-            <SelectTrigger className="w-full bg-white dark:bg-slate-800 border-none rounded-2xl h-14 px-6 shadow-md hover:shadow-lg transition-all text-sm font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+            <SelectTrigger className="w-full bg-white dark:bg-slate-800 border-none rounded-2xl h-14 px-6 shadow-md hover:shadow-lg transition-all text-sm font-semibold uppercase tracking-widest text-blue-600 dark:text-blue-400">
               <SelectValue placeholder={t('farmSelector.chooseFarm', 'Choose a farm...')} />
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-none shadow-2xl">
@@ -129,10 +129,10 @@ const InlineFarmSelector = ({
                   <div className="flex items-center justify-between w-full gap-8">
                     <div className="flex items-center gap-3">
                       <MapPin className="h-4 w-4 text-blue-600" />
-                      <span className="font-black uppercase tracking-widest text-xs">{farm.name}</span>
+                      <span className="font-semibold uppercase tracking-widest text-xs">{farm.name}</span>
                     </div>
                     {farm.total_area && (
-                      <span className="text-[10px] font-black text-slate-400 tabular-nums">
+                      <span className="text-[10px] font-medium text-slate-400 tabular-nums">
                         {farm.total_area} HA
                       </span>
                     )}

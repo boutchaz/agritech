@@ -25,7 +25,7 @@ interface FarmHierarchyHeaderProps {
 }
 
 const FarmHierarchyHeader = ({
-  organizationName,
+  organizationName: _organizationName,
   totalFarms,
   totalArea,
   viewMode,
@@ -40,25 +40,8 @@ const FarmHierarchyHeader = ({
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Quick Stats */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div className="w-full lg:w-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
-              <Building2 className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate max-w-full">
-                {t('nav.farmHierarchy')}
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-full">
-                {organizationName}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Toolbar only — page title & org live in ModernPageHeader (avoids duplicate h1 / repeated Building icon) */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2">
           {(selectedFarmId && onExportFarm) && (
             <Button
               variant="outline"
@@ -93,7 +76,6 @@ const FarmHierarchyHeader = ({
             <Plus className="w-4 h-4" />
             <span>{t('farmHierarchy.farm.newFarm')}</span>
           </Button>
-        </div>
       </div>
 
       {/* Stats Cards */}
@@ -139,7 +121,7 @@ const FarmHierarchyHeader = ({
               <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
             {t('farmHierarchy.exportImport')}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

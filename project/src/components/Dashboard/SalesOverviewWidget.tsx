@@ -112,7 +112,7 @@ const SalesOverviewWidget = () => {
           <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <ShoppingCart className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.sales.title', 'Sales Orders')}
           </h3>
         </div>
@@ -131,8 +131,8 @@ const SalesOverviewWidget = () => {
         <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full -mr-12 -mt-12 group-hover/card:scale-150 transition-transform duration-700"></div>
         <div className="relative flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.sales.thisMonth', 'This Month')}</span>
-            <div className="text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.sales.thisMonth', 'This Month')}</span>
+            <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
               {formatCurrency(stats.thisMonthTotal)}
             </div>
             <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 mt-1 uppercase tracking-tighter">
@@ -140,10 +140,10 @@ const SalesOverviewWidget = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 tabular-nums">
               {stats.total}
             </div>
-            <div className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
+            <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
               {t('dashboard.widgets.sales.totalOrders', 'Total Orders')}
             </div>
           </div>
@@ -160,7 +160,7 @@ const SalesOverviewWidget = () => {
         ].map((item) => (
           <div key={item.label} className={cn("text-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 min-w-0 transition-transform hover:scale-105 duration-300", item.bg)}>
             <item.icon className={cn("h-3.5 w-3.5 flex-shrink-0", item.color)} />
-            <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
+            <div className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
             <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tight leading-tight break-words hyphens-auto px-0.5">
               {t(`dashboard.widgets.sales.${item.label}`)}
             </div>
@@ -172,7 +172,7 @@ const SalesOverviewWidget = () => {
       {stats.recentOrders.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.sales.recentOrders', 'Recent Orders')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -186,10 +186,10 @@ const SalesOverviewWidget = () => {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tighter">
+                    <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tighter">
                       {order.order_number}
                     </p>
-                    <Badge className={cn("border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusColor(order.status))}>
+                    <Badge className={cn("border-none font-semibold text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusColor(order.status))}>
                       {order.status}
                     </Badge>
                   </div>
@@ -198,7 +198,7 @@ const SalesOverviewWidget = () => {
                   </p>
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
-                  <div className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white tabular-nums">
                     {formatCurrency(order.grand_total)}
                   </div>
                   <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-0.5">

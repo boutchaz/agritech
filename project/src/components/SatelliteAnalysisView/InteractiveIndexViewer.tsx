@@ -1287,6 +1287,7 @@ const MultiIndexOverlayMap = ({ boundary, multiData, overlayOpacity, baseLayer }
               selectedIndex={vegIndex}
               colorPalette={getIndexColorPalette(vegIndex)}
               opacity={overlayOpacity.get(vegIndex) || 0.7}
+              boundary={boundary as [number, number][]}
             />
           );
         })}

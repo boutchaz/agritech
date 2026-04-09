@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader } from '@/components/ui/data-table';
 import { SectionLoader } from '@/components/ui/loader';
 
 
@@ -160,21 +160,17 @@ const AppContent = () => {
       <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6", isRTL && "text-right")}>
         <ListPageLayout
           header={
-            <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
-              <div className="min-w-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('invoices.allInvoices', 'All Invoices')}</h2>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                  {t('invoices.description', 'Track and manage your invoices')}
-                </p>
-              </div>
-              <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+            <ListPageHeader
+              variant="shell"
+              className={isRTL ? 'sm:flex-row-reverse' : undefined}
+              actions={
                 <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
                   <span className="hidden sm:inline">{t('invoices.actions.create', 'Create Invoice')}</span>
                   <span className="sm:hidden">New</span>
                 </Button>
-              </div>
-            </div>
+              }
+            />
           }
           filters={
             <FilterBar

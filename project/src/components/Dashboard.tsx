@@ -51,7 +51,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.farm.title')}</p>
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
                   {currentFarm ? currentFarm.name : t('dashboard.widgets.farm.noFarm')}
                 </h3>
               </div>

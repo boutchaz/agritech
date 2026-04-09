@@ -237,7 +237,7 @@ const ActivityHeatMap = ({
               <MapIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
                 {t('liveDashboard.heatmap.title')}
               </h3>
               <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
@@ -248,7 +248,7 @@ const ActivityHeatMap = ({
           
           <div className="flex flex-wrap items-center gap-3">
             {lastUpdated && (
-              <span className="hidden sm:flex text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
+              <span className="hidden sm:flex text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
                 <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
                 {new Date(lastUpdated).toLocaleTimeString()}
               </span>
@@ -260,7 +260,7 @@ const ActivityHeatMap = ({
                 variant={isSatellite ? 'default' : 'ghost'}
                 onClick={() => setIsSatellite(true)}
                 className={cn(
-                  "h-8 text-[10px] font-black uppercase tracking-widest rounded-lg px-3",
+                  "h-8 text-[10px] font-medium uppercase tracking-widest rounded-lg px-3",
                   isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
                 )}
               >
@@ -272,7 +272,7 @@ const ActivityHeatMap = ({
                 variant={!isSatellite ? 'default' : 'ghost'}
                 onClick={() => setIsSatellite(false)}
                 className={cn(
-                  "h-8 text-[10px] font-black uppercase tracking-widest rounded-lg px-3",
+                  "h-8 text-[10px] font-medium uppercase tracking-widest rounded-lg px-3",
                   !isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
                 )}
               >
@@ -295,7 +295,7 @@ const ActivityHeatMap = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
             </div>
           </div>
         </div>
@@ -329,7 +329,7 @@ const ActivityHeatMap = ({
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-3xl w-fit mx-auto mb-4 border border-slate-100 dark:border-slate-800">
                 <MapIcon className="h-10 w-10 text-slate-300 dark:text-slate-600" />
               </div>
-              <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('liveDashboard.heatmap.noFarms')}</h4>
+              <h4 className="text-lg font-semibold text-slate-900 dark:text-white uppercase tracking-tight">{t('liveDashboard.heatmap.noFarms')}</h4>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
                 {t('liveDashboard.heatmap.noFarmsHint')}
               </p>
@@ -341,7 +341,7 @@ const ActivityHeatMap = ({
           <>
             {/* Legend Overlay */}
             <div className="absolute bottom-6 left-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-5 z-[1000] min-w-[200px]">
-              <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Legend</h4>
+              <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Legend</h4>
               <div className="space-y-3">
                 {presentTypes.map(type => (
                   <div key={type} className="flex items-center gap-3 group/item cursor-default">
@@ -349,14 +349,14 @@ const ActivityHeatMap = ({
                       className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 transition-transform group-hover/item:scale-125"
                       style={{ background: ACTIVITY_COLORS[type] ?? '#6b7280' }}
                     />
-                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-widest">
                       {ACTIVITY_LABELS[type] ?? type}
                     </span>
                   </div>
                 ))}
                 <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-50 dark:border-slate-700 opacity-60">
                   <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 border-dashed border-slate-400 bg-slate-100 dark:bg-slate-900" />
-                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">Idle / Farm</span>
+                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">Idle / Farm</span>
                 </div>
               </div>
             </div>
@@ -364,15 +364,15 @@ const ActivityHeatMap = ({
             {/* Live Stats Overlay */}
             <div className="absolute top-6 right-6 flex flex-col gap-3 z-[1000]">
               <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 min-w-[160px]">
-                <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Active Assets</p>
+                <p className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Active Assets</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{activeFarmsCount}</span>
+                  <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">{activeFarmsCount}</span>
                   <span className="text-[10px] font-bold text-slate-400">/ {totalFarmsCount} FARMS</span>
                 </div>
                 {activeCount > 0 && (
                   <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg w-fit">
                     <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <span className="text-[8px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
+                    <span className="text-[8px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">
                       {activeCount} OPERATING
                     </span>
                   </div>
@@ -383,7 +383,7 @@ const ActivityHeatMap = ({
                 variant="secondary"
                 size="sm"
                 onClick={() => fitAllRef.current?.()}
-                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-slate-100 dark:border-slate-700 shadow-lg text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-white transition-all h-10 px-4"
+                className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-xl border border-slate-100 dark:border-slate-700 shadow-lg text-[10px] font-medium uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-white transition-all h-10 px-4"
               >
                 Reset View
               </Button>

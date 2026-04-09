@@ -1,7 +1,7 @@
 import {  useMemo  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
-import { Receipt, ChevronRight, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { Receipt, ChevronRight, AlertCircle, CheckCircle, Clock, DollarSign } from 'lucide-react';
 import { useInvoices, useInvoiceStats } from '../../hooks/useInvoices';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,7 +42,7 @@ const AccountingWidget = () => {
   }, [invoices]);
 
   const handleViewInvoices = () => {
-    navigate({ to: '/accounting-invoices' });
+    navigate({ to: '/accounting/invoices' });
   };
 
   const handleViewAccounting = () => {
@@ -117,7 +117,7 @@ const AccountingWidget = () => {
           <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <Receipt className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.accounting.title', 'Accounting')}
           </h3>
         </div>
@@ -136,10 +136,10 @@ const AccountingWidget = () => {
         <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.accounting.revenue', 'Revenue')}
             </span>
-            <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums mt-1 truncate">
+            <div className="text-xl font-semibold text-slate-900 dark:text-white tabular-nums mt-1 truncate">
               {formatCurrency(detailedStats.salesTotal)}
             </div>
             <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">
@@ -151,10 +151,10 @@ const AccountingWidget = () => {
         <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-rose-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.accounting.expenses', 'Expenses')}
             </span>
-            <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums mt-1 truncate">
+            <div className="text-xl font-semibold text-slate-900 dark:text-white tabular-nums mt-1 truncate">
               {formatCurrency(detailedStats.purchaseTotal)}
             </div>
             <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-1 uppercase tracking-tighter">
@@ -174,7 +174,7 @@ const AccountingWidget = () => {
         ].map((item) => (
           <div key={item.label} className={cn("text-center p-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-transform hover:scale-105 duration-300", item.bg)}>
             <item.icon className={cn("h-3.5 w-3.5", item.color)} />
-            <div className="text-sm font-black text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
+            <div className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums leading-none">{item.value}</div>
             <div className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate w-full">
               {t(`dashboard.widgets.accounting.${item.label}`)}
             </div>
@@ -189,10 +189,10 @@ const AccountingWidget = () => {
             <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest leading-none">
+            <p className="text-[10px] font-medium text-amber-800 dark:text-amber-300 uppercase tracking-widest leading-none">
               {t('dashboard.widgets.accounting.outstandingAlert', 'Outstanding')}
             </p>
-            <p className="text-sm font-black text-amber-900 dark:text-amber-200 mt-1 tabular-nums">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mt-1 tabular-nums">
               {formatCurrency(stats.outstandingAmount)}
             </p>
           </div>
@@ -203,7 +203,7 @@ const AccountingWidget = () => {
       {detailedStats.recentInvoices.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.accounting.recentInvoices', 'Recent Invoices')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -217,10 +217,10 @@ const AccountingWidget = () => {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="text-[11px] font-black text-slate-900 dark:text-white truncate uppercase tracking-tighter">
+                    <p className="text-[11px] font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tighter">
                       {invoice.invoice_number}
                     </p>
-                    <Badge className={cn("border-none font-black text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusColor(invoice.status))}>
+                    <Badge className={cn("border-none font-semibold text-[8px] tracking-widest px-1.5 py-0 h-4", getStatusColor(invoice.status))}>
                       {invoice.status}
                     </Badge>
                   </div>
@@ -229,7 +229,7 @@ const AccountingWidget = () => {
                   </p>
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
-                  <div className="text-xs font-black text-slate-900 dark:text-white tabular-nums">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white tabular-nums">
                     {formatCurrency(Number(invoice.grand_total))}
                   </div>
                   <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase mt-0.5">

@@ -23,7 +23,6 @@ import {
 } from '@/components/LiveDashboard'
 import {
   trackDashboardView,
-  trackLiveModeToggle,
   trackRefreshMetrics,
   trackPageView,
 } from '@/lib/analytics'
@@ -181,7 +180,7 @@ const AppContent = () => {
             {/* Enhanced Live Mode Toggle */}
             <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
               <span className={cn(
-                "text-[10px] font-black uppercase tracking-widest px-2 transition-colors",
+                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
                 isLiveMode ? "text-slate-400" : "text-slate-600 dark:text-slate-300"
               )}>Static</span>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -194,7 +193,7 @@ const AppContent = () => {
                 <div className="w-10 h-5 bg-slate-300 dark:bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
               </label>
               <span className={cn(
-                "text-[10px] font-black uppercase tracking-widest px-2 transition-colors",
+                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
                 isLiveMode ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"
               )}>Live</span>
             </div>
@@ -284,21 +283,6 @@ const AppContent = () => {
           </div>
         ) : (
           <div className="animate-in fade-in duration-500 space-y-8">
-            {/* Regular Dashboard Content */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-6">
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {t('dashboard.unifiedView.title')}
-                </h2>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  {t('dashboard.unifiedView.subtitle')}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-full border border-blue-100 dark:border-blue-800">
-                <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-widest">Global Status: Optimal</span>
-              </div>
-            </div>
             <Dashboard sensorData={[]} settings={dashboardSettings} />
           </div>
         )}
@@ -330,13 +314,13 @@ const QuickActionsButton = () => {
     <Button
       type="button"
       onClick={handleClick}
-      className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 h-10 text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-400 dark:hover:text-emerald-300"
+      className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 h-10 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-400 dark:hover:text-emerald-300"
     >
       <span className="flex items-center gap-2">
         <Search className="h-3.5 w-3.5" />
         {t('dashboard.quickActions')}
       </span>
-      <span className="hidden items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-black text-slate-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500 sm:flex">
+      <span className="hidden items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500 sm:flex">
         <kbd className="tracking-tighter">CMD</kbd>
         <span className="opacity-50">+</span>
         <kbd className="tracking-tighter">K</kbd>

@@ -108,14 +108,11 @@ const UpcomingTasksWidget = () => {
   };
 
   const handleTaskClick = (task: Task) => {
-    navigate({
-      to: '/tasks/calendar',
-      search: { taskId: task.id }
-    });
+    navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
   };
 
   const handleViewAllTasks = () => {
-    navigate({ to: '/tasks/calendar' });
+    navigate({ to: '/tasks' });
   };
 
   if (isLoading) {
@@ -150,7 +147,7 @@ const UpcomingTasksWidget = () => {
           <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
             <Calendar className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.tasks.title')}
           </h3>
         </div>
@@ -184,7 +181,7 @@ const UpcomingTasksWidget = () => {
                   )} 
                 />
                 {getTaskCountForDate(date) > 0 && !isSameDay(date, selectedDate) && (
-                  <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[8px] font-black rounded-full w-3.5 h-3.5 flex items-center justify-center border-2 border-slate-50 dark:border-slate-900">
+                  <div className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[8px] font-medium rounded-full w-3.5 h-3.5 flex items-center justify-center border-2 border-slate-50 dark:border-slate-900">
                     {getTaskCountForDate(date)}
                   </div>
                 )}
@@ -198,7 +195,7 @@ const UpcomingTasksWidget = () => {
       {/* Tasks for selected date */}
       <div className="space-y-4 flex-1 min-h-0">
         <div className="flex items-center justify-between px-1">
-          <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+          <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
             {format(selectedDate, 'EEEE d MMMM yyyy', { locale: getLocale() })}
           </h4>
           <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -207,7 +204,7 @@ const UpcomingTasksWidget = () => {
         {tasksForSelectedDate.length === 0 ? (
           <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
             <Calendar className="h-10 w-10 mx-auto mb-3 text-slate-200 dark:text-slate-700" />
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.tasks.noTasks')}</p>
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.tasks.noTasks')}</p>
           </div>
         ) : (
           <div className="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
@@ -220,10 +217,10 @@ const UpcomingTasksWidget = () => {
                   className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-all duration-300 shadow-sm hover:shadow group"
                 >
                   <div className="flex items-start justify-between gap-3 mb-3">
-                    <h5 className="font-black text-xs text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight line-clamp-1 flex-1">
+                    <h5 className="font-semibold text-xs text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase tracking-tight line-clamp-1 flex-1">
                       {task.title}
                     </h5>
-                    <Badge className={cn("border-none font-black text-[8px] tracking-widest px-2 py-0 h-5", getStatusColor(task.status))}>
+                    <Badge className={cn("border-none font-semibold text-[8px] tracking-widest px-2 py-0 h-5", getStatusColor(task.status))}>
                       {getStatusLabel(task.status)}
                     </Badge>
                   </div>
@@ -271,8 +268,8 @@ const UpcomingTasksWidget = () => {
       {/* Summary footer */}
       {upcomingTasks.length > 0 && (
         <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
-          <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.tasks.upcomingSummary', { count: upcomingTasks.length }).split(' ')[1]} tasks</span>
-          <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-lg">
+          <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.tasks.upcomingSummary', { count: upcomingTasks.length }).split(' ')[1]} tasks</span>
+          <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-lg">
             {upcomingTasks.length}
           </span>
         </div>

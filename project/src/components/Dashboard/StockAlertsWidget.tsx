@@ -1,7 +1,7 @@
 import {  useMemo  } from "react";
 import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
-import { Package, AlertTriangle, ChevronRight, TrendingDown, CheckCircle } from 'lucide-react';
+import { Package, ChevronRight, CheckCircle } from 'lucide-react';
 import { useInventory, type InventoryItem } from '../../hooks/useInventory';
 import { useTranslation } from 'react-i18next';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,7 +70,7 @@ const StockAlertsWidget = () => {
           <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
             <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
           </div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight uppercase">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
             {t('dashboard.widgets.stock.title')}
           </h3>
         </div>
@@ -89,9 +89,9 @@ const StockAlertsWidget = () => {
         <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative min-w-0">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.alerts')}</span>
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.alerts')}</span>
             <div className={cn(
-              "text-3xl font-black tabular-nums mt-1",
+              "text-3xl font-bold tabular-nums mt-1",
               lowStockItems.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-900 dark:text-white"
             )}>
               {lowStockItems.length}
@@ -105,8 +105,8 @@ const StockAlertsWidget = () => {
         <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
           <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
           <div className="relative min-w-0">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.ok')}</span>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tabular-nums mt-1">
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.ok')}</span>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
               {healthyStock}
             </div>
             <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tight leading-tight break-words">
@@ -120,7 +120,7 @@ const StockAlertsWidget = () => {
       {lowStockItems.length > 0 ? (
         <div className="mt-auto">
           <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
               {t('dashboard.widgets.stock.lowStock')}
             </h4>
             <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
@@ -132,7 +132,7 @@ const StockAlertsWidget = () => {
                 className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
                     {item.name}
                   </p>
                   {item.brand && (
@@ -142,10 +142,10 @@ const StockAlertsWidget = () => {
                   )}
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
-                  <div className="text-sm font-black text-amber-600 dark:text-amber-400 tabular-nums">
+                  <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                     {item.quantity || 0}
                   </div>
-                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                  <div className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">
                     {item.unit || t('dashboard.widgets.stock.units')}
                   </div>
                 </div>
@@ -155,7 +155,7 @@ const StockAlertsWidget = () => {
           {lowStockItems.length > 5 && (
             <button
               onClick={handleViewStock}
-              className="w-full text-center py-2 mt-2 text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+              className="w-full text-center py-2 mt-2 text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
             >
               + {lowStockItems.length - 5} {t('dashboard.widgets.stock.moreItems')}
             </button>
@@ -172,8 +172,8 @@ const StockAlertsWidget = () => {
 
       {/* Footer Stats */}
       <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
-        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.stock.totalProducts')}</span>
-        <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-lg">{totalItems}</span>
+        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.stock.totalProducts')}</span>
+        <span className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-lg">{totalItems}</span>
       </div>
     </div>
   );

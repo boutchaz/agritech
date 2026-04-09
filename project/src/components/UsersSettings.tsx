@@ -337,7 +337,7 @@ const UsersSettings = () => {
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
               <Users className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
               {t('users.title')}
             </h2>
           </div>
@@ -350,7 +350,7 @@ const UsersSettings = () => {
           I="invite"
           a="User"
           fallback={
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700">
+            <div className="text-[10px] font-medium uppercase tracking-widest text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-700">
               {t('users.upgradeToInvite')}
             </div>
           }
@@ -358,7 +358,7 @@ const UsersSettings = () => {
           <Button 
             variant="default" 
             onClick={() => setShowInviteUser(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
           >
             <Plus className="h-4 w-4 mr-2" />
             {t('users.invite.button')}
@@ -376,8 +376,8 @@ const UsersSettings = () => {
         </div>
         <div className="lg:col-span-4">
           <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Seats</span>
-            <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums bg-white dark:bg-slate-800 px-3 py-1 rounded-xl shadow-sm">{users.length}</span>
+            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">Active Seats</span>
+            <span className="text-xl font-semibold text-slate-900 dark:text-white tabular-nums bg-white dark:bg-slate-800 px-3 py-1 rounded-xl shadow-sm">{users.length}</span>
           </div>
         </div>
       </div>
@@ -385,7 +385,7 @@ const UsersSettings = () => {
       {error && (
         <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
           <AlertCircle className="h-4 w-4 text-rose-600" />
-          <AlertTitle className="text-sm font-black uppercase tracking-tight">Error</AlertTitle>
+          <AlertTitle className="text-sm font-semibold uppercase tracking-tight">Error</AlertTitle>
           <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
         </Alert>
       )}
@@ -397,7 +397,7 @@ const UsersSettings = () => {
       ) : users.length === 0 ? (
         <Card className="rounded-[2.5rem] border-2 border-dashed border-slate-100 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/30 p-12 text-center">
           <Users className="mx-auto h-12 w-12 text-slate-200 dark:text-slate-700 mb-4" />
-          <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
             {t('users.empty.title')}
           </h3>
           <p className="text-sm font-medium text-slate-400 mt-2 max-w-sm mx-auto">
@@ -429,23 +429,23 @@ const UsersSettings = () => {
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                          <span className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-tight truncate">
                             {fullName}
                           </span>
                           {user.user_id === currentUser?.id && (
-                            <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-black uppercase px-1.5 py-0">SELF</Badge>
+                            <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-medium uppercase px-1.5 py-0">SELF</Badge>
                           )}
                         </div>
                         <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest">
                           {user.profile?.email}
                         </div>
                         <div className="flex items-center gap-2 pt-2 flex-wrap">
-                          <div className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-none font-black text-[8px] tracking-widest uppercase", getRoleColor(user.role.name))}>
+                          <div className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-none font-semibold text-[8px] tracking-widest uppercase", getRoleColor(user.role.name))}>
                             {getRoleIcon(user.role.name)}
                             {user.role.display_name}
                           </div>
                           <Badge className={cn(
-                            "border-none font-black text-[8px] tracking-widest px-2 py-0.5 uppercase",
+                            "border-none font-semibold text-[8px] tracking-widest px-2 py-0.5 uppercase",
                             user.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30'
                           )}>
                             {user.is_active ? t('users.status.active') : t('users.status.inactive')}
@@ -524,19 +524,19 @@ const UsersSettings = () => {
             <Table dir={isRTL ? 'rtl' : 'ltr'}>
               <TableHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
                 <TableRow>
-                  <TableHead className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <TableHead className="px-8 py-5 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     {t('users.table.user')}
                   </TableHead>
-                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <TableHead className="px-6 py-5 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     {t('users.table.role')}
                   </TableHead>
-                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <TableHead className="px-6 py-5 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     {t('users.table.status')}
                   </TableHead>
-                  <TableHead className="px-6 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <TableHead className="px-6 py-5 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     {t('users.table.joinedOn')}
                   </TableHead>
-                  <TableHead className="px-8 py-5 text-end text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <TableHead className="px-8 py-5 text-end text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                     {t('users.table.actions')}
                   </TableHead>
                 </TableRow>
@@ -560,10 +560,10 @@ const UsersSettings = () => {
                             className="rounded-xl shadow-sm border border-slate-100 dark:border-slate-700"
                           />
                           <div className="min-w-0 space-y-0.5">
-                            <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                            <div className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                               <span className="truncate">{fullName}</span>
                               {user.user_id === currentUser?.id && (
-                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-black px-1.5 py-0 h-4">YOU</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-600 text-[8px] font-medium px-1.5 py-0 h-4">YOU</Badge>
                               )}
                             </div>
                             <div className="truncate text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
@@ -573,21 +573,21 @@ const UsersSettings = () => {
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-5">
-                        <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-xl border-none font-black text-[9px] tracking-widest uppercase", getRoleColor(user.role.name))}>
+                        <div className={cn("inline-flex items-center gap-2 px-3 py-1 rounded-xl border-none font-semibold text-[9px] tracking-widest uppercase", getRoleColor(user.role.name))}>
                           {getRoleIcon(user.role.name)}
                           {user.role.display_name}
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-5">
                         <Badge className={cn(
-                          "border-none font-black text-[9px] tracking-widest px-3 py-1 uppercase",
+                          "border-none font-semibold text-[9px] tracking-widest px-3 py-1 uppercase",
                           user.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30'
                         )}>
                           {user.is_active ? t('users.status.active') : t('users.status.inactive')}
                         </Badge>
                       </TableCell>
                       <TableCell className="px-6 py-5">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums">
+                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums">
                           {new Date(user.created_at).toLocaleDateString(dateLocale, {
                             day: '2-digit', month: 'short', year: 'numeric'
                           })}
@@ -671,7 +671,7 @@ const UsersSettings = () => {
                   <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
                     <Mail className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('users.invite.title')}
                   </CardTitle>
                 </div>
@@ -691,13 +691,13 @@ const UsersSettings = () => {
             </CardHeader>
 
             <CardContent className="p-8 space-y-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-relaxed">
                 {t('users.invite.description')}
               </p>
 
               <div className="space-y-6 pt-2">
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.email')} *</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.email')} *</Label>
                   <Input
                     type="email"
                     value={inviteUser.email}
@@ -709,7 +709,7 @@ const UsersSettings = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.firstName')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.firstName')}</Label>
                     <Input
                       type="text"
                       value={inviteUser.first_name}
@@ -719,7 +719,7 @@ const UsersSettings = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.lastName')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.lastName')}</Label>
                     <Input
                       type="text"
                       value={inviteUser.last_name}
@@ -731,7 +731,7 @@ const UsersSettings = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.role')} *</Label>
+                  <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.invite.fields.role')} *</Label>
                   <Select
                     value={inviteUser.role_id}
                     onValueChange={(val) => setInviteUser({ ...inviteUser, role_id: val })}
@@ -752,7 +752,7 @@ const UsersSettings = () => {
 
               {error && (
                 <div className="p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-900/30">
-                  <p className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">{error}</p>
+                  <p className="text-[10px] font-medium text-rose-600 dark:text-rose-400 uppercase tracking-widest">{error}</p>
                 </div>
               )}
 
@@ -764,7 +764,7 @@ const UsersSettings = () => {
                     setInviteUser({ email: '', role_id: '', first_name: '', last_name: '' });
                     setError(null);
                   }}
-                  className="h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400"
+                  className="h-12 px-8 rounded-2xl text-[10px] font-medium uppercase tracking-widest text-slate-400"
                 >
                   {t('users.invite.cancel')}
                 </Button>
@@ -772,7 +772,7 @@ const UsersSettings = () => {
                   variant="default" 
                   onClick={handleInviteUser} 
                   disabled={!inviteUser.email || !inviteUser.role_id || loading}
-                  className="h-12 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
+                  className="h-12 px-10 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none transition-all"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -797,7 +797,7 @@ const UsersSettings = () => {
                   <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
                     <Key className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                  <CardTitle className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
                     {t('users.password.title')}
                   </CardTitle>
                 </div>
@@ -818,7 +818,7 @@ const UsersSettings = () => {
             </CardHeader>
 
             <CardContent className="p-8 space-y-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest leading-relaxed">
                 {t('users.password.description', { email: passwordDialogUser.profile?.email })}
               </p>
 
@@ -829,9 +829,9 @@ const UsersSettings = () => {
               ) : tempPassword ? (
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.password.tempPassword')}</Label>
+                    <Label className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em] ml-1">{t('users.password.tempPassword')}</Label>
                     <div className="flex items-center gap-2 p-1 pl-5 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-inner group">
-                      <code className="flex-1 font-mono text-base font-black tracking-wider text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                      <code className="flex-1 font-mono text-base font-semibold tracking-wider text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                         {tempPassword}
                       </code>
                       <Button
@@ -856,7 +856,7 @@ const UsersSettings = () => {
 
                   <Alert className="bg-amber-50 border-amber-100 text-amber-800 rounded-2xl">
                     <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-[10px] font-black uppercase tracking-widest leading-tight">
+                    <AlertDescription className="text-[10px] font-medium uppercase tracking-widest leading-tight">
                       {t('users.password.warning')}
                     </AlertDescription>
                   </Alert>
@@ -865,7 +865,7 @@ const UsersSettings = () => {
                     <Button
                       variant="ghost"
                       onClick={() => setPasswordDialogUser(null)}
-                      className="h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400"
+                      className="h-11 px-6 rounded-xl text-[10px] font-medium uppercase tracking-widest text-slate-400"
                     >
                       {t('users.password.close')}
                     </Button>
@@ -873,7 +873,7 @@ const UsersSettings = () => {
                       variant="default" 
                       onClick={handleResetPassword} 
                       disabled={passwordLoading}
-                      className="h-11 px-8 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[10px] uppercase tracking-widest shadow-xl"
+                      className="h-11 px-8 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-[10px] uppercase tracking-widest shadow-xl"
                     >
                       <RefreshCw className="h-3.5 w-3.5 mr-2" />
                       {t('users.password.reset')}
@@ -885,14 +885,14 @@ const UsersSettings = () => {
                   <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-full w-fit mx-auto border border-slate-100 dark:border-slate-800">
                     <Key className="h-10 w-10 text-slate-200" />
                   </div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-[0.2em]">
                     {t('users.password.noPassword')}
                   </p>
                   <Button 
                     variant="default" 
                     onClick={handleResetPassword} 
                     disabled={passwordLoading}
-                    className="h-12 px-10 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100"
+                    className="h-12 px-10 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-blue-100"
                   >
                     <Zap className="h-4 w-4 mr-2" />
                     {passwordLoading ? t('users.password.resetting') : t('users.password.reset')}

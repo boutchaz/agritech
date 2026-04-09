@@ -415,10 +415,6 @@
         "cta": "Explorer les analyses"
       }
     },
-    "unifiedView": {
-      "title": "Vue opérationnelle unifiée",
-      "subtitle": "Surveillez en direct vos indicateurs clés : taches prioritaires, données météo et performances financières"
-    },
     "structuredData": {
       "platformName": "plateforme de gestion agricole",
       "description": "Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.",

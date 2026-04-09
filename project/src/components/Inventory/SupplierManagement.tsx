@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { TableCell, TableHead } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   DialogHeader,
@@ -239,16 +239,15 @@ export default function SupplierManagement() {
     <>
     <ListPageLayout
       header={
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{t('suppliers.title')}</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{t('suppliers.subtitle')}</p>
-          </div>
-          <Button onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('suppliers.create')}
-          </Button>
-        </div>
+        <ListPageHeader
+          variant="shell"
+          actions={
+            <Button onClick={handleCreate}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('suppliers.create')}
+            </Button>
+          }
+        />
       }
       filters={
         <FilterBar

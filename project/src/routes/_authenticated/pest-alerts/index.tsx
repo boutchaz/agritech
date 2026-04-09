@@ -49,8 +49,7 @@ function PestAlertsPage() {
       <ListPageLayout
         header={
           <ListPageHeader
-            title="Alertes Ravageurs & Maladies"
-            subtitle="Surveillez et gérez les menaces sanitaires de vos cultures."
+            variant="shell"
             actions={<CreatePestReportDialog />}
           />
         }

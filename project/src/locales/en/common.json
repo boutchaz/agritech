@@ -415,10 +415,6 @@
         "cta": "Explore analyses"
       }
     },
-    "unifiedView": {
-      "title": "Unified operational view",
-      "subtitle": "Monitor your key indicators live: priority tasks, weather data and financial performance"
-    },
     "structuredData": {
       "platformName": "agricultural management platform",
       "description": "Unified agricultural management solution: farms, parcels, tasks, accounting and analyses.",

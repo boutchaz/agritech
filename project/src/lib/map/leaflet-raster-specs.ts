@@ -11,12 +11,11 @@ export interface LeafletRasterLayerSpec {
   maxZoom?: number;
 }
 
-/** Esri Clarity — newer, higher-res imagery than standard World_Imagery. Free. */
-const ESRI_CLARITY =
-  'https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const ESRI_REFERENCE =
   'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 const OSM = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+/** Google Satellite — no labels, most up-to-date imagery. */
+const GOOGLE_SATELLITE = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
 
 /**
  * Leaflet base stack aligned with OpenLayers tile-providers: Mapbox only when enabled,
@@ -36,18 +35,12 @@ export function getLeafletRasterLayerSpecs(
     }
     const layers: LeafletRasterLayerSpec[] = [
       {
-        url: ESRI_CLARITY,
-        attribution: 'Imagery \u00a9 Esri (Clarity)',
-        maxZoom: 19,
+        url: GOOGLE_SATELLITE,
+        attribution: 'Imagery \u00a9 Google',
+        maxZoom: 20,
       },
     ];
-    if (withLabels) {
-      layers.push({
-        url: ESRI_REFERENCE,
-        attribution: 'Labels \u00a9 Esri',
-        maxZoom: 19,
-      });
-    }
+    // Google Hybrid already includes labels, skip Esri reference
     return layers;
   }
 

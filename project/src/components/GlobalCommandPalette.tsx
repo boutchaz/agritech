@@ -89,7 +89,7 @@ export const GlobalCommandPalette = ({ children }: GlobalCommandPaletteProps) =>
         icon: <FlaskConical className="h-4 w-4" />,
         shortcut: ['g', 'a'],
         keywords: ['analyses', 'soil', 'rapport'],
-        onSelect: () => navigate({ to: '/analyses' }),
+        onSelect: () => navigate({ to: '/analytics' }),
       },
       {
         id: 'go-parcels',
