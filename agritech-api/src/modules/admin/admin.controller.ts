@@ -182,4 +182,40 @@ export class AdminController {
   async createReferential(@Body() body: { crop: string; template?: string }) {
     return this.referentialService.create(body.crop, body.template);
   }
+
+  // ============================================
+  // Admin Subscription Management
+  // ============================================
+
+  @Get('subscriptions/:orgId')
+  async getOrgSubscription(@Param('orgId') orgId: string) {
+    return this.adminService.getOrgSubscription(orgId);
+  }
+
+  @Post('subscriptions/:orgId/extend')
+  async extendSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: { days?: number; newEndDate?: string; reason?: string },
+    @Request() req: any,
+  ) {
+    return this.adminService.extendSubscription(orgId, body, req.user.id);
+  }
+
+  @Put('subscriptions/:orgId')
+  async updateSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.adminService.updateSubscription(orgId, body, req.user.id);
+  }
+
+  @Post('subscriptions/:orgId/create')
+  async createSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.adminService.createSubscription(orgId, body, req.user.id);
+  }
 }

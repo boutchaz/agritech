@@ -16,6 +16,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 20;
 
@@ -222,67 +223,14 @@ function ClientsPage() {
                   const sub = subscriptions?.[org.id];
                   const isExpanded = expandedOrg === org.id;
                   return (
-                    <tr
+                    <OrgRow
                       key={org.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setExpandedOrg(isExpanded ? null : org.id)}
-                    >
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{org.name}</p>
-                          <p className="text-xs text-gray-400">{org.account_type}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="space-y-0.5">
-                          {org.email && (
-                            <span className="flex items-center gap-1 text-xs text-gray-500">
-                              <Mail className="h-3 w-3" /> {org.email}
-                            </span>
-                          )}
-                          {org.phone && (
-                            <span className="flex items-center gap-1 text-xs text-gray-500">
-                              <Phone className="h-3 w-3" /> {org.phone}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-700">
-                        {org.city ? (
-                          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-gray-400" /> {org.city}</span>
-                        ) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3">
-                        {sub ? (
-                          <div>
-                            <SubStatusBadge status={sub.status} />
-                            {sub.formula && (
-                              <p className="text-xs text-gray-500 mt-0.5 capitalize">{sub.formula} · {sub.billing_cycle}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">No subscription</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {sub?.contracted_hectares ? (
-                          <span className="flex items-center gap-1">
-                            <Sprout className="h-3.5 w-3.5 text-emerald-500" />
-                            {sub.contracted_hectares} ha
-                          </span>
-                        ) : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                          org.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          {org.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {new Date(org.created_at).toLocaleDateString('fr-FR')}
-                      </td>
-                    </tr>
+                      org={org}
+                      sub={sub}
+                      isExpanded={isExpanded}
+                      onToggle={() => setExpandedOrg(isExpanded ? null : org.id)}
+                      onRefresh={() => refetch()}
+                    />
                   );
                 })
               )}
@@ -313,6 +261,268 @@ function ClientsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// --- OrgRow with expandable subscription management ---
+
+function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
+  org: Organization;
+  sub: Subscription | undefined;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onRefresh: () => void;
+}) {
+  const [extendDays, setExtendDays] = useState(30);
+  const [isExtending, setIsExtending] = useState(false);
+
+  const handleExtend = async () => {
+    setIsExtending(true);
+    try {
+      const { apiRequest } = await import('@/lib/api-client');
+      await apiRequest(`/api/v1/admin/subscriptions/${org.id}/extend`, {
+        method: 'POST',
+        body: JSON.stringify({ days: extendDays, reason: 'Admin extension' }),
+      });
+      toast.success(`Subscription extended by ${extendDays} days`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to extend');
+    }
+    setIsExtending(false);
+  };
+
+  return (
+    <>
+      <tr className="hover:bg-gray-50 cursor-pointer" onClick={onToggle}>
+        <td className="px-4 py-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900">{org.name}</p>
+            <p className="text-xs text-gray-400">{org.account_type}</p>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <div className="space-y-0.5">
+            {org.email && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Mail className="h-3 w-3" /> {org.email}
+              </span>
+            )}
+            {org.phone && (
+              <span className="flex items-center gap-1 text-xs text-gray-500">
+                <Phone className="h-3 w-3" /> {org.phone}
+              </span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-3 text-sm text-gray-700">
+          {org.city ? (
+            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-gray-400" /> {org.city}</span>
+          ) : <span className="text-gray-300">—</span>}
+        </td>
+        <td className="px-4 py-3">
+          {sub ? (
+            <div>
+              <SubStatusBadge status={sub.status} />
+              {sub.formula && (
+                <p className="text-xs text-gray-500 mt-0.5 capitalize">{sub.formula} · {sub.billing_cycle}</p>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-gray-400">No subscription</span>
+          )}
+        </td>
+        <td className="px-4 py-3 text-sm">
+          {sub?.contracted_hectares ? (
+            <span className="flex items-center gap-1">
+              <Sprout className="h-3.5 w-3.5 text-emerald-500" />
+              {sub.contracted_hectares} ha
+            </span>
+          ) : <span className="text-gray-300">—</span>}
+        </td>
+        <td className="px-4 py-3 text-center">
+          <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+            org.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+          }`}>
+            {org.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-500">
+          {new Date(org.created_at).toLocaleDateString('fr-FR')}
+        </td>
+      </tr>
+
+      {/* Expanded subscription panel */}
+      {isExpanded && (
+        <tr>
+          <td colSpan={7} className="px-4 py-4 bg-gray-50 border-b border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Subscription details */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Subscription Details</h4>
+                {sub ? (
+                  <dl className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Status</dt>
+                      <dd><SubStatusBadge status={sub.status} /></dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Formula</dt>
+                      <dd className="capitalize font-medium">{sub.formula ?? '—'}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Billing</dt>
+                      <dd className="capitalize">{sub.billing_cycle ?? '—'}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Hectares</dt>
+                      <dd>{sub.contracted_hectares ?? '—'} ha</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Amount TTC</dt>
+                      <dd className="font-mono">{sub.amount_ttc ? `${sub.amount_ttc} ${sub.currency}` : '—'}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Period end</dt>
+                      <dd>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('fr-FR') : '—'}</dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Limits</dt>
+                      <dd className="text-xs">{sub.max_farms} farms · {sub.max_users} users</dd>
+                    </div>
+                  </dl>
+                ) : (
+                  <p className="text-sm text-gray-400">No subscription</p>
+                )}
+              </div>
+
+              {/* Extend subscription */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Extend Subscription</h4>
+                {sub ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Days to add</label>
+                      <div className="flex gap-2">
+                        {[7, 14, 30, 90, 365].map((d) => (
+                          <button
+                            key={d}
+                            onClick={(e) => { e.stopPropagation(); setExtendDays(d); }}
+                            className={`px-2 py-1 rounded text-xs ${
+                              extendDays === d
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {d}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      value={extendDays}
+                      onChange={(e) => setExtendDays(Number(e.target.value))}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleExtend(); }}
+                      disabled={isExtending}
+                      className="w-full px-3 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {isExtending ? 'Extending...' : `Extend by ${extendDays} days`}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">Create a subscription first</p>
+                )}
+              </div>
+
+              {/* Quick actions */}
+              <div className="bg-white rounded-lg border border-gray-200 p-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h4>
+                <div className="space-y-2">
+                  {sub && sub.status !== 'active' && (
+                    <ActionButton
+                      orgId={org.id}
+                      label="Activate"
+                      payload={{ status: 'active' }}
+                      color="emerald"
+                      onDone={onRefresh}
+                    />
+                  )}
+                  {sub && sub.status === 'active' && (
+                    <ActionButton
+                      orgId={org.id}
+                      label="Suspend"
+                      payload={{ status: 'suspended' }}
+                      color="amber"
+                      onDone={onRefresh}
+                    />
+                  )}
+                  {!sub && (
+                    <ActionButton
+                      orgId={org.id}
+                      label="Create Trial (14 days)"
+                      action="create"
+                      payload={{ formula: 'starter', billing_cycle: 'monthly', contracted_hectares: 50, days: 14, status: 'trialing' }}
+                      color="blue"
+                      onDone={onRefresh}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function ActionButton({ orgId, label, payload, color, onDone, action = 'update' }: {
+  orgId: string;
+  label: string;
+  payload: any;
+  color: string;
+  onDone: () => void;
+  action?: 'update' | 'create';
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handle = async () => {
+    setLoading(true);
+    try {
+      const { apiRequest } = await import('@/lib/api-client');
+      const url = action === 'create'
+        ? `/api/v1/admin/subscriptions/${orgId}/create`
+        : `/api/v1/admin/subscriptions/${orgId}`;
+      const method = action === 'create' ? 'POST' : 'PUT';
+      await apiRequest(url, { method, body: JSON.stringify(payload) });
+      toast.success(`${label} — done`);
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed');
+    }
+    setLoading(false);
+  };
+
+  const colors: Record<string, string> = {
+    emerald: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    amber: 'bg-amber-500 hover:bg-amber-600 text-white',
+    blue: 'bg-blue-600 hover:bg-blue-700 text-white',
+    red: 'bg-red-600 hover:bg-red-700 text-white',
+  };
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); handle(); }}
+      disabled={loading}
+      className={`w-full px-3 py-2 rounded text-sm disabled:opacity-50 ${colors[color] ?? colors.emerald}`}
+    >
+      {loading ? '...' : label}
+    </button>
   );
 }
 

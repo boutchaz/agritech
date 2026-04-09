@@ -717,4 +717,196 @@ export class AdminService {
 
     return created;
   }
+
+  // ============================================
+  // Admin Subscription Management
+  // ============================================
+
+  async getOrgSubscription(orgId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  async extendSubscription(
+    orgId: string,
+    dto: {
+      days?: number;
+      newEndDate?: string;
+      reason?: string;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data: sub, error: fetchErr } = await client
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr) throw new BadRequestException(fetchErr.message);
+    if (!sub) throw new NotFoundException('No subscription found for this organization');
+
+    let newEnd: string;
+    if (dto.newEndDate) {
+      newEnd = dto.newEndDate;
+    } else if (dto.days) {
+      const current = sub.current_period_end
+        ? new Date(sub.current_period_end)
+        : new Date();
+      current.setDate(current.getDate() + dto.days);
+      newEnd = current.toISOString();
+    } else {
+      throw new BadRequestException('Provide either days or newEndDate');
+    }
+
+    const { error: updateErr } = await client
+      .from('subscriptions')
+      .update({
+        current_period_end: newEnd,
+        contract_end_at: newEnd,
+        status: 'active',
+      })
+      .eq('id', sub.id);
+
+    if (updateErr) throw new BadRequestException(updateErr.message);
+
+    // Log the event
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: sub.id,
+      event_type: 'admin_extension',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: { days: dto.days, newEndDate: newEnd, reason: dto.reason },
+    });
+
+    return { success: true, subscriptionId: sub.id, newPeriodEnd: newEnd };
+  }
+
+  async updateSubscription(
+    orgId: string,
+    dto: {
+      formula?: string;
+      billing_cycle?: string;
+      contracted_hectares?: number;
+      selected_modules?: any[];
+      discount_pct?: number;
+      status?: string;
+      max_farms?: number;
+      max_users?: number;
+      max_parcels?: number;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data: sub, error: fetchErr } = await client
+      .from('subscriptions')
+      .select('id')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr) throw new BadRequestException(fetchErr.message);
+    if (!sub) throw new NotFoundException('No subscription found for this organization');
+
+    const updates: Record<string, any> = {};
+    if (dto.formula !== undefined) updates.formula = dto.formula;
+    if (dto.billing_cycle !== undefined) updates.billing_cycle = dto.billing_cycle;
+    if (dto.contracted_hectares !== undefined) updates.contracted_hectares = dto.contracted_hectares;
+    if (dto.selected_modules !== undefined) updates.selected_modules = dto.selected_modules;
+    if (dto.discount_pct !== undefined) updates.discount_pct = dto.discount_pct;
+    if (dto.status !== undefined) updates.status = dto.status;
+    if (dto.max_farms !== undefined) updates.max_farms = dto.max_farms;
+    if (dto.max_users !== undefined) updates.max_users = dto.max_users;
+    if (dto.max_parcels !== undefined) updates.max_parcels = dto.max_parcels;
+
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    const { error: updateErr } = await client
+      .from('subscriptions')
+      .update(updates)
+      .eq('id', sub.id);
+
+    if (updateErr) throw new BadRequestException(updateErr.message);
+
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: sub.id,
+      event_type: 'admin_update',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: updates,
+    });
+
+    return { success: true, subscriptionId: sub.id, updates };
+  }
+
+  async createSubscription(
+    orgId: string,
+    dto: {
+      formula: string;
+      billing_cycle: string;
+      contracted_hectares: number;
+      status?: string;
+      days?: number;
+      selected_modules?: any[];
+      discount_pct?: number;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const end = new Date(now);
+    end.setDate(end.getDate() + (dto.days ?? 365));
+
+    const { data, error } = await client
+      .from('subscriptions')
+      .insert({
+        organization_id: orgId,
+        formula: dto.formula,
+        billing_cycle: dto.billing_cycle,
+        contracted_hectares: dto.contracted_hectares,
+        status: dto.status ?? 'active',
+        current_period_start: now.toISOString(),
+        current_period_end: end.toISOString(),
+        contract_start_at: now.toISOString(),
+        contract_end_at: end.toISOString(),
+        selected_modules: dto.selected_modules ?? [],
+        discount_pct: dto.discount_pct ?? 10,
+        currency: 'MAD',
+        vat_rate: 0.20,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: data.id,
+      event_type: 'admin_create',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: dto,
+    });
+
+    return { success: true, subscriptionId: data.id };
+  }
 }
