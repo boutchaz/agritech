@@ -10,7 +10,7 @@ import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 
 
@@ -364,35 +364,41 @@ const DayLaborerManagement = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('dayLaborers.title', 'Gestion des Ouvriers Journaliers')}
-        </h2>
-        <Button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          disabled={!currentFarm?.id}
-          variant={currentFarm?.id ? 'green' : undefined}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
-          title={!currentFarm?.id ? t('dayLaborers.errors.selectFarmToAdd', 'Sélectionnez une ferme pour ajouter un ouvrier.') : undefined}
-        >
-          <Plus className="h-5 w-5" />
-          <span>{t('dayLaborers.actions.newLaborer', 'Nouvel Ouvrier')}</span>
-        </Button>
-      </div>
-
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('dayLaborers.title', 'Gestion des Ouvriers Journaliers')}
+            </h2>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            disabled={!currentFarm?.id}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
+            title={!currentFarm?.id ? t('dayLaborers.errors.selectFarmToAdd', 'Sélectionnez une ferme pour ajouter un ouvrier.') : undefined}
+          >
+            <Plus className="h-5 w-5" />
+            <span>{t('dayLaborers.actions.newLaborer', 'Nouvel Ouvrier')}</span>
+          </Button>
+        </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          searchPlaceholder={t('dayLaborers.searchPlaceholder', 'Rechercher par nom ou CIN')}
+        />
+      }
+    >
       {displayError && (
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{displayError}</p>
         </div>
       )}
-
-      <FilterBar
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        searchPlaceholder={t('dayLaborers.searchPlaceholder', 'Rechercher par nom ou CIN')}
-      />
 
       {!farmId && (
         <EmptyState
@@ -882,7 +888,8 @@ const DayLaborerManagement = () => {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </div>
+    </ListPageLayout>
+    </>
   );
 };
 

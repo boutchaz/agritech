@@ -1,5 +1,5 @@
 import {  useState, useEffect, useMemo  } from "react";
-import { Plus, FileText, Trash2, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { Plus, FileText, Trash2, Loader2, Grid, List, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import SoilAnalysisForm from './SoilAnalysisForm';
 import CSVBulkUpload from './SoilAnalysis/CSVBulkUpload';
@@ -9,8 +9,7 @@ import { parcelsApi } from '../lib/api/parcels';
 import type { SoilAnalysis } from '../types';
 import { Select } from './ui/Select';
 import { Button } from '@/components/ui/button';
-
-const ITEMS_PER_PAGE = 6;
+import { DataTablePagination } from '@/components/ui/data-table';
 
 interface Parcel {
   id: string;
@@ -26,6 +25,7 @@ const SoilAnalysisPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loadingParcels, setLoadingParcels] = useState(true);
@@ -38,13 +38,13 @@ const SoilAnalysisPage = () => {
     return analyses.filter(analysis => analysis.parcel_id === selectedParcelId);
   }, [analyses, selectedParcelId]);
 
-  const totalPages = Math.ceil(filteredAnalyses.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAnalyses.length / pageSize);
 
   const paginatedAnalyses = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
     return filteredAnalyses.slice(startIndex, endIndex);
-  }, [filteredAnalyses, currentPage]);
+  }, [filteredAnalyses, currentPage, pageSize]);
 
   // Fetch parcels for the current farm
   useEffect(() => {
@@ -426,40 +426,14 @@ const SoilAnalysisPage = () => {
           )}
 
           {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6">
-              <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-                Affichage de {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à{' '}
-                {Math.min(currentPage * ITEMS_PER_PAGE, analyses.length)} sur{' '}
-                {analyses.length} analyses
-              </p>
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button variant="green"
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${ currentPage === page ? '' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                </div>
-                <Button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </Button>
-              </div>
-            </div>
+            <DataTablePagination
+              page={currentPage}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={filteredAnalyses.length}
+              onPageChange={(page) => setCurrentPage(page)}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            />
           )}
         </>
       )}

@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { FilterBar, ResponsiveList, DataTablePagination } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList, DataTablePagination } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   AlertDialog,
@@ -44,7 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Plus,
@@ -441,39 +441,41 @@ export default function ItemGroupsManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                {t('items.itemGroup.title')}
-              </CardTitle>
-              <CardDescription>{t('items.itemGroup.manageDescription')}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              {!predefinedImported && (
-                <Button
-                  variant="outline"
-                  onClick={() => seedMutation.mutate()}
-                  disabled={seedMutation.isPending}
-                >
-                  {seedMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4 mr-2" />
-                  )}
-                  {t('items.itemGroup.importPredefined')}
-                </Button>
-              )}
-              <Button onClick={handleOpenCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('items.itemGroup.createNew')}
-              </Button>
-            </div>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              {t('items.itemGroup.title')}
+            </h2>
+            <p className="text-sm text-muted-foreground">{t('items.itemGroup.manageDescription')}</p>
           </div>
-        </CardHeader>
+          <div className="flex items-center gap-2">
+            {!predefinedImported && (
+              <Button
+                variant="outline"
+                onClick={() => seedMutation.mutate()}
+                disabled={seedMutation.isPending}
+              >
+                {seedMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {t('items.itemGroup.importPredefined')}
+              </Button>
+            )}
+            <Button onClick={handleOpenCreate}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('items.itemGroup.createNew')}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <Card>
         <CardContent>
           {itemGroups.length === 0 ? (
             <EmptyState
@@ -856,7 +858,8 @@ export default function ItemGroupsManagement() {
              </AlertDialogAction>
            </AlertDialogFooter>
          </AlertDialogContent>
-       </AlertDialog>
-    </div>
+        </AlertDialog>
+    </ListPageLayout>
+    </>
   );
 }

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { TableCell, TableHead } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   DialogHeader,
@@ -236,24 +236,28 @@ export default function SupplierManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('suppliers.title')}</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('suppliers.subtitle')}</p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{t('suppliers.title')}</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('suppliers.subtitle')}</p>
+          </div>
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('suppliers.create')}
+          </Button>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('suppliers.create')}
-        </Button>
-      </div>
-
-      <FilterBar
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder={t('suppliers.searchPlaceholder', 'Search suppliers...')}
-      />
-
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('suppliers.searchPlaceholder', 'Search suppliers...')}
+        />
+      }
+    >
       {error ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-700">
           <p className="text-red-600 dark:text-red-400 mb-4">
@@ -621,6 +625,7 @@ export default function SupplierManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

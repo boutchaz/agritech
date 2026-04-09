@@ -31,7 +31,7 @@ import {
   TableCell,
   TableHead,
 } from '@/components/ui/table';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Plus, Edit, Trash2, Loader2, AlertCircle, Warehouse as WarehouseIcon } from 'lucide-react';
 
@@ -541,27 +541,32 @@ export default function WarehouseManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('warehouses.title')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('warehouses.description')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('warehouses.title')}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {t('warehouses.description')}
+            </p>
+          </div>
+          <Button onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('warehouses.createWarehouse')}
+          </Button>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('warehouses.createWarehouse')}
-        </Button>
-      </div>
-
-      <FilterBar
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder={t('warehouses.searchPlaceholder', 'Search warehouses...')}
-      />
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('warehouses.searchPlaceholder', 'Search warehouses...')}
+        />
+      }
+    >
 
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
@@ -787,6 +792,7 @@ export default function WarehouseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

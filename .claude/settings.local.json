@@ -99,7 +99,13 @@
       "Bash(npm run test:e2e:integration:*)",
       "Bash(brv:*)",
       "Bash(pnpm build:video:*)",
-      "Bash(python -m pytest tests/test_calibration_orchestrator.py tests/test_calibration_percentile_calculation.py tests/test_calibration_percentiles.py tests/test_calibration_health_score.py -x -q)"
+      "Bash(python -m pytest tests/test_calibration_orchestrator.py tests/test_calibration_percentile_calculation.py tests/test_calibration_percentiles.py tests/test_calibration_health_score.py -x -q)",
+      "Bash(mv referentials/DATA_OLIVIER.json referentials/DATA_AGRUMES.json referentials/DATA_AVOCATIER.json referentials/DATA_PALMIER_DATTIER.json agritech-api/referentials/)",
+      "Bash(ls referentials/)",
+      "Bash(ls agritech-api/referentials/)",
+      "Bash(mkdir -p /Users/boutchaz/Documents/CodeLovers/agritech/agritech-api/referentials)",
+      "Bash(cp /Users/boutchaz/Documents/CodeLovers/agritech/referentials/DATA_*.json /Users/boutchaz/Documents/CodeLovers/agritech/referentials/MOTEUR_CONFIG.json /Users/boutchaz/Documents/CodeLovers/agritech/agritech-api/referentials/)",
+      "Bash(npx vite:*)"
     ],
     "deny": [],
     "ask": []

@@ -1997,6 +1997,19 @@
       "coreModules": "Modules de base inclus",
       "perMonth": "{{price}} $/mois"
     },
+    "modular": {
+      "title": "Choisissez vos modules",
+      "subtitle": "Sélectionnez les modules ERP et les hectares pour votre ferme",
+      "switchToModular": "Passer au modulaire",
+      "changeModules": "Modifier les modules",
+      "activeModules": "Modules actifs",
+      "customPlan": "Plan personnalisé",
+      "modulesLabel": "modules",
+      "moduleCount": "{{count}} modules",
+      "erpMonthly": "ERP/mois",
+      "haAnnual": "Ha/an",
+      "annualHt": "Annuel HT"
+    },
     "errors": {
       "noOrganization": "Aucune organisation sélectionnée. Veuillez d'abord sélectionner une organisation.",
       "checkoutFailed": "Échec du processus de paiement. Veuillez vérifier la configuration."

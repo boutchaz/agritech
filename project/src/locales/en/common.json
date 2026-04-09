@@ -2001,6 +2001,19 @@
       "coreModules": "Included core modules",
       "perMonth": "${{price}}/mo"
     },
+    "modular": {
+      "title": "Choose Your Modules",
+      "subtitle": "Select the ERP modules and hectares for your farm",
+      "switchToModular": "Switch to modular",
+      "changeModules": "Change modules",
+      "activeModules": "Active Modules",
+      "customPlan": "Custom Plan",
+      "modulesLabel": "modules",
+      "moduleCount": "{{count}} modules",
+      "erpMonthly": "ERP/month",
+      "haAnnual": "Ha/year",
+      "annualHt": "Annual HT"
+    },
     "errors": {
       "noOrganization": "No organization selected. Please select an organization first.",
       "checkoutFailed": "Failed to start checkout process. Please check configuration."

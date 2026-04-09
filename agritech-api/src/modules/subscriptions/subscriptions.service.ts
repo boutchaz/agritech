@@ -18,14 +18,19 @@ import {
   PolarWebhookEventType,
   PolarSubscriptionData,
 } from './dto/webhook.dto';
-import { CreateQuoteDto } from './dto/quote.dto';
+import { CreateModularQuoteDto, CreateQuoteDto } from './dto/quote.dto';
 import {
   RenewalNoticeDto,
   TerminateSubscriptionDto,
 } from './dto/lifecycle.dto';
 import {
   BillingCycle,
+  DEFAULT_DISCOUNT_PERCENT,
+  ERP_MODULES,
+  FORMULA_MODULE_MAPPING,
   FORMULA_POLICIES,
+  HA_PRICE_TIERS,
+  SIZE_MULTIPLIER_TIERS,
   SubscriptionFormula,
   SubscriptionLifecycleStatus,
   isFormulaAtLeast,
@@ -35,6 +40,7 @@ import {
   normalizeFormula,
 } from './subscription-domain';
 import {
+  ModularQuoteBreakdown,
   QuoteBreakdown,
   SubscriptionPricingService,
 } from './subscription-pricing.service';
@@ -65,6 +71,10 @@ export interface SubscriptionRecord {
   max_satellite_reports: number | null;
   contracted_hectares: number | null;
   included_users: number | null;
+  selected_modules: unknown[] | null;
+  ha_pricing_mode: string | null;
+  discount_pct: number | null;
+  size_multiplier: number | null;
   contract_start_at: string | null;
   contract_end_at: string | null;
   renewal_notice_days: number | null;
@@ -148,6 +158,10 @@ export class SubscriptionsService {
         BillingCycle.ANNUAL,
       ],
       formulas,
+      modules: ERP_MODULES,
+      haTiers: HA_PRICE_TIERS,
+      sizeMultipliers: SIZE_MULTIPLIER_TIERS,
+      defaultDiscount: DEFAULT_DISCOUNT_PERCENT,
       currency: sampleQuote.currency,
       vatRate: sampleQuote.vatRate,
     };
@@ -163,12 +177,174 @@ export class SubscriptionsService {
     });
   }
 
+  async createModularQuote(
+    dto: CreateModularQuoteDto,
+  ): Promise<ModularQuoteBreakdown> {
+    const selectedModules = this.normalizeSelectedModuleIds(dto.selectedModules);
+
+    return this.pricingService.createModularQuote({
+      selectedModules,
+      contractedHectares: dto.contractedHectares,
+      billingCycle: dto.billingCycle,
+      discountPercent: dto.discountPercent,
+    });
+  }
+
   async createCheckoutUrl(
     userId: string,
     organizationId: string,
     checkoutDto: CheckoutDto,
   ) {
     await this.ensureOrganizationMembership(userId, organizationId);
+
+    const selectedModules = checkoutDto.selectedModules?.length
+      ? this.normalizeSelectedModuleIds(checkoutDto.selectedModules)
+      : [];
+
+    if (selectedModules.length > 0) {
+      const billingCycle = normalizeBillingCycle(checkoutDto.billingInterval);
+      const contractedHectares = Math.max(checkoutDto.contractedHectares || 1, 1);
+      const quote = this.pricingService.createModularQuote({
+        selectedModules,
+        contractedHectares,
+        billingCycle,
+        discountPercent: checkoutDto.discountPercent,
+      });
+      const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
+      if (!checkoutBaseUrl) {
+        throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
+      }
+
+      const productId = this.getModularCheckoutProductId(billingCycle);
+      if (!productId) {
+        throw new BadRequestException(
+          `Polar product ID is not configured for modular pricing (${billingCycle})`,
+        );
+      }
+
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+      const successUrl = frontendUrl
+        ? `${frontendUrl}/checkout-success`
+        : undefined;
+      const cancelUrl = frontendUrl
+        ? `${frontendUrl}/settings/subscription`
+        : undefined;
+
+      const checkoutUrl = new URL(checkoutBaseUrl);
+      checkoutUrl.searchParams.set('product_id', productId);
+
+      if (successUrl) {
+        checkoutUrl.searchParams.set('success_url', successUrl);
+      }
+      if (cancelUrl) {
+        checkoutUrl.searchParams.set('cancel_url', cancelUrl);
+      }
+
+      const fallbackFormula = this.resolveFormulaForHectares(
+        SubscriptionFormula.STARTER,
+        contractedHectares,
+      );
+
+      checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
+      checkoutUrl.searchParams.set('metadata[formula]', fallbackFormula);
+      checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
+      checkoutUrl.searchParams.set(
+        'metadata[contracted_hectares]',
+        String(contractedHectares),
+      );
+      checkoutUrl.searchParams.set(
+        'metadata[selected_modules]',
+        JSON.stringify(selectedModules),
+      );
+      checkoutUrl.searchParams.set(
+        'metadata[quote_amount_ht]',
+        String(quote.cycleAmountHt),
+      );
+      checkoutUrl.searchParams.set(
+        'metadata[quote_amount_ttc]',
+        String(quote.cycleAmountTtc),
+      );
+      checkoutUrl.searchParams.set(
+        'metadata[discount_percent]',
+        String(quote.discountPercent),
+      );
+      checkoutUrl.searchParams.set(
+        'metadata[size_multiplier]',
+        String(quote.sizeMultiplier),
+      );
+
+      const { data: existingSubscription } = await this.supabaseAdmin
+        .from('subscriptions')
+        .select('id, current_period_end')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      const migrationEffectiveAt = existingSubscription?.current_period_end
+        ? existingSubscription.current_period_end
+        : new Date().toISOString();
+
+      const legacyLimits = this.getLegacyResourceLimits(fallbackFormula);
+      const pendingPayload = {
+        pending_formula: fallbackFormula,
+        pending_billing_cycle: billingCycle,
+        pending_pricing_snapshot: quote,
+        migration_effective_at: migrationEffectiveAt,
+        contracted_hectares: contractedHectares,
+        included_users: FORMULA_POLICIES[fallbackFormula].includedUsers,
+        selected_modules: selectedModules,
+        ha_pricing_mode: 'progressive',
+        discount_pct: quote.discountPercent,
+        size_multiplier: quote.sizeMultiplier,
+        renewal_notice_days: 60,
+        payment_terms_days: 30,
+        overdue_grace_days: 30,
+        suspension_notice_days: 7,
+        export_window_days: 30,
+        currency: quote.currency,
+        vat_rate: quote.vatRate,
+        price_ht_per_ha_year: null,
+        amount_ht: quote.cycleAmountHt,
+        amount_tva: quote.cycleAmountTva,
+        amount_ttc: quote.cycleAmountTtc,
+      };
+
+      if (existingSubscription?.id) {
+        await this.supabaseAdmin
+          .from('subscriptions')
+          .update(pendingPayload)
+          .eq('id', existingSubscription.id);
+      } else {
+        const legacyPlan = mapFormulaToLegacyPlanType(fallbackFormula);
+        await this.supabaseAdmin.from('subscriptions').insert({
+          organization_id: organizationId,
+          status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
+          formula: fallbackFormula,
+          plan_type: legacyPlan,
+          billing_cycle: billingCycle,
+          billing_interval: billingCycle,
+          contracted_hectares: contractedHectares,
+          included_users: FORMULA_POLICIES[fallbackFormula].includedUsers,
+          max_farms: legacyLimits.farms,
+          max_parcels: legacyLimits.parcels,
+          max_users: legacyLimits.users,
+          max_satellite_reports: legacyLimits.satelliteReports,
+          contract_start_at: new Date().toISOString(),
+          contract_end_at: new Date(
+            Date.now() + 365 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          next_billing_at: new Date().toISOString(),
+          ...pendingPayload,
+        });
+      }
+
+      return {
+        checkoutUrl: checkoutUrl.toString(),
+        formula: fallbackFormula,
+        billingCycle,
+        quoteSnapshot: quote,
+        selectedModules,
+      };
+    }
 
     const formulaInput = checkoutDto.formula || checkoutDto.planType;
     const formula = normalizeFormula(formulaInput);
@@ -437,7 +613,7 @@ export class SubscriptionsService {
     const { data: subscription, error } = await this.supabaseAdmin
       .from('subscriptions')
       .select(
-        'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
+        'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, selected_modules, ha_pricing_mode, discount_pct, size_multiplier, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
       )
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -924,6 +1100,70 @@ export class SubscriptionsService {
     );
   }
 
+  private getModularCheckoutProductId(
+    billingCycle: BillingCycle,
+  ): string | undefined {
+    const cycleKey = billingCycle.toUpperCase();
+
+    return (
+      this.configService.get<string>(`POLAR_MODULAR_${cycleKey}_PRODUCT_ID`) ||
+      this.configService.get<string>(`POLAR_STANDARD_${cycleKey}_PRODUCT_ID`) ||
+      this.getCheckoutProductId(SubscriptionFormula.STANDARD, billingCycle)
+    );
+  }
+
+  private getBaseModuleIds(): string[] {
+    return ERP_MODULES.filter((module) => module.isBase).map((module) => module.id);
+  }
+
+  private normalizeSelectedModuleIds(moduleIds: string[]): string[] {
+    const validModules = new Set(ERP_MODULES.map((module) => module.id));
+    const orderedModuleIds = [...this.getBaseModuleIds(), ...moduleIds];
+    const dedupedModuleIds: string[] = [];
+
+    for (const moduleId of orderedModuleIds) {
+      const normalizedModuleId = moduleId.trim();
+
+      if (!validModules.has(normalizedModuleId)) {
+        throw new BadRequestException(
+          `Unsupported ERP module: ${normalizedModuleId}`,
+        );
+      }
+
+      if (!dedupedModuleIds.includes(normalizedModuleId)) {
+        dedupedModuleIds.push(normalizedModuleId);
+      }
+    }
+
+    return dedupedModuleIds;
+  }
+
+  private extractSelectedModuleIds(selectedModules: unknown): string[] {
+    if (!Array.isArray(selectedModules)) {
+      return [];
+    }
+
+    const moduleIds: string[] = [];
+
+    for (const entry of selectedModules) {
+      if (typeof entry === 'string') {
+        moduleIds.push(entry);
+        continue;
+      }
+
+      if (
+        typeof entry === 'object' &&
+        entry !== null &&
+        'id' in entry &&
+        typeof entry.id === 'string'
+      ) {
+        moduleIds.push(entry.id);
+      }
+    }
+
+    return moduleIds;
+  }
+
   private extractSubscriptionData(webhookPayload: {
     type: string;
     data: Record<string, unknown>;
@@ -1285,7 +1525,40 @@ export class SubscriptionsService {
       return false;
     }
 
-    const currentFormula = normalizeFormula(formulaValue || undefined);
+    const { data: subscription } = await this.supabaseAdmin
+      .from('subscriptions')
+      .select('selected_modules, formula')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    const selectedModuleIds = this.extractSelectedModuleIds(
+      subscription?.selected_modules,
+    );
+
+    if (selectedModuleIds.length > 0) {
+      if (selectedModuleIds.includes(module.id)) {
+        return true;
+      }
+
+      if (module.is_required) {
+        return true;
+      }
+    } else {
+      const currentFormula = normalizeFormula(
+        formulaValue || subscription?.formula || undefined,
+      );
+
+      if (currentFormula) {
+        const legacyModuleIds = FORMULA_MODULE_MAPPING[currentFormula] || [];
+        if (legacyModuleIds.includes(module.id)) {
+          return true;
+        }
+      }
+    }
+
+    const currentFormula = normalizeFormula(
+      formulaValue || subscription?.formula || undefined,
+    );
     const requiredFormula = normalizeFormula(
       module.required_plan as string | undefined,
     );

@@ -362,6 +362,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   export_window_days INTEGER DEFAULT 30,
   late_penalty_rate NUMERIC(8,6) DEFAULT 0.10,
   fixed_recovery_fee NUMERIC(12,2) DEFAULT 40.00,
+  -- Modular pricing (advisor model)
+  selected_modules JSONB DEFAULT '[]',
+  ha_pricing_mode VARCHAR(20) DEFAULT 'progressive',
+  discount_pct NUMERIC(5,2) DEFAULT 10,
+  size_multiplier NUMERIC(5,2) DEFAULT 1,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT subscriptions_formula_check

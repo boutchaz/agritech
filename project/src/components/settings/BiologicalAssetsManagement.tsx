@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Select,
@@ -433,24 +433,70 @@ export function BiologicalAssetsManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t('biologicalAssets.title', 'Biological Assets')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('biologicalAssets.description', 'Manage perennial assets like orchards, vineyards, and livestock under IAS 41.')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {t('biologicalAssets.title', 'Biological Assets')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t('biologicalAssets.description', 'Manage perennial assets like orchards, vineyards, and livestock under IAS 41.')}
+            </p>
+          </div>
+          {isAdmin && (
+            <Button onClick={() => handleOpenAssetDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('biologicalAssets.addNew', 'Add Asset')}
+            </Button>
+          )}
         </div>
-        {isAdmin && (
-          <Button onClick={() => handleOpenAssetDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('biologicalAssets.addNew', 'Add Asset')}
-          </Button>
-        )}
-      </div>
-
+      }
+      filters={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t('biologicalAssets.filters.searchPlaceholder', 'Search by asset name or code')}
+          filters={[
+            {
+              key: 'farm',
+              value: selectedFarmFilter || 'all',
+              onChange: (value) => setSelectedFarmFilter(value === 'all' ? '' : value),
+              options: [
+                { value: 'all', label: t('biologicalAssets.filters.allFarms', 'All Farms') },
+                ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
+              ],
+              className: 'w-full sm:w-48',
+            },
+            {
+              key: 'assetType',
+              value: selectedAssetType || 'all',
+              onChange: (value) => setSelectedAssetType(value === 'all' ? '' : value as BiologicalAssetType),
+              options: [
+                { value: 'all', label: t('biologicalAssets.filters.allTypes', 'All Types') },
+                ...ASSET_TYPES.map((type) => ({ value: type.value, label: getAssetTypeLabel(type.value) })),
+              ],
+              className: 'w-full sm:w-52',
+            },
+            {
+              key: 'status',
+              value: selectedStatusFilter || 'all',
+              onChange: (value) => setSelectedStatusFilter(value === 'all' ? '' : value as BiologicalAssetStatus),
+              options: [
+                { value: 'all', label: t('biologicalAssets.filters.allStatuses', 'All Statuses') },
+                { value: 'immature', label: getAssetStatusLabel('immature') },
+                { value: 'productive', label: getAssetStatusLabel('productive') },
+                { value: 'declining', label: getAssetStatusLabel('declining') },
+                { value: 'disposed', label: getAssetStatusLabel('disposed') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+          ]}
+          onClear={clearFilters}
+        />
+      }
+    >
       {summary && (
         <div className="grid gap-4 lg:grid-cols-4">
           <Card>
@@ -506,48 +552,6 @@ export function BiologicalAssetsManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FilterBar
-            searchValue={searchQuery}
-            onSearchChange={setSearchQuery}
-            searchPlaceholder={t('biologicalAssets.filters.searchPlaceholder', 'Search by asset name or code')}
-            filters={[
-              {
-                key: 'farm',
-                value: selectedFarmFilter || 'all',
-                onChange: (value) => setSelectedFarmFilter(value === 'all' ? '' : value),
-                options: [
-                  { value: 'all', label: t('biologicalAssets.filters.allFarms', 'All Farms') },
-                  ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
-                ],
-                className: 'w-full sm:w-48',
-              },
-              {
-                key: 'assetType',
-                value: selectedAssetType || 'all',
-                onChange: (value) => setSelectedAssetType(value === 'all' ? '' : value as BiologicalAssetType),
-                options: [
-                  { value: 'all', label: t('biologicalAssets.filters.allTypes', 'All Types') },
-                  ...ASSET_TYPES.map((type) => ({ value: type.value, label: getAssetTypeLabel(type.value) })),
-                ],
-                className: 'w-full sm:w-52',
-              },
-              {
-                key: 'status',
-                value: selectedStatusFilter || 'all',
-                onChange: (value) => setSelectedStatusFilter(value === 'all' ? '' : value as BiologicalAssetStatus),
-                options: [
-                  { value: 'all', label: t('biologicalAssets.filters.allStatuses', 'All Statuses') },
-                  { value: 'immature', label: getAssetStatusLabel('immature') },
-                  { value: 'productive', label: getAssetStatusLabel('productive') },
-                  { value: 'declining', label: getAssetStatusLabel('declining') },
-                  { value: 'disposed', label: getAssetStatusLabel('disposed') },
-                ],
-                className: 'w-full sm:w-44',
-              },
-            ]}
-            onClear={clearFilters}
-          />
-
           <ResponsiveList
             items={filteredAssets}
             isLoading={isLoading}
@@ -954,6 +958,7 @@ export function BiologicalAssetsManagement() {
             </div>
           </form>
       </ResponsiveDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -245,22 +245,58 @@ export function FiscalYearManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t('fiscalYears.title', 'Fiscal Years')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('fiscalYears.description', 'Manage fiscal years for financial reporting and period closing.')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {t('fiscalYears.title', 'Fiscal Years')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t('fiscalYears.description', 'Manage fiscal years for financial reporting and period closing.')}
+            </p>
+          </div>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('fiscalYears.addNew', 'Add Fiscal Year')}
+          </Button>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('fiscalYears.addNew', 'Add Fiscal Year')}
-        </Button>
-      </div>
-
+      }
+      filters={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t('fiscalYears.filters.searchPlaceholder', 'Search by name or code')}
+          filters={[
+            {
+              key: 'status',
+              value: selectedStatusFilter,
+              onChange: setSelectedStatusFilter,
+              options: [
+                { value: 'all', label: t('fiscalYears.filters.allStatuses', 'All statuses') },
+                { value: 'current', label: t('fiscalYears.status.current', 'Current') },
+                { value: 'open', label: t('fiscalYears.status.open', 'Open') },
+                { value: 'closed', label: t('fiscalYears.status.closed', 'Closed') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+            {
+              key: 'periodType',
+              value: selectedPeriodType,
+              onChange: setSelectedPeriodType,
+              options: [
+                { value: 'all', label: t('fiscalYears.filters.allTypes', 'All types') },
+                { value: 'monthly', label: t('fiscalYears.form.monthly', 'Monthly') },
+                { value: 'quarterly', label: t('fiscalYears.form.quarterly', 'Quarterly') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+          ]}
+          onClear={clearFilters}
+        />
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>{t('fiscalYears.listTitle', 'Fiscal Year List')}</CardTitle>
@@ -269,38 +305,6 @@ export function FiscalYearManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FilterBar
-            searchValue={searchQuery}
-            onSearchChange={setSearchQuery}
-            searchPlaceholder={t('fiscalYears.filters.searchPlaceholder', 'Search by name or code')}
-            filters={[
-              {
-                key: 'status',
-                value: selectedStatusFilter,
-                onChange: setSelectedStatusFilter,
-                options: [
-                  { value: 'all', label: t('fiscalYears.filters.allStatuses', 'All statuses') },
-                  { value: 'current', label: t('fiscalYears.status.current', 'Current') },
-                  { value: 'open', label: t('fiscalYears.status.open', 'Open') },
-                  { value: 'closed', label: t('fiscalYears.status.closed', 'Closed') },
-                ],
-                className: 'w-full sm:w-44',
-              },
-              {
-                key: 'periodType',
-                value: selectedPeriodType,
-                onChange: setSelectedPeriodType,
-                options: [
-                  { value: 'all', label: t('fiscalYears.filters.allTypes', 'All types') },
-                  { value: 'monthly', label: t('fiscalYears.form.monthly', 'Monthly') },
-                  { value: 'quarterly', label: t('fiscalYears.form.quarterly', 'Quarterly') },
-                ],
-                className: 'w-full sm:w-44',
-              },
-            ]}
-            onClear={clearFilters}
-          />
-
           <ResponsiveList
             items={filteredFiscalYears}
             isLoading={isLoading}
@@ -501,6 +505,7 @@ export function FiscalYearManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

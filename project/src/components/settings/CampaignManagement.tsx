@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import {
@@ -358,23 +358,62 @@ export function CampaignManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Leaf className="h-6 w-6 text-green-600" />
-            {t('campaigns.title', 'Agricultural Campaigns')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('campaigns.description', 'Manage agricultural campaigns (Campagne Agricole) for production planning.')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+              <Leaf className="h-6 w-6 text-green-600" />
+              {t('campaigns.title', 'Agricultural Campaigns')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t('campaigns.description', 'Manage agricultural campaigns (Campagne Agricole) for production planning.')}
+            </p>
+          </div>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('campaigns.addNew', 'New Campaign')}
+          </Button>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('campaigns.addNew', 'New Campaign')}
-        </Button>
-      </div>
-
+      }
+      filters={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t('campaigns.filters.searchPlaceholder', 'Search by name, code, or description')}
+          filters={[
+            {
+              key: 'status',
+              value: selectedStatusFilter,
+              onChange: setSelectedStatusFilter,
+              options: [
+                { value: 'all', label: t('campaigns.filters.allStatuses', 'All statuses') },
+                { value: 'planned', label: t('campaigns.status.planned', 'Planned') },
+                { value: 'active', label: t('campaigns.status.active', 'Active') },
+                { value: 'completed', label: t('campaigns.status.completed', 'Completed') },
+                { value: 'cancelled', label: t('campaigns.status.cancelled', 'Cancelled') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+            {
+              key: 'type',
+              value: selectedTypeFilter,
+              onChange: setSelectedTypeFilter,
+              options: [
+                { value: 'all', label: t('campaigns.filters.allTypes', 'All types') },
+                { value: 'general', label: t('campaigns.type.general', 'General') },
+                { value: 'rainfed', label: t('campaigns.type.rainfed', 'Rainfed') },
+                { value: 'irrigated', label: t('campaigns.type.irrigated', 'Irrigated') },
+                { value: 'greenhouse', label: t('campaigns.type.greenhouse', 'Greenhouse') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+          ]}
+          onClear={clearFilters}
+        />
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>{t('campaigns.listTitle', 'Campaign List')}</CardTitle>
@@ -383,41 +422,6 @@ export function CampaignManagement() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <FilterBar
-            searchValue={searchQuery}
-            onSearchChange={setSearchQuery}
-            searchPlaceholder={t('campaigns.filters.searchPlaceholder', 'Search by name, code, or description')}
-            filters={[
-              {
-                key: 'status',
-                value: selectedStatusFilter,
-                onChange: setSelectedStatusFilter,
-                options: [
-                  { value: 'all', label: t('campaigns.filters.allStatuses', 'All statuses') },
-                  { value: 'planned', label: t('campaigns.status.planned', 'Planned') },
-                  { value: 'active', label: t('campaigns.status.active', 'Active') },
-                  { value: 'completed', label: t('campaigns.status.completed', 'Completed') },
-                  { value: 'cancelled', label: t('campaigns.status.cancelled', 'Cancelled') },
-                ],
-                className: 'w-full sm:w-44',
-              },
-              {
-                key: 'type',
-                value: selectedTypeFilter,
-                onChange: setSelectedTypeFilter,
-                options: [
-                  { value: 'all', label: t('campaigns.filters.allTypes', 'All types') },
-                  { value: 'general', label: t('campaigns.type.general', 'General') },
-                  { value: 'rainfed', label: t('campaigns.type.rainfed', 'Rainfed') },
-                  { value: 'irrigated', label: t('campaigns.type.irrigated', 'Irrigated') },
-                  { value: 'greenhouse', label: t('campaigns.type.greenhouse', 'Greenhouse') },
-                ],
-                className: 'w-full sm:w-44',
-              },
-            ]}
-            onClear={clearFilters}
-          />
-
           <ResponsiveList
             items={filteredCampaigns}
             isLoading={isLoading}
@@ -655,6 +659,7 @@ export function CampaignManagement() {
           setConfirmOpen(false);
         }}
       />
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

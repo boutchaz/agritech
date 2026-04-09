@@ -12,10 +12,9 @@ import {
 } from '@/components/ui/radix-select';
 import { CertificationCard } from '@/components/compliance/CertificationCard';
 import { CreateCertificationDialog } from '@/components/compliance/CreateCertificationDialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLayout } from '@/components/PageLayout';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 
 import { useCertifications } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -104,53 +103,20 @@ function CertificationsPage() {
           </div>
         }
       >
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((skIdx) => (
-              <div key={"sk-" + skIdx} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm p-4 space-y-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-9 w-9 rounded-lg" />
-                    <div>
-                      <Skeleton className="h-5 w-28 mb-1" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-5 w-20 rounded-full" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between py-1">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                  <div className="flex justify-between py-1">
-                    <Skeleton className="h-4 w-18" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                </div>
-                <Skeleton className="h-9 w-full rounded-md" />
-              </div>
-            ))}
-          </div>
-        ) : filteredCertifications.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCertifications.map((cert) => (
-              <CertificationCard key={cert.id} certification={cert} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 border-2 border-dashed rounded-lg bg-muted/10">
-            <Award className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('certifications.noCertificationsFound')}</h3>
-            <p className="text-muted-foreground mt-1">
-              {t('certifications.noCertificationsHint')}
-            </p>
-          </div>
-        )}
+        <ResponsiveList
+          items={filteredCertifications}
+          isLoading={isLoading}
+          keyExtractor={(cert) => cert.id}
+          emptyIcon={Award}
+          emptyTitle={t('certifications.noCertificationsFound')}
+          emptyMessage={t('certifications.noCertificationsHint')}
+          renderCard={(cert) => (
+            <CertificationCard certification={cert} />
+          )}
+          renderTable={(cert) => (
+            <CertificationCard certification={cert} />
+          )}
+        />
       </ListPageLayout>
     </div>
     </PageLayout>

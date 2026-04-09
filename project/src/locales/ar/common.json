@@ -1983,6 +1983,19 @@
       "coreModules": "الوحدات الأساسية المضمنة",
       "perMonth": "{{price}} $/شهر"
     },
+    "modular": {
+      "title": "اختر وحداتك",
+      "subtitle": "حدد وحدات ERP الهكتارات لمزرعتك",
+      "switchToModular": "التحويل إلى النظام المعياري",
+      "changeModules": "تعديل الوحدات",
+      "activeModules": "الوحدات النشطة",
+      "customPlan": "خطة مخصصة",
+      "modulesLabel": "وحدات",
+      "moduleCount": "{{count}} وحدات",
+      "erpMonthly": "ERP/شهر",
+      "haAnnual": "هكتار/سنة",
+      "annualHt": "السنوي HT"
+    },
     "errors": {
       "noOrganization": "لم يتم اختيار منظمة. يرجى اختيار منظمة أولاً.",
       "checkoutFailed": "فشل بدء عملية الدفع. يرجى التحقق من الإعدادات."

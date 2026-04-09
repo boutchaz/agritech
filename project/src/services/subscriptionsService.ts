@@ -47,6 +47,10 @@ export interface Subscription {
   currency: string | null;
   vat_rate: number | null;
   price_ht_per_ha_year: number | null;
+  selected_modules: Array<{ id: string; name: string; pricePerMonth: number }> | null;
+  ha_pricing_mode: string | null;
+  discount_pct: number | null;
+  size_multiplier: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -264,6 +268,35 @@ class SubscriptionsService {
 
     return apiClient.get<SubscriptionUsage>(
       '/api/v1/subscriptions/usage',
+      {},
+      orgId,
+    );
+  }
+
+  async createModularCheckout(
+    selectedModules: string[],
+    contractedHectares: number,
+    billingCycle: BillingInterval = 'monthly',
+    organizationId?: string,
+  ): Promise<{
+    checkoutUrl: string;
+    formula: PlanType;
+    billingCycle: BillingInterval;
+    quoteSnapshot: Record<string, unknown>;
+  }> {
+    const orgId = organizationId || getCurrentOrganizationId();
+
+    if (!orgId) {
+      throw new OrganizationRequiredError();
+    }
+
+    return apiClient.post(
+      '/api/v1/subscriptions/checkout',
+      {
+        selectedModules,
+        contractedHectares,
+        billingInterval: billingCycle,
+      },
       {},
       orgId,
     );

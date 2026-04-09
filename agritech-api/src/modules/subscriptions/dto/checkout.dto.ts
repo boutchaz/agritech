@@ -1,4 +1,14 @@
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  Max,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BillingCycle, SubscriptionFormula } from '../subscription-domain';
 
@@ -60,6 +70,28 @@ export class CheckoutDto {
   contractedHectares?: number;
 
   @ApiPropertyOptional({
+    description: 'Selected modular ERP module IDs. When provided, modular pricing is used.',
+    type: String,
+    isArray: true,
+    example: ['erp-multiferme', 'erp-dashboard', 'erp-taches', 'erp-recolte'],
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  @IsOptional()
+  selectedModules?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Optional modular pricing discount percent (0-100)',
+    example: 10,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  discountPercent?: number;
+
+  @ApiPropertyOptional({
     description: 'Optional organization ID (normally provided via header)',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
@@ -85,6 +117,13 @@ export class CheckoutResponseDto {
     description: 'Quote snapshot stored for reconciliation with payment events',
   })
   quoteSnapshot: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'Selected modular ERP modules when checkout uses modular pricing',
+    type: String,
+    isArray: true,
+  })
+  selectedModules?: string[];
 }
 
 export class CustomerPortalResponseDto {
