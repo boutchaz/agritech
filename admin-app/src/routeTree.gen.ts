@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
+import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
 import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
 
 const LoginRoute = LoginRouteImport.update({
@@ -29,9 +31,20 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSubscriptionModelRoute =
+  AuthenticatedSubscriptionModelRouteImport.update({
+    id: '/subscription-model',
+    path: '/subscription-model',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedRdvRoute = AuthenticatedRdvRouteImport.update({
   id: '/rdv',
   path: '/rdv',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedReferentielsCropRoute =
@@ -44,12 +57,16 @@ const AuthenticatedReferentielsCropRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/clients': typeof AuthenticatedClientsRoute
   '/rdv': typeof AuthenticatedRdvRoute
+  '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/clients': typeof AuthenticatedClientsRoute
   '/rdv': typeof AuthenticatedRdvRoute
+  '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/': typeof AuthenticatedIndexRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
@@ -57,20 +74,36 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
+  '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/rdv' | '/referentiels/$crop'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/clients'
+    | '/rdv'
+    | '/subscription-model'
+    | '/referentiels/$crop'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/rdv' | '/' | '/referentiels/$crop'
+  to:
+    | '/login'
+    | '/clients'
+    | '/rdv'
+    | '/subscription-model'
+    | '/'
+    | '/referentiels/$crop'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/clients'
     | '/_authenticated/rdv'
+    | '/_authenticated/subscription-model'
     | '/_authenticated/'
     | '/_authenticated/referentiels/$crop'
   fileRoutesById: FileRoutesById
@@ -103,11 +136,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/subscription-model': {
+      id: '/_authenticated/subscription-model'
+      path: '/subscription-model'
+      fullPath: '/subscription-model'
+      preLoaderRoute: typeof AuthenticatedSubscriptionModelRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/rdv': {
       id: '/_authenticated/rdv'
       path: '/rdv'
       fullPath: '/rdv'
       preLoaderRoute: typeof AuthenticatedRdvRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/clients': {
+      id: '/_authenticated/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof AuthenticatedClientsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referentiels/$crop': {
@@ -121,13 +168,17 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
+  AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedReferentielsCropRoute: typeof AuthenticatedReferentielsCropRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedClientsRoute: AuthenticatedClientsRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
+  AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedReferentielsCropRoute: AuthenticatedReferentielsCropRoute,
 }
