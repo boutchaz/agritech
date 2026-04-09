@@ -10,6 +10,7 @@ function ReferentielsDashboard() {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [newCropName, setNewCropName] = useState('');
+  const [templateCrop, setTemplateCrop] = useState('');
 
   const { data: crops, isLoading, refetch } = useQuery({
     queryKey: ['referentials-list'],
@@ -17,20 +18,14 @@ function ReferentielsDashboard() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (crop: string) =>
-      referentialApi.create(crop, {
-        metadata: {
-          version: '1.0',
-          date: new Date().toISOString().slice(0, 7),
-          culture: crop.toLowerCase().replace(/\s+/g, '_'),
-          pays: 'Maroc',
-        },
-      }),
+    mutationFn: ({ crop, template }: { crop: string; template?: string }) =>
+      referentialApi.create(crop, template || undefined),
     onSuccess: (result) => {
       toast.success(`Referential "${result.crop}" created`);
       queryClient.invalidateQueries({ queryKey: ['referentials-list'] });
       setShowCreate(false);
       setNewCropName('');
+      setTemplateCrop('');
       navigate({ to: '/referentiels/$crop', params: { crop: result.crop } });
     },
     onError: (err: Error) => {
@@ -42,7 +37,7 @@ function ReferentielsDashboard() {
     e.preventDefault();
     const name = newCropName.trim();
     if (!name) return;
-    createMutation.mutate(name);
+    createMutation.mutate({ crop: name, template: templateCrop || undefined });
   };
 
   return (
@@ -101,8 +96,25 @@ function ReferentielsDashboard() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 autoFocus
               />
+            </div>
+            <div className="max-w-xs">
+              <label className="block text-sm text-gray-600 mb-1">
+                Template (optional)
+              </label>
+              <select
+                value={templateCrop}
+                onChange={(e) => setTemplateCrop(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">Empty — no template</option>
+                {crops?.map((c) => (
+                  <option key={c.crop} value={c.crop}>
+                    Copy from {getCropLabel(c.crop)}
+                  </option>
+                ))}
+              </select>
               <p className="text-xs text-gray-400 mt-1">
-                Creates DATA_{'<NAME>'}.json with empty metadata
+                Uses same structure with empty default values
               </p>
             </div>
             <button

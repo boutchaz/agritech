@@ -164,8 +164,22 @@ export class AdminController {
     return this.referentialService.updateSection(crop, section, body);
   }
 
+  @Post('referentials/:crop/:section/validate')
+  async validateReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.validateSection(crop, section, body);
+  }
+
+  @Get('referentials/:crop/schema')
+  async getReferentialSchema(@Param('crop') crop: string) {
+    return this.referentialService.getSchema(crop);
+  }
+
   @Post('referentials')
-  async createReferential(@Body() body: { crop: string; data: Record<string, unknown> }) {
-    return this.referentialService.create(body.crop, body.data);
+  async createReferential(@Body() body: { crop: string; template?: string }) {
+    return this.referentialService.create(body.crop, body.template);
   }
 }

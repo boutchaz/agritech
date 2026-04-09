@@ -13,6 +13,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { referentialApi, getCropLabel, getSectionLabel } from '@/lib/referentiels';
+import type { ValidationError } from '@/lib/referentiels';
 import { toast } from 'sonner';
 
 type JsonPath = (string | number)[];
@@ -24,6 +25,8 @@ function CropDetailPage() {
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [sectionDraft, setSectionDraft] = useState<unknown>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [isValidating, setIsValidating] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['referential', crop],
@@ -59,6 +62,7 @@ function CropDetailPage() {
     setEditingSection(section);
     setSectionDraft(structuredClone(data[section]));
     setHasChanges(false);
+    setValidationErrors([]);
     if (!expandedSections.has(section)) {
       toggleSection(section);
     }
@@ -68,10 +72,28 @@ function CropDetailPage() {
     setEditingSection(null);
     setSectionDraft(null);
     setHasChanges(false);
+    setValidationErrors([]);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingSection || !sectionDraft) return;
+
+    // Validate before saving
+    setIsValidating(true);
+    try {
+      const result = await referentialApi.validateSection(crop, editingSection, sectionDraft);
+      if (!result.valid) {
+        setValidationErrors(result.errors);
+        toast.error(`${result.errors.length} validation error(s)`);
+        setIsValidating(false);
+        return;
+      }
+      setValidationErrors([]);
+    } catch {
+      // If validate endpoint fails, still allow save (backward compat)
+    }
+    setIsValidating(false);
+
     updateMutation.mutate({ section: editingSection, value: sectionDraft });
   };
 
@@ -177,11 +199,11 @@ function CropDetailPage() {
                       <>
                         <button
                           onClick={saveEdit}
-                          disabled={updateMutation.isPending || !hasChanges}
+                          disabled={updateMutation.isPending || isValidating || !hasChanges}
                           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 disabled:opacity-50"
                         >
                           <Save className="h-3.5 w-3.5" />
-                          Save
+                          {isValidating ? 'Validating...' : 'Save'}
                         </button>
                         <button
                           onClick={cancelEdit}
@@ -202,6 +224,24 @@ function CropDetailPage() {
                     ) : null}
                   </div>
                 </div>
+
+                {/* Validation errors */}
+                {isEditing && validationErrors.length > 0 && (
+                  <div className="mx-5 mt-0 mb-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                    <p className="text-sm font-medium text-red-800 mb-1">
+                      Schema validation failed ({validationErrors.length} error{validationErrors.length > 1 ? 's' : ''})
+                    </p>
+                    <ul className="text-xs text-red-700 space-y-0.5">
+                      {validationErrors.map((e, i) => (
+                        <li key={i}>
+                          <span className="font-mono text-red-600">{e.path}</span>
+                          {' — '}
+                          {e.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Section content */}
                 {isExpanded && (

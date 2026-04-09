@@ -8,6 +8,11 @@ export interface ReferentialSummary {
   sections: string[];
 }
 
+export interface ValidationError {
+  path: string;
+  message: string;
+}
+
 export const referentialApi = {
   list(): Promise<ReferentialSummary[]> {
     return apiRequest<ReferentialSummary[]>('/api/v1/admin/referentials');
@@ -28,10 +33,17 @@ export const referentialApi = {
     });
   },
 
-  create(crop: string, data: Record<string, unknown>): Promise<{ success: boolean; crop: string }> {
+  validateSection(crop: string, section: string, value: unknown): Promise<{ valid: boolean; errors: ValidationError[] }> {
+    return apiRequest<{ valid: boolean; errors: ValidationError[] }>(
+      `/api/v1/admin/referentials/${crop}/${section}/validate`,
+      { method: 'POST', body: JSON.stringify(value) },
+    );
+  },
+
+  create(crop: string, template?: string): Promise<{ success: boolean; crop: string }> {
     return apiRequest<{ success: boolean; crop: string }>('/api/v1/admin/referentials', {
       method: 'POST',
-      body: JSON.stringify({ crop, data }),
+      body: JSON.stringify({ crop, template }),
     });
   },
 };
