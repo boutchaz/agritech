@@ -50,18 +50,19 @@ def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
 def extract_weather_history(
     weather_data: list[dict[str, object]],
     crop_type: str,
-    tbase: float,
     frost_threshold: float = 0.0,
     heat_threshold: float = 38.0,
-    tupper: float | None = None,
 ) -> Step2Output:
+    """Extract weather history: daily records, precipitation, extremes, chill hours.
+
+    GDD is NOT computed here — the orchestrator wires crop-aware GDD via
+    ``gdd_service.precompute_gdd_rows()`` and populates ``cumulative_gdd``
+    after this function returns.
+    """
     daily_rows: list[WeatherDay] = []
     monthly_precip: dict[str, float] = defaultdict(float)
-    monthly_gdd: dict[str, float] = defaultdict(float)
-    cumulative_gdd: dict[str, float] = {}
     extremes: list[ExtremeEvent] = []
 
-    running_gdd = 0.0
     drought_streak = 0
     heat_streak = 0
 
@@ -86,15 +87,7 @@ def extract_weather_history(
         )
 
         month_key = current_date.strftime("%Y-%m")
-        tmoy = (temp_max + temp_min) / 2.0
-        if tupper is not None:
-            tmoy = min(tmoy, tupper)
-        gdd_daily = max(0.0, tmoy - tbase)
-
         monthly_precip[month_key] += precip
-        monthly_gdd[month_key] += gdd_daily
-        running_gdd += gdd_daily
-        cumulative_gdd[month_key] = round(running_gdd, 3)
 
         if current_date.month >= 3 and temp_min < frost_threshold:
             extremes.append(
@@ -136,7 +129,7 @@ def extract_weather_history(
             MonthlyWeatherAggregate(
                 month=month,
                 precipitation_total=round(monthly_precip[month], 3),
-                gdd_total=round(monthly_gdd[month], 3),
+                gdd_total=0.0,
             )
         )
 
@@ -152,7 +145,7 @@ def extract_weather_history(
     return Step2Output(
         daily_weather=daily_rows,
         monthly_aggregates=monthly_aggregates,
-        cumulative_gdd=cumulative_gdd,
+        cumulative_gdd={},
         chill_hours=chill_hours,
         extreme_events=extremes,
     )

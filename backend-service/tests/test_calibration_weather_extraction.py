@@ -35,20 +35,20 @@ def _build_weather(days: int) -> list[dict[str, object]]:
     return rows
 
 
-def test_step2_weather_computes_gdd_and_monthly_aggregates() -> None:
+def test_step2_weather_computes_daily_and_monthly_aggregates() -> None:
     weather = _build_weather(days=120)
     output = extract_weather_history(
         weather_data=weather,
         crop_type="olivier",
-        tbase=10.0,
         frost_threshold=1.0,
         heat_threshold=38.0,
     )
 
     assert len(output.daily_weather) == 120
     assert len(output.monthly_aggregates) >= 3
-    assert output.monthly_aggregates[0].gdd_total > 0
-    assert output.cumulative_gdd
+    # GDD is no longer computed in step2 — orchestrator wires gdd_service
+    assert output.cumulative_gdd == {}
+    assert output.monthly_aggregates[0].gdd_total == 0.0
 
 
 def test_step2_detects_extreme_events() -> None:
@@ -56,7 +56,6 @@ def test_step2_detects_extreme_events() -> None:
     output = extract_weather_history(
         weather_data=weather,
         crop_type="olivier",
-        tbase=10.0,
         frost_threshold=1.0,
         heat_threshold=38.0,
     )
@@ -72,7 +71,6 @@ def test_step2_computes_chill_hours_in_winter() -> None:
     output = extract_weather_history(
         weather_data=weather,
         crop_type="olivier",
-        tbase=10.0,
         frost_threshold=1.0,
     )
 

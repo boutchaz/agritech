@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import UTC, datetime
 from importlib import import_module
 from typing import Any
@@ -20,6 +21,7 @@ from .step1_satellite_extraction import (
 from .step2_weather_extraction import extract_weather_history
 from .step3_percentile_calculation import calculate_percentiles
 from .step4_phenology_detection import detect_phenology
+from .gdd_service import precompute_gdd_rows
 from .referential_utils import get_gdd_tbase_tupper
 from .types import (
     CalibrationInput,
@@ -177,19 +179,40 @@ def run_calibration_pipeline(
         storage=storage,
     )
 
-    tbase_resolved, tupper = get_gdd_tbase_tupper(
-        calibration_input.crop_type,
-        calibration_input.reference_data,
-    )
-    tbase = tbase_resolved if tbase_resolved is not None else 10.0
     frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)
     step2 = extract_weather_history(
         weather_data=weather_rows,
         crop_type=calibration_input.crop_type,
-        tbase=tbase,
         frost_threshold=frost_threshold,
-        tupper=tupper,
     )
+
+    # Crop-aware GDD: replace naive cumulative_gdd with gdd_service model
+    # (chill-gated for olives, BBCH-month-filtered, NIRv-gated)
+    nirv_series_raw = [
+        {"date": p.date.isoformat(), "value": p.value}
+        for p in step1.index_time_series.get("NIRv", [])
+    ]
+    gdd_rows, _ = precompute_gdd_rows(
+        weather_rows,
+        calibration_input.crop_type,
+        variety=calibration_input.variety,
+        nirv_series=nirv_series_raw,
+        reference_data=calibration_input.reference_data,
+    )
+    gdd_column = f"gdd_{calibration_input.crop_type}"
+    crop_aware_cumulative: dict[str, float] = {}
+    monthly_gdd_totals: dict[str, float] = defaultdict(float)
+    running_gdd = 0.0
+    for row in sorted(gdd_rows, key=lambda r: str(r.get("date", ""))):
+        daily = float(row.get(gdd_column, 0.0))
+        running_gdd += daily
+        month_key = str(row.get("date", ""))[:7]
+        crop_aware_cumulative[month_key] = round(running_gdd, 3)
+        monthly_gdd_totals[month_key] += daily
+    if crop_aware_cumulative:
+        step2.cumulative_gdd = crop_aware_cumulative
+        for agg in step2.monthly_aggregates:
+            agg.gdd_total = round(monthly_gdd_totals.get(agg.month, 0.0), 3)
 
     from .step2a_signal_classification import classify_signal
 
