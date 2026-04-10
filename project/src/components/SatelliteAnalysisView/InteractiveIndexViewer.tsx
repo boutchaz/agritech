@@ -153,7 +153,6 @@ const InteractiveIndexViewer = ({
   const [leftTemporalData, setLeftTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [rightTemporalData, setRightTemporalData] = useState<HeatmapDataResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [dateMismatch, setDateMismatch] = useState<{requested: string; actual: string} | null>(null);
   const [sameActualDateWarning, setSameActualDateWarning] = useState(false);
 
   // Overlay opacity control (per index)
@@ -346,7 +345,6 @@ const InteractiveIndexViewer = ({
 
     setIsLoading(true);
     setError(null);
-    setDateMismatch(null);
     setSameActualDateWarning(false);
 
     try {
@@ -367,16 +365,7 @@ const InteractiveIndexViewer = ({
           satelliteApi.generateInteractiveVisualization(aoi, compareDate, selectedIndex, 'heatmap', parcelId) as Promise<HeatmapDataResponse>,
         ]);
 
-        const leftActualDate = leftResult.date;
-        const rightActualDate = rightResult.date;
-
-        if (leftActualDate !== selectedDate) {
-          setDateMismatch({ requested: selectedDate, actual: leftActualDate });
-        } else if (rightActualDate !== compareDate) {
-          setDateMismatch({ requested: compareDate, actual: rightActualDate });
-        }
-
-        setSameActualDateWarning(leftActualDate === rightActualDate);
+        setSameActualDateWarning(leftResult.date === rightResult.date);
 
         setLeftTemporalData(leftResult);
         setRightTemporalData(rightResult);
@@ -389,15 +378,9 @@ const InteractiveIndexViewer = ({
           parcelId
         );
 
-        const heatmapResult = result as HeatmapDataResponse;
-        if (heatmapResult.metadata?.requested_date && heatmapResult.date !== heatmapResult.metadata.requested_date) {
-          setDateMismatch({ requested: heatmapResult.metadata.requested_date, actual: heatmapResult.date });
-        }
-
         setData(result);
       } else {
         const results = new Map<VegetationIndexType, HeatmapDataResponse>();
-        let foundMismatch: {requested: string; actual: string} | null = null;
 
         for (const index of selectedIndices) {
           try {
@@ -409,17 +392,9 @@ const InteractiveIndexViewer = ({
               parcelId
             ) as HeatmapDataResponse;
             results.set(index, result);
-
-            if (!foundMismatch && result.metadata?.requested_date && result.date !== result.metadata.requested_date) {
-              foundMismatch = { requested: result.metadata.requested_date, actual: result.date };
-            }
           } catch (err) {
             console.error(`Failed to fetch ${index}:`, err);
           }
-        }
-
-        if (foundMismatch) {
-          setDateMismatch(foundMismatch);
         }
 
         setMultiData(results);
@@ -858,19 +833,6 @@ const InteractiveIndexViewer = ({
             </Alert>
           )}
 
-          {dateMismatch && (
-            <Alert className="bg-amber-50 border-amber-200 text-amber-800">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertTitle className="text-sm font-bold">{t('satellite:heatmap.warnings.dateMismatchTitle')}</AlertTitle>
-              <AlertDescription className="text-xs">
-                <Trans
-                  i18nKey="satellite:heatmap.warnings.dateMismatchDescription"
-                  values={{ requested: dateMismatch.requested, actual: dateMismatch.actual }}
-                  components={{ strong: <strong /> }}
-                />
-              </AlertDescription>
-            </Alert>
-          )}
 
           {sameActualDateWarning && leftTemporalData && rightTemporalData && (
             <Alert className="bg-orange-50 border-orange-200 text-orange-800">

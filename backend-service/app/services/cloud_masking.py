@@ -1,11 +1,11 @@
 """
 Cloud masking and coverage calculation utilities for Earth Engine.
-Calculates cloud coverage specifically within AOI boundaries.
 
-NOTE: SCL-based AOI cloud filtering is ONLY used for available-dates (indices.py).
-Heatmap, timeseries, calculate, and export use tile-level CLOUDY_PIXEL_PERCENTAGE
-with 10m bands (B2,B3,B4,B8). This module is used when get_sentinel2_collection
-is called with use_aoi_cloud_filter=True (currently unused by API endpoints).
+Primary method: filter_by_scl_coverage() — used by all endpoints (available-dates,
+heatmap, timeseries) via get_sentinel2_collection(use_aoi_cloud_filter=True).
+Uses SCL band at 20m native resolution, no spatial buffer.
+SCL is a filter gate only — it determines date availability, not pixel masking.
+Actual index calculation uses raw 10m bands (B2, B3, B4, B8) untouched.
 """
 
 import ee
@@ -150,100 +150,7 @@ class CloudMaskingService:
             except:
                 return None
 
-    @staticmethod
-    def filter_collection_by_aoi_clouds(
-        collection: ee.ImageCollection,
-        aoi: ee.Geometry,
-        max_cloud_coverage: float,
-        buffer_meters: Optional[float] = 300,
-    ) -> ee.ImageCollection:
-        """
-        Filter image collection based on cloud coverage within AOI.
 
-        Args:
-            collection: Sentinel-2 image collection
-            aoi: Area of interest
-            max_cloud_coverage: Maximum acceptable cloud coverage percentage
-            buffer_meters: Buffer around AOI for cloud calculation (default: 300m)
-
-        Returns:
-            Filtered image collection
-        """
-
-        def add_aoi_cloud_score(image):
-            """Add cloud coverage percentage as property to image - Server-side computation"""
-            # Apply buffer if specified
-            region = aoi.buffer(buffer_meters) if buffer_meters else aoi
-
-            # Get QA60 band for cloud detection
-            qa = image.select("QA60")
-
-            # Bit masks for cloud detection
-            cloud_bit_mask = 1 << 10  # Opaque clouds
-            cirrus_bit_mask = 1 << 11  # Cirrus clouds
-
-            # Create cloud mask (1 where clouds exist, 0 otherwise)
-            cloud_mask = (
-                qa.bitwiseAnd(cloud_bit_mask)
-                .gt(0)
-                .Or(qa.bitwiseAnd(cirrus_bit_mask).gt(0))
-            )
-
-            # Try to add SCL band for more accurate cloud detection
-            # This is done server-side, no getInfo() call
-            try:
-                scl = image.select("SCL")
-                # SCL cloud classes: 8 (cloud medium), 9 (cloud high), 10 (cirrus), 3 (shadow)
-                scl_cloud_mask = scl.eq(8).Or(scl.eq(9)).Or(scl.eq(10)).Or(scl.eq(3))
-                cloud_mask = cloud_mask.Or(scl_cloud_mask)
-            except:
-                # If SCL band doesn't exist, continue with QA60 only
-                pass
-
-            # Calculate statistics within AOI - all server-side
-            # Use CRS parameter to handle AOI crossing UTM zone boundaries
-            # Count cloudy pixels
-            cloud_pixels = cloud_mask.reduceRegion(
-                reducer=ee.Reducer.sum(),
-                geometry=region,
-                scale=60,  # QA60 is native 60m; reduces pixel pressure on large AOIs
-                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                maxPixels=settings.MAX_PIXELS,
-                bestEffort=True,
-                tileScale=4,
-            ).get("QA60")
-
-            # Count total pixels
-            total_pixels = (
-                cloud_mask.gt(-1)
-                .reduceRegion(
-                    reducer=ee.Reducer.count(),
-                    geometry=region,
-                    scale=60,
-                    crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
-                    maxPixels=settings.MAX_PIXELS,
-                    bestEffort=True,
-                    tileScale=4,
-                )
-                .get("QA60")
-            )
-
-            # Calculate percentage server-side
-            cloud_percentage = (
-                ee.Number(cloud_pixels).divide(ee.Number(total_pixels)).multiply(100)
-            )
-
-            return image.set("AOI_CLOUD_COVERAGE", cloud_percentage)
-
-        # Map the function over collection to add AOI cloud coverage
-        scored_collection = collection.map(add_aoi_cloud_score)
-
-        # Filter based on AOI cloud coverage
-        filtered = scored_collection.filter(
-            ee.Filter.lte("AOI_CLOUD_COVERAGE", max_cloud_coverage)
-        )
-
-        return filtered
 
     @staticmethod
     def get_best_cloud_free_image(

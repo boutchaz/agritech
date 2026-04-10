@@ -86,8 +86,7 @@ class IndexCalculationRequest(BaseModel):
     indices: List[VegetationIndex] = Field(..., min_items=1, description="List of indices to calculate")
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100, description="Maximum cloud coverage percentage")
     scale: Optional[int] = Field(10, ge=10, le=1000, description="Pixel scale in meters")
-    use_aoi_cloud_filter: Optional[bool] = Field(False, description="Ignored. SCL-based AOI filtering reserved for available-dates. Indices use tile-level filter at 10m.")
-    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
+    use_aoi_cloud_filter: Optional[bool] = Field(False, description="If True, use SCL-based AOI cloud filter at 20m instead of tile-level CLOUDY_PIXEL_PERCENTAGE.")
 
 class TimeSeriesRequest(BaseModel):
     aoi: AOIRequest
@@ -95,8 +94,7 @@ class TimeSeriesRequest(BaseModel):
     index: TimeSeriesIndex
     interval: Optional[TimeInterval] = TimeInterval.MONTH
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100)
-    use_aoi_cloud_filter: Optional[bool] = Field(False, description="Ignored. SCL-based AOI filtering reserved for available-dates. Timeseries uses tile-level filter at 10m.")
-    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
+    use_aoi_cloud_filter: Optional[bool] = Field(False, description="If True, use SCL-based AOI cloud filter at 20m instead of tile-level CLOUDY_PIXEL_PERCENTAGE.")
 
 class ExportRequest(BaseModel):
     aoi: AOIRequest

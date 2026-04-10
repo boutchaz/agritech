@@ -96,6 +96,7 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
+import { CalibrationSyntheseBanner } from '@/components/calibration/CalibrationSyntheseBanner';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
@@ -1728,6 +1729,15 @@ const AICalibrationPage = () => {
       </div>
 
       {phase && <PhaseBanner phase={phase} />}
+
+      {!isCalibrating && hasV2Report && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || calibrationCompletedButPhaseStuck) && (
+        <CalibrationSyntheseBanner
+          parcelId={parcelId}
+          onNavigateToReview={() => {
+            document.querySelector('[data-testid="calibration-review-section"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+        />
+      )}
 
       {!isCalibrating &&
         (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'calibrating' || calibrationCompletedButPhaseStuck) &&

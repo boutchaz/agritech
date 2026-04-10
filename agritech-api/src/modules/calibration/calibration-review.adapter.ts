@@ -469,7 +469,7 @@ export class CalibrationReviewAdapter {
       return (month === 6 && day >= 10) || (month === 7 && day <= 30);
     });
 
-    if (!hasValidSummerImage && zoneSummary.length === 0) {
+    if (!hasValidSummerImage && zoneSummary.length === 0 && !zonesGeojson) {
       return {
         available: false,
         zone_summary: [],
@@ -754,7 +754,22 @@ export class CalibrationReviewAdapter {
   }
 
   private getStep(output: JsonRecord, stepName: string): JsonRecord {
-    return this.asRecord(output[stepName]);
+    const step = this.asRecord(output[stepName]);
+    if (Object.keys(step).length > 0) return step;
+
+    // Fallback: baseline_data spreads step7 under the key "zones"
+    if (stepName === "step7") return this.asRecord(output.zones);
+    // Fallback: baseline_data spreads step3.global_percentiles under "percentiles"
+    if (stepName === "step3") {
+      const percentiles = output.percentiles;
+      if (percentiles && typeof percentiles === "object") {
+        return { global_percentiles: percentiles } as JsonRecord;
+      }
+    }
+    // Fallback: baseline_data spreads step4 under "phenology"
+    if (stepName === "step4") return this.asRecord(output.phenology);
+
+    return step;
   }
 
   private asRecord(value: unknown): JsonRecord {

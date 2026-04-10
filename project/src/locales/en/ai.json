@@ -216,6 +216,12 @@
       "stress_events": "Stress events"
     }
   },
+  "calibrationSynthese": {
+    "title": "Calibration Summary",
+    "confidence": "Confidence",
+    "yield": "Yield Potential",
+    "viewFull": "View full report"
+  },
   "calibrationReview": {
     "title": "Calibration Review",
     "level1": {

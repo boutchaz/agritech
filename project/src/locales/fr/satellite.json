@@ -183,8 +183,6 @@
       "barChartLabels": ["Moyenne", "Médiane", "Min", "Max", "P10", "P90", "Écart-type"]
     },
     "warnings": {
-      "dateMismatchTitle": "Date de données différente",
-      "dateMismatchDescription": "Aucune image satellite disponible pour le <strong>{{requested}}</strong>. Données du <strong>{{actual}}</strong> affichées à la place.",
       "sameActualDateTitle": "Même image satellite détectée",
       "sameActualDateDescription": "Les deux dates sélectionnées ({{date1}} et {{date2}}) correspondent à la même image satellite du <strong>{{actual}}</strong>. La comparaison affiche des données identiques. Choisissez des dates plus éloignées pour une comparaison pertinente.",
       "noImagesForDate": "Aucune image satellite disponible pour le {{date}}. Veuillez sélectionner une autre date dans le calendrier.",

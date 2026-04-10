@@ -434,7 +434,6 @@ async def calculate_indices(
         f"cloud_coverage={request.cloud_coverage}, "
         f"scale={request.scale}, "
         f"use_aoi_cloud_filter={request.use_aoi_cloud_filter}, "
-        f"cloud_buffer_meters={request.cloud_buffer_meters}, "
         f"provider_param={provider!r}"
     )
 
@@ -481,7 +480,6 @@ async def calculate_indices(
                     request.date_range.end_date,
                     request.cloud_coverage,
                     use_aoi_cloud_filter=False,
-                    cloud_buffer_meters=request.cloud_buffer_meters,
                 )
 
                 collection_size = collection.size().getInfo()
@@ -1565,218 +1563,64 @@ async def get_available_dates(
                 )
                 area_hectares = None
 
-            # For available-dates we use AOI-LEVEL cloud filtering by default.
-            # This calculates the actual cloud coverage within the user's AOI
-            # using the SCL band, which is more accurate than tile-level metadata.
-            end_dt_inclusive = (
-                datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
-            ).strftime("%Y-%m-%d")
-
+            # Use the same SCL-based AOI cloud filter as heatmap/timeseries
+            # via get_sentinel2_collection → filter_by_scl_coverage (SCL, 20m, no buffer)
             logger.info(
-                f"[available-dates][{req_id}] GEE: Querying S2_SR_HARMONIZED with AOI-level cloud filtering, "
-                f"filterDate={start_date} -> {end_dt_inclusive} (inclusive), "
-                f"max_aoi_cloud_coverage={max_cloud_coverage}%"
+                f"[available-dates][{req_id}] GEE: Querying S2_SR_HARMONIZED with unified SCL cloud filtering, "
+                f"dates={start_date} -> {end_date}, "
+                f"max_cloud_coverage={max_cloud_coverage}%"
             )
 
-            # Get collection WITHOUT tile-level cloud filter first
-            # We'll apply AOI-level filtering instead
-            unfiltered_collection = (
-                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-                .filterBounds(aoi)
-                .filterDate(start_date, end_dt_inclusive)
-            )
+            t_gee = time.monotonic()
 
-            # Get collection size
-            def _gee_get_unfiltered_size():
-                return unfiltered_collection.size().getInfo()
-
-            logger.info(
-                f"[available-dates][{req_id}] GEE: Checking unfiltered collection size..."
-            )
-            t_sizes = time.monotonic()
-            unfiltered_count = await _to_thread(_gee_get_unfiltered_size)
-            sizes_elapsed = time.monotonic() - t_sizes
-            logger.info(
-                f"[available-dates][{req_id}] GEE: Unfiltered collection size: {unfiltered_count}, "
-                f"elapsed={sizes_elapsed:.2f}s"
-            )
-
-            if unfiltered_count == 0:
-                logger.warning(
-                    f"[available-dates][{req_id}] GEE: ZERO images found! "
-                    f"This means NO Sentinel-2 data intersects this geometry for this date range. "
-                    f"geometry_fingerprint={geo_summary.get('fingerprint', 'N/A')}, "
-                    f"bbox={geo_summary.get('bbox', 'N/A')}"
+            def _gee_get_filtered_dates():
+                filtered_collection = earth_engine_service.get_sentinel2_collection(
+                    aoi_geometry,
+                    start_date,
+                    end_date,
+                    max_cloud_coverage,
+                    use_aoi_cloud_filter=True,
                 )
-                total_elapsed = time.monotonic() - t_start
-                logger.info(
-                    f"[available-dates][{req_id}] === DONE (empty) === "
-                    f"total_elapsed={total_elapsed:.2f}s"
-                )
-                return {
-                    "available_dates": [],
-                    "total_images": 0,
-                    "date_range": {"start": start_date, "end": end_date},
-                    "filters": {"max_cloud_coverage": max_cloud_coverage},
-                    "debug_info": {
-                        "message": "No Sentinel-2 images found for this location and time period",
-                        "suggestion": "Check that the geometry is within Sentinel-2 coverage area",
-                    },
-                    "provider": satellite_provider.provider_name,
-                }
 
-            # SCL is ONLY used here for available-dates AOI-level cloud filtering (10%).
-            # Heatmap and timeseries use tile-level CLOUDY_PIXEL_PERCENTAGE with 10m bands (B2,B3,B4,B8).
-            # SCL values: 3=Cloud Shadow, 8=Cloud Medium, 9=Cloud High, 10=Cirrus
-            def extract_date_with_aoi_cloud(image):
-                """Extract date info with AOI-level cloud coverage calculation."""
-                date = ee.Date(image.get("system:time_start"))
+                collection_size = filtered_collection.size().getInfo()
+                if collection_size == 0:
+                    return []
 
-                # Get SCL band for cloud detection within AOI
-                scl = image.select("SCL")
-
-                # Cloud mask: pixels that are clouds (3, 8, 9, 10)
-                cloud_mask = scl.eq(3).Or(scl.eq(8)).Or(scl.eq(9)).Or(scl.eq(10))
-
-                # Calculate cloud percentage within AOI
-                cloud_pixels = cloud_mask.reduceRegion(
-                    reducer=ee.Reducer.sum(),
-                    geometry=aoi,
-                    scale=20,  # SCL is at 20m resolution
-                    maxPixels=1e13,
-                    bestEffort=True,
-                    tileScale=4,
-                ).get("SCL")
-
-                total_pixels = (
-                    scl.mask()
-                    .reduceRegion(
-                        reducer=ee.Reducer.count(),
-                        geometry=aoi,
-                        scale=20,
-                        maxPixels=1e13,
-                        bestEffort=True,
-                        tileScale=4,
+                # Extract date + cloud info from each filtered image
+                def extract_date_info(image):
+                    date = ee.Date(image.get("system:time_start"))
+                    cloud_pct = ee.Algorithms.If(
+                        image.propertyNames().contains("AOI_SCL_CLOUD_COVERAGE"),
+                        image.get("AOI_SCL_CLOUD_COVERAGE"),
+                        image.get("CLOUDY_PIXEL_PERCENTAGE"),
                     )
-                    .get("SCL")
-                )
+                    return ee.Feature(
+                        None,
+                        {
+                            "date": date.format("YYYY-MM-dd"),
+                            "cloud_coverage": cloud_pct,
+                            "timestamp": date.millis(),
+                        },
+                    )
 
-                # Calculate percentage
-                aoi_cloud_pct = (
-                    ee.Number(cloud_pixels)
-                    .divide(ee.Number(total_pixels))
-                    .multiply(100)
-                )
-
-                return ee.Feature(
-                    None,
-                    {
-                        "date": date.format("YYYY-MM-dd"),
-                        "aoi_cloud_coverage": aoi_cloud_pct,
-                        "tile_cloud_coverage": image.get("CLOUDY_PIXEL_PERCENTAGE"),
-                        "timestamp": date.millis(),
-                    },
-                )
-
-            def _gee_get_dates_with_aoi_cloud():
-                """Get all dates with AOI-level cloud coverage."""
-                collection_list = unfiltered_collection.toList(
-                    unfiltered_collection.size()
-                )
-                num_images = unfiltered_collection.size().getInfo()
+                features = filtered_collection.map(extract_date_info)
+                info_list = features.getInfo()
 
                 results = []
-                for i in range(num_images):
-                    try:
-                        image = ee.Image(collection_list.get(i))
-                        feature = extract_date_with_aoi_cloud(image)
-                        info = feature.getInfo()
-                        props = info.get("properties", {})
-                        results.append(
-                            [
-                                props.get("date"),
-                                props.get("aoi_cloud_coverage"),
-                                props.get("tile_cloud_coverage"),
-                                props.get("timestamp"),
-                            ]
-                        )
-                    except Exception as e:
-                        logger.warning(
-                            f"[available-dates][{req_id}] Error processing image {i}: {e}"
-                        )
-                        continue
-
+                for f in info_list.get("features", []):
+                    props = f.get("properties", {})
+                    results.append(props)
                 return results
 
-            logger.info(
-                f"[available-dates][{req_id}] GEE: Calculating AOI-level cloud coverage for {unfiltered_count} images..."
-            )
-            t_gee = time.monotonic()
-            all_date_info = await _to_thread(_gee_get_dates_with_aoi_cloud)
+            all_date_info = await _to_thread(_gee_get_filtered_dates)
             gee_elapsed = time.monotonic() - t_gee
 
             logger.info(
-                f"[available-dates][{req_id}] GEE: AOI cloud calculation complete, "
-                f"processed {len(all_date_info)} images, elapsed={gee_elapsed:.2f}s"
+                f"[available-dates][{req_id}] GEE: SCL filtering complete, "
+                f"{len(all_date_info)} images passed, elapsed={gee_elapsed:.2f}s"
             )
 
-            # Filter by AOI-level cloud coverage and log details
-            date_info = []
-            for item in all_date_info:
-                if item and len(item) >= 4:
-                    date_str = item[0]
-                    aoi_cloud = item[1]
-                    tile_cloud = item[2]
-                    timestamp = item[3]
-
-                    # Check if passes AOI cloud filter
-                    passes = (
-                        aoi_cloud <= max_cloud_coverage
-                        if aoi_cloud is not None
-                        else False
-                    )
-
-                    logger.debug(
-                        f"[available-dates][{req_id}] GEE: {date_str} - "
-                        f"AOI cloud: {aoi_cloud:.1f}%, Tile cloud: {tile_cloud:.1f}%, "
-                        f"passes={passes}"
-                    )
-
-                    if passes:
-                        date_info.append([date_str, aoi_cloud, timestamp])
-
-            raw_count = len(date_info)
-            logger.info(
-                f"[available-dates][{req_id}] GEE: After AOI-level filtering: "
-                f"{raw_count} images pass {max_cloud_coverage}% threshold"
-            )
-
-            if not date_info:
-                # Find minimum AOI cloud coverage for helpful debug message
-                min_aoi_cloud = None
-                all_cloud_data = []
-                for item in all_date_info:
-                    if item and len(item) >= 4 and item[1] is not None:
-                        all_cloud_data.append(
-                            {
-                                "date": item[0],
-                                "aoi_cloud": item[1],
-                                "tile_cloud": item[2],
-                            }
-                        )
-                        if min_aoi_cloud is None or item[1] < min_aoi_cloud:
-                            min_aoi_cloud = item[1]
-
-                # Sort by AOI cloud coverage
-                all_cloud_data.sort(key=lambda x: x["aoi_cloud"])
-
-                logger.warning(
-                    f"[available-dates][{req_id}] GEE: ALL {unfiltered_count} images rejected by "
-                    f"AOI-level cloud filter (threshold={max_cloud_coverage}%). "
-                    f"Minimum AOI cloud found: {min_aoi_cloud:.1f}%. "
-                    f"Suggestion: Increase cloud_coverage to at least {int(min_aoi_cloud) + 5}%"
-                )
-
+            if not all_date_info:
                 total_elapsed = time.monotonic() - t_start
                 logger.info(
                     f"[available-dates][{req_id}] === DONE (empty) === "
@@ -1790,143 +1634,34 @@ async def get_available_dates(
                         "max_cloud_coverage": max_cloud_coverage,
                         "filter_type": "aoi_level",
                     },
-                    "debug_info": {
-                        "message": f"All {unfiltered_count} images exceed {max_cloud_coverage}% AOI cloud coverage",
-                        "min_aoi_cloud_found": round(min_aoi_cloud, 2)
-                        if min_aoi_cloud is not None
-                        else None,
-                        "suggestion": f"Increase cloud_coverage threshold to at least {int(min_aoi_cloud) + 5 if min_aoi_cloud else 20}%",
-                        "all_images_cloud_data": all_cloud_data[
-                            :10
-                        ],  # Show top 10 least cloudy
-                    },
                     "provider": satellite_provider.provider_name,
                 }
 
-            # === DIAGNOSTIC: Log per-date cloud coverage distribution ===
-            cloud_values_all = []
-            dates_seen = set()
-            for item in date_info:
-                if item and len(item) >= 3:
-                    dates_seen.add(item[0])
-                    if item[1] is not None:
-                        cloud_values_all.append(float(item[1]))
-
-            if cloud_values_all:
-                import numpy as np
-
-                cloud_arr = np.array(cloud_values_all)
-                logger.info(
-                    f"[available-dates][{req_id}] GEE: Cloud coverage distribution across {raw_count} images: "
-                    f"min={cloud_arr.min():.1f}%, max={cloud_arr.max():.1f}%, "
-                    f"mean={cloud_arr.mean():.1f}%, median={np.median(cloud_arr):.1f}%, "
-                    f"std={cloud_arr.std():.1f}%, "
-                    f"<10%={int((cloud_arr < 10).sum())}, "
-                    f"<20%={int((cloud_arr < 20).sum())}, "
-                    f"<50%={int((cloud_arr < 50).sum())}, "
-                    f"unique_dates={len(dates_seen)}, "
-                    f"images_per_date_avg={raw_count / max(len(dates_seen), 1):.1f}"
-                )
-
-            # Process and deduplicate dates
+            # Deduplicate: keep lowest cloud coverage per date
             dates_dict = {}
-            malformed_items = 0
-            duplicate_count = 0
-            for item in date_info:
-                if item and len(item) >= 3:
-                    date_str = item[0]
-                    cloud_coverage = item[1]
-                    timestamp = item[2]
+            for item in all_date_info:
+                date_str = item.get("date")
+                cloud = item.get("cloud_coverage")
+                timestamp = item.get("timestamp")
+                if date_str is None:
+                    continue
 
-                    # Keep the image with lowest cloud coverage for each date
-                    if date_str not in dates_dict:
-                        dates_dict[date_str] = {
-                            "date": date_str,
-                            "cloud_coverage": round(cloud_coverage, 2),
-                            "timestamp": timestamp,
-                            "available": True,
-                        }
-                    elif dates_dict[date_str]["cloud_coverage"] > cloud_coverage:
-                        logger.debug(
-                            f"[available-dates][{req_id}] GEE: Dedup {date_str}: "
-                            f"replacing cloud={dates_dict[date_str]['cloud_coverage']}% "
-                            f"with better cloud={round(cloud_coverage, 2)}%"
-                        )
-                        dates_dict[date_str] = {
-                            "date": date_str,
-                            "cloud_coverage": round(cloud_coverage, 2),
-                            "timestamp": timestamp,
-                            "available": True,
-                        }
-                        duplicate_count += 1
-                    else:
-                        duplicate_count += 1
-                else:
-                    malformed_items += 1
-                    logger.debug(
-                        f"[available-dates][{req_id}] GEE: Malformed item: {item}"
-                    )
+                cloud_val = round(float(cloud), 2) if cloud is not None else 0.0
 
-            if malformed_items > 0:
-                logger.warning(
-                    f"[available-dates][{req_id}] GEE: {malformed_items} malformed items "
-                    f"in date_info (expected [date, cloud, timestamp])"
-                )
+                if date_str not in dates_dict or dates_dict[date_str]["cloud_coverage"] > cloud_val:
+                    dates_dict[date_str] = {
+                        "date": date_str,
+                        "cloud_coverage": cloud_val,
+                        "timestamp": timestamp,
+                        "available": True,
+                    }
 
-            if duplicate_count > 0:
-                logger.info(
-                    f"[available-dates][{req_id}] GEE: Deduplicated {duplicate_count} "
-                    f"overlapping tile entries (multiple S2 tiles covering same date)"
-                )
-
-            # Sort by date and return
             available_dates = sorted(dates_dict.values(), key=lambda x: x["date"])
-
-            # === DIAGNOSTIC: Detect date gaps ===
-            if len(available_dates) >= 2:
-                sorted_date_strs = [d["date"] for d in available_dates]
-                gaps = []
-                for i in range(1, len(sorted_date_strs)):
-                    prev = datetime.strptime(sorted_date_strs[i - 1], "%Y-%m-%d")
-                    curr = datetime.strptime(sorted_date_strs[i], "%Y-%m-%d")
-                    gap_days = (curr - prev).days
-                    if gap_days > 15:  # S2 revisit is ~5 days, so >15 is notable
-                        gaps.append(
-                            f"{sorted_date_strs[i - 1]}->{sorted_date_strs[i]} ({gap_days}d)"
-                        )
-                if gaps:
-                    logger.info(
-                        f"[available-dates][{req_id}] GEE: Notable date gaps (>15 days): "
-                        f"{gaps[:10]}{'...' if len(gaps) > 10 else ''}"
-                    )
-
-            # Log per-date summary at debug level
-            if available_dates:
-                cloud_summary = ", ".join(
-                    f"{d['date']}:{d['cloud_coverage']}%" for d in available_dates[:20]
-                )
-                logger.debug(
-                    f"[available-dates][{req_id}] GEE: Per-date cloud (first 20): [{cloud_summary}]"
-                )
-                if len(available_dates) > 20:
-                    cloud_summary_tail = ", ".join(
-                        f"{d['date']}:{d['cloud_coverage']}%"
-                        for d in available_dates[-5:]
-                    )
-                    logger.debug(
-                        f"[available-dates][{req_id}] GEE: Per-date cloud (last 5): [{cloud_summary_tail}]"
-                    )
 
             total_elapsed = time.monotonic() - t_start
             logger.info(
                 f"[available-dates][{req_id}] === DONE === "
-                f"raw_images={raw_count}, "
                 f"unique_dates={len(available_dates)}, "
-                f"duplicates_merged={duplicate_count}, "
-                f"malformed={malformed_items}, "
-                f"date_range_result="
-                f"{available_dates[0]['date'] if available_dates else 'N/A'} -> "
-                f"{available_dates[-1]['date'] if available_dates else 'N/A'}, "
                 f"total_elapsed={total_elapsed:.2f}s"
             )
 

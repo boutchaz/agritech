@@ -216,6 +216,12 @@
       "stress_events": "Événements de stress"
     }
   },
+  "calibrationSynthese": {
+    "title": "Synthèse du Calibrage",
+    "confidence": "Confiance",
+    "yield": "Potentiel",
+    "viewFull": "Voir le rapport complet"
+  },
   "calibrationReview": {
     "title": "Revue de Calibration",
     "level1": {

@@ -55,6 +55,7 @@ function isPixelGridFeatureCollection(fc: FeatureCollection): boolean {
   let maxR = 0;
   let minC = Infinity;
   let minR = Infinity;
+  let allIntegers = true;
 
   for (const f of features) {
     const g = f.geometry;
@@ -65,7 +66,11 @@ function isPixelGridFeatureCollection(fc: FeatureCollection): boolean {
     maxR = Math.max(maxR, b);
     minC = Math.min(minC, a);
     minR = Math.min(minR, b);
+    if (allIntegers && (a % 1 !== 0 || b % 1 !== 0)) allIntegers = false;
   }
+
+  // Integer coordinates starting at 0 are a strong signal of pixel/raster indices
+  const startsAtZero = minC === 0 && minR === 0;
 
   const spanC = maxC - minC;
   const spanR = maxR - minR;
@@ -79,6 +84,9 @@ function isPixelGridFeatureCollection(fc: FeatureCollection): boolean {
     minR >= -90;
 
   const looksLikeIndexGrid = spanC > 2.5 || spanR > 2.5 || maxC > 24 || maxR > 24;
+
+  // Small rasters (e.g. 3x3): integer coords starting at [0,0] with all-Point geometry
+  if (allIntegers && startsAtZero && !looksLikeGeographicParcel) return true;
 
   return looksLikeIndexGrid && !looksLikeGeographicParcel;
 }
@@ -299,6 +307,14 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
     return f0?.geometry?.type === 'Point';
   }, [mapGeoJson.zones]);
 
+  // Stable key to force GeoJSON re-mount when data changes
+  const geoJsonKey = useMemo(() => {
+    const z = mapGeoJson.zones;
+    if (!z || typeof z !== 'object') return 'empty';
+    const fc = z as FeatureCollection;
+    return `zones-${fc.features?.length ?? 0}-${fc.features?.[0]?.geometry?.type ?? 'none'}`;
+  }, [mapGeoJson.zones]);
+
   if (!heatmap.available) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6" data-block="zones">
@@ -348,10 +364,11 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
             >
               <LeafletBaseTileLayers variant="satellite" />
               <GeoJSON
+                key={geoJsonKey}
                 data={mapGeoJson.zones}
                 interactive={false}
                 style={(f) => {
-                  if (f.geometry.type === 'Point') {
+                  if (f?.geometry?.type === 'Point') {
                     return {};
                   }
                   return geoJsonStyle(f);
@@ -360,6 +377,7 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
               />
               {mapGeoJson.boundaryFeature && (
                 <GeoJSON
+                  key={`boundary-${geoJsonKey}`}
                   data={mapGeoJson.boundaryFeature}
                   interactive={false}
                   style={{

@@ -216,6 +216,12 @@
       "stress_events": "أحداث إجهاد"
     }
   },
+  "calibrationSynthese": {
+    "title": "ملخص المعايرة",
+    "confidence": "الثقة",
+    "yield": "إمكانية الإنتاج",
+    "viewFull": "عرض التقرير الكامل"
+  },
   "calibrationReview": {
     "title": "مراجعة المعايرة",
     "level1": {

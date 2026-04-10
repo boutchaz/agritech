@@ -320,7 +320,6 @@ class EarthEngineService:
         end_date: str,
         max_cloud_coverage: float = None,
         use_aoi_cloud_filter: bool = False,
-        cloud_buffer_meters: float = 300,
     ) -> ee.ImageCollection:
         """
         Get Sentinel-2 image collection for given parameters
@@ -330,9 +329,9 @@ class EarthEngineService:
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
             max_cloud_coverage: Maximum cloud coverage percentage
-            use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter (CloudMaskingService).
-                Default is False. Available-dates can opt-in explicitly.
-            cloud_buffer_meters: Buffer around AOI for cloud calculation (default 300m)
+            use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter at 20m
+                (filter_by_scl_coverage). No tile-level pre-filter applied.
+                Default is False (tile-level CLOUDY_PIXEL_PERCENTAGE).
         """
         self.initialize()
 
@@ -372,26 +371,26 @@ class EarthEngineService:
             datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
         ).strftime("%Y-%m-%d")
 
-        # First, get initial collection with loose tile-based filtering
-        collection = (
-            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-            .filterBounds(aoi)
-            .filterDate(start_date, end_dt_inclusive)
-            .filter(
-                ee.Filter.lte(
-                    "CLOUDY_PIXEL_PERCENTAGE",
-                    max_cloud * 2 if use_aoi_cloud_filter else max_cloud,
-                )
-            )
-        )
-
-        # If AOI-based cloud filtering is requested, apply it
         if use_aoi_cloud_filter:
-            logger.info(
-                f"Applying AOI-based cloud filtering with {cloud_buffer_meters}m buffer"
+            # AOI-level: no tile pre-filter, SCL-only at 20m decides
+            collection = (
+                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                .filterBounds(aoi)
+                .filterDate(start_date, end_dt_inclusive)
             )
-            collection = CloudMaskingService.filter_collection_by_aoi_clouds(
-                collection, aoi, max_cloud, cloud_buffer_meters
+            logger.info("Applying SCL-based AOI cloud filtering at 20m")
+            collection = CloudMaskingService.filter_by_scl_coverage(
+                collection, aoi, max_cloud
+            )
+        else:
+            # Tile-level: CLOUDY_PIXEL_PERCENTAGE metadata filter
+            collection = (
+                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                .filterBounds(aoi)
+                .filterDate(start_date, end_dt_inclusive)
+                .filter(
+                    ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", max_cloud)
+                )
             )
 
         # Check if collection has any images
@@ -859,11 +858,6 @@ class EarthEngineService:
             use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
 
-        if use_aoi_cloud_filter:
-            collection = CloudMaskingService.filter_by_scl_coverage(
-                collection, aoi, max_cloud
-            )
-
         index_name = index
 
         def extract_observation(image):
@@ -973,11 +967,6 @@ class EarthEngineService:
             max_cloud,
             use_aoi_cloud_filter=use_aoi_cloud_filter,
         )
-
-        if use_aoi_cloud_filter:
-            base_collection = CloudMaskingService.filter_by_scl_coverage(
-                base_collection, aoi, max_cloud
-            )
 
         windows = []
         current = start_dt
@@ -1102,11 +1091,6 @@ class EarthEngineService:
                     max_cloud,
                     use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
-
-                if use_aoi_cloud_filter:
-                    sub_collection = CloudMaskingService.filter_by_scl_coverage(
-                        sub_collection, aoi, max_cloud
-                    )
 
                 count = sub_collection.size().getInfo()
                 if count == 0:
@@ -1610,46 +1594,25 @@ class EarthEngineService:
     ) -> Dict[str, Any]:
         """Export real Earth Engine pixel data for heatmap visualization within AOI.
 
-        Searches for the nearest available Sentinel-2 image within ±15 days of the
-        requested date to handle days without satellite passes.
+        Fetches the exact requested date using the same SCL-based AOI cloud filter
+        as available-dates and timeseries. No fallback — the date picker guarantees
+        only available dates are shown.
         """
         self.initialize()
 
-        target_date = datetime.strptime(date, "%Y-%m-%d")
-        image = None
-        actual_date = date
+        # Fetch exact date — same filter as available-dates
+        collection = self.get_sentinel2_collection(
+            geometry,
+            date,
+            date,
+            max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+            use_aoi_cloud_filter=True,
+        )
+        collection_size = collection.size().getInfo()
+        if collection_size == 0:
+            raise ValueError(f"No Sentinel-2 images found for {date}")
 
-        # Strategy: try exact date first, then expand window up to ±15 days
-        for delta in range(0, 16):
-            for direction in [0] if delta == 0 else [-1, 1]:
-                search_date = target_date + timedelta(days=delta * direction)
-                search_start = search_date.strftime("%Y-%m-%d")
-                search_end = (search_date + timedelta(days=1)).strftime("%Y-%m-%d")
-
-                try:
-                    # Use same SCL AOI-level cloud filter as available-dates to ensure
-                    # consistent date availability between timeseries and heatmap.
-                    collection = self.get_sentinel2_collection(
-                        geometry,
-                        search_start,
-                        search_end,
-                        max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
-                        use_aoi_cloud_filter=True,
-                    )
-                    collection_size = collection.size().getInfo()
-                    if collection_size > 0:
-                        image = ee.Image(
-                            collection.sort("CLOUDY_PIXEL_PERCENTAGE").first()
-                        )
-                        actual_date = search_start
-                        break
-                except Exception:
-                    continue
-            if image is not None:
-                break
-
-        if image is None:
-            raise ValueError(f"No Sentinel-2 images found within ±15 days of {date}")
+        image = ee.Image(collection.sort("CLOUDY_PIXEL_PERCENTAGE").first())
 
         indices = self.calculate_vegetation_indices(image, [index])
         index_image = indices[index]
@@ -1839,11 +1802,8 @@ class EarthEngineService:
         if geometry.get("type") == "Polygon" and geometry.get("coordinates"):
             aoi_coordinates = geometry["coordinates"][0]
 
-        if actual_date != date:
-            logger.info(f"No image on {date}, using nearest available: {actual_date}")
-
         return {
-            "date": actual_date,
+            "date": date,
             "index": index,
             "bounds": {
                 "min_lon": min_lon,
@@ -1863,7 +1823,6 @@ class EarthEngineService:
                 "max_requested_pixels": max_pixels,
                 "estimated_total_pixels": estimated_pixels,
                 "aoi_area_deg2": area_deg_lat * area_deg_lon,
-                "requested_date": date,
             },
         }
 
