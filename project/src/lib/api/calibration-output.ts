@@ -1,7 +1,7 @@
 import { apiClient } from "../api-client";
 import type { CalibrationOutput,
 NutritionOption, } from "@/types/calibration-output";
-import type { CalibrationBlocksReviewView } from "@/types/calibration-blocks-review";
+import type { CalibrationReviewView } from "@/types/calibration-review";
 
 const BASE_URL = "/api/v1/parcels";
 
@@ -394,8 +394,8 @@ export const calibrationApi = {
   async getCalibrationReview(
     parcelId: string,
     organizationId?: string,
-  ): Promise<CalibrationBlocksReviewView | null> {
-    return apiClient.get<CalibrationBlocksReviewView | null>(
+  ): Promise<CalibrationReviewView | null> {
+    return apiClient.get<CalibrationReviewView | null>(
       `${BASE_URL}/${parcelId}/calibration/review`,
       {},
       organizationId,

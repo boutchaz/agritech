@@ -1,5 +1,5 @@
 import { Info } from 'lucide-react';
-import type { BlockGMetadonnees as BlockGData } from '@/types/calibration-blocks-review';
+import type { BlockGMetadonnees as BlockGData } from '@/types/calibration-review';
 
 interface BlockGMetadonneesProps {
   data: BlockGData;

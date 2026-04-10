@@ -1,232 +1,233 @@
-import type { IndexTimePoint, SeverityLevel } from './calibration-output';
+/**
+ * CalibrationReviewView — Post-calibration screen DTO (Blocks A-H)
+ *
+ * Mirrors the backend CalibrationReviewView from
+ * agritech-api/src/modules/calibration/dto/calibration-review.dto.ts
+ */
 
-export type OperationalAlertCategory =
-  | 'hydrique'
-  | 'climatique'
-  | 'nutritionnel'
-  | 'sanitaire'
-  | 'phenologique'
-  | 'structurel';
+// ── Block A — Synthese executive ──
 
-export type ExpertAuditRuleStatus = 'applied' | 'skipped' | 'not_implemented' | 'partial';
+export type HealthLabel = 'excellent' | 'bon' | 'moyen' | 'faible' | 'critique';
+export type ConfidenceLevel = 'eleve' | 'moyen' | 'faible' | 'minimal';
+export type ConcernSeverity = 'critique' | 'vigilance';
 
-export type ExpertAuditNoteSeverity = 'info' | 'warning' | 'critical';
+export interface StrengthItem {
+  component: string;
+  phrase: string;
+}
 
-export type ExpertAuditNoteCategory = 'methodology' | 'data_gap' | 'reliability';
+export interface ConcernItem {
+  component: string;
+  phrase: string;
+  severity: ConcernSeverity;
+  target_block: string;
+}
 
-export type ProtocolComplianceLevel = 'partial' | 'full' | 'none';
+export interface BlockASynthese {
+  health_score: number;
+  health_label: HealthLabel;
+  health_narrative: string;
+  confidence_score: number;
+  confidence_level: ConfidenceLevel;
+  confidence_narrative: string;
+  yield_range: {
+    min: number;
+    max: number;
+    unit: string;
+    wide_range_warning: boolean;
+  } | null;
+  strengths: StrengthItem[];
+  concerns: ConcernItem[];
+}
 
-export interface DetectedSignal {
-  type: string;
-  severity: SeverityLevel;
-  message: string;
+// ── Block B — Analyse detaillee ──
+
+export interface GaugeData {
+  min: number;
+  max: number;
+  value: number;
+  color: string;
+}
+
+export interface IndexCard {
+  indice: string;
+  valeur_mediane: number;
+  position_referentiel: string;
+  gauge: GaugeData;
+  phrase: string;
+}
+
+export interface CrossDiagnosisCard {
+  indice: string;
+  valeur_mediane: number;
+  cross_diagnosis_text: string;
+  sources_used: string[];
+}
+
+export interface ZoneSummaryItem {
+  class_name: string;
+  label: string;
+  percent: number;
+  color: string;
+}
+
+export interface IndexTimePoint {
   date: string;
-  source: 'anomaly' | 'extreme_event';
+  value: number;
+  outlier: boolean;
 }
 
-export interface OperationalAlert {
-  code: string;
-  category: OperationalAlertCategory;
-  severity: string;
-  message: string;
-  hysteresis: {
-    entry_threshold: string;
-    exit_threshold: string;
-  };
+export interface PercentileBand {
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
 }
 
-export interface Level1Decision {
-  current_phase: {
+export interface SpectralData {
+  indices: Record<string, IndexTimePoint[]>;
+  percentiles: Record<string, PercentileBand>;
+  phenology_phases: Array<{
     name: string;
-    method: 'heuristic' | 'protocol';
-    confidence: string;
-    date_start: string | null;
-    estimated_date_end: string | null;
-  };
-  next_phase: {
-    name: string | null;
-    timing_estimate: string | null;
-    condition: string | null;
-  };
-  detected_signals: DetectedSignal[];
-  operational_alerts: OperationalAlert[] | null;
-}
-
-export interface Level2Diagnostic {
-  signal_state: 'SIGNAL_PUR' | 'MIXTE_MODERE' | 'DOMINE_ADVENTICES' | 'NON_DISPONIBLE';
-  signal_state_note?: string;
-  mode: 'NORMAL' | 'AMORCAGE' | 'OBSERVATION';
-  mode_detail: string;
-  annotations: string[];
-  phase_diagnostics: Record<
-    string,
-    {
-      status: 'detected' | 'estimated' | 'not_applicable';
-      detail: string;
-    }
-  >;
-  health_components: {
-    vigor: number;
-    temporal_stability: number;
-    stability: number;
-    hydric: number;
-    nutritional: number;
-  };
-  alternance:
-    | {
-        detected: boolean;
-        current_year_type: 'on' | 'off' | null;
-        confidence: number;
-      }
-    | null;
-}
-
-export interface PhenologyYearStages {
-  dormancy_exit: string;
-  peak: string;
-  plateau_start: string;
-  decline_start: string;
-  dormancy_entry: string;
-}
-
-export interface Level3Biophysical {
-  indices: {
-    NIRv: IndexTimePoint[];
-    NIRvP: IndexTimePoint[] | null;
-    NDVI: IndexTimePoint[];
-    NDMI: IndexTimePoint[];
-    NDRE: IndexTimePoint[];
-    EVI: IndexTimePoint[];
-    GCI: IndexTimePoint[];
-  };
-  gdd: {
-    cumulative: Record<string, number>;
-    daily: Array<{ date: string; gdd_day: number; tmean: number }>;
-    base_temperature_used: number;
-    base_temperature_protocol: number;
-    chill_hours: number;
-  };
-  percentiles: Record<
-    string,
-    {
-      p10: number;
-      p25: number;
-      p50: number;
-      p75: number;
-      p90: number;
-      mean: number;
-      std: number;
-    }
-  >;
-}
-
-export interface Level4Temporal {
-  phenology_timeline: {
-    dormancy_exit: string;
-    peak: string;
-    plateau_start: string;
-    decline_start: string;
-    dormancy_entry: string;
-    inter_annual_variability: Record<string, number>;
-    yearly_stages?: Record<string, PhenologyYearStages>;
-  };
-  calibration_history: Array<{
-    id: string;
-    date: string;
-    health_score: number | null;
-    confidence_score: number | null;
-    phase_age: string;
-    status: string;
+    start_date: string;
+    end_date: string | null;
   }>;
-  confidence: {
-    total_score: number;
-    normalized_score: number;
-    components: Record<string, { score: number; max_score: number }>;
-  };
+  excluded_periods: Array<{
+    date: string;
+    type: string;
+    label: string;
+  }>;
 }
 
-export interface Level5QualityAudit {
-  filtering: {
-    total_images_input: number;
-    images_retained: number;
-    images_rejected_cloud: number;
-    average_cloud_coverage: number;
-    outliers_removed: number;
-    interpolated_dates: string[];
-  };
-  excluded_cycles: string[];
-  data_quality_flags: string[];
-  notes: string[];
+export interface HeatmapData {
+  available: boolean;
+  zone_summary: ZoneSummaryItem[];
+  zones_geojson: Record<string, unknown> | null;
+  date_image: string | null;
+  blocked_message: string | null;
 }
 
-export interface ExpertAuditRule {
-  rule_id: string;
-  name: string;
-  status: ExpertAuditRuleStatus;
+export interface SpatialPatterns {
+  detected: boolean;
+  confidence: number;
+  message: string;
+}
+
+export interface TemporalStability {
+  label: 'stable' | 'moderee' | 'forte';
+  variance_percent: number;
+  phrase: string;
+}
+
+export interface HistoryDepth {
+  months: number;
+  date_start: string;
+  date_end: string;
+}
+
+export interface BlockBAnalyse {
+  vigor: IndexCard;
+  hydric: CrossDiagnosisCard;
+  nutritional: CrossDiagnosisCard;
+  spectral: SpectralData;
+  heatmap: HeatmapData;
+  spatial_patterns: SpatialPatterns | null;
+  heterogeneity_flag: boolean;
+  temporal_stability: TemporalStability;
+  history_depth: HistoryDepth;
+}
+
+// ── Block C — Anomalies (Phase 2) ──
+
+export interface AnomalyItem {
+  period: string;
+  type: string;
+  icon: string;
+  impact: string;
+  sources: string[];
+}
+
+export interface RuptureItem {
+  type: string;
+  date: string;
   detail: string;
 }
 
-export interface ExpertAuditMissingData {
-  field: string;
-  impact: string;
-  workaround: string | null;
+export interface BlockCAnomalies {
+  anomalies: AnomalyItem[];
+  ruptures: RuptureItem[];
+  total_excluded_percent: number;
+  calibrage_limite: boolean;
 }
 
-export interface ExpertAuditNote {
-  severity: ExpertAuditNoteSeverity;
-  category: ExpertAuditNoteCategory;
-  note: string;
+// ── Block D — Ameliorer la precision ──
+
+export interface AvailableDataItem {
+  type: string;
+  label: string;
 }
 
-export interface ExpertAudit {
-  rules_applied: ExpertAuditRule[];
-  missing_data: ExpertAuditMissingData[];
-  expert_notes: ExpertAuditNote[];
-  protocol_compliance: {
-    section_1_filtering: ProtocolComplianceLevel;
-    section_2_classification: 'none';
-    section_3_diagnostic: 'none';
-    section_4_alerts: 'none';
-    overall: 'partial' | 'minimal' | 'none';
+export interface MissingDataItem {
+  type: string;
+  label: string;
+  gain_points: number;
+  message: string;
+}
+
+export interface BlockDAmeliorer {
+  current_confidence: number;
+  projected_confidence: number;
+  available_data: AvailableDataItem[];
+  missing_data: MissingDataItem[];
+}
+
+// ── Block F — Alternance (Phase 2) ──
+
+export type AlternanceLabel = 'faible' | 'moderee' | 'marquee' | 'forte';
+export type SeasonBadge = 'on_probable' | 'stable' | 'off_probable' | 'indetermine';
+
+export interface BlockFAlternance {
+  indice: number;
+  label: AlternanceLabel;
+  interpretation: string;
+  next_season: {
+    badge: SeasonBadge;
+    color: string;
+    phrase: string;
   };
+  variety_reference: {
+    variety: string;
+    indice_ref: number;
+  } | null;
 }
+
+// ── Block G — Metadonnees ──
+
+export interface BlockGMetadonnees {
+  generated_at_formatted: string;
+  calibration_version: string;
+}
+
+// ── Top-level ──
 
 export interface CalibrationReviewView {
   calibration_id: string;
   parcel_id: string;
   generated_at: string;
-  schema_version: 'calibration-review/v1';
-  planting_year?: number | null;
-  output: Record<string, unknown>;
-  level1_decision: Level1Decision;
-  level2_diagnostic: Level2Diagnostic;
-  level3_biophysical: Level3Biophysical;
-  level4_temporal: Level4Temporal;
-  level5_quality_audit: Level5QualityAudit;
-  expert_audit: ExpertAudit;
+  planting_year: number | null;
+  status: string;
+
+  block_a: BlockASynthese;
+  block_b: BlockBAnalyse;
+  block_c: BlockCAnomalies | null;
+  block_d: BlockDAmeliorer;
+  block_f: BlockFAlternance | null;
+  block_g: BlockGMetadonnees;
+  block_h_enabled: boolean;
+
   export: {
-    available_formats: Array<'json' | 'csv' | 'zip'>;
+    available_formats: ('json' | 'csv' | 'zip')[];
     calibration_id: string;
   };
-}
-
-export interface CalibrationSnapshotInput {
-  calibration_id: string;
-  parcel_id: string;
-  generated_at: string;
-  output: Record<string, unknown>;
-  inputs?: Record<string, unknown>;
-  confidence_score: number | null;
-  status: string;
-  parcel_phase: string;
-  organization_id: string;
-  planting_year?: number | null;
-  calibration_history: Array<{
-    id: string;
-    date: string;
-    health_score: number | null;
-    confidence_score: number | null;
-    phase_age: string;
-    status: string;
-  }>;
 }

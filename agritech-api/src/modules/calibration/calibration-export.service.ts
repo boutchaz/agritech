@@ -7,11 +7,11 @@ import {
 import archiver from "archiver";
 import { PassThrough, Readable } from "stream";
 import { DatabaseService } from "../database/database.service";
-import {
-  CalibrationReviewAdapter,
+import { CalibrationReviewAdapter } from "./calibration-review.adapter";
+import type {
   CalibrationReviewView,
   CalibrationSnapshotInput,
-} from "./calibration-review.adapter";
+} from "./dto/calibration-review.dto";
 import { CALIBRATION_HISTORY_DEFAULT_LIMIT } from "./calibration.constants";
 
 type JsonObject = Record<string, unknown>;
@@ -190,23 +190,21 @@ export class CalibrationExportService {
       ["organization_id", data.calibration.organization_id],
       ["status", data.calibration.status],
       ["generated_at", data.review.generated_at],
-      ["phase", data.review.level1_decision.current_phase.name],
-      ["confidence_label", data.review.level1_decision.current_phase.confidence],
-      ["confidence_total_score", data.review.level4_temporal.confidence.total_score],
-      [
-        "confidence_normalized_score",
-        data.review.level4_temporal.confidence.normalized_score,
-      ],
-      ["health_vigor", data.review.level2_diagnostic.health_components.vigor],
-      [
-        "health_temporal_stability",
-        data.review.level2_diagnostic.health_components.temporal_stability,
-      ],
-      ["health_stability", data.review.level2_diagnostic.health_components.stability],
-      ["health_hydric", data.review.level2_diagnostic.health_components.hydric],
-      ["health_nutritional", data.review.level2_diagnostic.health_components.nutritional],
-      ["detected_signals", data.review.level1_decision.detected_signals.length],
-      ["data_quality_flags", data.review.level5_quality_audit.data_quality_flags.length],
+      ["health_score", data.review.block_a.health_score],
+      ["health_label", data.review.block_a.health_label],
+      ["confidence_score", data.review.block_a.confidence_score],
+      ["confidence_level", data.review.block_a.confidence_level],
+      ["yield_min", data.review.block_a.yield_range?.min ?? ""],
+      ["yield_max", data.review.block_a.yield_range?.max ?? ""],
+      ["vigor_median", data.review.block_b.vigor.valeur_mediane],
+      ["hydric_median", data.review.block_b.hydric.valeur_mediane],
+      ["nutritional_median", data.review.block_b.nutritional.valeur_mediane],
+      ["temporal_stability", data.review.block_b.temporal_stability.label],
+      ["heterogeneity_flag", data.review.block_b.heterogeneity_flag ? "true" : "false"],
+      ["history_depth_months", data.review.block_b.history_depth.months],
+      ["current_confidence", data.review.block_d.current_confidence],
+      ["projected_confidence", data.review.block_d.projected_confidence],
+      ["missing_data_count", data.review.block_d.missing_data.length],
     ];
 
     const header = "metric,value";
@@ -227,7 +225,6 @@ export class CalibrationExportService {
 
     archive.pipe(outputStream);
 
-    // Stable epoch timestamp for deterministic ZIP output
     const epoch = new Date(0);
 
     const outputStep2 = this.toJsonObject(data.output.step2);
@@ -254,12 +251,6 @@ export class CalibrationExportService {
         "csv/zones.csv",
         "csv/phenology.csv",
         "csv/gdd_accumulation.csv",
-        "quality/excluded_cycles.json",
-        "quality/confidence.json",
-        "quality/filtering.json",
-        "quality/data_quality_flags.json",
-        "audit/rules_applied.json",
-        "audit/protocol_compliance.json",
       ],
     };
 
@@ -268,53 +259,41 @@ export class CalibrationExportService {
     archive.append(JSON.stringify(data.output, null, 2), { name: "output.json", date: epoch });
     archive.append(JSON.stringify(data.review, null, 2), { name: "review.json", date: epoch });
 
-    archive.append(this.buildSatelliteIndicesCsv(data.review), { name: "csv/satellite_indices.csv", date: epoch });
+    // CSV exports from raw output steps (not review blocks)
+    archive.append(this.buildSatelliteIndicesCsv(data.output), { name: "csv/satellite_indices.csv", date: epoch });
     archive.append(this.buildWeatherDailyCsv(this.asArray(outputStep2.daily_weather)), { name: "csv/weather_daily.csv", date: epoch });
     archive.append(this.buildWeatherMonthlyCsv(this.asArray(outputStep2.monthly_aggregates)), { name: "csv/weather_monthly.csv", date: epoch });
     archive.append(this.buildExtremeEventsCsv(this.asArray(outputStep2.extreme_events)), { name: "csv/extreme_events.csv", date: epoch });
     archive.append(this.buildAnomaliesCsv(this.asArray(outputStep5.anomalies)), { name: "csv/anomalies.csv", date: epoch });
     archive.append(this.buildZonesCsv(this.asArray(outputStep7.zone_summary)), { name: "csv/zones.csv", date: epoch });
-    archive.append(this.buildPhenologyCsv(outputStep4, data.review), { name: "csv/phenology.csv", date: epoch });
-    archive.append(this.buildGddAccumulationCsv(data.review), { name: "csv/gdd_accumulation.csv", date: epoch });
-
-    archive.append(JSON.stringify(data.review.level4_temporal.confidence, null, 2), { name: "quality/confidence.json", date: epoch });
-    archive.append(JSON.stringify([], null, 2), { name: "quality/excluded_cycles.json", date: epoch });
-    archive.append(JSON.stringify(data.review.level5_quality_audit.filtering, null, 2), { name: "quality/filtering.json", date: epoch });
-    archive.append(JSON.stringify(
-      {
-        data_quality_flags: data.review.level5_quality_audit.data_quality_flags,
-        notes: data.review.level5_quality_audit.notes,
-      },
-      null,
-      2,
-    ), { name: "quality/data_quality_flags.json", date: epoch });
-    archive.append(JSON.stringify(data.review.expert_audit.rules_applied ?? [], null, 2), { name: "audit/rules_applied.json", date: epoch });
-    archive.append(JSON.stringify(data.review.expert_audit.protocol_compliance ?? {}, null, 2), { name: "audit/protocol_compliance.json", date: epoch });
+    archive.append(this.buildPhenologyCsv(outputStep4), { name: "csv/phenology.csv", date: epoch });
+    archive.append(this.buildGddAccumulationCsv(data.output), { name: "csv/gdd_accumulation.csv", date: epoch });
 
     void archive.finalize();
     return outputStream;
   }
 
-  private buildSatelliteIndicesCsv(review: CalibrationReviewView): string {
+  // ─── CSV builders (from raw output, not review blocks) ─────
+
+  private buildSatelliteIndicesCsv(output: JsonObject): string {
+    const step1 = this.toJsonObject(output.step1);
+    const indexSeries = this.toJsonObject(step1.index_time_series);
     const rows = ["date,index,value,outlier"];
-    const entries = Object.entries(review.level3_biophysical.indices);
 
-    entries.forEach(([indexName, points]) => {
-      if (!Array.isArray(points)) {
-        return;
-      }
-
-      points.forEach((point) => {
+    for (const [indexName, series] of Object.entries(indexSeries)) {
+      if (!Array.isArray(series)) continue;
+      for (const point of series) {
+        const record = this.toJsonObject(point);
         rows.push(
           [
-            this.escapeCsv(point.date),
+            this.escapeCsv(String(record.date ?? "")),
             this.escapeCsv(indexName),
-            this.escapeCsv(String(point.value)),
-            this.escapeCsv(String(point.outlier)),
+            this.escapeCsv(String(record.value ?? "")),
+            this.escapeCsv(String(record.outlier ?? "")),
           ].join(","),
         );
-      });
-    });
+      }
+    }
 
     return rows.join("\n");
   }
@@ -341,15 +320,9 @@ export class CalibrationExportService {
 
   private buildAnomaliesCsv(anomalies: unknown[]): string {
     const header = [
-      "date",
-      "anomaly_type",
-      "severity",
-      "index_name",
-      "value",
-      "previous_value",
-      "deviation",
-      "weather_reference",
-      "excluded_from_reference",
+      "date", "anomaly_type", "severity", "index_name",
+      "value", "previous_value", "deviation",
+      "weather_reference", "excluded_from_reference",
     ];
     const rows = [header.join(",")];
 
@@ -390,10 +363,7 @@ export class CalibrationExportService {
     return rows.join("\n");
   }
 
-  private buildPhenologyCsv(
-    step4: JsonObject,
-    review: CalibrationReviewView,
-  ): string {
+  private buildPhenologyCsv(step4: JsonObject): string {
     const meanDates = this.toJsonObject(step4.mean_dates);
     const rows = ["metric,value"];
 
@@ -403,8 +373,6 @@ export class CalibrationExportService {
       ["plateau_start", String(meanDates.plateau_start ?? "")],
       ["decline_start", String(meanDates.decline_start ?? "")],
       ["dormancy_entry", String(meanDates.dormancy_entry ?? "")],
-      ["current_phase", review.level1_decision.current_phase.name],
-      ["next_phase", review.level1_decision.next_phase.name ?? ""],
     ];
 
     data.forEach(([metric, value]) => {
@@ -414,53 +382,23 @@ export class CalibrationExportService {
     return rows.join("\n");
   }
 
-  private buildGddAccumulationCsv(review: CalibrationReviewView): string {
-    const rows = ["month,gdd_cumulative,base_temperature_used,base_temperature_protocol,chill_hours"];
-    const gdd = review.level3_biophysical.gdd;
+  private buildGddAccumulationCsv(output: JsonObject): string {
+    const step2 = this.toJsonObject(output.step2);
+    const cumulativeGdd = this.toJsonObject(step2.cumulative_gdd);
+    const chillHours = typeof step2.chill_hours === "number" ? step2.chill_hours : 0;
+    const rows = ["month,gdd_cumulative,chill_hours"];
 
-    Object.entries(gdd.cumulative).forEach(([month, value]) => {
+    Object.entries(cumulativeGdd).forEach(([month, value]) => {
       rows.push(
         [
           this.escapeCsv(month),
           this.escapeCsv(String(value)),
-          this.escapeCsv(String(gdd.base_temperature_used)),
-          this.escapeCsv(String(gdd.base_temperature_protocol)),
-          this.escapeCsv(String(gdd.chill_hours)),
+          this.escapeCsv(String(chillHours)),
         ].join(","),
       );
     });
 
     return rows.join("\n");
-  }
-
-  private escapeCsv(value: string): string {
-    if (value.includes(",") || value.includes("\"") || value.includes("\n")) {
-      return `"${value.replace(/\"/g, '""')}"`;
-    }
-    return value;
-  }
-
-  private toJsonObject(value: unknown): JsonObject {
-    return typeof value === "object" && value !== null && !Array.isArray(value)
-      ? (value as JsonObject)
-      : {};
-  }
-
-  private asArray(value: unknown): unknown[] {
-    return Array.isArray(value) ? value : [];
-  }
-
-  private toNumber(value: unknown): number | null {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-
-    if (typeof value === "string" && value.trim().length > 0) {
-      const parsed = Number(value);
-      return Number.isFinite(parsed) ? parsed : null;
-    }
-
-    return null;
   }
 
   private buildExtremeEventsCsv(extremeEvents: unknown[]): string {
@@ -495,5 +433,42 @@ export class CalibrationExportService {
     });
 
     return rows.join("\n");
+  }
+
+  // ─── Utilities ─────────────────────────────────────────────
+
+  private escapeCsv(value: string): string {
+    // Prevent CSV formula injection: prefix with tab if a non-numeric value starts with =, +, -, or @
+    let safe = value;
+    if (safe.length > 0 && /^[=+\-@]/.test(safe) && Number.isNaN(Number(safe))) {
+      safe = `\t${safe}`;
+    }
+    if (safe.includes(",") || safe.includes("\"") || safe.includes("\n")) {
+      return `"${safe.replace(/\"/g, '""')}"`;
+    }
+    return safe;
+  }
+
+  private toJsonObject(value: unknown): JsonObject {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+      ? (value as JsonObject)
+      : {};
+  }
+
+  private asArray(value: unknown): unknown[] {
+    return Array.isArray(value) ? value : [];
+  }
+
+  private toNumber(value: unknown): number | null {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+
+    if (typeof value === "string" && value.trim().length > 0) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
   }
 }

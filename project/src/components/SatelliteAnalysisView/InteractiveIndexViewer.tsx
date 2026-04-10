@@ -37,6 +37,7 @@ import {
    formatDateForAPI
 } from '../../lib/satellite-api';
 import LeafletHeatmapViewer, { GridHeatmapLayer } from './LeafletHeatmapViewer';
+import HeatmapComparisonSlider from './HeatmapComparisonSlider';
 import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 
 import { Button } from '../ui/button';
@@ -1112,39 +1113,23 @@ const InteractiveIndexViewer = ({
           {/* Temporal Compare Mode Content */}
           {viewMode === 'temporal-compare' && leftTemporalData && rightTemporalData && !isLoading && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Side-by-side Maps */}
-                {[
-                  { id: 'left', date: selectedDate, data: leftTemporalData, color: 'bg-purple-600', label: 'Reference' },
-                  { id: 'right', date: compareDate, data: rightTemporalData, color: 'bg-indigo-600', label: 'Comparison' },
-                ].map((side) => (
-                  <Card key={side.id} className="border-slate-200 shadow-sm overflow-hidden">
-                    <CardHeader className="p-3 border-b border-slate-100 flex flex-row items-center justify-between space-y-0">
-                      <div className="flex items-center gap-2">
-                        <Badge className={cn(side.color, "text-white text-[9px] font-bold uppercase tracking-tighter px-1.5 h-5")}>{side.label}</Badge>
-                        <span className="text-xs font-bold text-slate-700">{side.date}</span>
-                        {side.data.date !== side.date && (
-                          <span className="text-[10px] text-slate-400 ml-1">({side.data.date})</span>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-bold text-slate-400">MEAN: {(side.data.statistics?.mean ?? 0).toFixed(3)}</span>
-                    </CardHeader>
-                    <div className="h-80 bg-slate-50">
-                      <LeafletHeatmapViewer
-                        parcelId={parcelId}
-                        parcelName={parcelName}
-                        boundary={boundary}
-                        initialData={side.data}
-                        selectedIndex={selectedIndex}
-                        selectedDate={side.date}
-                        embedded={true}
-                        colorPalette={colorPalette}
-                        baseLayer={baseLayer}
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              {/* Comparison Slider — overlay both dates on one map with a draggable divider */}
+              <HeatmapComparisonSlider
+                boundary={boundary}
+                leftData={leftTemporalData}
+                rightData={rightTemporalData}
+                leftLabel="Reference"
+                rightLabel="Comparison"
+                leftDate={leftTemporalData.date !== selectedDate ? `${selectedDate} (${leftTemporalData.date})` : selectedDate}
+                rightDate={rightTemporalData.date !== compareDate ? `${compareDate} (${rightTemporalData.date})` : compareDate}
+                selectedIndex={selectedIndex}
+                colorPalette={colorPalette}
+                baseLayer={baseLayer}
+                renderMode={renderMode}
+                valueDisplay={valueDisplay}
+                showIsolines={showIsolines}
+                className="h-[450px]"
+              />
 
               {/* Temporal Delta Analysis */}
               <Card className="border-slate-200 shadow-sm">

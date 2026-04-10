@@ -1,237 +1,15 @@
 /**
- * CalibrationReviewView — 5-Level Review DTO
+ * Calibration Review DTO — Blocks A through H
  *
- * This DTO restructures the flat CalibrationOutput (step1-8) into 5 review levels
- * as specified in docs/docs/specs/calibration-review-export-plan.md (v1.6).
+ * Restructures the flat CalibrationOutput (step1-8) into the spec-defined
+ * post-calibration screen layout described in "output calibrage.docx" (2026-04-09).
  *
- * It is a PRESENTATION layer built by CalibrationReviewAdapter on top of the
- * immutable CalibrationOutput. It does NOT modify the computation pipeline.
+ * Built by CalibrationReviewAdapter on top of CalibrationSnapshotInput.
  */
 
-// === Level 1: Décisionnelles (QUE FAIRE) ===
-
-export interface DetectedSignal {
-  type: string;
-  severity: "low" | "medium" | "high" | "critical";
-  message: string;
-  date: string;
-  source: "anomaly" | "extreme_event";
-}
-
-export interface OperationalAlert {
-  code: string;
-  category:
-    | "hydrique"
-    | "climatique"
-    | "nutritionnel"
-    | "sanitaire"
-    | "phenologique"
-    | "structurel";
-  severity: string;
-  message: string;
-  hysteresis: { entry_threshold: string; exit_threshold: string };
-}
-
-export interface Level1Decision {
-  current_phase: {
-    name: string;
-    method: "heuristic" | "protocol";
-    confidence: string;
-    date_start: string | null;
-    estimated_date_end: string | null;
-  };
-  next_phase: {
-    name: string | null;
-    timing_estimate: string | null;
-    condition: string | null;
-  };
-  detected_signals: DetectedSignal[];
-  /** ALWAYS null in Phase 1 — operational alerts (OLI-01 to OLI-18) not yet implemented */
-  operational_alerts: OperationalAlert[] | null;
-}
-
-// === Level 2: Diagnostiques (POURQUOI) ===
-
-export interface Level2Diagnostic {
-  signal_state: "SIGNAL_PUR" | "MIXTE_MODERE" | "DOMINE_ADVENTICES" | "NON_DISPONIBLE";
-  signal_state_note?: string;
-  mode: "NORMAL" | "AMORCAGE" | "OBSERVATION";
-  mode_detail: string;
-  annotations: string[];
-  phase_diagnostics: Record<
-    string,
-    { status: "detected" | "estimated" | "not_applicable"; detail: string }
-  >;
-  health_components: {
-    vigor: number;
-    temporal_stability: number;
-    stability: number;
-    hydric: number;
-    nutritional: number;
-  };
-  alternance: {
-    detected: boolean;
-    current_year_type: "on" | "off" | null;
-    confidence: number;
-  } | null;
-}
-
-// === Level 3: Biophysiques (SUR QUOI JE ME BASE) ===
-
-export interface IndexTimePoint {
-  date: string;
-  value: number;
-  outlier: boolean;
-}
-
-export interface Level3Biophysical {
-  indices: {
-    NIRv: IndexTimePoint[];
-    /** null in Phase 1 — PAR not extracted */
-    NIRvP: IndexTimePoint[] | null;
-    NDVI: IndexTimePoint[];
-    NDMI: IndexTimePoint[];
-    NDRE: IndexTimePoint[];
-    EVI: IndexTimePoint[];
-    GCI: IndexTimePoint[];
-  };
-  gdd: {
-    cumulative: Record<string, number>;
-    daily: Array<{ date: string; gdd_day: number; tmean: number }>;
-    base_temperature_used: number;
-    base_temperature_protocol: number;
-    chill_hours: number;
-  };
-  percentiles: Record<
-    string,
-    {
-      p10: number;
-      p25: number;
-      p50: number;
-      p75: number;
-      p90: number;
-      mean: number;
-      std: number;
-    }
-  >;
-}
-
-// === Level 4: Temporelles (EST-CE FIABLE) ===
-
-export interface PhenologyYearStages {
-  dormancy_exit: string;
-  peak: string;
-  plateau_start: string;
-  decline_start: string;
-  dormancy_entry: string;
-}
-
-export interface Level4Temporal {
-  phenology_timeline: {
-    dormancy_exit: string;
-    peak: string;
-    plateau_start: string;
-    decline_start: string;
-    dormancy_entry: string;
-    inter_annual_variability: Record<string, number>;
-    /** Cycle year → dates (matches calibration step4.yearly_stages) */
-    yearly_stages?: Record<string, PhenologyYearStages>;
-  };
-  calibration_history: Array<{
-    id: string;
-    date: string;
-    health_score: number | null;
-    confidence_score: number | null;
-    phase_age: string;
-    status: string;
-  }>;
-  confidence: {
-    total_score: number;
-    normalized_score: number;
-    components: Record<string, { score: number; max_score: number }>;
-  };
-}
-
-// === Level 5: Qualité données (AUDIT) ===
-
-export interface Level5QualityAudit {
-  filtering: {
-    total_images_input: number;
-    images_retained: number;
-    images_rejected_cloud: number;
-    average_cloud_coverage: number;
-    outliers_removed: number;
-    interpolated_dates: string[];
-  };
-  /** Empty in Phase 1 — cycle exclusion not implemented */
-  excluded_cycles: string[];
-  data_quality_flags: string[];
-  notes: string[];
-}
-
-// === Expert Audit (Lecture Expert) ===
-
-export interface ExpertAuditRule {
-  rule_id: string;
-  name: string;
-  status: "applied" | "skipped" | "not_implemented" | "partial";
-  detail: string;
-}
-
-export interface ExpertAuditMissingData {
-  field: string;
-  impact: string;
-  workaround: string | null;
-}
-
-export interface ExpertAuditNote {
-  severity: "info" | "warning" | "critical";
-  category: "methodology" | "data_gap" | "reliability";
-  note: string;
-}
-
-export interface ExpertAudit {
-  rules_applied: ExpertAuditRule[];
-  missing_data: ExpertAuditMissingData[];
-  expert_notes: ExpertAuditNote[];
-  protocol_compliance: {
-    section_1_filtering: "partial" | "full" | "none";
-    section_2_classification: "none";
-    section_3_diagnostic: "none";
-    section_4_alerts: "none";
-    overall: "partial" | "minimal" | "none";
-  };
-}
-
-// === Top-level DTO ===
-
-export interface CalibrationReviewView {
-  calibration_id: string;
-  parcel_id: string;
-  generated_at: string;
-  schema_version: "calibration-review/v1";
-
-  /** Parcel planting year when known — filters phenology year picker */
-  planting_year?: number | null;
-
-  /** Raw CalibrationOutput (step1-8) — available for export and expert */
-  output: Record<string, unknown>;
-
-  level1_decision: Level1Decision;
-  level2_diagnostic: Level2Diagnostic;
-  level3_biophysical: Level3Biophysical;
-  level4_temporal: Level4Temporal;
-  level5_quality_audit: Level5QualityAudit;
-
-  expert_audit: ExpertAudit;
-
-  export: {
-    available_formats: ("json" | "csv" | "zip")[];
-    calibration_id: string;
-  };
-}
-
-// === Adapter input (snapshot from DB + context) ===
+// ──────────────────────────────────────────────
+// Adapter input (snapshot from DB + context)
+// ──────────────────────────────────────────────
 
 export interface CalibrationSnapshotInput {
   calibration_id: string;
@@ -257,4 +35,245 @@ export interface CalibrationSnapshotInput {
     phase_age: string;
     status: string;
   }>;
+}
+
+// ──────────────────────────────────────────────
+// Block A — Synthese executive
+// ──────────────────────────────────────────────
+
+export type HealthLabel = "excellent" | "bon" | "moyen" | "faible" | "critique";
+export type ConfidenceLevel = "eleve" | "moyen" | "faible" | "minimal";
+export type ConcernSeverity = "critique" | "vigilance";
+
+export interface StrengthItem {
+  component: string;
+  phrase: string;
+}
+
+export interface ConcernItem {
+  component: string;
+  phrase: string;
+  severity: ConcernSeverity;
+  target_block: string;
+}
+
+export interface BlockASynthese {
+  health_score: number;
+  health_label: HealthLabel;
+  health_narrative: string;
+  confidence_score: number;
+  confidence_level: ConfidenceLevel;
+  confidence_narrative: string;
+  yield_range: {
+    min: number;
+    max: number;
+    unit: string;
+    wide_range_warning: boolean;
+  } | null;
+  strengths: StrengthItem[];
+  concerns: ConcernItem[];
+}
+
+// ──────────────────────────────────────────────
+// Block B — Analyse detaillee
+// ──────────────────────────────────────────────
+
+export interface GaugeData {
+  min: number;
+  max: number;
+  value: number;
+  color: string;
+}
+
+export interface IndexCard {
+  indice: string;
+  valeur_mediane: number;
+  position_referentiel: string;
+  gauge: GaugeData;
+  phrase: string;
+}
+
+export interface CrossDiagnosisCard {
+  indice: string;
+  valeur_mediane: number;
+  cross_diagnosis_text: string;
+  sources_used: string[];
+}
+
+export interface ZoneSummaryItem {
+  class_name: string;
+  label: string;
+  percent: number;
+  color: string;
+}
+
+export interface IndexTimePoint {
+  date: string;
+  value: number;
+  outlier: boolean;
+}
+
+export interface PercentileBand {
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+}
+
+export interface SpectralData {
+  indices: Record<string, IndexTimePoint[]>;
+  percentiles: Record<string, PercentileBand>;
+  phenology_phases: Array<{
+    name: string;
+    start_date: string;
+    end_date: string | null;
+  }>;
+  excluded_periods: Array<{
+    date: string;
+    type: string;
+    label: string;
+  }>;
+}
+
+export interface HeatmapData {
+  available: boolean;
+  zone_summary: ZoneSummaryItem[];
+  zones_geojson: Record<string, unknown> | null;
+  date_image: string | null;
+  blocked_message: string | null;
+}
+
+export interface SpatialPatterns {
+  detected: boolean;
+  confidence: number;
+  message: string;
+}
+
+export interface TemporalStability {
+  label: "stable" | "moderee" | "forte";
+  variance_percent: number;
+  phrase: string;
+}
+
+export interface HistoryDepth {
+  months: number;
+  date_start: string;
+  date_end: string;
+}
+
+export interface BlockBAnalyse {
+  vigor: IndexCard;
+  hydric: CrossDiagnosisCard;
+  nutritional: CrossDiagnosisCard;
+  spectral: SpectralData;
+  heatmap: HeatmapData;
+  spatial_patterns: SpatialPatterns | null;
+  heterogeneity_flag: boolean;
+  temporal_stability: TemporalStability;
+  history_depth: HistoryDepth;
+}
+
+// ──────────────────────────────────────────────
+// Block C — Anomalies et ruptures (Phase 2)
+// ──────────────────────────────────────────────
+
+export interface AnomalyItem {
+  period: string;
+  type: string;
+  icon: string;
+  impact: string;
+  sources: string[];
+}
+
+export interface RuptureItem {
+  type: string;
+  date: string;
+  detail: string;
+}
+
+export interface BlockCAnomalies {
+  anomalies: AnomalyItem[];
+  ruptures: RuptureItem[];
+  total_excluded_percent: number;
+  calibrage_limite: boolean;
+}
+
+// ──────────────────────────────────────────────
+// Block D — Ameliorer la precision
+// ──────────────────────────────────────────────
+
+export interface AvailableDataItem {
+  type: string;
+  label: string;
+}
+
+export interface MissingDataItem {
+  type: string;
+  label: string;
+  gain_points: number;
+  message: string;
+}
+
+export interface BlockDAmeliorer {
+  current_confidence: number;
+  projected_confidence: number;
+  available_data: AvailableDataItem[];
+  missing_data: MissingDataItem[];
+}
+
+// ──────────────────────────────────────────────
+// Block F — Prevision alternance (Phase 2)
+// ──────────────────────────────────────────────
+
+export type AlternanceLabel = "faible" | "moderee" | "marquee" | "forte";
+export type SeasonBadge = "on_probable" | "stable" | "off_probable" | "indetermine";
+
+export interface BlockFAlternance {
+  indice: number;
+  label: AlternanceLabel;
+  interpretation: string;
+  next_season: {
+    badge: SeasonBadge;
+    color: string;
+    phrase: string;
+  };
+  variety_reference: {
+    variety: string;
+    indice_ref: number;
+  } | null;
+}
+
+// ──────────────────────────────────────────────
+// Block G — Metadonnees baseline
+// ──────────────────────────────────────────────
+
+export interface BlockGMetadonnees {
+  generated_at_formatted: string;
+  calibration_version: string;
+}
+
+// ──────────────────────────────────────────────
+// Top-level DTO
+// ──────────────────────────────────────────────
+
+export interface CalibrationReviewView {
+  calibration_id: string;
+  parcel_id: string;
+  generated_at: string;
+  planting_year: number | null;
+  status: string;
+
+  block_a: BlockASynthese;
+  block_b: BlockBAnalyse;
+  block_c: BlockCAnomalies | null;
+  block_d: BlockDAmeliorer;
+  block_f: BlockFAlternance | null;
+  block_g: BlockGMetadonnees;
+  block_h_enabled: boolean;
+
+  export: {
+    available_formats: ("json" | "csv" | "zip")[];
+    calibration_id: string;
+  };
 }

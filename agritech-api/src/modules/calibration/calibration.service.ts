@@ -31,11 +31,11 @@ import {
 import { getLocalCropReference } from "./crop-reference-loader";
 import {
   CalibrationReviewAdapter,
-  type CalibrationReviewView,
-  type CalibrationSnapshotInput,
 } from "./calibration-review.adapter";
-import { CalibrationBlocksReviewAdapter } from "./calibration-blocks-review.adapter";
-import type { CalibrationBlocksReviewView } from "./dto/calibration-blocks-review.dto";
+import type {
+  CalibrationReviewView,
+  CalibrationSnapshotInput,
+} from "./dto/calibration-review.dto";
 import {
   CALIBRATION_HISTORY_DEFAULT_LIMIT,
   CALIBRATION_HISTORY_MAX_LIMIT,
@@ -329,7 +329,6 @@ export class CalibrationService {
     private readonly satelliteProxy: SatelliteProxyService,
     private readonly notificationsService: NotificationsService,
     private readonly calibrationReviewAdapter: CalibrationReviewAdapter,
-    private readonly calibrationBlocksReviewAdapter: CalibrationBlocksReviewAdapter,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════
@@ -2176,7 +2175,7 @@ export class CalibrationService {
   async getCalibrationReview(
     parcelId: string,
     organizationId: string,
-  ): Promise<CalibrationBlocksReviewView> {
+  ): Promise<CalibrationReviewView> {
     const ALLOWED_STATUSES = [
       "completed",
       "calibrated",
@@ -2267,7 +2266,7 @@ export class CalibrationService {
       })),
     };
 
-    return this.calibrationBlocksReviewAdapter.transform(snapshotInput);
+    return this.calibrationReviewAdapter.transform(snapshotInput);
   }
 
   async checkCalibrationReadiness(

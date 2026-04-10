@@ -17,7 +17,6 @@ import {
   useRefreshUserData
 } from '../hooks/useAuthQueries';
 import type { OrganizationWithRole } from '../lib/api/users';
-import { useSubscription } from '../hooks/useSubscription';
 
 import { useOrganizationStore } from '../stores/organizationStore';
 import { useAuthStore, waitForHydration } from '../stores/authStore';
@@ -82,7 +81,6 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   const { data: profile, isLoading: profileLoading, isError: profileError } = useUserProfile(user?.id);
   const { data: organizations = [], isLoading: orgsLoading, isError: orgsError } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
-  const { isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -104,10 +102,14 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   // IMPORTANT: Also wait for currentOrganization to be set when we have organizations
   const waitingForOrganization = organizations.length > 0 && !currentOrganization && !orgsLoading;
 
-  // Don't wait for subscription or farms on onboarding page
+  // Don't block the shell on subscription: `/_authenticated` already gates on `useSubscription`.
+  // Waiting here caused infinite "loading" when the subscription request hung or retry-looped.
   const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
-  const loading = authLoading || profileLoading || orgsLoading ||
-    (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
+  const loading =
+    authLoading ||
+    profileLoading ||
+    orgsLoading ||
+    (!isOnOnboardingPage && farmsLoading) ||
     waitingForOrganization;
 
 

@@ -11,10 +11,8 @@ import {
   MockSupabaseClient,
   setupThenableMock,
 } from '../../../test/helpers/mock-database.helper';
-import {
-  CalibrationReviewAdapter,
-  CalibrationSnapshotInput,
-} from './calibration-review.adapter';
+import { CalibrationReviewAdapter } from './calibration-review.adapter';
+import type { CalibrationSnapshotInput } from './dto/calibration-review.dto';
 import {
   CalibrationExportData,
   CalibrationExportService,
@@ -114,7 +112,7 @@ const buildSnapshotInput = (): CalibrationSnapshotInput => ({
       date: '2026-01-01T00:00:00.000Z',
       health_score: 75,
       confidence_score: 0.71,
-      maturity_phase: 'dormancy_exit',
+      phase_age: 'dormancy_exit',
       status: 'completed',
     },
   ],
@@ -194,7 +192,7 @@ describe('CalibrationExportService', () => {
         status: 'completed',
         health_score: 75,
         confidence_score: 0.71,
-        maturity_phase: 'dormancy_exit',
+        phase_age: 'dormancy_exit',
         created_at: '2026-01-01T00:00:00.000Z',
         completed_at: '2026-01-15T00:00:00.000Z',
       },
