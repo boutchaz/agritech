@@ -1,11 +1,27 @@
 import { z } from 'zod';
 
-/** HTML select with value="" for "Non precise" — z.enum().optional() accepts undefined but rejects "". */
+/**
+ * Optional native select: "Non precise" uses value="".
+ * Normalizes draft/API values (trim; unknown strings → undefined) so optional fields do not hard-fail.
+ */
 function optionalSelectEnum<T extends [string, ...string[]]>(values: T) {
-  return z.preprocess(
-    (val) => (val === '' || val === null || val === undefined ? undefined : val),
-    z.enum(values).optional(),
-  );
+  const allowed = new Set<string>(values);
+  return z.preprocess((val) => {
+    if (val === '' || val === null || val === undefined) {
+      return undefined;
+    }
+    if (typeof val === 'string') {
+      const t = val.trim();
+      if (t === '') {
+        return undefined;
+      }
+      if (allowed.has(t)) {
+        return t;
+      }
+      return undefined;
+    }
+    return undefined;
+  }, z.enum(values).optional());
 }
 
 const optionalNumber = z.number().min(0).optional();
@@ -205,6 +221,36 @@ export const CalibrationWizardSchema = PlantationStepSchema.merge(IrrigationStep
   .merge(ValidationStepSchema);
 
 export type CalibrationWizardFormValues = z.infer<typeof CalibrationWizardSchema>;
+
+/** Draft JSON may contain "" for optional selects; coerce so Zod/RHF never see invalid enum values. */
+const OPTIONAL_SELECT_KEYS = [
+  'pruning_practiced',
+  'pruning_type',
+  'pruning_intensity',
+  'past_fertilization',
+  'fertilization_type',
+  'biostimulants_used',
+  'harvest_regularity',
+  'foliar_analysis_available',
+  'branch_type',
+] as const satisfies readonly (keyof CalibrationWizardFormValues)[];
+
+export function normalizeCalibrationOptionalSelects(
+  data: Partial<CalibrationWizardFormValues> | Record<string, unknown>,
+): Partial<CalibrationWizardFormValues> {
+  const out: Record<string, unknown> = { ...data };
+  for (const key of OPTIONAL_SELECT_KEYS) {
+    const v = out[key as string];
+    if (v === '' || v === null) {
+      out[key as string] = undefined;
+      continue;
+    }
+    if (typeof v === 'string' && v.trim() === '') {
+      out[key as string] = undefined;
+    }
+  }
+  return out as Partial<CalibrationWizardFormValues>;
+}
 
 export const calibrationWizardDefaultValues: CalibrationWizardFormValues = {
   plantation_age: 0,

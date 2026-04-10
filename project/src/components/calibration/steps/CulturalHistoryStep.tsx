@@ -7,6 +7,11 @@ import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import type { CalibrationWizardFormValues } from '@/schemas/calibrationWizardSchema';
 
+/** Native select "Non precise" uses value=""; store undefined so validation stays optional. */
+function emptySelectToUndefined(value: string) {
+  return value === '' ? undefined : value;
+}
+
 interface CulturalHistoryStepProps {
   form: UseFormReturn<CalibrationWizardFormValues>;
 }
@@ -30,7 +35,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
     <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Taille pratiquee ?" htmlFor="pruning_practiced" error={errors.pruning_practiced?.message}>
-          <Select id="pruning_practiced" {...register('pruning_practiced')}>
+          <Select id="pruning_practiced" {...register('pruning_practiced', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="yes">Oui</option>
             <option value="no">Non</option>
@@ -39,7 +44,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
         </FormField>
 
         <FormField label="Type de taille" htmlFor="pruning_type" error={errors.pruning_type?.message}>
-          <Select id="pruning_type" {...register('pruning_type')}>
+          <Select id="pruning_type" {...register('pruning_type', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="production">Production</option>
             <option value="rejuvenation">Rajeunissement</option>
@@ -56,7 +61,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
           </FormField>
 
           <FormField label="Intensite" htmlFor="pruning_intensity" error={errors.pruning_intensity?.message}>
-            <Select id="pruning_intensity" {...register('pruning_intensity')}>
+            <Select id="pruning_intensity" {...register('pruning_intensity', { setValueAs: emptySelectToUndefined })}>
               <option value="">Non precise</option>
               <option value="light">Legere (&lt;15%)</option>
               <option value="moderate">Moderee (15-25%)</option>
@@ -68,7 +73,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Fertilisation passee" htmlFor="past_fertilization" error={errors.past_fertilization?.message}>
-          <Select id="past_fertilization" {...register('past_fertilization')}>
+          <Select id="past_fertilization" {...register('past_fertilization', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="yes">Oui</option>
             <option value="no">Non</option>
@@ -77,7 +82,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
         </FormField>
 
         <FormField label="Type de fertilisation (optionnel)" htmlFor="fertilization_type" error={errors.fertilization_type?.message}>
-          <Select id="fertilization_type" {...register('fertilization_type')}>
+          <Select id="fertilization_type" {...register('fertilization_type', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="organic">Organique</option>
             <option value="mineral">Minerale</option>
@@ -87,7 +92,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
         </FormField>
 
         <FormField label="Biostimulants utilises (optionnel)" htmlFor="biostimulants_used" error={errors.biostimulants_used?.message}>
-          <Select id="biostimulants_used" {...register('biostimulants_used')}>
+          <Select id="biostimulants_used" {...register('biostimulants_used', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="yes">Oui</option>
             <option value="no">Non</option>

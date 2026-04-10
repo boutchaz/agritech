@@ -10,6 +10,10 @@ import {
   type CalibrationWizardFormValues,
 } from '@/schemas/calibrationWizardSchema';
 
+function emptySelectToUndefined(value: string) {
+  return value === '' ? undefined : value;
+}
+
 interface FoliarAnalysisStepProps {
   form: UseFormReturn<CalibrationWizardFormValues>;
 }
@@ -157,7 +161,7 @@ export function FoliarAnalysisStep({ form }: FoliarAnalysisStepProps) {
     <div className="space-y-5">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField label="Analyse foliaire disponible ? (optionnel)" htmlFor="foliar_analysis_available" error={errors.foliar_analysis_available?.message}>
-          <Select id="foliar_analysis_available" {...register('foliar_analysis_available')}>
+          <Select id="foliar_analysis_available" {...register('foliar_analysis_available', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="yes">Oui</option>
             <option value="no">Non</option>
@@ -180,7 +184,7 @@ export function FoliarAnalysisStep({ form }: FoliarAnalysisStepProps) {
         </FormField>
 
         <FormField label="Type de rameaux" htmlFor="branch_type" error={errors.branch_type?.message}>
-          <Select id="branch_type" {...register('branch_type')}>
+          <Select id="branch_type" {...register('branch_type', { setValueAs: emptySelectToUndefined })}>
             <option value="">Non precise</option>
             <option value="fruiting">Fructiferes</option>
             <option value="non_fruiting">Non fructiferes</option>

@@ -7,6 +7,10 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import type { CalibrationWizardFormValues } from '@/schemas/calibrationWizardSchema';
 
+function emptySelectToUndefined(value: string) {
+  return value === '' ? undefined : value;
+}
+
 interface HarvestHistoryStepProps {
   form: UseFormReturn<CalibrationWizardFormValues>;
 }
@@ -104,7 +108,7 @@ export function HarvestHistoryStep({ form }: HarvestHistoryStepProps) {
       )}
 
       <FormField label="Regularite percue" htmlFor="harvest_regularity" error={errors.harvest_regularity?.message}>
-        <Select id="harvest_regularity" {...register('harvest_regularity')}>
+        <Select id="harvest_regularity" {...register('harvest_regularity', { setValueAs: emptySelectToUndefined })}>
           <option value="">Non precise</option>
           <option value="stable">Stable</option>
           <option value="marked_alternance">Alternance marquee</option>

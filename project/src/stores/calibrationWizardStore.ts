@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { CalibrationWizardFormValues } from '@/schemas/calibrationWizardSchema';
+import {
+  normalizeCalibrationOptionalSelects,
+  type CalibrationWizardFormValues,
+} from '@/schemas/calibrationWizardSchema';
 
 interface CalibrationWizardStore {
   currentStep: number;
@@ -50,7 +53,7 @@ export const useCalibrationWizardStore = create<CalibrationWizardStore>()(
     hydrateFromDraft: (draft) => {
       set({
         currentStep: draft.current_step,
-        formData: draft.form_data as Partial<CalibrationWizardFormValues>,
+        formData: normalizeCalibrationOptionalSelects(draft.form_data ?? {}),
         hydrated: true,
       });
     },
