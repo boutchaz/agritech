@@ -1878,6 +1878,9 @@
   },
   "organization": {
     "title": "Organization Settings",
+    "pageSubtitle": "Configure your organization identity, contact details and regional preferences",
+    "previewMarketplace": "Preview Marketplace",
+    "previewShort": "Preview",
     "save": "Save",
     "saving": "Saving...",
     "success": "Settings saved successfully",

@@ -221,42 +221,51 @@ const OrganizationSettings = () => {
 
   return (
     <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex min-w-0 items-center gap-3">
+      {/* Header — lg+ row layout so sm/md widths are not split with flex-1 title + buttons */}
+      <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+        <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
               <Building className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              {t('organization.title')}
-            </h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-balance text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white md:text-2xl xl:text-3xl">
+                {t('organization.title')}
+              </h2>
+            </div>
           </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-            Configure your organization identity, contact details and regional preferences
+          <p className="text-pretty text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+            {t(
+              'organization.pageSubtitle',
+              'Configure your organization identity, contact details and regional preferences',
+            )}
           </p>
         </div>
-        
-        <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-          <Button 
+
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:shrink-0 lg:justify-end">
+          <Button
+            type="button"
             variant="outline"
             onClick={async () => {
               const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
-            className="h-12 w-full rounded-2xl border-slate-200 px-6 text-xs font-semibold uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700 sm:w-auto"
+            className="h-11 w-full rounded-2xl border-slate-200 px-4 text-xs font-semibold uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700 sm:h-12 sm:min-w-0 sm:flex-1 lg:h-12 lg:w-auto lg:flex-none lg:px-6"
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Preview Marketplace</span>
-            <span className="sm:hidden">Preview</span>
+            <ExternalLink className="mr-2 h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">
+              {t('organization.previewMarketplace', 'Preview Marketplace')}
+            </span>
+            <span className="sm:hidden">{t('organization.previewShort', 'Preview')}</span>
           </Button>
 
           {activeTab === 'general' && (
-            <Button 
-              variant="default" 
-              onClick={handleSave} 
-              disabled={saving} 
-              className="h-12 w-full rounded-2xl bg-emerald-600 px-8 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:w-auto"
+            <Button
+              type="button"
+              variant="default"
+              onClick={handleSave}
+              disabled={saving}
+              className="h-11 w-full rounded-2xl bg-emerald-600 px-6 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:h-12 sm:min-w-[10rem] sm:flex-1 lg:h-12 lg:w-auto lg:flex-none lg:px-8"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

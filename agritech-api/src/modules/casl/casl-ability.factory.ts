@@ -217,8 +217,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Read, Subject.DASHBOARD); // Can read dashboard
             can(Action.Update, Subject.DASHBOARD); // Can update dashboard settings
-            can(Action.Read, Subject.USER); // Can view users in org
-            can(Action.Update, Subject.USER); // Can manage user roles
+            can(Action.Manage, Subject.USER); // Can manage users (invite, remove, update roles)
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Update, Subject.ORGANIZATION); // Can update org settings
             can(Action.Manage, Subject.ROLE); // Can manage roles
@@ -599,8 +598,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Update, Subject.DASHBOARD);
             can(Action.Read, Subject.CHAT);
-            can(Action.Read, Subject.USER);
-            can(Action.Update, Subject.USER);
+            can(Action.Manage, Subject.USER);
             can(Action.Read, Subject.ORGANIZATION);
             can(Action.Update, Subject.ORGANIZATION);
             can(Action.Read, Subject.SUBSCRIPTION);

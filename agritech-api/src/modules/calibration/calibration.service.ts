@@ -40,6 +40,7 @@ import {
   CALIBRATION_HISTORY_DEFAULT_LIMIT,
   CALIBRATION_HISTORY_MAX_LIMIT,
 } from "./calibration.constants";
+import { detectPhaseAgeFromReferentiel } from "./phase-age-detector";
 
 /**
  * Calibration satellite lookback depth depends on tree age, per spec.

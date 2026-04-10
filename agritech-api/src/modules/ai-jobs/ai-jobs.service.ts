@@ -429,11 +429,17 @@ export class AiJobsService {
     const url = new URL(`${this.getSatelliteServiceUrl()}${path}`);
     url.search = new URLSearchParams(query).toString();
 
+    const headers: Record<string, string> = {
+      'x-organization-id': organizationId,
+    };
+    const internalToken = (process.env.INTERNAL_SERVICE_TOKEN || '').trim();
+    if (internalToken) {
+      headers['authorization'] = `Bearer ${internalToken}`;
+    }
+
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: {
-        'x-organization-id': organizationId,
-      },
+      headers,
     });
 
     if (!response.ok) {

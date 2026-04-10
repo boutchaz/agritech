@@ -1874,6 +1874,9 @@
   },
   "organization": {
     "title": "Paramètres de l'Organisation",
+    "pageSubtitle": "Configurez l'identité de votre organisation, les coordonnées et les préférences régionales",
+    "previewMarketplace": "Aperçu marketplace",
+    "previewShort": "Aperçu",
     "save": "Sauvegarder",
     "saving": "Sauvegarde...",
     "success": "Paramètres sauvegardés avec succès",

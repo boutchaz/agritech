@@ -205,25 +205,28 @@ const SubscriptionSettings = () => {
   if (!hasSubscription || showModularPicker) {
     return (
       <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
-        <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex min-w-0 items-center gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+          <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
+            <div className="flex min-w-0 items-start gap-3">
               <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
                 <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-                {t('subscription.modular.title', 'Choose Your Modules')}
-              </h2>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-balance text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white md:text-2xl xl:text-3xl">
+                  {t('subscription.modular.title', 'Choose Your Modules')}
+                </h2>
+              </div>
             </div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            <p className="text-pretty text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
               {t('subscription.modular.subtitle', 'Select the ERP modules and hectares for your farm')}
             </p>
           </div>
           {showModularPicker && hasSubscription && (
             <Button
+              type="button"
               variant="ghost"
               onClick={() => setShowModularPicker(false)}
-              className="text-slate-500 hover:text-slate-700 font-medium"
+              className="h-11 w-full shrink-0 font-medium text-slate-500 hover:text-slate-700 lg:h-auto lg:w-auto"
             >
               {t('subscription.backToDetails', 'Back to details')}
             </Button>
@@ -418,56 +421,61 @@ const SubscriptionSettings = () => {
 
   const modularPricing = isModular
     ? computeModularQuote({
-        selectedModules: subscription!.selected_modules!.map((m: { id: string }) => m.id),
+        selectedModules: (subscription?.selected_modules ?? []).map((m: { id: string }) => m.id),
         hectares: effectiveHectares,
         billingCycle: effectiveCycle,
-        discountPercent: subscription!.discount_pct ?? DEFAULT_DISCOUNT_PERCENT,
+        discountPercent: subscription?.discount_pct ?? DEFAULT_DISCOUNT_PERCENT,
       })
     : null;
 
   return (
     <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
-      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex min-w-0 items-center gap-3">
+      <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+        <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
+          <div className="flex min-w-0 items-start gap-3">
             <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
               <CreditCard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              {t('subscription.title', 'Subscription')}
-            </h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-balance text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white md:text-2xl xl:text-3xl">
+                {t('subscription.title', 'Subscription')}
+              </h2>
+            </div>
           </div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-pretty text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
             {t('subscription.subtitle', 'Manage your plan, billing cycle and usage limits')}
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:shrink-0 lg:justify-end">
           {isModular ? (
             <Button
+              type="button"
               variant="default"
               onClick={() => setShowModularPicker(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+              className="h-11 w-full rounded-2xl bg-emerald-600 px-6 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:h-12 sm:w-auto lg:px-8"
             >
-              <RefreshCw className="h-4 w-4 mr-2" />
+              <RefreshCw className="mr-2 h-4 w-4" />
               {t('subscription.modular.changeModules', 'Change modules')}
             </Button>
           ) : (
             <>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => setShowModularPicker(true)}
-                className="h-12 px-6 rounded-2xl font-semibold text-xs uppercase tracking-widest border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30 transition-all duration-300"
+                className="h-11 w-full rounded-2xl border-emerald-200 px-4 font-semibold text-xs uppercase tracking-widest text-emerald-700 transition-all duration-300 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30 sm:h-12 sm:min-w-0 sm:flex-1 lg:w-auto lg:flex-none lg:px-6"
               >
-                <Package className="h-4 w-4 mr-2" />
-                {t('subscription.modular.switchToModular', 'Switch to modular')}
+                <Package className="mr-2 h-4 w-4 shrink-0" />
+                <span className="text-center">{t('subscription.modular.switchToModular', 'Switch to modular')}</span>
               </Button>
               <Button
+                type="button"
                 variant="default"
                 onClick={() => setShowPlans(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+                className="h-11 w-full rounded-2xl bg-emerald-600 px-6 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:h-12 sm:min-w-[12rem] sm:flex-1 lg:h-12 lg:w-auto lg:flex-none lg:px-8"
               >
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 {t('subscription.changePlan', 'Change plan')}
               </Button>
             </>
@@ -476,15 +484,15 @@ const SubscriptionSettings = () => {
       </div>
 
       {subscription?.status === 'trialing' && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-[2rem] border border-blue-100 dark:border-blue-800/50 flex items-start gap-5">
-          <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none">
+        <div className="flex min-w-0 items-start gap-4 rounded-[2rem] border border-blue-100 bg-blue-50 p-4 dark:border-blue-800/50 dark:bg-blue-900/20 sm:gap-5 sm:p-6">
+          <div className="shrink-0 rounded-2xl bg-blue-600 p-3 shadow-lg shadow-blue-200 dark:shadow-none">
             <AlertCircle className="h-6 w-6 text-white" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 uppercase tracking-tight">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-balance text-base font-semibold uppercase tracking-tight text-blue-900 dark:text-blue-100 sm:text-lg">
               {t('subscription.trial.active', 'Trial Period Active')}
             </h3>
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mt-1">
+            <p className="mt-1 text-pretty text-sm font-medium leading-relaxed text-blue-700 dark:text-blue-300">
               {t('subscription.trial.description', {
                 endDate: subscription.current_period_end
                   ? new Date(subscription.current_period_end).toLocaleDateString()

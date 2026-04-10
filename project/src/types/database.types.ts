@@ -7676,6 +7676,159 @@ export type Database = {
           },
         ]
       }
+      email_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          html_body: string
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          organization_id: string | null
+          subject: string
+          text_body: string | null
+          type: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html_body: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          organization_id?: string | null
+          subject: string
+          text_body?: string | null
+          type: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html_body?: string
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          organization_id?: string | null
+          subject?: string
+          text_body?: string | null
+          type?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "email_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       entity_events: {
         Row: {
           created_at: string | null

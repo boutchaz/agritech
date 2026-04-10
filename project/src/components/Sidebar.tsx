@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -134,6 +134,37 @@ const Sidebar = ({
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY);
     return saved === "true";
   });
+
+  const prevPathnameRef = useRef<string | null>(null);
+
+  /** More horizontal room for settings: collapse main rail when entering /settings from outside. */
+  useEffect(() => {
+    const path = location.pathname;
+    const prev = prevPathnameRef.current;
+    prevPathnameRef.current = path;
+
+    const inSettings = path.startsWith("/settings");
+    if (!inSettings) return;
+
+    const enteredFromOutside =
+      prev == null || !prev.startsWith("/settings");
+    if (!enteredFromOutside) return;
+
+    // Collapse sidebar when navigating into settings from outside.
+    // Deferred to next microtask to satisfy react-hooks/set-state-in-effect.
+    queueMicrotask(() => {
+      setIsCollapsed((collapsed) => {
+        if (collapsed) return collapsed;
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "true");
+        window.dispatchEvent(
+          new CustomEvent("sidebarCollapse", {
+            detail: { collapsed: true },
+          }),
+        );
+        return true;
+      });
+    });
+  }, [location.pathname]);
 
   // Listen for external collapse events (e.g., from tour system)
   useEffect(() => {
