@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+/** HTML select with value="" for "Non precise" — z.enum().optional() accepts undefined but rejects "". */
+function optionalSelectEnum<T extends [string, ...string[]]>(values: T) {
+  return z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.enum(values).optional(),
+  );
+}
+
 const optionalNumber = z.number().min(0).optional();
 
 const requiredNumber = z.number().min(0);
@@ -148,10 +156,10 @@ export const FoliarElementsSchema = z.object({
 });
 
 export const FoliarAnalysisStepSchema = z.object({
-  foliar_analysis_available: z.enum(['yes', 'no', 'planned']).optional(),
+  foliar_analysis_available: optionalSelectEnum(['yes', 'no', 'planned']),
   foliar_analysis_date: z.string().trim().optional(),
   phenological_stage_at_sampling: z.string().trim().optional(),
-  branch_type: z.enum(['fruiting', 'non_fruiting', 'mixed']).optional(),
+  branch_type: optionalSelectEnum(['fruiting', 'non_fruiting', 'mixed']),
   foliar_elements: FoliarElementsSchema,
 });
 
@@ -165,7 +173,7 @@ export const HarvestRecordSchema = z.object({
 
 export const HarvestHistoryStepSchema = z.object({
   harvests: z.array(HarvestRecordSchema).min(3).max(5),
-  harvest_regularity: z.enum(['stable', 'marked_alternance', 'very_irregular']).optional(),
+  harvest_regularity: optionalSelectEnum(['stable', 'marked_alternance', 'very_irregular']),
 });
 
 export const StressEventSchema = z.object({
@@ -175,13 +183,13 @@ export const StressEventSchema = z.object({
 });
 
 export const CulturalHistoryStepSchema = z.object({
-  pruning_practiced: z.enum(['yes', 'no', 'irregular']).optional(),
-  pruning_type: z.enum(['production', 'rejuvenation', 'sanitary', 'mixed']).optional(),
+  pruning_practiced: optionalSelectEnum(['yes', 'no', 'irregular']),
+  pruning_type: optionalSelectEnum(['production', 'rejuvenation', 'sanitary', 'mixed']),
   last_pruning_date: z.string().trim().optional(),
-  pruning_intensity: z.enum(['light', 'moderate', 'severe']).optional(),
-  past_fertilization: z.enum(['yes', 'no', 'partial']).optional(),
-  fertilization_type: z.enum(['organic', 'mineral', 'both', 'unknown']).optional(),
-  biostimulants_used: z.enum(['yes', 'no', 'unknown']).optional(),
+  pruning_intensity: optionalSelectEnum(['light', 'moderate', 'severe']),
+  past_fertilization: optionalSelectEnum(['yes', 'no', 'partial']),
+  fertilization_type: optionalSelectEnum(['organic', 'mineral', 'both', 'unknown']),
+  biostimulants_used: optionalSelectEnum(['yes', 'no', 'unknown']),
   stress_events: z.array(StressEventSchema),
   observations: z.string().trim().optional(),
 });

@@ -76,7 +76,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
           </Select>
         </FormField>
 
-        <FormField label="Type de fertilisation" htmlFor="fertilization_type" error={errors.fertilization_type?.message}>
+        <FormField label="Type de fertilisation (optionnel)" htmlFor="fertilization_type" error={errors.fertilization_type?.message}>
           <Select id="fertilization_type" {...register('fertilization_type')}>
             <option value="">Non precise</option>
             <option value="organic">Organique</option>
@@ -86,7 +86,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
           </Select>
         </FormField>
 
-        <FormField label="Biostimulants utilises" htmlFor="biostimulants_used" error={errors.biostimulants_used?.message}>
+        <FormField label="Biostimulants utilises (optionnel)" htmlFor="biostimulants_used" error={errors.biostimulants_used?.message}>
           <Select id="biostimulants_used" {...register('biostimulants_used')}>
             <option value="">Non precise</option>
             <option value="yes">Oui</option>
@@ -97,8 +97,8 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Stress majeurs identifies</h4>
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Stress majeurs identifies (optionnel)</h4>
           <Button
             type="button"
             variant="outline"
