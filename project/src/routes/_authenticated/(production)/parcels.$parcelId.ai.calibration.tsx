@@ -540,6 +540,7 @@ const PhenologyTimeline = ({
     }
     return step4?.mean_dates as unknown as Record<string, string | unknown> | undefined;
   }, [effectiveYear, step4]);
+  
 
   // Same chronological order as backend step4_phenology_detection._temporal_order_valid
   const stages = [

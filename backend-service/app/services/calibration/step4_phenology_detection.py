@@ -43,6 +43,28 @@ def _find_constrained_stages_for_year(
     points: list[tuple[date, float]],
     phenology_periods: dict[str, set[int]],
 ) -> dict[str, date]:
+    """
+    Identify and return key phenological stage dates for a specific year from input time series data.
+
+    Args:
+        points (list[tuple[date, float]]): 
+            List of (date, value) tuples representing observations within a year.
+        phenology_periods (dict[str, set[int]]): 
+            Mapping of phenological stage names (e.g., "dormancy", "growth", etc.) to sets of 
+            integer month values corresponding to each stage.
+
+    Returns:
+        dict[str, date]: 
+            Dictionary where the keys are phenological stage names (such as 'dormancy_exit', 
+            'plateau_start', 'decline_start', 'dormancy_entry', etc.) and the values are the 
+            estimated dates at which these stages occur during the given year.
+
+    Notes:
+        - If there are too few points or values for robust estimation, this function will fallback 
+          to a default mechanism to select the stage dates.
+        - This function internally smooths the input value series for improved robustness.
+        - The actual phenological stage names returned may depend on the implementation logic.
+    """
     sorted_points = sorted(points, key=lambda item: item[0])
     dates = [item[0] for item in sorted_points]
     values = _safe_smooth([item[1] for item in sorted_points])

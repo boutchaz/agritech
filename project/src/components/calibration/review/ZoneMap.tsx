@@ -23,6 +23,28 @@ const ZONE_DESCRIPTIONS: Record<string, string> = {
   E: 'problématique, rouge',
 };
 
+/** Convert a coordinate from Web Mercator (EPSG:3857) to WGS84 if needed. */
+function toWgs84(coord: number[]): number[] {
+  const [x, y] = coord;
+  if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+    const lon = (x / 20037508.34) * 180;
+    const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+    return [lon, lat];
+  }
+  return coord;
+}
+
+/** Convert a boundary ring from EPSG:3857 to WGS84 if needed. */
+function ensureWgs84Ring(ring: number[][]): number[][] {
+  if (!ring?.length) return ring;
+  // Quick check: if first coordinate looks like Web Mercator, convert all
+  const [x, y] = ring[0];
+  if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+    return ring.map(toWgs84);
+  }
+  return ring;
+}
+
 function ringBBox(ring: number[][]): { minLng: number; minLat: number; maxLng: number; maxLat: number } | null {
   if (!ring?.length) return null;
   let minLng = Infinity;
@@ -170,7 +192,8 @@ function FitBounds({ geojson, boundary }: { geojson: GeoJsonObject | null; bound
         }
       }
       if (boundary && boundary.length > 2) {
-        const latLngs = boundary.map(([lng, lat]) => [lat, lng] as [number, number]);
+        const wgs = ensureWgs84Ring(boundary);
+        const latLngs = wgs.map(([lng, lat]) => [lat, lng] as [number, number]);
         const bounds = L.latLngBounds(latLngs);
         if (bounds.isValid()) {
           map.fitBounds(bounds, { padding: [20, 20], maxZoom: 18 });
@@ -236,7 +259,8 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
       if (!boundary?.length) {
         return { zones: null, boundaryFeature: null, needsBoundaryForZoning: true };
       }
-      const ring = closedRingCoordinates(boundary);
+      const wgs84Boundary = ensureWgs84Ring(boundary);
+      const ring = closedRingCoordinates(wgs84Boundary);
       const transformed = transformPixelGridToCellPolygons(fc, ring);
       return {
         zones: transformed as GeoJsonObject,
@@ -276,8 +300,9 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
 
   const defaultCenter: [number, number] = useMemo(() => {
     if (boundary && boundary.length > 0) {
-      const avgLng = boundary.reduce((s, p) => s + p[0], 0) / boundary.length;
-      const avgLat = boundary.reduce((s, p) => s + p[1], 0) / boundary.length;
+      const wgs = ensureWgs84Ring(boundary);
+      const avgLng = wgs.reduce((s, p) => s + p[0], 0) / wgs.length;
+      const avgLat = wgs.reduce((s, p) => s + p[1], 0) / wgs.length;
       return [avgLat, avgLng];
     }
     return [33.9, -5.5];
