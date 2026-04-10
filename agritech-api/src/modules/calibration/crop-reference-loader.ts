@@ -25,14 +25,11 @@ function discoverReferentialsDir(): string | null {
   return null;
 }
 
-function loadAll(): Map<string, Record<string, unknown>> {
+function loadAllFromDisk(): Map<string, Record<string, unknown>> {
   const map = new Map<string, Record<string, unknown>>();
   const dir = discoverReferentialsDir();
 
   if (!dir) {
-    logger.warn(
-      `No referentials/ directory found. Searched: ${REFERENTIALS_SEARCH_PATHS.join(', ')}`,
-    );
     return map;
   }
 
@@ -47,23 +44,86 @@ function loadAll(): Map<string, Record<string, unknown>> {
       const raw = fs.readFileSync(path.join(dir, file), 'utf-8');
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       map.set(cropType, parsed);
-      logger.log(`Loaded reference for "${cropType}" from ${file}`);
     } catch (err) {
       logger.error(`Failed to parse ${file}: ${(err as Error).message}`);
     }
   }
 
-  logger.log(`Loaded ${map.size} crop reference(s) from ${dir}`);
+  if (map.size > 0) {
+    logger.log(`Loaded ${map.size} crop reference(s) from disk: ${dir}`);
+  }
+
   return map;
 }
 
+/**
+ * Load all crop references from DB (crop_ai_references table).
+ * Used as fallback when disk files are not available (e.g. Docker without mounted referentials).
+ */
+async function loadAllFromDb(
+  supabaseAdmin: { from: (table: string) => any },
+): Promise<Map<string, Record<string, unknown>>> {
+  const map = new Map<string, Record<string, unknown>>();
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('crop_ai_references')
+      .select('crop_type, reference_data');
+
+    if (error) {
+      logger.warn(`Failed to load crop references from DB: ${error.message}`);
+      return map;
+    }
+
+    for (const row of data ?? []) {
+      if (row.crop_type && row.reference_data) {
+        map.set(row.crop_type, row.reference_data);
+      }
+    }
+
+    if (map.size > 0) {
+      logger.log(`Loaded ${map.size} crop reference(s) from DB`);
+    }
+  } catch (err) {
+    logger.warn(`DB crop reference load failed: ${(err as Error).message}`);
+  }
+
+  return map;
+}
+
+/**
+ * Get a crop reference by type. Tries in-memory cache first, then disk, then DB.
+ * For synchronous callers that can't await, use getLocalCropReference (disk-only).
+ */
 export function getLocalCropReference(
   cropType: string,
 ): Record<string, unknown> | null {
   if (!cache) {
-    cache = loadAll();
+    cache = loadAllFromDisk();
   }
   return cache.get(cropType.toLowerCase()) ?? null;
+}
+
+/**
+ * Get a crop reference, falling back to DB if not found on disk.
+ * Async version for callers that have a Supabase client available.
+ */
+export async function getCropReference(
+  cropType: string,
+  supabaseAdmin: { from: (table: string) => any },
+): Promise<Record<string, unknown> | null> {
+  // Try in-memory cache / disk first
+  const local = getLocalCropReference(cropType);
+  if (local) return local;
+
+  // Fall back to DB
+  const dbMap = await loadAllFromDb(supabaseAdmin);
+  // Merge DB results into cache so subsequent sync calls hit cache
+  for (const [key, value] of dbMap) {
+    cache?.set(key, value);
+  }
+
+  return cache?.get(cropType.toLowerCase()) ?? null;
 }
 
 export function reloadCropReferences(): void {
@@ -72,7 +132,6 @@ export function reloadCropReferences(): void {
 
 /**
  * Load and cache MOTEUR_CONFIG.json — culture-agnostic engine configuration.
- * Contains: gouvernance rules, phases_age, scoring formulas, index interpretation per culture.
  */
 export function getMoteurConfig(): Record<string, unknown> | null {
   if (moteurConfigCache) {

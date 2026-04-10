@@ -159,7 +159,7 @@ function ReferentielsDashboard() {
                     <h3 className="text-lg font-semibold text-gray-900 group-hover:text-emerald-700">
                       {getCropLabel(c.crop)}
                     </h3>
-                    <p className="text-sm text-gray-500">{c.fileName}</p>
+                    <p className="text-sm text-gray-500">v{c.version}</p>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-emerald-600 mt-1" />

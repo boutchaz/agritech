@@ -2,7 +2,6 @@ import { apiRequest } from './api-client';
 
 export interface ReferentialSummary {
   crop: string;
-  fileName: string;
   version: string;
   date: string;
   sections: string[];
