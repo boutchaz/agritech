@@ -4,7 +4,7 @@ import { AlertTriangle, Info } from 'lucide-react';
 import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { FeatureCollection, Feature, GeoJsonObject, Point } from 'geojson';
+import type { FeatureCollection, Feature, GeoJsonObject, Point, Polygon } from 'geojson';
 import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 import type { HeatmapData, SpatialPatterns } from '@/types/calibration-review';
 
@@ -83,7 +83,11 @@ function isPixelGridFeatureCollection(fc: FeatureCollection): boolean {
   return looksLikeIndexGrid && !looksLikeGeographicParcel;
 }
 
-function transformPixelGridToWgs84(fc: FeatureCollection, boundaryRing: number[][]): FeatureCollection {
+/**
+ * Turn each raster cell into a small WGS84 rectangle so zones read as a continuous heatmap
+ * (semi-transparent tiles), not scattered dots.
+ */
+function transformPixelGridToCellPolygons(fc: FeatureCollection, boundaryRing: number[][]): FeatureCollection {
   const bbox = ringBBox(boundaryRing);
   if (!bbox) return fc;
 
@@ -108,14 +112,27 @@ function transformPixelGridToWgs84(fc: FeatureCollection, boundaryRing: number[]
     const g = f.geometry;
     if (g?.type !== 'Point') return f;
     const [col, row] = (g as Point).coordinates;
-    const lng = minLng + ((Number(col) + 0.5) / cols) * lngSpan;
-    const lat = maxLat - ((Number(row) + 0.5) / rows) * latSpan;
+    const ci = Math.floor(Number(col));
+    const ri = Math.floor(Number(row));
+
+    const lng0 = minLng + (ci / cols) * lngSpan;
+    const lng1 = minLng + ((ci + 1) / cols) * lngSpan;
+    const latN = maxLat - (ri / rows) * latSpan;
+    const latS = maxLat - ((ri + 1) / rows) * latSpan;
+
+    const ring: [number, number][] = [
+      [lng0, latN],
+      [lng1, latN],
+      [lng1, latS],
+      [lng0, latS],
+      [lng0, latN],
+    ];
+
+    const poly: Polygon = { type: 'Polygon', coordinates: [ring] };
     return {
-      ...f,
-      geometry: {
-        type: 'Point',
-        coordinates: [lng, lat],
-      },
+      type: 'Feature',
+      properties: f.properties ?? {},
+      geometry: poly,
     };
   });
 
@@ -212,7 +229,7 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
         return { zones: null, boundaryFeature: null, needsBoundaryForZoning: true };
       }
       const ring = closedRingCoordinates(boundary);
-      const transformed = transformPixelGridToWgs84(fc, ring);
+      const transformed = transformPixelGridToCellPolygons(fc, ring);
       return {
         zones: transformed as GeoJsonObject,
         boundaryFeature: {
@@ -232,14 +249,19 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
 
   const geoJsonStyle = useMemo(() => {
     return (feature: GeoJSON.Feature | undefined) => {
+      const g = feature?.geometry;
+      if (g?.type === 'Point') {
+        return {};
+      }
       const className = zoneClassFromProps(feature?.properties);
       const color = zoneColorMap.get(className) ?? '#888888';
+      const isCellRaster = g?.type === 'Polygon' || g?.type === 'MultiPolygon';
       return {
         fillColor: color,
-        fillOpacity: 0.65,
+        fillOpacity: isCellRaster ? 0.58 : 0.65,
         color,
-        weight: 0.5,
-        opacity: 0.8,
+        weight: isCellRaster ? 0 : 0.5,
+        opacity: isCellRaster ? 0.92 : 0.8,
       };
     };
   }, [zoneColorMap]);
@@ -268,6 +290,14 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
     },
     [zoneColorMap],
   );
+
+  const zonesLayerUsesPoints = useMemo(() => {
+    const z = mapGeoJson.zones;
+    if (!z || typeof z !== 'object') return false;
+    const fc = z as FeatureCollection;
+    const f0 = fc.features?.[0];
+    return f0?.geometry?.type === 'Point';
+  }, [mapGeoJson.zones]);
 
   if (!heatmap.available) {
     return (
@@ -317,28 +347,31 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary 
               preferCanvas
             >
               <LeafletBaseTileLayers variant="satellite" />
-              {mapGeoJson.boundaryFeature && (
-                <GeoJSON
-                  data={mapGeoJson.boundaryFeature}
-                  interactive={false}
-                  style={{
-                    fillOpacity: 0,
-                    color: '#f8fafc',
-                    weight: 2,
-                    opacity: 0.95,
-                  }}
-                />
-              )}
               <GeoJSON
                 data={mapGeoJson.zones}
+                interactive={false}
                 style={(f) => {
                   if (f.geometry.type === 'Point') {
                     return {};
                   }
                   return geoJsonStyle(f);
                 }}
-                pointToLayer={pointToLayer}
+                pointToLayer={zonesLayerUsesPoints ? pointToLayer : undefined}
               />
+              {mapGeoJson.boundaryFeature && (
+                <GeoJSON
+                  data={mapGeoJson.boundaryFeature}
+                  interactive={false}
+                  style={{
+                    fillOpacity: 0,
+                    color: '#ffffff',
+                    weight: 3,
+                    opacity: 1,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                  }}
+                />
+              )}
               <FitBounds geojson={mapGeoJson.zones} boundary={boundary} />
             </MapContainer>
           )}
