@@ -19,9 +19,6 @@ export function useMediaQuery(query: string): boolean {
     if (typeof window === 'undefined') return;
 
     const mediaQuery = window.matchMedia(query);
-    
-    // Set initial value
-    setMatches(mediaQuery.matches);
 
     // Create event listener
     const handler = (event: MediaQueryListEvent) => {
@@ -49,4 +46,6 @@ export function useMediaQuery(query: string): boolean {
 export const useIsMobile = () => useMediaQuery('(max-width: 639px)');
 export const useIsTablet = () => useMediaQuery('(min-width: 640px) and (max-width: 1023px)');
 export const useIsDesktop = () => useMediaQuery('(min-width: 1024px)');
+/** Tailwind `md` — tablet / iPad portrait; matches sidebar rail visibility. Use for header chrome (farm + org switchers). */
+export const useIsMdUp = () => useMediaQuery('(min-width: 768px)');
 export const useIsLargeDesktop = () => useMediaQuery('(min-width: 1280px)');

@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageHeader, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import {
@@ -361,21 +361,15 @@ export function CampaignManagement() {
     <>
     <ListPageLayout
       header={
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-              <Leaf className="h-6 w-6 text-green-600" />
-              {t('campaigns.title', 'Agricultural Campaigns')}
-            </h2>
-            <p className="text-muted-foreground">
-              {t('campaigns.description', 'Manage agricultural campaigns (Campagne Agricole) for production planning.')}
-            </p>
-          </div>
-          <Button onClick={() => handleOpenDialog()}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('campaigns.addNew', 'New Campaign')}
-          </Button>
-        </div>
+        <ListPageHeader
+          variant="shell"
+          actions={
+            <Button onClick={() => handleOpenDialog()}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('campaigns.addNew', 'New Campaign')}
+            </Button>
+          }
+        />
       }
       filters={
         <FilterBar

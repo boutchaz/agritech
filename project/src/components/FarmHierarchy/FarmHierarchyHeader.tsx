@@ -69,6 +69,8 @@ const FarmHierarchyHeader = ({
             </Button>
           )}
           <Button
+            type="button"
+            variant="default"
             data-testid="create-farm-button"
             data-tour="add-farm"
             onClick={onAddFarm}

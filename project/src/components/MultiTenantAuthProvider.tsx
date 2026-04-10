@@ -466,6 +466,38 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     }
   }, [farms, currentFarm]);
 
+  // Keep currentFarm in sync with latest `farms` list (ids + parcel-derived total_area).
+  // Fixes empty Radix Select when `currentFarm.id` was missing from a transient [] or after refetch.
+  useEffect(() => {
+    if (farms.length === 0) return;
+    if (!currentFarm) return;
+
+    const match = farms.find(f => f.id === currentFarm.id);
+    if (!match) {
+      let next = farms[0];
+      const raw = localStorage.getItem('currentFarm');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { id?: string };
+          const bySaved = parsed.id ? farms.find(f => f.id === parsed.id) : undefined;
+          if (bySaved) next = bySaved;
+        } catch {
+          /* ignore */
+        }
+      }
+      setCurrentFarm(next);
+      localStorage.setItem('currentFarm', JSON.stringify(next));
+      return;
+    }
+
+    const cur = currentFarm as typeof match & { total_area?: number };
+    const matchTa = (match as { total_area?: number }).total_area;
+    if (cur.total_area !== matchTa || cur.name !== match.name) {
+      setCurrentFarm(match);
+      localStorage.setItem('currentFarm', JSON.stringify(match));
+    }
+  }, [farms, currentFarm]);
+
   // Fetch user role when user or organization changes
   useEffect(() => {
     fetchUserRole();

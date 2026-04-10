@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   Building2,
   CreditCard,
+  Mail,
   Menu,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { to: '/', label: 'Référentiels', icon: Database, match: (p: string) => p === '/' || p.startsWith('/referentiels') },
     { to: '/clients', label: 'Clients', icon: Building2 },
     { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
+    { to: '/email-templates', label: 'Email Templates', icon: Mail },
     { to: '/rdv', label: 'RDV SIAM', icon: CalendarCheck },
   ];
 

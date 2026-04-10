@@ -553,7 +553,7 @@ export default function WarehouseManagement() {
               {t('warehouses.description')}
             </p>
           </div>
-          <Button onClick={handleCreate}>
+          <Button type="button" variant="default" onClick={handleCreate}>
             <Plus className="w-4 h-4 mr-2" />
             {t('warehouses.createWarehouse')}
           </Button>

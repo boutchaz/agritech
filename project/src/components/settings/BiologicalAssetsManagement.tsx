@@ -23,7 +23,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { FilterBar, ListPageHeader, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   Select,
@@ -436,22 +436,17 @@ export function BiologicalAssetsManagement() {
     <>
     <ListPageLayout
       header={
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              {t('biologicalAssets.title', 'Biological Assets')}
-            </h2>
-            <p className="text-muted-foreground">
-              {t('biologicalAssets.description', 'Manage perennial assets like orchards, vineyards, and livestock under IAS 41.')}
-            </p>
-          </div>
-          {isAdmin && (
-            <Button onClick={() => handleOpenAssetDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('biologicalAssets.addNew', 'Add Asset')}
-            </Button>
-          )}
-        </div>
+        isAdmin ? (
+          <ListPageHeader
+            variant="shell"
+            actions={
+              <Button onClick={() => handleOpenAssetDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                {t('biologicalAssets.addNew', 'Add Asset')}
+              </Button>
+            }
+          />
+        ) : undefined
       }
       filters={
         <FilterBar

@@ -97,7 +97,7 @@ export function CreateCertificationDialog() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button type="button" variant="default" onClick={() => setOpen(true)}>
         <Plus className="mr-2 h-4 w-4" />
         {t('dialogs.createCertification.button')}
       </Button>

@@ -7,7 +7,7 @@ import FarmSwitcher from './FarmSwitcher';
 import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
-import { useIsDesktop } from '../hooks/useMediaQuery';
+import { useIsMdUp } from '../hooks/useMediaQuery';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -69,7 +69,8 @@ const ModernPageHeader = ({
   const CurrentIcon = currentPage.icon;
   const { currentFarm, farms, setCurrentFarm } = useAuth();
   const currentFarmId = currentFarm?.id;
-  const isDesktop = useIsDesktop();
+  /** Use md (768px), not lg (1024px), so iPad / tablet get farm + org switchers like desktop. */
+  const showExpandedTopBar = useIsMdUp();
 
   // Handle farm change
   const handleFarmChange = (farmId: string) => {
@@ -81,8 +82,8 @@ const ModernPageHeader = ({
 
   return (
     <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-300">
-      {/* Top bar: compact below lg; full breadcrumbs + org on desktop. NotificationBell mounts in one branch only. */}
-      {!isDesktop ? (
+      {/* Top bar: compact on narrow phones only; from md up show farm + org switchers (aligns with sidebar). NotificationBell mounts in one branch only. */}
+      {!showExpandedTopBar ? (
         <div className="border-b border-slate-50 dark:border-slate-800/50">
           <div className="flex gap-2 py-2 px-3 items-center">
             <Button
@@ -133,9 +134,9 @@ const ModernPageHeader = ({
           </div>
         </div>
       ) : (
-        <div className="px-6 lg:px-8">
-          <div className="flex items-center justify-between py-2.5 border-b border-slate-50 dark:border-slate-800/50">
-            <Breadcrumb className="flex-1 me-4">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 py-2.5 border-b border-slate-50 dark:border-slate-800/50 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <Breadcrumb className="min-w-0 flex-1 lg:me-4">
               <BreadcrumbList className="text-[10px] font-medium uppercase tracking-[0.2em] gap-2">
                 {breadcrumbs.map((item, index) => {
                   const Icon = item.icon;
@@ -166,13 +167,13 @@ const ModernPageHeader = ({
               </BreadcrumbList>
             </Breadcrumb>
 
-            <div className="flex flex-shrink-0 items-center gap-4">
-              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
+            <div className="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3 lg:ml-2 lg:w-auto lg:gap-4">
+              <div className="flex min-w-0 max-w-full items-center gap-1.5 rounded-2xl border border-slate-100 bg-slate-50 p-1 shadow-inner dark:border-slate-700/50 dark:bg-slate-800/50 sm:gap-2">
                 <FarmSwitcher currentFarmId={currentFarmId || ''} onFarmChange={handleFarmChange} />
-                <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+                <div className="h-4 w-px shrink-0 bg-slate-200 dark:bg-slate-700" />
                 <OrganizationSwitcher />
               </div>
-              <div className="flex items-center gap-3 ml-2">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <LanguageSwitcher />
                 <div className="w-px h-6 bg-slate-100 dark:bg-slate-800" />
                 <NotificationBell />

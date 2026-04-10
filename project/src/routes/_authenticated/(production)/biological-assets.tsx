@@ -16,6 +16,10 @@ function BiologicalAssetsPage() {
       header={
         <ModernPageHeader
           title={t('biologicalAssets.pageTitle', 'Biological Assets')}
+          subtitle={t(
+            'biologicalAssets.description',
+            'Manage perennial assets like orchards, vineyards, and livestock under IAS 41.',
+          )}
           breadcrumbs={[
             { icon: Building2, label: currentOrganization?.name || t('nav.dashboard', 'Dashboard'), path: '/dashboard' },
             { icon: TreeDeciduous, label: t('biologicalAssets.pageTitle', 'Biological Assets'), isActive: true },

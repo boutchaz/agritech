@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgroGina — Calibration Flow UX Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 40px 20px;
+  }
+
+  .page-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .page-subtitle {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 48px;
+  }
+
+  .flow-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 64px;
+  }
+
+  .phase-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    background: #6366f1;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .phase-label.green { background: #059669; }
+  .phase-label.amber { background: #d97706; }
+  .phase-label.blue { background: #2563eb; }
+  .phase-label.purple { background: #7c3aed; }
+
+  .screen {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 30px rgba(0,0,0,0.04);
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+  }
+
+  .screen-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    padding: 20px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #fff;
+  }
+  .screen-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .screen-header .breadcrumb {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* ============ PHASE 1: WIZARD ============ */
+  .wizard-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 560px;
+  }
+
+  .wizard-sidebar {
+    background: #f8fafc;
+    border-right: 1px solid #e2e8f0;
+    padding: 24px 0;
+  }
+
+  .confidence-gauge {
+    text-align: center;
+    padding: 20px 24px 28px;
+    border-bottom: 1px solid #e2e8f0;
+    margin-bottom: 16px;
+  }
+  .gauge-ring {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+  .gauge-ring svg { width: 120px; height: 120px; transform: rotate(-90deg); }
+  .gauge-ring .bg { fill: none; stroke: #e2e8f0; stroke-width: 8; }
+  .gauge-ring .fill { fill: none; stroke: url(#gaugeGrad); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 339.292; stroke-dashoffset: 118.75; transition: stroke-dashoffset 1s; }
+  .gauge-value {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    font-weight: 800;
+    color: #059669;
+  }
+  .gauge-value span { font-size: 14px; font-weight: 600; }
+  .gauge-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .gauge-potential {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+  .gauge-potential strong { color: #059669; }
+
+  .step-list { padding: 0 12px; }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 2px;
+  }
+  .step-item:hover { background: #e2e8f0; }
+  .step-item.active { background: #ede9fe; }
+  .step-item.completed .step-icon { background: #059669; color: #fff; }
+  .step-item.active .step-icon { background: #6366f1; color: #fff; }
+  .step-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+  .step-info { flex: 1; min-width: 0; }
+  .step-name { font-size: 13px; font-weight: 600; color: #1e293b; }
+  .step-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .step-badge.required { background: #fee2e2; color: #dc2626; }
+  .step-badge.recommended { background: #fef9c3; color: #a16207; }
+  .step-badge.optional { background: #e0e7ff; color: #4338ca; }
+  .step-gain {
+    font-size: 10px;
+    font-weight: 600;
+    color: #059669;
+  }
+
+  .wizard-content {
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+  }
+  .wizard-content h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .wizard-content .step-desc {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 28px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 24px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #f8fafc;
+    color: #1e293b;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { outline: none; border-color: #6366f1; background: #fff; }
+  .form-input.filled { border-color: #a7f3d0; background: #f0fdf4; }
+
+  .water-source-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .source-card {
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .source-card.selected {
+    border-color: #6366f1;
+    background: #ede9fe;
+  }
+  .source-card .icon { font-size: 28px; margin-bottom: 6px; }
+  .source-card .name { font-size: 13px; font-weight: 600; }
+
+  .prefill-banner {
+    background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border: 1px solid #a7f3d0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .prefill-banner .icon { font-size: 20px; }
+  .prefill-banner .text { font-size: 13px; color: #065f46; flex: 1; }
+  .prefill-banner .text strong { font-weight: 700; }
+  .prefill-btn {
+    padding: 6px 16px;
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .wizard-footer {
+    margin-top: auto;
+    padding-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .btn {
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-ghost { background: transparent; color: #64748b; }
+  .btn-outline { background: #fff; color: #475569; border: 1.5px solid #e2e8f0; }
+  .btn-primary { background: #6366f1; color: #fff; }
+  .btn-green { background: #059669; color: #fff; }
+
+  /* ============ PHASE 2: PROCESSING ============ */
+  .processing-screen {
+    padding: 48px 40px;
+    text-align: center;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    color: #fff;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .brain-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 20px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); }
+    50% { box-shadow: 0 0 0 16px rgba(99,102,241,0); }
+  }
+
+  .processing-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .processing-sub {
+    font-size: 14px;
+    color: #94a3b8;
+    margin-bottom: 32px;
+  }
+
+  .progress-steps {
+    width: 100%;
+    max-width: 480px;
+    text-align: left;
+  }
+  .progress-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+    opacity: 0.4;
+  }
+  .progress-step.done { opacity: 1; }
+  .progress-step.active { opacity: 1; }
+  .progress-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .progress-step.done .progress-dot { background: #059669; }
+  .progress-step.active .progress-dot { background: #6366f1; animation: pulse 1.5s infinite; }
+  .progress-text { font-size: 14px; font-weight: 500; }
+  .progress-text small { display: block; font-size: 12px; color: #64748b; font-weight: 400; margin-top: 2px; }
+
+  .processing-note {
+    margin-top: 32px;
+    font-size: 13px;
+    color: #64748b;
+    background: #1e293b;
+    padding: 12px 20px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+  }
+
+  /* ============ PHASE 3: REVIEW ============ */
+  .review-hero {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+    padding: 48px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .review-hero::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .health-ring {
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+  .health-ring svg { width: 160px; height: 160px; transform: rotate(-90deg); }
+  .health-ring .bg { fill: none; stroke: #d1fae5; stroke-width: 10; }
+  .health-ring .fill { fill: none; stroke: #059669; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 439.82; stroke-dashoffset: 79.17; }
+  .health-score {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .health-score .number { font-size: 44px; font-weight: 900; color: #059669; line-height: 1; }
+  .health-score .label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+
+  .kpi-row {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 24px 0;
+  }
+  .kpi-item { text-align: center; }
+  .kpi-value { font-size: 22px; font-weight: 800; color: #0f172a; }
+  .kpi-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+  }
+  .pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .pill.green { background: #d1fae5; color: #065f46; }
+  .pill.amber { background: #fef3c7; color: #92400e; }
+  .pill.red { background: #fee2e2; color: #991b1b; }
+
+  .review-tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0 28px;
+    background: #fff;
+  }
+  .review-tab {
+    padding: 14px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .review-tab.active {
+    color: #6366f1;
+    border-bottom-color: #6366f1;
+  }
+
+  .review-content {
+    padding: 28px;
+  }
+
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .analysis-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .analysis-card h4 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .chart-placeholder {
+    height: 140px;
+    background: linear-gradient(180deg, #0f172a, #1e293b);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+  }
+  .chart-line {
+    position: absolute;
+    bottom: 30px;
+    left: 12px;
+    right: 12px;
+    height: 2px;
+  }
+  .chart-line svg { width: 100%; height: 80px; position: absolute; bottom: 0; }
+
+  .mini-sparkline {
+    display: inline-block;
+    width: 60px;
+    height: 20px;
+    vertical-align: middle;
+  }
+
+  .index-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .index-row:last-child { border-bottom: none; }
+  .index-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .index-name { font-size: 13px; font-weight: 600; flex: 1; }
+  .index-value { font-size: 13px; font-weight: 700; }
+  .index-trend { font-size: 11px; font-weight: 600; }
+  .index-trend.up { color: #059669; }
+  .index-trend.down { color: #dc2626; }
+
+  /* Comparison slider mockup */
+  .comparison-mock {
+    height: 180px;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    background: #1e293b;
+  }
+  .comp-left, .comp-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .comp-left {
+    left: 0;
+    right: 50%;
+    background: linear-gradient(135deg, #064e3b, #065f46);
+  }
+  .comp-right {
+    left: 50%;
+    right: 0;
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+  }
+  .comp-divider {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #fff;
+    transform: translateX(-50%);
+    z-index: 10;
+  }
+  .comp-handle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 48px;
+    background: #fff;
+    border-radius: 16px;
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .comp-handle-grip {
+    display: flex;
+    gap: 2px;
+  }
+  .comp-handle-grip div {
+    width: 2px;
+    height: 16px;
+    background: #94a3b8;
+    border-radius: 1px;
+  }
+  .comp-badge {
+    position: absolute;
+    top: 8px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 5;
+  }
+  .comp-badge.left { left: 8px; background: #7c3aed; }
+  .comp-badge.right { right: 8px; background: #4f46e5; }
+
+  /* ============ IMPROVE CARD (Block D) ============ */
+  .improve-card {
+    background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+    border: 1px solid #ddd6fe;
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .improve-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .improve-header h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #4c1d95;
+  }
+  .improve-scores {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .improve-current {
+    font-size: 24px;
+    font-weight: 800;
+    color: #7c3aed;
+  }
+  .improve-arrow { font-size: 16px; color: #a78bfa; }
+  .improve-potential {
+    font-size: 24px;
+    font-weight: 800;
+    color: #c4b5fd;
+  }
+
+  .gain-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .gain-card {
+    background: #fff;
+    border: 1.5px solid #e9d5ff;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .gain-card:hover {
+    border-color: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124,58,237,0.1);
+  }
+  .gain-icon { font-size: 24px; margin-bottom: 6px; }
+  .gain-name { font-size: 12px; font-weight: 600; color: #4c1d95; margin-bottom: 4px; }
+  .gain-value { font-size: 16px; font-weight: 800; color: #059669; }
+  .gain-cta { font-size: 11px; color: #7c3aed; font-weight: 600; margin-top: 6px; }
+
+  /* ============ STICKY VALIDATION BAR ============ */
+  .validation-bar {
+    background: #fff;
+    border-top: 1px solid #e2e8f0;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .validation-bar .text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+  }
+  .validation-bar .actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ============ PHASE 4: RECALIBRATION ============ */
+  .recal-card {
+    padding: 28px;
+    display: flex;
+    gap: 24px;
+  }
+  .recal-suggestion {
+    flex: 1;
+    background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+    border: 1px solid #bfdbfe;
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .recal-suggestion h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .recal-suggestion p {
+    font-size: 13px;
+    color: #3b82f6;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .recal-impact {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .impact-before-after {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 12px;
+  }
+  .impact-box {
+    text-align: center;
+  }
+  .impact-box .val {
+    font-size: 36px;
+    font-weight: 900;
+  }
+  .impact-box .lbl {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .impact-box.before .val { color: #94a3b8; }
+  .impact-box.after .val { color: #059669; }
+  .impact-arrow-big {
+    font-size: 24px;
+    color: #059669;
+  }
+
+  /* ============ PHASE 5: ANNUAL ============ */
+  .annual-banner {
+    padding: 28px;
+  }
+  .annual-card {
+    background: linear-gradient(135deg, #fefce8, #fef9c3);
+    border: 1px solid #fde68a;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .annual-icon {
+    width: 56px;
+    height: 56px;
+    background: #f59e0b;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+  .annual-info { flex: 1; }
+  .annual-info h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 4px;
+  }
+  .annual-info p {
+    font-size: 13px;
+    color: #a16207;
+    line-height: 1.5;
+  }
+  .annual-actions {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .yoy-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+    padding: 0 28px 28px;
+  }
+  .yoy-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .yoy-card .metric { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .yoy-values { display: flex; align-items: center; justify-content: center; gap: 12px; }
+  .yoy-old { font-size: 20px; font-weight: 700; color: #94a3b8; text-decoration: line-through; }
+  .yoy-new { font-size: 24px; font-weight: 800; color: #0f172a; }
+  .yoy-delta { font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .yoy-delta.up { color: #059669; }
+
+  /* Flow arrow between sections */
+  .flow-arrow {
+    text-align: center;
+    padding: 8px 0;
+    color: #cbd5e1;
+    font-size: 28px;
+  }
+
+  /* Mobile indicator */
+  .mobile-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-left: 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">AgroGina UX Vision</div>
+<div class="page-subtitle">Calibration Flow &mdash; Ideal Experience</div>
+
+<div class="flow-container">
+
+  <!-- ========== PHASE 1: WIZARD ========== -->
+  <div>
+    <div class="phase-label purple">Phase 1 &mdash; Data Collection Wizard</div>
+    <div class="screen">
+      <div class="screen-header">
+        <h2>&#129504; Calibration &mdash; Parcelle B3 (Clem. Nour)</h2>
+        <div class="breadcrumb">Parcels &rsaquo; B3 &rsaquo; AI Calibration</div>
+      </div>
+      <div class="wizard-layout">
+
+        <!-- Sidebar with live confidence -->
+        <div class="wizard-sidebar">
+          <div class="confidence-gauge">
+            <div class="gauge-ring">
+              <svg viewBox="0 0 120 120">
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color:#6366f1"/>
+                    <stop offset="100%" style="stop-color:#059669"/>
+                  </linearGradient>
+                </defs>
+                <circle class="bg" cx="60" cy="60" r="54"/>
+                <circle class="fill" cx="60" cy="60" r="54"/>
+              </svg>
+              <div class="gauge-value">65<span>%</span></div>
+            </div>
+            <div class="gauge-label">Confidence Level</div>
+            <div class="gauge-potential">Potential: <strong>91%</strong></div>
+          </div>
+
+          <div class="step-list">
+            <div class="step-item completed">
+              <div class="step-icon">&#10003;</div>
+              <div class="step-info">
+                <div class="step-name">Plantation</div>
+              </div>
+              <span class="step-badge required">Requis</span>
+            </div>
+            <div class="step-item completed">
+              <div class="step-icon">&#10003;</div>
+              <div class="step-info">
+                <div class="step-name">Irrigation</div>
+              </div>
+              <span class="step-badge required">Requis</span>
+            </div>
+            <div class="step-item active">
+              <div class="step-icon">3</div>
+              <div class="step-info">
+                <div class="step-name">Analyse Sol</div>
+                <div class="step-gain">+12% confiance</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-icon">4</div>
+              <div class="step-info">
+                <div class="step-name">Analyse Eau</div>
+                <div class="step-gain">+8% confiance</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-icon">5</div>
+              <div class="step-info">
+                <div class="step-name">Analyse Foliaire</div>
+                <div class="step-gain">+4% confiance</div>
+              </div>
+              <span class="step-badge optional">Opt.</span>
+            </div>
+            <div class="step-item">
+              <div class="step-icon">6</div>
+              <div class="step-info">
+                <div class="step-name">Historique Récolte</div>
+                <div class="step-gain">+6% confiance</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-icon">7</div>
+              <div class="step-info">
+                <div class="step-name">Historique Cultural</div>
+                <div class="step-gain">+3% confiance</div>
+              </div>
+            </div>
+            <div class="step-item">
+              <div class="step-icon">8</div>
+              <div class="step-info">
+                <div class="step-name">Validation</div>
+              </div>
+              <span class="step-badge required">Requis</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main content area -->
+        <div class="wizard-content">
+          <h3>&#129514; Analyse du Sol</h3>
+          <div class="step-desc">Les donnees de sol ameliorent significativement la precision. Ajoutez vos resultats d'analyse recents.</div>
+
+          <!-- Auto-fill banner -->
+          <div class="prefill-banner">
+            <div class="icon">&#128269;</div>
+            <div class="text">Analyse de sol trouvee du <strong>12 Mars 2026</strong> (Lab AgriTest Meknes). Utiliser ces donnees?</div>
+            <button class="prefill-btn">Utiliser &rarr;</button>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>pH du sol</label>
+              <input class="form-input filled" type="text" value="7.2" />
+            </div>
+            <div class="form-group">
+              <label>EC (dS/m)</label>
+              <input class="form-input filled" type="text" value="1.8" />
+            </div>
+            <div class="form-group">
+              <label>Matiere Organique (%)</label>
+              <input class="form-input" type="text" placeholder="Ex: 2.5" />
+            </div>
+            <div class="form-group">
+              <label>Texture</label>
+              <input class="form-input" type="text" placeholder="Argilo-limoneux..." />
+            </div>
+          </div>
+
+          <div style="font-size:12px; color:#6366f1; font-weight:600; cursor:pointer; margin-bottom:20px;">
+            &#x25BC; Afficher les parametres avances (Recommande + Optionnel)
+          </div>
+
+          <div class="wizard-footer">
+            <button class="btn btn-ghost">&larr; Retour</button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-outline">&#128190; Sauvegarder et finir plus tard</button>
+              <button class="btn btn-primary">Suivant &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">&#x25BC;</div>
+
+  <!-- ========== PHASE 2: PROCESSING ========== -->
+  <div>
+    <div class="phase-label blue">Phase 2 &mdash; AgromindIA Processing</div>
+    <div class="screen">
+      <div class="processing-screen">
+        <div class="brain-icon">&#129504;</div>
+        <div class="processing-title">AgromindIA analyse votre parcelle...</div>
+        <div class="processing-sub">Estimation: 1-2 minutes</div>
+
+        <div class="progress-steps">
+          <div class="progress-step done">
+            <div class="progress-dot">&#10003;</div>
+            <div class="progress-text">
+              Analyse de 18 mois d'imagerie satellite
+              <small>Sentinel-2 &mdash; 24 images traitees</small>
+            </div>
+          </div>
+          <div class="progress-step done">
+            <div class="progress-dot">&#10003;</div>
+            <div class="progress-text">
+              Croisement avec les donnees de sol
+              <small>pH 7.2, EC 1.8 &mdash; comparaison regionale</small>
+            </div>
+          </div>
+          <div class="progress-step active">
+            <div class="progress-dot">&#9679;</div>
+            <div class="progress-text">
+              Detection des anomalies et patterns spatiaux
+              <small>Classification des zones de vigueur...</small>
+            </div>
+          </div>
+          <div class="progress-step">
+            <div class="progress-dot">4</div>
+            <div class="progress-text">
+              Construction du profil agronomique
+              <small>Score de sante, prediction de rendement</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="processing-note">
+          &#128276; Vous recevrez une notification quand c'est pret &mdash; vous pouvez naviguer ailleurs.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">&#x25BC;</div>
+
+  <!-- ========== PHASE 3: REVIEW ========== -->
+  <div>
+    <div class="phase-label green">Phase 3 &mdash; Diagnostic Report</div>
+    <div class="screen">
+      <div class="screen-header">
+        <h2>&#127793; Diagnostic &mdash; Parcelle B3 (Clem. Nour, 12ha)</h2>
+        <div class="breadcrumb">Calibration v2.1 &mdash; 10 Avril 2026</div>
+      </div>
+
+      <!-- Hero Health Card -->
+      <div class="review-hero">
+        <div class="health-ring">
+          <svg viewBox="0 0 160 160">
+            <circle class="bg" cx="80" cy="80" r="70"/>
+            <circle class="fill" cx="80" cy="80" r="70"/>
+          </svg>
+          <div class="health-score">
+            <div class="number">82</div>
+            <div class="label">Sante</div>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-item">
+            <div class="kpi-value">78%</div>
+            <div class="kpi-label">Confiance</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-value">18-24</div>
+            <div class="kpi-label">T/ha prevision</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-value">Prod.</div>
+            <div class="kpi-label">Maturite</div>
+          </div>
+        </div>
+
+        <div class="pills-row">
+          <div class="pill green">&#10003; Bonne vigueur vegetative</div>
+          <div class="pill green">&#10003; Hydratation adequate</div>
+          <div class="pill green">&#10003; Historique stable</div>
+          <div class="pill amber">&#9888; Salinite sol elevee (EC 1.8)</div>
+          <div class="pill red">&#9888; Tendance NDVI en baisse (-8%)</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="review-tabs">
+        <div class="review-tab active">Synthese</div>
+        <div class="review-tab">Analyse Detaillee</div>
+        <div class="review-tab">Anomalies (2)</div>
+        <div class="review-tab">Ameliorer</div>
+        <div class="review-tab">Alternance</div>
+      </div>
+
+      <!-- Analysis content -->
+      <div class="review-content">
+        <div class="analysis-grid">
+          <!-- Spectral Chart -->
+          <div class="analysis-card">
+            <h4>&#128200; Indices de Vegetation (18 mois)</h4>
+            <div class="chart-placeholder">
+              <svg viewBox="0 0 400 80" style="width:100%; height:80px; position:absolute; bottom:20px; left:0;">
+                <polyline fill="none" stroke="#22c55e" stroke-width="2" points="0,60 30,55 60,40 90,45 120,30 150,35 180,25 210,20 240,28 270,22 300,30 330,25 360,18 400,22"/>
+                <polyline fill="none" stroke="#3b82f6" stroke-width="2" opacity="0.6" points="0,50 30,48 60,35 90,40 120,28 150,32 180,22 210,18 240,25 270,20 300,28 330,22 360,15 400,20"/>
+                <polyline fill="none" stroke="#f59e0b" stroke-width="2" opacity="0.4" points="0,65 30,62 60,50 90,55 120,42 150,46 180,38 210,35 240,40 270,36 300,42 330,38 360,30 400,34"/>
+              </svg>
+              <div style="display:flex; gap:16px; z-index:2; font-size:10px; font-weight:600;">
+                <span style="color:#22c55e;">&#9679; NDVI</span>
+                <span style="color:#3b82f6;">&#9679; NDRE</span>
+                <span style="color:#f59e0b;">&#9679; NDMI</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;">
+              <div class="index-row">
+                <div class="index-dot" style="background:#22c55e;"></div>
+                <div class="index-name">NDVI (Vigueur)</div>
+                <svg class="mini-sparkline" viewBox="0 0 60 20"><polyline fill="none" stroke="#22c55e" stroke-width="1.5" points="0,15 10,12 20,8 30,10 40,6 50,8 60,5"/></svg>
+                <div class="index-value">0.72</div>
+                <div class="index-trend up">+3.2%</div>
+              </div>
+              <div class="index-row">
+                <div class="index-dot" style="background:#3b82f6;"></div>
+                <div class="index-name">NDMI (Hydrique)</div>
+                <svg class="mini-sparkline" viewBox="0 0 60 20"><polyline fill="none" stroke="#3b82f6" stroke-width="1.5" points="0,5 10,8 20,10 30,12 40,14 50,12 60,15"/></svg>
+                <div class="index-value">0.31</div>
+                <div class="index-trend down">-2.1%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zone Map / Comparison -->
+          <div class="analysis-card">
+            <h4>&#128506; Comparaison Temporelle</h4>
+            <div class="comparison-mock">
+              <div class="comp-left">
+                <div style="text-align:center;">
+                  <div style="font-size:28px; margin-bottom:4px;">&#127807;</div>
+                  Oct 2025
+                </div>
+              </div>
+              <div class="comp-right">
+                <div style="text-align:center;">
+                  <div style="font-size:28px; margin-bottom:4px;">&#127810;</div>
+                  Mar 2026
+                </div>
+              </div>
+              <div class="comp-divider"></div>
+              <div class="comp-handle">
+                <div class="comp-handle-grip">
+                  <div></div><div></div><div></div>
+                </div>
+              </div>
+              <div class="comp-badge left">Reference</div>
+              <div class="comp-badge right">Comparaison</div>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:#64748b; text-align:center;">
+              &#8592; Glissez pour comparer l'evolution de la vegetation &#8594;
+            </div>
+          </div>
+        </div>
+
+        <!-- Improve Card (Block D) -->
+        <div class="improve-card" style="margin-top:20px;">
+          <div class="improve-header">
+            <h4>&#128640; Ameliorer la Precision</h4>
+            <div class="improve-scores">
+              <span class="improve-current">78%</span>
+              <span class="improve-arrow">&rarr;</span>
+              <span class="improve-potential">91%</span>
+            </div>
+          </div>
+          <div class="gain-cards">
+            <div class="gain-card">
+              <div class="gain-icon">&#129514;</div>
+              <div class="gain-name">Analyse Foliaire</div>
+              <div class="gain-value">+4%</div>
+              <div class="gain-cta">Ajouter &rarr;</div>
+            </div>
+            <div class="gain-card">
+              <div class="gain-icon">&#127806;</div>
+              <div class="gain-name">Historique Cultural</div>
+              <div class="gain-value">+3%</div>
+              <div class="gain-cta">Ajouter &rarr;</div>
+            </div>
+            <div class="gain-card">
+              <div class="gain-icon">&#128197;</div>
+              <div class="gain-name">+ de donnees satellite</div>
+              <div class="gain-value">+6%</div>
+              <div class="gain-cta">Auto (6 mois)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sticky validation bar -->
+      <div class="validation-bar">
+        <div class="text">&#9989; Satisfait de cette analyse?</div>
+        <div class="actions">
+          <button class="btn btn-outline">&#128190; Sauvegarder pour plus tard</button>
+          <button class="btn btn-green">&#10003; Valider et Activer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">&#x25BC;</div>
+
+  <!-- ========== PHASE 4: RECALIBRATION ========== -->
+  <div>
+    <div class="phase-label amber">Phase 4 &mdash; Smart Recalibration</div>
+    <div class="screen">
+      <div class="screen-header">
+        <h2>&#128260; Mise a jour du profil</h2>
+        <div class="breadcrumb">Declenchee automatiquement &mdash; Nouvelle analyse de sol detectee</div>
+      </div>
+      <div class="recal-card">
+        <div class="recal-suggestion">
+          <h4>&#128161; Nouvelle analyse de sol disponible</h4>
+          <p>
+            Vous avez enregistre une analyse de sol le <strong>8 Avril 2026</strong> (Lab AgriTest).
+            Les parametres ont change significativement par rapport a votre baseline:
+          </p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;">
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px; font-size:12px;">
+              <div style="color:#94a3b8; font-weight:600;">pH</div>
+              <div style="font-weight:700;">7.2 <span style="color:#94a3b8;">&rarr;</span> <span style="color:#059669;">7.0</span></div>
+            </div>
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:10px; font-size:12px;">
+              <div style="color:#94a3b8; font-weight:600;">EC (dS/m)</div>
+              <div style="font-weight:700;">1.8 <span style="color:#94a3b8;">&rarr;</span> <span style="color:#059669;">1.4</span></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;">Mettre a jour le profil &rarr;</button>
+        </div>
+        <div class="recal-impact">
+          <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Impact sur la confiance</div>
+          <div class="impact-before-after">
+            <div class="impact-box before">
+              <div class="val">78%</div>
+              <div class="lbl">Actuel</div>
+            </div>
+            <div class="impact-arrow-big">&rarr;</div>
+            <div class="impact-box after">
+              <div class="val">83%</div>
+              <div class="lbl">Apres MAJ</div>
+            </div>
+          </div>
+          <div style="font-size:13px; color:#059669; font-weight:600;">+5% de precision</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">&#x25BC;</div>
+
+  <!-- ========== PHASE 5: ANNUAL ========== -->
+  <div>
+    <div class="phase-label amber">Phase 5 &mdash; Bilan de Saison</div>
+    <div class="screen">
+      <div class="screen-header">
+        <h2>&#127793; Bilan de Campagne 2025-26</h2>
+        <div class="breadcrumb">Parcelle B3 &mdash; Recolte detectee le 5 Avril 2026</div>
+      </div>
+      <div class="annual-banner">
+        <div class="annual-card">
+          <div class="annual-icon">&#127942;</div>
+          <div class="annual-info">
+            <h4>Campagne 2025-26 terminee!</h4>
+            <p>La recolte a ete detectee. Mettez a jour votre profil pour preparer la prochaine saison et comparer vos resultats.</p>
+          </div>
+          <div class="annual-actions">
+            <button class="btn btn-outline">Reporter (1 sem.)</button>
+            <button class="btn btn-green">Commencer le bilan &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="yoy-grid">
+        <div class="yoy-card">
+          <div class="metric">Rendement</div>
+          <div class="yoy-values">
+            <span class="yoy-old">19 T/ha</span>
+            <span class="yoy-new">22 T/ha</span>
+          </div>
+          <div class="yoy-delta up">&#9650; +15.8%</div>
+        </div>
+        <div class="yoy-card">
+          <div class="metric">Score Sante</div>
+          <div class="yoy-values">
+            <span class="yoy-old">75</span>
+            <span class="yoy-new">82</span>
+          </div>
+          <div class="yoy-delta up">&#9650; +9.3%</div>
+        </div>
+        <div class="yoy-card">
+          <div class="metric">NDVI Moyen</div>
+          <div class="yoy-values">
+            <span class="yoy-old">0.68</span>
+            <span class="yoy-new">0.72</span>
+          </div>
+          <div class="yoy-delta up">&#9650; +5.9%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="text-align:center; padding:48px 0 24px; color:#94a3b8; font-size:12px; font-weight:600;">
+  AgroGina &mdash; Calibration Flow UX Mockup &mdash; Designed for Karim, Hassan, Fatima & Ahmed
+</div>
+
+</body>
+</html>

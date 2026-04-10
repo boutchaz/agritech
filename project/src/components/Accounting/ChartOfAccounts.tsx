@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Filter, Database as DatabaseIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Filter, Database as DatabaseIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
@@ -360,22 +360,16 @@ export const ChartOfAccounts = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Building2 className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{t('accountingModule.accounts.title')}</span>
-              </CardTitle>
-              <CardDescription className="mt-1 text-sm">
-                {t('accountingModule.accounts.subtitleAlt')}
-              </CardDescription>
-            </div>
-            <Button onClick={handleCreateAccount} className="w-full sm:w-auto justify-center flex-shrink-0">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('accountingModule.accounts.newAccount')}
-            </Button>
-          </div>
+        <CardHeader className="flex flex-row items-center justify-end gap-3 border-b px-4 py-4 sm:px-6 sm:py-5">
+          <Button
+            type="button"
+            variant="default"
+            onClick={handleCreateAccount}
+            className="w-full sm:w-auto justify-center flex-shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('accountingModule.accounts.newAccount')}
+          </Button>
         </CardHeader>
         <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 mb-6">
@@ -443,6 +437,8 @@ export const ChartOfAccounts = () => {
                           </div>
                           <div className="flex flex-col sm:flex-row gap-3 px-4">
                             <Button
+                              type="button"
+                              variant="default"
                               onClick={handleSeedChartOfAccounts}
                               disabled={isSeeding}
                               size="lg"
@@ -492,6 +488,8 @@ export const ChartOfAccounts = () => {
                 </div>
                 <div className="flex flex-col gap-3 w-full">
                   <Button
+                    type="button"
+                    variant="default"
                     onClick={handleSeedChartOfAccounts}
                     disabled={isSeeding}
                     size="lg"

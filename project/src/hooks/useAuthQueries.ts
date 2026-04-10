@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
 import { parcelsApi } from '../lib/api/parcels';
@@ -213,6 +213,8 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes,
+    /** Avoid empty `farms` during refetch/invalidation — prevents losing farm context in UI (empty Select). */
+    placeholderData: keepPreviousData,
     retry: (failureCount, error) => {
       // Don't retry if session expired
       if (error instanceof Error && (

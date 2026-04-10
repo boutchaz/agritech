@@ -1687,6 +1687,7 @@
       "all": "All",
       "marketplace": "Marketplace",
       "invoice": "Invoices",
+      "quote": "Quotes",
       "order": "Orders",
       "task": "Tasks",
       "reminder": "Reminders",

@@ -539,10 +539,11 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
               }
             >
               <Button
-                variant="blue"
+                type="button"
+                variant="default"
                 data-tour="worker-add"
                 onClick={openCreateForm}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base w-full sm:w-auto justify-center"
+                className="w-full sm:w-auto justify-center text-sm sm:text-base"
               >
                 <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{t('workers.list.addWorker')}</span>

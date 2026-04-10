@@ -26,7 +26,9 @@ const InlineFarmSelector = ({
 
   const farmsList = Array.isArray(farms) ? farms : [];
 
-  if (farmsList.length === 0) {
+  // Only show "no farms" when we truly have none — not while refetching with a stale empty array
+  // when currentFarm is still set (handled in MultiTenantAuthProvider + keepPreviousData).
+  if (farmsList.length === 0 && !currentFarm) {
     return (
       <div className={`bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 ${className}`}>
         <div className="flex items-start gap-3">
@@ -45,6 +47,13 @@ const InlineFarmSelector = ({
   }
 
   if (currentFarm) {
+    const farmRow = farmsList.find((f) => f.id === currentFarm.id);
+    const displayArea =
+      farmRow && 'total_area' in farmRow && farmRow.total_area != null
+        ? Number(farmRow.total_area)
+        : (currentFarm as { total_area?: number }).total_area;
+    const selectValue = farmRow ? currentFarm.id : '';
+
     return (
       <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4", className)}>
         <div className="flex items-center gap-4">
@@ -60,18 +69,20 @@ const InlineFarmSelector = ({
         <div className="flex items-center gap-3">
           <div className="hidden md:flex flex-col items-end px-4 border-r border-slate-100 dark:border-slate-700">
             <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Surface</span>
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums">{currentFarm.total_area?.toFixed(2) || '0.00'} HA</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 tabular-nums">
+              {displayArea != null ? Number(displayArea).toFixed(2) : '0.00'} HA
+            </span>
           </div>
           
           <Select
-            value={currentFarm.id}
+            value={selectValue}
             onValueChange={(value) => {
               const farm = farmsList.find(f => f.id === value);
               if (farm) setCurrentFarm(farm);
             }}
           >
             <SelectTrigger className="w-full sm:w-48 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-xl h-10 text-xs font-bold uppercase tracking-tight">
-              <SelectValue />
+              <SelectValue placeholder={currentFarm.name} />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl">
               {farmsList.map((farm) => (

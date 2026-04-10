@@ -29,6 +29,7 @@ const CATEGORIES: { key: EmailTemplateCategory | 'all'; labelKey: string }[] = [
   { key: 'all', labelKey: 'emailTemplates.categories.all' },
   { key: 'marketplace', labelKey: 'emailTemplates.categories.marketplace' },
   { key: 'invoice', labelKey: 'emailTemplates.categories.invoice' },
+  { key: 'quote', labelKey: 'emailTemplates.categories.quote' },
   { key: 'order', labelKey: 'emailTemplates.categories.order' },
   { key: 'task', labelKey: 'emailTemplates.categories.task' },
   { key: 'reminder', labelKey: 'emailTemplates.categories.reminder' },
@@ -38,6 +39,7 @@ const CATEGORIES: { key: EmailTemplateCategory | 'all'; labelKey: string }[] = [
 const CATEGORY_COLORS: Record<EmailTemplateCategory, string> = {
   marketplace: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
   invoice: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  quote: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
   order: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
   task: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
   reminder: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
@@ -45,7 +47,8 @@ const CATEGORY_COLORS: Record<EmailTemplateCategory, string> = {
 };
 
 export default function EmailTemplatesSettings() {
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const { t } = useTranslation('common');
   const queryClient = useQueryClient();
 
