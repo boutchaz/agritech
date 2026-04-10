@@ -1626,6 +1626,8 @@
       "costCentersDescription": "إدارة مراكز التكلفة لتتبع النفقات",
       "accountMappings": "ربط الحسابات",
       "accountMappingsDescription": "تكوين ربط القيود اليومية التلقائية",
+      "emailTemplates": "قوالب البريد الإلكتروني",
+      "emailTemplatesDescription": "إدارة قوالب رسائل البريد الإلكتروني",
       "files": "إدارة الملفات",
       "filesDescription": "إدارة الملفات واكتشاف الملفات المعزولة",
       "dangerZone": "منطقة الخطر",
@@ -1637,6 +1639,40 @@
         "content": "المحتوى والعرض",
         "system": "النظام"
       }
+    }
+  },
+  "emailTemplates": {
+    "title": "قوالب البريد الإلكتروني",
+    "description": "عرض وتخصيص قوالب رسائل البريد الإلكتروني",
+    "search": "البحث في القوالب...",
+    "noTemplates": "لا توجد قوالب بريد إلكتروني",
+    "noResults": "لا توجد قوالب تطابق بحثك",
+    "selectTemplate": "اختر قالبًا لعرض التفاصيل",
+    "edit": "تعديل",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "deleted": "تم حذف القالب",
+    "deleteFailed": "فشل حذف القالب",
+    "duplicated": "تم نسخ القالب",
+    "duplicateFailed": "فشل نسخ القالب",
+    "updated": "تم تحديث القالب",
+    "updateFailed": "فشل تحديث القالب",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "system": "نظام",
+    "subject": "الموضوع",
+    "htmlBody": "محتوى HTML",
+    "preview": "معاينة",
+    "variables": "المتغيرات",
+    "categories": {
+      "all": "الكل",
+      "marketplace": "السوق",
+      "invoice": "الفواتير",
+      "order": "الطلبات",
+      "task": "المهام",
+      "reminder": "التذكيرات",
+      "general": "عام"
     }
   },
   "account": {
@@ -3676,7 +3712,9 @@
       "list": "إدارة الموظفين",
       "payments": "المدفوعات",
       "paymentsShort": "الرواتب",
-      "calculator": "حاسبة المزارعة"
+      "calculator": "حاسبة المزارعة",
+      "productionSharing": "تقاسم الإنتاج",
+      "productionSharingShort": "تقاسم"
     },
     "list": {
       "title": "إدارة الموظفين",
@@ -3908,6 +3946,33 @@
         "fillAllRequired": "يرجى ملء جميع الحقول المطلوبة",
         "settlementSaved": "تم حفظ التسوية بنجاح",
         "saveError": "خطأ في حفظ التسوية"
+      }
+    },
+    "productionSharing": {
+      "addHint": "أضف عاملاً من نوع \"مزارعة\" لبدء التتبع",
+      "summary": {
+        "grossRevenue": "إجمالي الإيرادات",
+        "totalCharges": "إجمالي المصاريف",
+        "workerShares": "حصص العمال",
+        "ownerShare": "حصة المالك"
+      },
+      "pending": "معلق",
+      "paid": "مدفوع",
+      "settlements": "تسويات",
+      "workerTotal": "المجموع لـ",
+      "noSettlements": "لا توجد تسويات مسجلة. استخدم الحاسبة لإنشاء تسوية.",
+      "statusPaid": "مدفوع",
+      "statusPending": "معلق",
+      "statusCancelled": "ملغى",
+      "table": {
+        "period": "الفترة",
+        "grossRevenue": "الإيراد الإجمالي",
+        "charges": "المصاريف",
+        "basis": "الأساس",
+        "percentage": "%",
+        "workerShare": "حصة العامل",
+        "verification": "التحقق",
+        "status": "الحالة"
       }
     },
     "configuration": {

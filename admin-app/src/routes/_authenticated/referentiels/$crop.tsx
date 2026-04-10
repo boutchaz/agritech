@@ -114,44 +114,44 @@ function CropDetailPage() {
   const metadata = data?.metadata as Record<string, unknown> | undefined;
 
   return (
-    <div className="p-8">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link
-          to="/"
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="h-12 w-12 rounded-xl bg-emerald-50 flex items-center justify-center">
-          <Leaf className="h-6 w-6 text-emerald-600" />
-        </div>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {getCropLabel(crop)}
-          </h1>
-          <div className="flex items-center gap-3 mt-0.5">
-            {metadata && (
-              <>
-                <span className="text-sm text-gray-500">
-                  v{String(metadata.version ?? '')}
-                </span>
-                <span className="text-sm text-gray-400">
-                  {String(metadata.date ?? '')}
-                </span>
-              </>
-            )}
-            <span className="text-sm text-gray-400">
-              {sections.length} sections
-            </span>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <Link
+            to="/"
+            className="mt-0.5 shrink-0 rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 sm:mt-0"
+            aria-label="Back to referentials"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 sm:h-12 sm:w-12">
+            <Leaf className="h-5 w-5 text-emerald-600 sm:h-6 sm:w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
+              {getCropLabel(crop)}
+            </h1>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 sm:text-sm">
+              {metadata && (
+                <>
+                  <span className="text-gray-500">
+                    v{String(metadata.version ?? '')}
+                  </span>
+                  <span>{String(metadata.date ?? '')}</span>
+                </>
+              )}
+              <span>{sections.length} sections</span>
+            </div>
           </div>
         </div>
         <button
+          type="button"
           onClick={() => refetch()}
           disabled={isLoading}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 sm:w-auto sm:shrink-0"
         >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
@@ -178,7 +178,7 @@ function CropDetailPage() {
                 }`}
               >
                 {/* Section header */}
-                <div className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between gap-2 px-3 py-3 transition-colors hover:bg-gray-50 sm:px-5">
                   <button
                     onClick={() => toggleSection(section)}
                     className="flex items-center gap-3 flex-1"

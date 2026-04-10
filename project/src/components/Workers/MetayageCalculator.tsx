@@ -1,9 +1,8 @@
-import {  useState, useEffect  } from "react";
+import { useState, useEffect } from "react";
 import { Calculator, Info, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useWorkers, useCreateMetayageSettlement } from '../../hooks/useWorkers';
-import { calculateMetayageShare } from '../../types/workers';
+import { useWorkers, useCreateMetayageSettlement, useCalculateMetayageShare } from '../../hooks/useWorkers';
 import type { CalculationBasis } from '../../types/workers';
 import { useCurrency } from '../../hooks/useCurrency';
 import { Button } from '@/components/ui/button';
@@ -35,31 +34,53 @@ const MetayageCalculator = ({
   const [harvestDate, setHarvestDate] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
 
+  const calculateShareMutation = useCalculateMetayageShare();
+
   const metayageWorkers = workers.filter(w => w.worker_type === 'metayage' && w.is_active);
   const selectedWorker = metayageWorkers.find(w => w.id === selectedWorkerId);
 
   // Auto-set calculation basis from worker
-  /* eslint-disable react-hooks/set-state-in-effect -- sync state from worker prop */
+   
   useEffect(() => {
     if (selectedWorker?.calculation_basis) {
       setCalculationBasis(selectedWorker.calculation_basis);
     }
   }, [selectedWorker]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+   
 
-  // Calculate share
   const grossRevenueNum = parseFloat(grossRevenue) || 0;
   const totalChargesNum = parseFloat(totalCharges) || 0;
   const percentage = selectedWorker?.metayage_percentage || 0;
 
   const netRevenue = grossRevenueNum - totalChargesNum;
   const baseAmount = calculationBasis === 'gross_revenue' ? grossRevenueNum : netRevenue;
-  const workerShare = calculateMetayageShare(
-    grossRevenueNum,
-    totalChargesNum,
-    percentage,
-    calculationBasis
-  );
+
+  // Worker share computed by backend (authoritative)
+  const [workerShare, setWorkerShare] = useState<number>(0);
+
+  // Call backend API to calculate share whenever inputs change (debounced)
+  useEffect(() => {
+    if (!selectedWorkerId || grossRevenueNum <= 0) {
+      setWorkerShare(0);
+      return;
+    }
+    const timer = setTimeout(() => {
+      calculateShareMutation.mutate(
+        {
+          organizationId,
+          workerId: selectedWorkerId,
+          grossRevenue: grossRevenueNum,
+          totalCharges: totalChargesNum,
+        },
+        {
+          onSuccess: (share) => setWorkerShare(share),
+          onError: () => setWorkerShare(0),
+        },
+      );
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkerId, grossRevenueNum, totalChargesNum, organizationId]);
 
   const handleSaveSettlement = async () => {
     if (!selectedWorkerId || !grossRevenue || !periodStart || !periodEnd) {
@@ -69,18 +90,22 @@ const MetayageCalculator = ({
 
     try {
       await createSettlement.mutateAsync({
-        worker_id: selectedWorkerId,
-        farm_id: farmId || '',
-        period_start: periodStart,
-        period_end: periodEnd,
-        harvest_date: harvestDate || undefined,
-        gross_revenue: grossRevenueNum,
-        total_charges: totalChargesNum,
-        worker_percentage: percentage,
-        worker_share_amount: workerShare,
-        calculation_basis: calculationBasis,
-        payment_status: 'pending',
-        notes: notes || undefined,
+        organizationId,
+        workerId: selectedWorkerId,
+        data: {
+          farm_id: farmId || '',
+          organization_id: organizationId,
+          period_start: periodStart,
+          period_end: periodEnd,
+          harvest_date: harvestDate || undefined,
+          gross_revenue: grossRevenueNum,
+          total_charges: totalChargesNum,
+          worker_percentage: percentage,
+          worker_share_amount: workerShare,
+          calculation_basis: calculationBasis,
+          payment_status: 'pending',
+          notes: notes || undefined,
+        },
       });
 
       // Reset form

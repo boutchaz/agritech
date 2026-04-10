@@ -105,6 +105,7 @@ import { MonitoringModule } from "./modules/monitoring/monitoring.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
 import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
+import { EmailTemplatesModule } from "./modules/email-templates/email-templates.module";
 
 @Module({
   imports: [
@@ -229,6 +230,7 @@ import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
     HealthModule,
     MonitoringModule,
     PublicRdvModule,
+    EmailTemplatesModule,
   ],
   controllers: [AppController],
   providers: [AppService, Reflector],

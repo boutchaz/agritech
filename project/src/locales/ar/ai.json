@@ -358,6 +358,64 @@
       "downloading": "جارٍ تجهيز التصدير…",
       "error": "فشل التصدير",
       "success": "تم التصدير بنجاح بصيغة {{format}}"
+    },
+    "blockA": {
+      "healthScore": "درجة الصحة",
+      "confidenceScore": "الثقة",
+      "yieldPotential": "الإنتاج المقدر",
+      "to": "إلى",
+      "wideRange": "نطاق واسع، ثقة منخفضة",
+      "yieldDisclaimer": "تقدير أولي — سيتم تحسينه بعد كل حصاد",
+      "strengths": "نقاط القوة",
+      "concerns": "نقاط الانتباه",
+      "critical": "حرج",
+      "vigilance": "تحذير",
+      "health": {
+        "excellent": "ممتاز",
+        "bon": "جيد",
+        "moyen": "متوسط",
+        "faible": "ضعيف",
+        "critique": "حرج"
+      }
+    },
+    "blockB": {
+      "title": "التحليل المفصل",
+      "vigor": "حيوية النبات",
+      "hydric": "الحالة المائية",
+      "nutritional": "الحالة الغذائية",
+      "heatmap": "التجانس المكاني",
+      "ofReferential": "من المرجع",
+      "basedOnEVI": "بناءً على EVI — صورة Sentinel-2 بتاريخ",
+      "heterogeneity": "عدم تجانس ملحوظ",
+      "stability": "الاستقرار الزمني",
+      "stable": "مستقر",
+      "moderate": "معتدل",
+      "strong": "قوي",
+      "historyDepth": "المعايرة مبنية على",
+      "monthsHistory": "أشهر من البيانات الفضائية"
+    },
+    "blockD": {
+      "title": "تحسين الدقة",
+      "allComplete": "تهانينا، تم جمع جميع البيانات الحرجة.",
+      "confidenceAt": "الثقة",
+      "current": "الحالي",
+      "potential": "المحتمل",
+      "availableData": "البيانات المتوفرة",
+      "missingData": "البيانات الناقصة",
+      "dataType": "البيانات",
+      "gain": "الربح",
+      "why": "لماذا هو مفيد"
+    },
+    "blockH": {
+      "prompt": "هل يعكس هذا المعايرة قطعتك؟",
+      "validate": "تأكيد خط الأساس",
+      "saveLater": "حفظ وإكمال لاحقاً",
+      "confirmTitle": "تأكيد التحقق",
+      "confirmDescription": "تأكيد التحقق من خط الأساس؟ هذا الإجراء ينشط تشخيصات الذكاء الاصطناعي لقطعتك.",
+      "confirmValidate": "تأكيد",
+      "validateSuccess": "تم تأكيد خط الأساس بنجاح",
+      "validateError": "فشل التحقق",
+      "savedForLater": "تم حفظ خط الأساس"
     }
   },
   "compass": {

@@ -1637,6 +1637,8 @@
       "costCentersDescription": "Gérer les centres de coûts pour le suivi des dépenses",
       "accountMappings": "Correspondance des Comptes",
       "accountMappingsDescription": "Configurer les correspondances automatiques des écritures comptables",
+      "emailTemplates": "Templates d'emails",
+      "emailTemplatesDescription": "Gérer les templates d'emails de notification",
       "files": "Gestion des Fichiers",
       "filesDescription": "Gérer les fichiers et détecter les orphelins",
       "dangerZone": "Zone de Danger",
@@ -1651,6 +1653,40 @@
         "legal": "Légal",
         "system": "Système"
       }
+    }
+  },
+  "emailTemplates": {
+    "title": "Templates d'Emails",
+    "description": "Afficher et personnaliser les templates d'emails de notification",
+    "search": "Rechercher des templates...",
+    "noTemplates": "Aucun template d'email trouvé",
+    "noResults": "Aucun template ne correspond à votre recherche",
+    "selectTemplate": "Sélectionnez un template pour voir les détails",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleted": "Template supprimé",
+    "deleteFailed": "Échec de la suppression du template",
+    "duplicated": "Template dupliqué",
+    "duplicateFailed": "Échec de la duplication du template",
+    "updated": "Template mis à jour",
+    "updateFailed": "Échec de la mise à jour du template",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "system": "Système",
+    "subject": "Sujet",
+    "htmlBody": "Corps HTML",
+    "preview": "Aperçu",
+    "variables": "Variables",
+    "categories": {
+      "all": "Tous",
+      "marketplace": "Marketplace",
+      "invoice": "Factures",
+      "order": "Commandes",
+      "task": "Tâches",
+      "reminder": "Rappels",
+      "general": "Général"
     }
   },
   "account": {
@@ -3471,7 +3507,9 @@
       "list": "Gestion du Personnel",
       "payments": "Paiements",
       "paymentsShort": "Paie",
-      "calculator": "Calculateur Métayage"
+      "calculator": "Calculateur Métayage",
+      "productionSharing": "Partage de Production",
+      "productionSharingShort": "Partage"
     },
     "list": {
       "title": "Gestion du Personnel",
@@ -3706,6 +3744,33 @@
         "fillAllRequired": "Veuillez remplir tous les champs obligatoires",
         "settlementSaved": "Règlement enregistré avec succès",
         "saveError": "Erreur lors de l'enregistrement"
+      }
+    },
+    "productionSharing": {
+      "addHint": "Ajoutez un travailleur de type \"Métayage\" pour commencer le suivi",
+      "summary": {
+        "grossRevenue": "Revenu brut total",
+        "totalCharges": "Charges totales",
+        "workerShares": "Parts travailleurs",
+        "ownerShare": "Part propriétaire"
+      },
+      "pending": "en attente",
+      "paid": "payés",
+      "settlements": "règlements",
+      "workerTotal": "Total pour",
+      "noSettlements": "Aucun règlement enregistré. Utilisez le calculateur pour créer un règlement.",
+      "statusPaid": "Payé",
+      "statusPending": "En attente",
+      "statusCancelled": "Annulé",
+      "table": {
+        "period": "Période",
+        "grossRevenue": "Revenu brut",
+        "charges": "Charges",
+        "basis": "Base",
+        "percentage": "%",
+        "workerShare": "Part travailleur",
+        "verification": "Vérification",
+        "status": "Statut"
       }
     },
     "configuration": {

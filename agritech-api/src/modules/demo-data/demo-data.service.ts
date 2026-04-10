@@ -671,6 +671,51 @@ export class DemoDataService {
         is_active: true,
         created_by: userId,
       },
+      // Métayage workers — traditional Moroccan sharecropping arrangements
+      {
+        organization_id: organizationId,
+        farm_id: farmId,
+        first_name: "Hassan",
+        last_name: "El Khammass",
+        worker_type: "metayage",
+        position: "Khammass - Parcelle Olives",
+        hire_date: "2022-09-01",
+        is_cnss_declared: false,
+        metayage_type: "khammass",
+        metayage_percentage: 20,
+        calculation_basis: "net_revenue",
+        metayage_contract_details: JSON.stringify({
+          charges_shared: true,
+          owner_provides: ["land", "trees", "equipment", "inputs"],
+          worker_provides: ["labor"],
+          harvest_distribution_rules: "Khammass reçoit 1/5 du revenu net après déduction des charges",
+        }),
+        payment_method: "cash",
+        is_active: true,
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        farm_id: farmId,
+        first_name: "Youssef",
+        last_name: "Rebâa",
+        worker_type: "metayage",
+        position: "Rebâa - Parcelle Agrumes",
+        hire_date: "2023-01-15",
+        is_cnss_declared: false,
+        metayage_type: "rebaa",
+        metayage_percentage: 25,
+        calculation_basis: "gross_revenue",
+        metayage_contract_details: JSON.stringify({
+          charges_shared: false,
+          owner_provides: ["land", "trees", "irrigation"],
+          worker_provides: ["labor", "inputs", "transport"],
+          harvest_distribution_rules: "Rebâa reçoit 1/4 du revenu brut, charges à sa charge",
+        }),
+        payment_method: "cash",
+        is_active: true,
+        created_by: userId,
+      },
     ];
 
     const { data: createdWorkers, error } = await client
@@ -3496,81 +3541,167 @@ export class DemoDataService {
     const laborCat = createdCategories?.find((c) => c.type === "labor");
     const utilitiesCat = createdCategories?.find((c) => c.type === "utilities");
 
-    // Create costs with farm_id and category_id
+    const equipmentCat = createdCategories?.find((c) => c.type === "equipment");
+    const phytoCat = createdCategories?.find((c) => c.name.includes("Phytosanitaires"));
+    const threeMonthsAgo = new Date(now);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const fourMonthsAgo = new Date(now);
+    fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+
+    // Realistic costs per parcel — mirrors typical Moroccan farm expenses
     const costs = [
+      // ── Parcelle Olives (parcels[0]) ──────────────────────
       {
-        organization_id: organizationId,
-        farm_id: farmId,
-        parcel_id: parcels[0].id,
-        category_id: materialsCat?.id || null,
-        cost_type: "materials",
-        amount: 2500,
-        currency: "MAD",
-        date: lastMonth.toISOString().split("T")[0],
-        description: "Achat engrais organique pour parcelle olives",
-        created_by: userId,
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: materialsCat?.id || null, cost_type: "materials", amount: 4500,
+        currency: "MAD", date: fourMonthsAgo.toISOString().split("T")[0],
+        description: "Engrais NPK + amendement organique olives", created_by: userId,
       },
       {
-        organization_id: organizationId,
-        farm_id: farmId,
-        parcel_id: parcels[1].id,
-        category_id: laborCat?.id || null,
-        cost_type: "labor",
-        amount: 1800,
-        currency: "MAD",
-        date: lastMonth.toISOString().split("T")[0],
-        description: "Main d'œuvre pour taille agrumes",
-        created_by: userId,
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 8000,
+        currency: "MAD", date: threeMonthsAgo.toISOString().split("T")[0],
+        description: "Main d'œuvre taille et entretien olives (20 jours)", created_by: userId,
       },
       {
-        organization_id: organizationId,
-        farm_id: farmId,
-        parcel_id: parcels[2]?.id || parcels[0].id,
-        category_id: utilitiesCat?.id || null,
-        cost_type: "utilities",
-        amount: 1200,
-        currency: "MAD",
-        date: twoMonthsAgo.toISOString().split("T")[0],
-        description: "Coût irrigation parcelle légumes",
-        created_by: userId,
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: utilitiesCat?.id || null, cost_type: "utilities", amount: 3200,
+        currency: "MAD", date: twoMonthsAgo.toISOString().split("T")[0],
+        description: "Irrigation goutte-à-goutte olives (3 mois)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: phytoCat?.id || null, cost_type: "materials", amount: 2800,
+        currency: "MAD", date: twoMonthsAgo.toISOString().split("T")[0],
+        description: "Traitement phytosanitaire mouche de l'olive", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 6000,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Récolte olives — journaliers (30 jours × 200 MAD)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        category_id: equipmentCat?.id || null, cost_type: "equipment", amount: 3500,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Location filets + caisses récolte olives", created_by: userId,
+      },
+      // ── Parcelle Agrumes (parcels[1]) ─────────────────────
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: materialsCat?.id || null, cost_type: "materials", amount: 6000,
+        currency: "MAD", date: fourMonthsAgo.toISOString().split("T")[0],
+        description: "Engrais spécial agrumes + oligo-éléments", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 5400,
+        currency: "MAD", date: threeMonthsAgo.toISOString().split("T")[0],
+        description: "Taille et éclaircissage clémentines (18 jours)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: utilitiesCat?.id || null, cost_type: "utilities", amount: 4800,
+        currency: "MAD", date: twoMonthsAgo.toISOString().split("T")[0],
+        description: "Irrigation par aspersion agrumes (3 mois)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: phytoCat?.id || null, cost_type: "materials", amount: 3500,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Traitements fongicide + insecticide agrumes", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 7200,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Récolte clémentines — journaliers (24 jours × 300 MAD)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        category_id: equipmentCat?.id || null, cost_type: "equipment", amount: 2000,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Transport récolte agrumes vers marché de gros", created_by: userId,
+      },
+      // ── Parcelle Légumes (parcels[2]) ─────────────────────
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[2]?.id || parcels[0].id,
+        category_id: materialsCat?.id || null, cost_type: "materials", amount: 3800,
+        currency: "MAD", date: threeMonthsAgo.toISOString().split("T")[0],
+        description: "Semences tomates + tuteurs + paillage", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[2]?.id || parcels[0].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 4500,
+        currency: "MAD", date: twoMonthsAgo.toISOString().split("T")[0],
+        description: "Plantation et entretien tomates (15 jours)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[2]?.id || parcels[0].id,
+        category_id: utilitiesCat?.id || null, cost_type: "utilities", amount: 2200,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Irrigation goutte-à-goutte légumes (2 mois)", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[2]?.id || parcels[0].id,
+        category_id: laborCat?.id || null, cost_type: "labor", amount: 3000,
+        currency: "MAD", date: lastMonth.toISOString().split("T")[0],
+        description: "Récolte tomates — journaliers (15 jours × 200 MAD)", created_by: userId,
       },
     ];
 
     await client.from("costs").insert(costs);
 
-    // Create revenues linked to harvests
+    // Revenues per parcel — realistic Moroccan market prices
     const revenues = [
+      // ── Olives ────────────────────────────────────────────
       {
-        organization_id: organizationId,
-        farm_id: farmId,
-        parcel_id: parcels[1].id,
-        revenue_type: "harvest",
-        amount: 60000,
-        currency: "MAD",
-        date: lastMonth.toISOString().split("T")[0],
-        crop_type: "Agrumes",
-        quantity: 5000,
-        unit: "kg",
-        price_per_unit: 12,
-        harvest_record_id: harvests[0]?.id || null,
-        description: "Vente récolte agrumes",
-        created_by: userId,
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        revenue_type: "harvest", amount: 45000, currency: "MAD",
+        date: twoMonthsAgo.toISOString().split("T")[0],
+        crop_type: "Olives", quantity: 3000, unit: "kg", price_per_unit: 15,
+        harvest_record_id: harvests[1]?.id || null,
+        description: "Vente olives de table — marché Berkane", created_by: userId,
       },
       {
-        organization_id: organizationId,
-        farm_id: farmId,
-        parcel_id: parcels[0].id,
-        revenue_type: "harvest",
-        amount: 45000,
-        currency: "MAD",
-        date: twoMonthsAgo.toISOString().split("T")[0],
-        crop_type: "Olives",
-        quantity: 3000,
-        unit: "kg",
-        price_per_unit: 15,
-        harvest_record_id: harvests[1]?.id || null,
-        description: "Vente récolte olives",
-        created_by: userId,
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        revenue_type: "harvest", amount: 22500, currency: "MAD",
+        date: lastMonth.toISOString().split("T")[0],
+        crop_type: "Olives", quantity: 1500, unit: "kg", price_per_unit: 15,
+        description: "Vente olives pour huilerie — 2ème passage", created_by: userId,
+      },
+      // ── Agrumes ───────────────────────────────────────────
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        revenue_type: "harvest", amount: 60000, currency: "MAD",
+        date: lastMonth.toISOString().split("T")[0],
+        crop_type: "Agrumes", quantity: 5000, unit: "kg", price_per_unit: 12,
+        harvest_record_id: harvests[0]?.id || null,
+        description: "Vente clémentines — export Espagne", created_by: userId,
+      },
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[1].id,
+        revenue_type: "harvest", amount: 18000, currency: "MAD",
+        date: lastMonth.toISOString().split("T")[0],
+        crop_type: "Agrumes", quantity: 2000, unit: "kg", price_per_unit: 9,
+        description: "Vente clémentines calibre 2 — marché local", created_by: userId,
+      },
+      // ── Légumes ───────────────────────────────────────────
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[2]?.id || parcels[0].id,
+        revenue_type: "harvest", amount: 9600, currency: "MAD",
+        date: lastMonth.toISOString().split("T")[0],
+        crop_type: "Tomates", quantity: 1200, unit: "kg", price_per_unit: 8,
+        harvest_record_id: harvests[2]?.id || null,
+        description: "Vente tomates Marmande — souk hebdomadaire", created_by: userId,
+      },
+      // ── Subvention ────────────────────────────────────────
+      {
+        organization_id: organizationId, farm_id: farmId, parcel_id: parcels[0].id,
+        revenue_type: "subsidy", amount: 8000, currency: "MAD",
+        date: threeMonthsAgo.toISOString().split("T")[0],
+        description: "Subvention ONCA — programme d'irrigation localisée", created_by: userId,
       },
     ];
 
@@ -5838,43 +5969,139 @@ export class DemoDataService {
 
     const client = this.databaseService.getAdminClient();
     const now = new Date();
-    const lastMonth = new Date(now);
-    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
 
-    const grossRevenue = 45000;
-    const totalCharges = 12000;
-    const netRevenue = grossRevenue - totalCharges;
-    const workerPercentage = 30;
-    const workerShare = netRevenue * (workerPercentage / 100);
+    // Find the metayage workers (indices 3 and 4 — Hassan Khammass, Youssef Rebâa)
+    const khammassWorker = workers.find((w: any) => w.worker_type === 'metayage' && w.metayage_type === 'khammass') || workers[3];
+    const rebaaWorker = workers.find((w: any) => w.worker_type === 'metayage' && w.metayage_type === 'rebaa') || workers[4];
 
-    const settlements = [
-      {
+    if (!khammassWorker && !rebaaWorker) return;
+
+    const settlements: any[] = [];
+
+    // ── Hassan (Khammass 20%, net_revenue) — Parcelle Olives ──────────
+    if (khammassWorker) {
+      // Settlement 1: Récolte olives principale (2 mois ago)
+      const oliveGross1 = 45000;
+      const oliveCharges1 = 15500; // engrais + irrigation + traitement + récolte
+      const oliveNet1 = oliveGross1 - oliveCharges1;
+      const oliveShare1 = oliveNet1 * (20 / 100); // Khammass = 20% of net
+
+      settlements.push({
         organization_id: organizationId,
-        worker_id: workers[2]?.id || workers[0].id,
+        worker_id: khammassWorker.id,
         farm_id: farmId,
         parcel_id: parcels[0].id,
-        period_start: new Date(now.getFullYear(), now.getMonth() - 3, 1).toISOString().split('T')[0],
-        period_end: lastMonth.toISOString().split('T')[0],
-        harvest_date: harvests?.[1]?.harvest_date || lastMonth.toISOString().split('T')[0],
-        gross_revenue: grossRevenue,
-        total_charges: totalCharges,
-        net_revenue: netRevenue,
-        worker_percentage: workerPercentage,
-        worker_share_amount: workerShare,
+        period_start: fmt(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
+        period_end: fmt(new Date(now.getFullYear(), now.getMonth() - 2, 0)),
+        harvest_date: harvests?.[1]?.harvest_date || fmt(new Date(now.getFullYear(), now.getMonth() - 2, 15)),
+        gross_revenue: oliveGross1,
+        total_charges: oliveCharges1,
+        net_revenue: oliveNet1,
+        worker_percentage: 20,
+        worker_share_amount: oliveShare1,
         calculation_basis: 'net_revenue',
         charges_breakdown: JSON.stringify({
-          engrais: 5000,
-          irrigation: 3000,
-          transport: 2000,
-          divers: 2000,
+          engrais: 4500, irrigation: 3200, traitement_phyto: 2800, récolte_main_oeuvre: 5000,
         }),
         payment_status: 'paid',
-        payment_date: now.toISOString().split('T')[0],
+        payment_date: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 10)),
         payment_method: 'cash',
-        notes: 'R\u00e8glement m\u00e9tayage parcelle olives - Saison termin\u00e9e',
+        notes: 'Règlement Khammass — récolte olives 1er passage, 3000 kg à 15 MAD/kg',
         created_by: userId,
-      },
-    ];
+      });
+
+      // Settlement 2: 2ème passage olives (last month)
+      const oliveGross2 = 22500;
+      const oliveCharges2 = 6500; // récolte + transport
+      const oliveNet2 = oliveGross2 - oliveCharges2;
+      const oliveShare2 = oliveNet2 * (20 / 100);
+
+      settlements.push({
+        organization_id: organizationId,
+        worker_id: khammassWorker.id,
+        farm_id: farmId,
+        parcel_id: parcels[0].id,
+        period_start: fmt(new Date(now.getFullYear(), now.getMonth() - 2, 1)),
+        period_end: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 0)),
+        harvest_date: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 20)),
+        gross_revenue: oliveGross2,
+        total_charges: oliveCharges2,
+        net_revenue: oliveNet2,
+        worker_percentage: 20,
+        worker_share_amount: oliveShare2,
+        calculation_basis: 'net_revenue',
+        charges_breakdown: JSON.stringify({
+          récolte_main_oeuvre: 3000, transport: 2000, divers: 1500,
+        }),
+        payment_status: 'pending',
+        payment_method: 'cash',
+        notes: 'Khammass — 2ème passage olives pour huilerie, 1500 kg',
+        created_by: userId,
+      });
+    }
+
+    // ── Youssef (Rebâa 25%, gross_revenue) — Parcelle Agrumes ─────────
+    if (rebaaWorker) {
+      // Settlement 1: Récolte clémentines export (last month)
+      const citrusGross1 = 60000;
+      const citrusCharges1 = 18900; // charges portées par le rebâa mais enregistrées pour transparence
+      const citrusNet1 = citrusGross1 - citrusCharges1;
+      const citrusShare1 = citrusGross1 * (25 / 100); // Rebâa = 25% of GROSS
+
+      settlements.push({
+        organization_id: organizationId,
+        worker_id: rebaaWorker.id,
+        farm_id: farmId,
+        parcel_id: parcels[1].id,
+        period_start: fmt(new Date(now.getFullYear(), now.getMonth() - 4, 1)),
+        period_end: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 0)),
+        harvest_date: harvests?.[0]?.harvest_date || fmt(new Date(now.getFullYear(), now.getMonth() - 1, 10)),
+        gross_revenue: citrusGross1,
+        total_charges: citrusCharges1,
+        net_revenue: citrusNet1,
+        worker_percentage: 25,
+        worker_share_amount: citrusShare1,
+        calculation_basis: 'gross_revenue',
+        charges_breakdown: JSON.stringify({
+          engrais: 6000, irrigation: 4800, traitement: 3500, récolte: 2600, transport: 2000,
+        }),
+        payment_status: 'paid',
+        payment_date: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 15)),
+        payment_method: 'cash',
+        notes: 'Rebâa — clémentines export Espagne, 5000 kg à 12 MAD/kg. Part sur brut car charges à sa charge.',
+        created_by: userId,
+      });
+
+      // Settlement 2: Clémentines marché local (last month)
+      const citrusGross2 = 18000;
+      const citrusCharges2 = 4600;
+      const citrusNet2 = citrusGross2 - citrusCharges2;
+      const citrusShare2 = citrusGross2 * (25 / 100); // 25% of gross
+
+      settlements.push({
+        organization_id: organizationId,
+        worker_id: rebaaWorker.id,
+        farm_id: farmId,
+        parcel_id: parcels[1].id,
+        period_start: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        period_end: fmt(new Date(now.getFullYear(), now.getMonth(), 0)),
+        harvest_date: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 25)),
+        gross_revenue: citrusGross2,
+        total_charges: citrusCharges2,
+        net_revenue: citrusNet2,
+        worker_percentage: 25,
+        worker_share_amount: citrusShare2,
+        calculation_basis: 'gross_revenue',
+        charges_breakdown: JSON.stringify({
+          récolte: 2600, transport: 1200, emballage: 800,
+        }),
+        payment_status: 'pending',
+        payment_method: 'cash',
+        notes: 'Rebâa — clémentines calibre 2 marché local, 2000 kg à 9 MAD/kg',
+        created_by: userId,
+      });
+    }
 
     const { error } = await client.from('metayage_settlements').insert(settlements);
     if (error) {

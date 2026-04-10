@@ -85,6 +85,7 @@ import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './rout
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
 import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
+import { Route as AuthenticatedsettingsSettingsEmailTemplatesRouteImport } from './routes/_authenticated/(settings)/settings.email-templates'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
@@ -586,6 +587,12 @@ const AuthenticatedsettingsSettingsFilesRoute =
   AuthenticatedsettingsSettingsFilesRouteImport.update({
     id: '/files',
     path: '/files',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsEmailTemplatesRoute =
+  AuthenticatedsettingsSettingsEmailTemplatesRouteImport.update({
+    id: '/email-templates',
+    path: '/email-templates',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsDocumentsRoute =
@@ -1094,6 +1101,7 @@ export interface FileRoutesByFullPath {
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
+  '/settings/email-templates': typeof AuthenticatedsettingsSettingsEmailTemplatesRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
@@ -1233,6 +1241,7 @@ export interface FileRoutesByTo {
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
+  '/settings/email-templates': typeof AuthenticatedsettingsSettingsEmailTemplatesRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
@@ -1377,6 +1386,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
+  '/_authenticated/(settings)/settings/email-templates': typeof AuthenticatedsettingsSettingsEmailTemplatesRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
@@ -1524,6 +1534,7 @@ export interface FileRouteTypes {
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
+    | '/settings/email-templates'
     | '/settings/files'
     | '/settings/fiscal-years'
     | '/settings/legal'
@@ -1663,6 +1674,7 @@ export interface FileRouteTypes {
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
+    | '/settings/email-templates'
     | '/settings/files'
     | '/settings/fiscal-years'
     | '/settings/legal'
@@ -1806,6 +1818,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/danger-zone'
     | '/_authenticated/(settings)/settings/dashboard'
     | '/_authenticated/(settings)/settings/documents'
+    | '/_authenticated/(settings)/settings/email-templates'
     | '/_authenticated/(settings)/settings/files'
     | '/_authenticated/(settings)/settings/fiscal-years'
     | '/_authenticated/(settings)/settings/legal'
@@ -2406,6 +2419,13 @@ declare module '@tanstack/react-router' {
       path: '/files'
       fullPath: '/settings/files'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsFilesRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/email-templates': {
+      id: '/_authenticated/(settings)/settings/email-templates'
+      path: '/email-templates'
+      fullPath: '/settings/email-templates'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsEmailTemplatesRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/documents': {
@@ -3175,6 +3195,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
+  AuthenticatedsettingsSettingsEmailTemplatesRoute: typeof AuthenticatedsettingsSettingsEmailTemplatesRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
   AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
@@ -3205,6 +3226,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsDashboardRoute,
     AuthenticatedsettingsSettingsDocumentsRoute:
       AuthenticatedsettingsSettingsDocumentsRoute,
+    AuthenticatedsettingsSettingsEmailTemplatesRoute:
+      AuthenticatedsettingsSettingsEmailTemplatesRoute,
     AuthenticatedsettingsSettingsFilesRoute:
       AuthenticatedsettingsSettingsFilesRoute,
     AuthenticatedsettingsSettingsFiscalYearsRoute:

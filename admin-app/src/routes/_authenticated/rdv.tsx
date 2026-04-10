@@ -160,27 +160,29 @@ function RdvPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="admin-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">RDV SIAM</h1>
-          <p className="text-gray-500 mt-1">Leads rendez-vous salon SIAM 2026</p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">RDV SIAM</h1>
+          <p className="mt-1 text-sm text-gray-500 sm:text-base">Leads rendez-vous salon SIAM 2026</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
           <button
+            type="button"
             onClick={exportCsv}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4 shrink-0" />
             Export CSV
           </button>
           <button
+            type="button"
             onClick={() => refetch()}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -188,7 +190,7 @@ function RdvPage() {
 
       {/* Stats cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center">
@@ -241,14 +243,14 @@ function RdvPage() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             setPage(1);
             refetch();
           }}
-          className="relative flex-1 max-w-sm"
+          className="relative w-full min-w-0 sm:max-w-sm sm:flex-1"
         >
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -266,7 +268,7 @@ function RdvPage() {
             setRegionFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-auto sm:min-w-[10rem]"
         >
           <option value="">Toutes régions</option>
           {uniqueRegions.map((r) => (
@@ -282,7 +284,7 @@ function RdvPage() {
             setDateFilter(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-auto sm:min-w-[10rem]"
         >
           <option value="">Tous les jours</option>
           {uniqueDates.map((d) => (
@@ -294,13 +296,14 @@ function RdvPage() {
 
         {(search || regionFilter || dateFilter) && (
           <button
+            type="button"
             onClick={() => {
               setSearch('');
               setRegionFilter('');
               setDateFilter('');
               setPage(1);
             }}
-            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+            className="w-full rounded-lg px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-800 sm:w-auto"
           >
             Réinitialiser
           </button>
@@ -308,33 +311,33 @@ function RdvPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="-mx-px overflow-x-auto overscroll-x-contain">
+          <table className="w-full min-w-[720px]">
+            <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Contact
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Entreprise
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Région
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Surface
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Créneau
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Cultures
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-center text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Date
                 </th>
               </tr>
@@ -450,19 +453,20 @@ function RdvPage() {
 
         {/* Pagination */}
         {total > 0 && (
-          <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-700">
+          <div className="flex flex-col gap-3 border-t border-gray-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            <p className="text-center text-xs text-gray-700 sm:text-left sm:text-sm">
               <span className="font-medium">{(page - 1) * PAGE_SIZE + 1}</span> à{' '}
               <span className="font-medium">
                 {Math.min(page * PAGE_SIZE, total)}
               </span>{' '}
               sur <span className="font-medium">{total}</span>
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2 sm:justify-end">
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -470,9 +474,10 @@ function RdvPage() {
                 {page} / {totalPages}
               </span>
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

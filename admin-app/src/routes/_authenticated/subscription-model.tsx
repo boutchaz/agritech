@@ -146,31 +146,33 @@ function SubscriptionModelPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Subscription Model</h1>
-          <p className="text-gray-500 mt-1">Configure modular ERP pricing, hectare tiers & simulator</p>
+    <div className="admin-page">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Subscription Model</h1>
+          <p className="mt-1 text-sm text-gray-500 sm:text-base">Configure modular ERP pricing, hectare tiers & simulator</p>
         </div>
         <button
+          type="button"
           onClick={handleSave}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 sm:w-auto"
         >
-          <Save className="h-4 w-4" /> Save Model
+          <Save className="h-4 w-4 shrink-0" /> Save Model
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Left column: Config */}
         <div className="lg:col-span-2 space-y-6">
           {/* ERP Modules */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Layers className="h-5 w-5 text-emerald-600" />
-              <h2 className="text-lg font-semibold text-gray-900">ERP Modules</h2>
-              <span className="text-sm text-gray-400">({modules.length} modules)</span>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Layers className="h-5 w-5 shrink-0 text-emerald-600" />
+              <h2 className="text-base font-semibold text-gray-900 sm:text-lg">ERP Modules</h2>
+              <span className="text-xs text-gray-400 sm:text-sm">({modules.length} modules)</span>
             </div>
-            <table className="w-full">
+            <div className="-mx-px overflow-x-auto">
+            <table className="w-full min-w-[280px]">
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="pb-2 text-left text-xs font-medium text-gray-500 uppercase">Module</th>
@@ -204,19 +206,21 @@ function SubscriptionModelPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Ha Tiers */}
-          <div className="bg-white rounded-lg border border-gray-200 p-5">
+          <div className="rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
             <div className="flex items-center gap-2 mb-4">
               <TrendingDown className="h-5 w-5 text-blue-600" />
               <h2 className="text-lg font-semibold text-gray-900">Degressive Hectare Pricing</h2>
             </div>
-            <table className="w-full">
+            <div className="-mx-px overflow-x-auto">
+            <table className="w-full min-w-[240px]">
               <thead>
                 <tr className="border-b border-gray-100">
                   <th className="pb-2 text-left text-xs font-medium text-gray-500 uppercase">Tier</th>
-                  <th className="pb-2 text-right text-xs font-medium text-gray-500 uppercase w-32">DH/ha/year</th>
+                  <th className="w-32 pb-2 text-right text-xs font-medium text-gray-500 uppercase">DH/ha/year</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -228,17 +232,18 @@ function SubscriptionModelPage() {
                         type="number"
                         value={t.pricePerHaYear}
                         onChange={(e) => updateTierPrice(i, Number(e.target.value))}
-                        className="w-24 text-right text-sm font-mono border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        className="w-full max-w-[6rem] rounded border border-gray-200 px-2 py-1 text-right font-mono text-sm focus:outline-none focus:ring-1 focus:ring-blue-400 sm:w-24"
                       />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Size Multipliers & Discount */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="bg-white rounded-lg border border-gray-200 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Maximize2 className="h-5 w-5 text-purple-600" />
@@ -276,7 +281,7 @@ function SubscriptionModelPage() {
 
         {/* Right column: Simulator */}
         <div className="space-y-4">
-          <div className="bg-white rounded-lg border border-emerald-200 p-5 sticky top-8">
+          <div className="rounded-lg border border-emerald-200 bg-white p-4 sm:p-5 lg:sticky lg:top-4">
             <div className="flex items-center gap-2 mb-4">
               <Calculator className="h-5 w-5 text-emerald-600" />
               <h2 className="text-lg font-semibold text-gray-900">Quote Simulator</h2>

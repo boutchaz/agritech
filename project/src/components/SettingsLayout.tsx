@@ -23,6 +23,7 @@ import {
   PanelLeft,
   ChevronDown,
   Home,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -246,6 +247,14 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: FileText,
             path: "/settings/documents",
             description: t("settings.menu.documentsDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "email-templates",
+            name: t("settings.menu.emailTemplates", "Email Templates"),
+            icon: Mail,
+            path: "/settings/email-templates",
+            description: t("settings.menu.emailTemplatesDescription", "Manage email notification templates"),
             roles: ADMIN_ROLES,
           },
         ],

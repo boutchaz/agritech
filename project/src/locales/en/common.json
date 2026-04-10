@@ -1641,6 +1641,8 @@
       "costCentersDescription": "Manage cost centers for expense tracking",
       "accountMappings": "Account Mappings",
       "accountMappingsDescription": "Configure automatic journal entry mappings",
+      "emailTemplates": "Email Templates",
+      "emailTemplatesDescription": "Manage email notification templates",
       "files": "File Management",
       "filesDescription": "Manage files and detect orphans",
       "dangerZone": "Danger Zone",
@@ -1655,6 +1657,40 @@
         "legal": "Legal",
         "system": "System"
       }
+    }
+  },
+  "emailTemplates": {
+    "title": "Email Templates",
+    "description": "View and customize email notification templates sent by the system",
+    "search": "Search templates...",
+    "noTemplates": "No email templates found",
+    "noResults": "No templates match your search",
+    "selectTemplate": "Select a template to view details",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleted": "Template deleted",
+    "deleteFailed": "Failed to delete template",
+    "duplicated": "Template duplicated",
+    "duplicateFailed": "Failed to duplicate template",
+    "updated": "Template updated",
+    "updateFailed": "Failed to update template",
+    "active": "Active",
+    "inactive": "Inactive",
+    "system": "System",
+    "subject": "Subject",
+    "htmlBody": "HTML Body",
+    "preview": "Preview",
+    "variables": "Variables",
+    "categories": {
+      "all": "All",
+      "marketplace": "Marketplace",
+      "invoice": "Invoices",
+      "order": "Orders",
+      "task": "Tasks",
+      "reminder": "Reminders",
+      "general": "General"
     }
   },
   "account": {
@@ -3475,7 +3511,9 @@
       "list": "Personnel Management",
       "payments": "Payments",
       "paymentsShort": "Pay",
-      "calculator": "Sharecropping Calculator"
+      "calculator": "Sharecropping Calculator",
+      "productionSharing": "Production Sharing",
+      "productionSharingShort": "Sharing"
     },
     "list": {
       "title": "Personnel Management",
@@ -3710,6 +3748,33 @@
         "fillAllRequired": "Please fill all required fields",
         "settlementSaved": "Settlement saved successfully",
         "saveError": "Error saving settlement"
+      }
+    },
+    "productionSharing": {
+      "addHint": "Add a worker of type \"Sharecropping\" to start tracking",
+      "summary": {
+        "grossRevenue": "Total Gross Revenue",
+        "totalCharges": "Total Charges",
+        "workerShares": "Worker Shares",
+        "ownerShare": "Owner Share"
+      },
+      "pending": "pending",
+      "paid": "paid",
+      "settlements": "settlements",
+      "workerTotal": "Total for",
+      "noSettlements": "No settlements recorded. Use the calculator to create a settlement.",
+      "statusPaid": "Paid",
+      "statusPending": "Pending",
+      "statusCancelled": "Cancelled",
+      "table": {
+        "period": "Period",
+        "grossRevenue": "Gross Revenue",
+        "charges": "Charges",
+        "basis": "Basis",
+        "percentage": "%",
+        "workerShare": "Worker Share",
+        "verification": "Verification",
+        "status": "Status"
       }
     },
     "configuration": {

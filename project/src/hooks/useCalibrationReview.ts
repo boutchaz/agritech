@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "./useAuth";
 import { calibrationApi } from "@/lib/api/calibration-output";
 import { queryKeys } from "@/lib/query-keys";
-import type { CalibrationReviewView } from "@/types/calibration-review";
+import type { CalibrationBlocksReviewView } from "@/types/calibration-blocks-review";
 
 export function useCalibrationReview(parcelId: string) {
   const { currentOrganization } = useAuth();
 
-  return useQuery<CalibrationReviewView | null>({
+  return useQuery<CalibrationBlocksReviewView | null>({
     queryKey: queryKeys.calibration.review(parcelId,
     currentOrganization?.id,),
     queryFn: () =>

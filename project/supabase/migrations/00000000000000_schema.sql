@@ -23733,3 +23733,41 @@ CREATE TRIGGER set_pest_disease_reports_updated_at
   BEFORE UPDATE ON pest_disease_reports
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================================
+-- EMAIL TEMPLATES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS email_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  type VARCHAR(100) NOT NULL,
+  category VARCHAR(100) NOT NULL DEFAULT 'general' CHECK (category IN ('marketplace', 'invoice', 'quote', 'order', 'task', 'reminder', 'general')),
+  subject VARCHAR(500) NOT NULL,
+  html_body TEXT NOT NULL,
+  text_body TEXT,
+  variables JSONB DEFAULT '[]'::jsonb,
+  is_system BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON email_templates
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+CREATE INDEX IF NOT EXISTS idx_email_templates_org ON email_templates (organization_id, category);
+CREATE INDEX IF NOT EXISTS idx_email_templates_type ON email_templates (type);
+CREATE INDEX IF NOT EXISTS idx_email_templates_active ON email_templates (is_active);
+
+CREATE TRIGGER set_email_templates_updated_at
+  BEFORE UPDATE ON email_templates
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+

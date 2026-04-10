@@ -41,28 +41,30 @@ function ReferentielsDashboard() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Référentiels</h1>
-          <p className="text-gray-500 mt-1">
+    <div className="admin-page">
+      <div className="mb-6 flex flex-col gap-4 sm:mb-8 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Référentiels</h1>
+          <p className="mt-1 text-sm text-gray-500 sm:text-base">
             Inspect, validate and update agronomic reference data
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:shrink-0">
           <button
+            type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md text-sm hover:bg-emerald-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 active:bg-emerald-800"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 shrink-0" />
             New Referential
           </button>
           <button
+            type="button"
             onClick={() => refetch()}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -83,8 +85,8 @@ function ReferentielsDashboard() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <form onSubmit={handleCreate} className="flex items-end gap-3">
-            <div className="flex-1 max-w-xs">
+          <form onSubmit={handleCreate} className="flex flex-col gap-4 md:flex-row md:items-end md:gap-3">
+            <div className="min-w-0 flex-1 md:max-w-xs">
               <label className="block text-sm text-gray-600 mb-1">
                 Crop name
               </label>
@@ -97,7 +99,7 @@ function ReferentielsDashboard() {
                 autoFocus
               />
             </div>
-            <div className="max-w-xs">
+            <div className="min-w-0 md:max-w-xs">
               <label className="block text-sm text-gray-600 mb-1">
                 Template (optional)
               </label>
@@ -140,7 +142,7 @@ function ReferentielsDashboard() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
           {crops.map((c) => (
             <Link
               key={c.crop}

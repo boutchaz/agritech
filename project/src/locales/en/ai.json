@@ -358,6 +358,64 @@
       "downloading": "Preparing export...",
       "error": "Export failed",
       "success": "Exported successfully as {{format}}"
+    },
+    "blockA": {
+      "healthScore": "Health Score",
+      "confidenceScore": "Confidence",
+      "yieldPotential": "Estimated potential",
+      "to": "to",
+      "wideRange": "Wide range, reduced confidence",
+      "yieldDisclaimer": "Initial estimate — will be refined after each harvest",
+      "strengths": "Strengths",
+      "concerns": "Points of attention",
+      "critical": "Critical",
+      "vigilance": "Warning",
+      "health": {
+        "excellent": "Excellent",
+        "bon": "Good",
+        "moyen": "Average",
+        "faible": "Weak",
+        "critique": "Critical"
+      }
+    },
+    "blockB": {
+      "title": "Detailed Analysis",
+      "vigor": "Vegetative vigor",
+      "hydric": "Water status",
+      "nutritional": "Nutritional status",
+      "heatmap": "Spatial homogeneity",
+      "ofReferential": "of reference",
+      "basedOnEVI": "Based on EVI — Sentinel-2 image from",
+      "heterogeneity": "Significant heterogeneity",
+      "stability": "Temporal stability",
+      "stable": "Stable",
+      "moderate": "Moderate",
+      "strong": "Strong",
+      "historyDepth": "Calibration based on",
+      "monthsHistory": "months of satellite history"
+    },
+    "blockD": {
+      "title": "Improve Precision",
+      "allComplete": "Congratulations, all critical data has been collected.",
+      "confidenceAt": "Confidence",
+      "current": "Current",
+      "potential": "Potential",
+      "availableData": "Available data",
+      "missingData": "Missing data",
+      "dataType": "Data",
+      "gain": "Gain",
+      "why": "Why it's useful"
+    },
+    "blockH": {
+      "prompt": "Does this calibration reflect your parcel?",
+      "validate": "Validate baseline",
+      "saveLater": "Save and complete later",
+      "confirmTitle": "Confirm validation",
+      "confirmDescription": "Confirm baseline validation? This action activates AI diagnostics for your parcel.",
+      "confirmValidate": "Confirm",
+      "validateSuccess": "Baseline validated successfully",
+      "validateError": "Validation failed",
+      "savedForLater": "Baseline saved"
     }
   },
   "compass": {

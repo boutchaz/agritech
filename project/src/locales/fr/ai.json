@@ -358,6 +358,64 @@
       "downloading": "Préparation de l’export…",
       "error": "Échec de l’export",
       "success": "Export réussi en {{format}}"
+    },
+    "blockA": {
+      "healthScore": "Score de santé",
+      "confidenceScore": "Confiance",
+      "yieldPotential": "Potentiel estimé",
+      "to": "à",
+      "wideRange": "Fourchette élargie, confiance réduite",
+      "yieldDisclaimer": "Estimation initiale — sera affinée après chaque récolte",
+      "strengths": "Points forts",
+      "concerns": "Points d’attention",
+      "critical": "Critique",
+      "vigilance": "Vigilance",
+      "health": {
+        "excellent": "Excellent",
+        "bon": "Bon",
+        "moyen": "Moyen",
+        "faible": "Faible",
+        "critique": "Critique"
+      }
+    },
+    "blockB": {
+      "title": "Analyse détaillée",
+      "vigor": "Vigueur végétative",
+      "hydric": "État hydrique",
+      "nutritional": "État nutritionnel",
+      "heatmap": "Homogénéité spatiale",
+      "ofReferential": "du référentiel",
+      "basedOnEVI": "Basée sur EVI — image Sentinel-2 du",
+      "heterogeneity": "Hétérogénéité significative",
+      "stability": "Stabilité temporelle",
+      "stable": "Stable",
+      "moderate": "Modérée",
+      "strong": "Forte",
+      "historyDepth": "Calibrage basé sur",
+      "monthsHistory": "mois d’historique satellite"
+    },
+    "blockD": {
+      "title": "Améliorer la précision",
+      "allComplete": "Félicitations, toutes les données critiques sont collectées.",
+      "confidenceAt": "Confiance",
+      "current": "Actuel",
+      "potential": "Potentiel",
+      "availableData": "Données déjà disponibles",
+      "missingData": "Données manquantes",
+      "dataType": "Donnée",
+      "gain": "Gain",
+      "why": "Pourquoi c’est utile"
+    },
+    "blockH": {
+      "prompt": "Ce calibrage vous semble-t-il refléter votre parcelle ?",
+      "validate": "Valider la baseline",
+      "saveLater": "Sauvegarder et compléter plus tard",
+      "confirmTitle": "Confirmer la validation",
+      "confirmDescription": "Confirmer la validation de la baseline ? Cette action active les diagnostics IA pour votre parcelle.",
+      "confirmValidate": "Confirmer",
+      "validateSuccess": "Baseline validée avec succès",
+      "validateError": "Échec de la validation",
+      "savedForLater": "Baseline sauvegardée"
     }
   },
   "compass": {

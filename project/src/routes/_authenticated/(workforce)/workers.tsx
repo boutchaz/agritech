@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote } from 'lucide-react';
+import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote, Handshake } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
 import WorkersPaymentsList from '@/components/Workers/WorkersPaymentsList';
+import ProductionSharingTab from '@/components/Workers/ProductionSharingTab';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
@@ -207,6 +208,14 @@ function WorkersPage() {
                       <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
                     </TabsTrigger>
                     <TabsTrigger
+                      value="production-sharing"
+                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                    >
+                      <Handshake className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.productionSharing', 'Partage de Production')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.tabs.productionSharingShort', 'Partage')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger
                       value="calculator"
                       className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
                       data-tour="worker-payments"
@@ -227,6 +236,13 @@ function WorkersPage() {
 
                 <TabsContent value="payments" className="mt-4 sm:mt-6">
                   <WorkersPaymentsList organizationId={currentOrganization.id} />
+                </TabsContent>
+
+                <TabsContent value="production-sharing" className="mt-4 sm:mt-6">
+                  <ProductionSharingTab
+                    organizationId={currentOrganization.id}
+                    farmId={currentFarm?.id}
+                  />
                 </TabsContent>
 
                 <TabsContent value="calculator" className="mt-4 sm:mt-6">

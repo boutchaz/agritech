@@ -511,6 +511,20 @@ export class TasksService {
       }
     }
 
+    // Auto time tracking on status transitions
+    if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
+      if (updateTaskDto.status === "in_progress" && task.assigned_to) {
+        // Resumed → clock in
+        await this.autoClockIn(taskId, task.assigned_to);
+      } else if (
+        existingTask.status === "in_progress" &&
+        ["paused", "completed", "cancelled", "on_hold"].includes(updateTaskDto.status)
+      ) {
+        // Left in_progress → clock out
+        await this.autoClockOut(taskId);
+      }
+    }
+
     // Send notification when task status changes
     if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
       try {
@@ -940,6 +954,9 @@ export class TasksService {
       throw new Error(`Failed to complete task: ${error.message}`);
     }
 
+    // Auto clock-out any active time sessions
+    await this.autoClockOut(taskId);
+
     // Create work record if task is assigned to a worker
     // This connects the task system with the worker payment system
     if (existingTask.assigned_to) {
@@ -1220,6 +1237,11 @@ export class TasksService {
       .select()
       .single();
 
+    // Auto clock-in to start time tracking
+    if (task.assigned_to) {
+      await this.autoClockIn(taskId, task.assigned_to);
+    }
+
     // Deduct planned stock immediately — workers are taking the product now
     await this.processConsumedItems(userId, organizationId, taskId, task);
 
@@ -1339,6 +1361,11 @@ export class TasksService {
 
     if (taskError) {
       throw new Error(`Failed to update task: ${taskError.message}`);
+    }
+
+    // Auto clock-out when completing (not for partial harvests which stay in_progress)
+    if (!isPartial) {
+      await this.autoClockOut(taskId);
     }
 
     // Get parcel crop_type if crop_id is not provided (virtual crop from parcel)
@@ -2169,6 +2196,51 @@ export class TasksService {
     }
 
     return data;
+  }
+
+  /**
+   * Auto clock-in: create a time log when a task transitions to in_progress
+   */
+  private async autoClockIn(taskId: string, workerId: string) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      // Check if there's already an active session for this task
+      const { data: existing } = await client
+        .from("task_time_logs")
+        .select("id")
+        .eq("task_id", taskId)
+        .is("end_time", null)
+        .maybeSingle();
+
+      if (existing) {
+        return; // Already clocked in
+      }
+
+      await client.from("task_time_logs").insert({
+        task_id: taskId,
+        worker_id: workerId,
+        start_time: new Date().toISOString(),
+      });
+    } catch (err) {
+      this.logger.warn(`Auto clock-in failed for task ${taskId}: ${err}`);
+    }
+  }
+
+  /**
+   * Auto clock-out: close any open time logs when a task leaves in_progress
+   */
+  private async autoClockOut(taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      const now = new Date().toISOString();
+      await client
+        .from("task_time_logs")
+        .update({ end_time: now })
+        .eq("task_id", taskId)
+        .is("end_time", null);
+    } catch (err) {
+      this.logger.warn(`Auto clock-out failed for task ${taskId}: ${err}`);
+    }
   }
 
   /**

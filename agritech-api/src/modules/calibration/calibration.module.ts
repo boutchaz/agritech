@@ -13,6 +13,7 @@ import { CalibrationStateMachine } from "./calibration-state-machine";
 import { NutritionOptionService } from "./nutrition-option.service";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { CalibrationReviewAdapter } from "./calibration-review.adapter";
+import { CalibrationBlocksReviewAdapter } from "./calibration-blocks-review.adapter";
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { CalibrationReviewAdapter } from "./calibration-review.adapter";
     NutritionOptionService,
     AnnualRecalibrationService,
     CalibrationReviewAdapter,
+    CalibrationBlocksReviewAdapter,
   ],
   exports: [
     CalibrationService,

@@ -1,9 +1,10 @@
-import {  useState, useMemo, useEffect  } from "react";
+import { useState, useMemo } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, PieChart, Calendar, Filter, Download, Loader2, Sparkles, Wheat, CalendarRange } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { profitabilityApi } from '../lib/api/profitability';
 import type { Cost as _Cost, Revenue as _Revenue } from '../lib/api/profitability';
+import { computeProfitability } from '../lib/calculations/profitability';
 import { useCurrency } from '../hooks/useCurrency';
 import { useCampaigns, useFiscalYears } from '../hooks/useAgriculturalAccounting';
 import { Button } from './ui/button';
@@ -22,17 +23,6 @@ import {
 import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelContext';
 import { AdaptiveSection as _AdaptiveSection } from './adaptive/AdaptiveSection';
 import { Badge } from './ui/badge';
-
-interface ParcelProfitabilitySummary {
-  parcel_id?: string;
-  parcel_name: string;
-  total_costs: number;
-  total_revenue: number;
-  net_profit: number;
-  profit_margin?: number;
-  cost_breakdown: Record<string, number>;
-  revenue_breakdown: Record<string, number>;
-}
 
 const ProfitabilityDashboard = () => {
   const { currentOrganization } = useAuth();
@@ -55,27 +45,27 @@ const ProfitabilityDashboard = () => {
   const { data: campaigns = [] } = useCampaigns();
   const { data: fiscalYears = [] } = useFiscalYears();
 
-  useEffect(() => {
-    if (selectedCampaign !== 'all') {
-      const campaign = campaigns.find(c => c.id === selectedCampaign);
-      if (campaign) {
-        setStartDate(campaign.start_date);
-        setEndDate(campaign.end_date);
-        setSelectedFiscalYear('all');
-      }
+  const handleCampaignChange = (value: string) => {
+    setSelectedCampaign(value);
+    if (value === 'all') return;
+    const campaign = campaigns.find((c) => c.id === value);
+    if (campaign) {
+      setStartDate(campaign.start_date);
+      setEndDate(campaign.end_date);
+      setSelectedFiscalYear('all');
     }
-  }, [selectedCampaign, campaigns]);
+  };
 
-  useEffect(() => {
-    if (selectedFiscalYear !== 'all') {
-      const fiscalYear = fiscalYears.find(fy => fy.id === selectedFiscalYear);
-      if (fiscalYear) {
-        setStartDate(fiscalYear.start_date);
-        setEndDate(fiscalYear.end_date);
-        setSelectedCampaign('all');
-      }
+  const handleFiscalYearChange = (value: string) => {
+    setSelectedFiscalYear(value);
+    if (value === 'all') return;
+    const fiscalYear = fiscalYears.find((fy) => fy.id === value);
+    if (fiscalYear) {
+      setStartDate(fiscalYear.start_date);
+      setEndDate(fiscalYear.end_date);
+      setSelectedCampaign('all');
     }
-  }, [selectedFiscalYear, fiscalYears]);
+  };
 
   // Fetch parcels
   const { data: parcels = [] } = useQuery({
@@ -118,83 +108,21 @@ const ProfitabilityDashboard = () => {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Calculate profitability metrics
+  // Calculate profitability metrics using shared calculation utils
   const profitabilityData = useMemo(() => {
-    const totalCosts = costs.reduce((sum, cost) => sum + Number(cost.amount), 0);
-    const totalRevenue = revenues.reduce((sum, rev) => sum + Number(rev.amount), 0);
-    const netProfit = totalRevenue - totalCosts;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-
-    // Cost breakdown by type
-    const costBreakdown = costs.reduce((acc, cost) => {
-      acc[cost.cost_type] = (acc[cost.cost_type] || 0) + Number(cost.amount);
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Revenue breakdown by type
-    const revenueBreakdown = revenues.reduce((acc, rev) => {
-      acc[rev.revenue_type] = (acc[rev.revenue_type] || 0) + Number(rev.amount);
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Group by parcel
-    const byParcel: Record<string, ParcelProfitabilitySummary> = {};
-
-    costs.forEach(cost => {
-      const parcelId = cost.parcel_id || 'unassigned';
-      const parcelName = cost.parcel?.name || 'Non assigné';
-      if (!byParcel[parcelId]) {
-        byParcel[parcelId] = {
-          parcel_id: cost.parcel_id,
-          parcel_name: parcelName,
-          total_costs: 0,
-          total_revenue: 0,
-          net_profit: 0,
-          cost_breakdown: {},
-          revenue_breakdown: {}
-        };
-      }
-      byParcel[parcelId].total_costs += Number(cost.amount);
-      byParcel[parcelId].cost_breakdown[cost.cost_type] =
-        (byParcel[parcelId].cost_breakdown[cost.cost_type] || 0) + Number(cost.amount);
-    });
-
-    revenues.forEach(rev => {
-      const parcelId = rev.parcel_id || 'unassigned';
-      const parcelName = rev.parcel?.name || 'Non assigné';
-      if (!byParcel[parcelId]) {
-        byParcel[parcelId] = {
-          parcel_id: rev.parcel_id,
-          parcel_name: parcelName,
-          total_costs: 0,
-          total_revenue: 0,
-          net_profit: 0,
-          cost_breakdown: {},
-          revenue_breakdown: {}
-        };
-      }
-      byParcel[parcelId].total_revenue += Number(rev.amount);
-      byParcel[parcelId].revenue_breakdown[rev.revenue_type] =
-        (byParcel[parcelId].revenue_breakdown[rev.revenue_type] || 0) + Number(rev.amount);
-    });
-
-    // Calculate net profit and margin for each parcel
-    Object.values(byParcel).forEach(parcel => {
-      parcel.net_profit = parcel.total_revenue - parcel.total_costs;
-      parcel.profit_margin = parcel.total_revenue > 0
-        ? (parcel.net_profit / parcel.total_revenue) * 100
-        : undefined;
-    });
-
-    return {
-      totalCosts,
-      totalRevenue,
-      netProfit,
-      profitMargin,
-      costBreakdown,
-      revenueBreakdown,
-      byParcel: Object.values(byParcel)
-    };
+    const costEntries = costs.map(c => ({
+      amount: c.amount,
+      cost_type: c.cost_type,
+      parcel_id: c.parcel_id,
+      parcel_name: c.parcel?.name,
+    }));
+    const revenueEntries = revenues.map(r => ({
+      amount: r.amount,
+      revenue_type: r.revenue_type,
+      parcel_id: r.parcel_id,
+      parcel_name: r.parcel?.name,
+    }));
+    return computeProfitability(costEntries, revenueEntries);
   }, [costs, revenues]);
 
   const isLoading = costsLoading || revenuesLoading;
@@ -235,7 +163,7 @@ const ProfitabilityDashboard = () => {
               </Label>
               <NativeSelect
                 value={selectedCampaign}
-                onChange={(e) => setSelectedCampaign(e.target.value)}
+                onChange={(e) => handleCampaignChange(e.target.value)}
               >
                 <option value="all">Toutes les campagnes</option>
                 {campaigns.map(campaign => (
@@ -250,7 +178,7 @@ const ProfitabilityDashboard = () => {
               </Label>
               <NativeSelect
                 value={selectedFiscalYear}
-                onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                onChange={(e) => handleFiscalYearChange(e.target.value)}
               >
                 <option value="all">Toutes les années</option>
                 {fiscalYears.map(fy => (
