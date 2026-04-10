@@ -2,6 +2,26 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
+/** Prevent infinite spinner when Supabase / network never resolves */
+const GET_SESSION_TIMEOUT_MS = 8_000;
+const INTERNAL_ADMIN_CHECK_TIMEOUT_MS = 10_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label}-timeout`)), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 interface AuthState {
   user: User | null;
   session: Session | null;
@@ -28,12 +48,18 @@ export function useAuth() {
     }
 
     try {
-      const { data, error } = await supabase
+      const internalAdminQuery = supabase
         .from('internal_admins')
         .select('id')
         .eq('user_id', userId)
         .eq('is_active', true)
         .limit(1);
+
+      const { data, error } = await withTimeout(
+        Promise.resolve(internalAdminQuery),
+        INTERNAL_ADMIN_CHECK_TIMEOUT_MS,
+        'internal-admin-check',
+      );
 
       if (error) {
         console.error('Error checking internal admin:', error);
@@ -44,7 +70,11 @@ export function useAuth() {
       adminCacheRef.current.set(userId, isAdmin);
       return isAdmin;
     } catch (error) {
-      console.error('Failed to check internal admin:', error);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        console.warn('[useAuth] Internal admin check timed out');
+      } else {
+        console.error('Failed to check internal admin:', error);
+      }
       return false;
     }
   }, []);
@@ -54,7 +84,11 @@ export function useAuth() {
 
     const initSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await withTimeout(
+          supabase.auth.getSession(),
+          GET_SESSION_TIMEOUT_MS,
+          'getSession',
+        );
 
         if (error) {
           if (mounted) setState(prev => ({ ...prev, isLoading: false }));
@@ -74,8 +108,16 @@ export function useAuth() {
             isInternalAdmin,
           });
         }
-      } catch {
-        if (mounted) setState(prev => ({ ...prev, isLoading: false }));
+      } catch (e) {
+        console.warn('[useAuth] getSession timed out or failed:', e);
+        if (mounted) {
+          setState({
+            user: null,
+            session: null,
+            isLoading: false,
+            isInternalAdmin: false,
+          });
+        }
       }
     };
 
