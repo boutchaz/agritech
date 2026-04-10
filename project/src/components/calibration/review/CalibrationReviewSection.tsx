@@ -124,6 +124,7 @@ export function CalibrationReviewSection({ parcelId }: CalibrationReviewSectionP
             heatmap={review.block_b.heatmap}
             spatialPatterns={review.block_b.spatial_patterns}
             heterogeneityFlag={review.block_b.heterogeneity_flag}
+            boundary={parcel?.boundary}
           />
 
           {/* Section 4: Improve precision */}

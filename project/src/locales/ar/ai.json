@@ -317,6 +317,14 @@
       "notes": "ملاحظات",
       "excludedCycles": "الدورات المستبعدة"
     },
+    "spectral": {
+      "title": "العتبات الطيفية",
+      "noData": "لا تتوفر بيانات طيفية",
+      "excluded": "فترات مستبعدة",
+      "excludedListTitle": "علامات على الرسم البياني",
+      "fullscreen": "ملء الشاشة",
+      "fullscreenTitle": "العتبات الطيفية — عرض موسّع"
+    },
     "expertLecture": {
       "title": "تدقيق خبير",
       "rulesApplied": "قواعد البروتوكول المطبقة",

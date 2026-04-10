@@ -1,12 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Info } from 'lucide-react';
+import { MapContainer, GeoJSON, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { LeafletBaseTileLayers } from '@/components/map/LeafletBaseTileLayers';
 import type { HeatmapData, SpatialPatterns } from '@/types/calibration-review';
 
 interface ZoneMapProps {
   heatmap: HeatmapData;
   spatialPatterns: SpatialPatterns | null;
   heterogeneityFlag: boolean;
+  boundary?: number[][];
 }
 
 const ZONE_DESCRIPTIONS: Record<string, string> = {
@@ -17,7 +22,36 @@ const ZONE_DESCRIPTIONS: Record<string, string> = {
   E: 'problématique, rouge',
 };
 
-export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag }: ZoneMapProps) {
+/** Fits the map to the GeoJSON or parcel boundary bounds. */
+function FitBounds({ geojson, boundary }: { geojson: Record<string, unknown> | null; boundary?: number[][] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    try {
+      if (geojson) {
+        const layer = L.geoJSON(geojson as unknown as GeoJSON.GeoJsonObject);
+        const bounds = layer.getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [20, 20] });
+          return;
+        }
+      }
+      if (boundary && boundary.length > 2) {
+        const latLngs = boundary.map(([lng, lat]) => [lat, lng] as [number, number]);
+        const bounds = L.latLngBounds(latLngs);
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [20, 20] });
+        }
+      }
+    } catch {
+      // Silently ignore malformed data
+    }
+  }, [map, geojson, boundary]);
+
+  return null;
+}
+
+export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag, boundary }: ZoneMapProps) {
   const { t } = useTranslation('ai');
 
   const sortedZones = useMemo(
@@ -29,6 +63,40 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag }: ZoneMap
   );
 
   const totalPercent = sortedZones.reduce((sum, z) => sum + z.percent, 0);
+
+  /** Build a color lookup from zone_summary for styling GeoJSON features. */
+  const zoneColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const z of heatmap.zone_summary) {
+      map.set(z.class_name, z.color);
+    }
+    return map;
+  }, [heatmap.zone_summary]);
+
+  /** Style each GeoJSON feature by its zone class color. */
+  const geoJsonStyle = useMemo(() => {
+    return (feature: GeoJSON.Feature | undefined) => {
+      const className = feature?.properties?.class_name ?? feature?.properties?.class ?? '';
+      const color = zoneColorMap.get(className) ?? '#888888';
+      return {
+        fillColor: color,
+        fillOpacity: 0.65,
+        color: color,
+        weight: 0.5,
+        opacity: 0.8,
+      };
+    };
+  }, [zoneColorMap]);
+
+  /** Default map center (Morocco) — overridden by FitBounds. */
+  const defaultCenter: [number, number] = useMemo(() => {
+    if (boundary && boundary.length > 0) {
+      const avgLng = boundary.reduce((s, p) => s + p[0], 0) / boundary.length;
+      const avgLat = boundary.reduce((s, p) => s + p[1], 0) / boundary.length;
+      return [avgLat, avgLng];
+    }
+    return [33.9, -5.5];
+  }, [boundary]);
 
   if (!heatmap.available) {
     return (
@@ -51,34 +119,39 @@ export function ZoneMap({ heatmap, spatialPatterns, heterogeneityFlag }: ZoneMap
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left: Map placeholder / zones visual */}
-        <div className="relative bg-gray-50 dark:bg-gray-800/50 rounded-lg overflow-hidden min-h-[220px] flex items-center justify-center">
+        {/* Left: Heatmap on Leaflet map */}
+        <div className="relative rounded-lg overflow-hidden min-h-[280px]">
           {heatmap.zones_geojson ? (
-            <div className="w-full h-full p-4">
-              {/* Zone blocks as a simplified grid representation */}
-              <div className="grid grid-cols-5 gap-1 h-full">
-                {sortedZones.map((zone) => {
-                  const cells = Math.max(1, Math.round((zone.percent / 100) * 25));
-                  return Array.from({ length: cells }).map((_, i) => (
-                    <div
-                      key={`${zone.class_name}-${i}`}
-                      className="rounded-sm min-h-[20px]"
-                      style={{ backgroundColor: zone.color }}
-                    />
-                  ));
-                })}
-              </div>
-            </div>
+            <MapContainer
+              center={defaultCenter}
+              zoom={15}
+              className="h-full w-full min-h-[280px]"
+              zoomControl={false}
+              attributionControl={false}
+              scrollWheelZoom={false}
+              dragging={false}
+              doubleClickZoom={false}
+              touchZoom={false}
+            >
+              <LeafletBaseTileLayers variant="satellite" />
+              <GeoJSON
+                data={heatmap.zones_geojson as unknown as GeoJSON.GeoJsonObject}
+                style={geoJsonStyle}
+              />
+              <FitBounds geojson={heatmap.zones_geojson} boundary={boundary} />
+            </MapContainer>
           ) : (
-            <div className="text-center text-gray-400 dark:text-gray-500">
-              <div className="text-4xl mb-2">🗺️</div>
-              <p className="text-sm">{t('calibrationReview.zones.mapPlaceholder', 'Carte de zonage')}</p>
+            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800/50 text-center text-gray-400 dark:text-gray-500">
+              <div>
+                <div className="text-4xl mb-2">🗺️</div>
+                <p className="text-sm">{t('calibrationReview.zones.mapPlaceholder', 'Carte de zonage')}</p>
+              </div>
             </div>
           )}
 
           {/* Pattern detected overlay */}
           {spatialPatterns?.detected && (
-            <div className="absolute bottom-2 left-2 right-2 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300">
+            <div className="absolute bottom-2 left-2 right-2 z-[1000] bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm rounded px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300">
               <span className="font-medium">Pattern detected:</span> {spatialPatterns.message}
             </div>
           )}

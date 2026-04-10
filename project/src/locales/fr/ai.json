@@ -317,6 +317,14 @@
       "notes": "Notes",
       "excludedCycles": "Cycles exclus"
     },
+    "spectral": {
+      "title": "SEUILS SPECTRAUX",
+      "noData": "Pas de données spectrales disponibles",
+      "excluded": "Périodes exclues",
+      "excludedListTitle": "Repères sur le graphique",
+      "fullscreen": "Plein écran",
+      "fullscreenTitle": "Seuils spectraux — vue agrandie"
+    },
     "expertLecture": {
       "title": "Audit Expert",
       "rulesApplied": "Règles du protocole appliquées",

@@ -317,6 +317,14 @@
       "notes": "Notes",
       "excludedCycles": "Excluded Cycles"
     },
+    "spectral": {
+      "title": "Spectral thresholds",
+      "noData": "No spectral data available",
+      "excluded": "Excluded periods",
+      "excludedListTitle": "Vertical markers (details)",
+      "fullscreen": "Full screen",
+      "fullscreenTitle": "Spectral thresholds — enlarged view"
+    },
     "expertLecture": {
       "title": "Expert Audit",
       "rulesApplied": "Protocol Rules Applied",
