@@ -145,12 +145,7 @@ export class AlertService {
     }
 
     try {
-      await this.emailService['transporter'].sendMail({
-        from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
-        to: this.alertEmailTo,
-        subject,
-        html: lines.join('\n'),
-      });
+      await this.emailService.sendRaw(this.alertEmailTo, subject, lines.join('\n'));
       this.logger.log(`[Alert] Email sent to ${this.alertEmailTo} for ${alert.service}`);
     } catch (err) {
       this.logger.error(`[Alert] Failed to send email: ${err.message}`);

@@ -1,8 +1,9 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { DatabaseService } from '../database/database.service';
 import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { NotificationsGateway } from './notifications.gateway';
+import { EmailService } from '../email/email.service';
 import {
   CreateNotificationDto,
   NotificationResponseDto,
@@ -97,6 +98,7 @@ export class NotificationsService {
     private readonly databaseService: DatabaseService,
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly gateway: NotificationsGateway,
+    @Optional() @Inject(EmailService) private readonly emailServiceDb?: EmailService,
   ) {
     this.initializeTransporter();
   }
@@ -306,7 +308,12 @@ export class NotificationsService {
     }
     for (const to of recipients) {
       try {
-        const ok = await this.sendEmail({ to, ...payload });
+        let ok = false;
+        if (this.emailServiceDb) {
+          ok = await this.emailServiceDb.sendRaw(to, payload.subject, payload.html, payload.text);
+        } else {
+          ok = await this.sendEmail({ to, ...payload });
+        }
         if (!ok) {
           this.logger.warn(`Operational email not delivered to ${to} (transporter disabled or error)`);
         }
@@ -841,17 +848,13 @@ export class NotificationsService {
     sellerEmail: string,
     data: QuoteRequestEmailData,
   ): Promise<boolean> {
-    const subject = `Nouvelle demande de devis - ${data.productTitle}`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('quote_request_received', sellerEmail, data);
+    }
 
     const html = this.generateQuoteRequestEmail(data);
     const text = this.generateQuoteRequestEmailText(data);
-
-    return this.sendEmail({
-      to: sellerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle demande de devis - ${data.productTitle}`, html, text });
   }
 
   /**
@@ -1043,17 +1046,13 @@ export class NotificationsService {
     buyerEmail: string,
     data: QuoteResponseEmailData,
   ): Promise<boolean> {
-    const subject = `Réponse à votre demande de devis - ${data.productTitle}`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('quote_response_sent', buyerEmail, data as any);
+    }
 
     const html = this.generateQuoteResponseEmail(data);
     const text = this.generateQuoteResponseEmailText(data);
-
-    return this.sendEmail({
-      to: buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: buyerEmail, subject: `Réponse à votre demande de devis - ${data.productTitle}`, html, text });
   }
 
   /**
@@ -1269,34 +1268,26 @@ export class NotificationsService {
    * Send order confirmation email to buyer
    */
   async sendOrderConfirmationEmail(data: OrderEmailData): Promise<boolean> {
-    const subject = `Commande confirmée #${data.orderNumber} - AgriTech Marketplace`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('order_confirmed', data.buyerEmail, data as any);
+    }
 
     const html = this.generateOrderConfirmationEmail(data);
     const text = this.generateOrderConfirmationEmailText(data);
-
-    return this.sendEmail({
-      to: data.buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande confirmée #${data.orderNumber} - AgriTech Marketplace`, html, text });
   }
 
   /**
    * Send new order notification to seller
    */
   async sendNewOrderNotificationToSeller(sellerEmail: string, data: OrderEmailData): Promise<boolean> {
-    const subject = `Nouvelle commande #${data.orderNumber} - AgriTech Marketplace`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('new_order_to_seller', sellerEmail, data as any);
+    }
 
     const html = this.generateNewOrderSellerEmail(data);
     const text = this.generateNewOrderSellerEmailText(data);
-
-    return this.sendEmail({
-      to: sellerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle commande #${data.orderNumber} - AgriTech Marketplace`, html, text });
   }
 
   /**
@@ -1309,19 +1300,19 @@ export class NotificationsService {
       delivered: 'livrée',
       cancelled: 'annulée',
     };
-
     const statusText = statusTexts[data.status || ''] || data.status;
-    const subject = `Commande #${data.orderNumber} ${statusText} - AgriTech Marketplace`;
+
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('order_status_update', data.buyerEmail, {
+        ...data,
+        statusText,
+        statusMessage: `Votre commande a été ${statusText}.`,
+      } as any);
+    }
 
     const html = this.generateOrderStatusUpdateEmail(data);
     const text = this.generateOrderStatusUpdateEmailText(data);
-
-    return this.sendEmail({
-      to: data.buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande #${data.orderNumber} ${statusText} - AgriTech Marketplace`, html, text });
   }
 
   /**
@@ -1815,8 +1806,32 @@ export class NotificationsService {
    * Send invoice email to customer/supplier
    */
   async sendInvoiceEmail(data: InvoiceEmailData): Promise<boolean> {
+    // Use DB-backed template via EmailService if available
+    if (this.emailServiceDb) {
+      const isSales = data.invoiceType === 'sales';
+      return this.emailServiceDb.sendByType('invoice_email', data.partyEmail, {
+        partyName: data.partyName,
+        invoiceNumber: data.invoiceNumber,
+        invoiceType: data.invoiceType,
+        invoiceTypeLabel: isSales ? 'Facture de Vente' : "Facture d'Achat",
+        invoiceIntro: isSales
+          ? `Veuillez trouver ci-joint votre facture de ${data.organizationName}.`
+          : `Voici la facture d'achat de ${data.organizationName}.`,
+        organizationName: data.organizationName,
+        invoiceDate: data.invoiceDate,
+        dueDate: data.dueDate,
+        subtotal: data.subtotal,
+        taxAmount: data.taxAmount,
+        grandTotal: data.grandTotal,
+        currency: data.currency,
+        items: data.items,
+        notes: data.notes,
+      });
+    }
+
+    // Fallback to hardcoded HTML
     const isSales = data.invoiceType === 'sales';
-    const subject = isSales 
+    const subject = isSales
       ? `Facture ${data.invoiceNumber} - ${data.organizationName}`
       : `Facture d'achat ${data.invoiceNumber} - ${data.organizationName}`;
 
@@ -2071,6 +2086,12 @@ export class NotificationsService {
     to: string,
     data: Parameters<(typeof marketplaceEmailTemplates)[typeof type]>[0],
   ): Promise<boolean> {
+    // Try DB template first
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType(type, to, data as any);
+    }
+
+    // Fallback to hardcoded templates
     const templateFn = marketplaceEmailTemplates[type] as (data: any) => {
       subject: string;
       html: string;

@@ -12423,7 +12423,7 @@ export class DemoDataService {
         land_prep_date: `${currentYear}-07-01`,
         expected_harvest_start: `${currentYear}-09-15`,
         expected_harvest_end: `${currentYear}-11-15`,
-        status: now.getMonth() >= 8 ? "harvesting" : "flowering",
+        status: now.getMonth() >= 8 ? "harvesting" : "growing",
         planted_area_ha: 3,
         expected_yield_per_ha: 18000,
         expected_total_yield: 54000,

@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as hbs from 'handlebars';
 import { promises as fs } from 'fs';
 import { join } from 'path';
+import { DatabaseService } from '../database/database.service';
 
 export interface EmailOptions {
   to: string;
@@ -18,7 +19,10 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
   private templates: Map<string, hbs.TemplateDelegate> = new Map();
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Optional() @Inject(DatabaseService) private databaseService?: DatabaseService,
+  ) {
     this.transporter = nodemailer.createTransport({
       host: this.configService.get('SMTP_HOST') || 'localhost',
       port: parseInt(this.configService.get('SMTP_PORT') || '1025'),
@@ -76,18 +80,13 @@ export class EmailService {
     tempPassword: string,
     organizationName: string,
   ): Promise<boolean> {
-    return this.sendEmail({
-      to: email,
-      subject: 'Welcome to AgriTech - Your Account Details',
-      template: 'user-created',
-      context: {
-        firstName,
-        lastName,
-        email,
-        tempPassword,
-        organizationName,
-        loginUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
-      },
+    return this.sendByType('user_created', email, {
+      firstName,
+      lastName,
+      email,
+      tempPassword,
+      organizationName,
+      loginUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
     });
   }
 
@@ -96,15 +95,10 @@ export class EmailService {
     firstName: string,
     tempPassword: string,
   ): Promise<boolean> {
-    return this.sendEmail({
-      to: email,
-      subject: 'Your Password Has Been Reset',
-      template: 'password-reset',
-      context: {
-        firstName,
-        tempPassword,
-        loginUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
-      },
+    return this.sendByType('password_reset', email, {
+      firstName,
+      tempPassword,
+      loginUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
     });
   }
 
@@ -124,15 +118,87 @@ export class EmailService {
     return template(context);
   }
 
+  /**
+   * Send an email using a template from the database, falling back to .hbs file.
+   * This is the preferred method — all callers should migrate to this.
+   */
+  async sendByType(
+    type: string,
+    to: string,
+    context: Record<string, any>,
+  ): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    try {
+      if (!this.databaseService) {
+        this.logger.error(`Cannot send email type "${type}": DatabaseService not available`);
+        return false;
+      }
+
+      const client = this.databaseService.getAdminClient();
+      const { data: template } = await client
+        .from('email_templates')
+        .select('subject, html_body, text_body')
+        .is('organization_id', null)
+        .eq('type', type)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!template) {
+        this.logger.error(`No active DB template for type "${type}". Email NOT sent. Add it to email_templates table.`);
+        return false;
+      }
+
+      const compiledSubject = hbs.compile(template.subject)(context);
+      const compiledHtml = hbs.compile(template.html_body)(context);
+
+      await this.transporter.sendMail({
+        from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
+        to,
+        subject: compiledSubject,
+        html: compiledHtml,
+        text: template.text_body ? hbs.compile(template.text_body)(context) : undefined,
+      });
+
+      this.logger.log(`Email sent (type: ${type}) to ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send email (type: ${type}): ${error.message}`);
+      return false;
+    }
+  }
+
   async sendTestEmail(to: string): Promise<boolean> {
-    return this.sendEmail({
-      to,
-      subject: 'Test Email from AgriTech',
-      template: 'test',
-      context: {
-        message: 'This is a test email from the AgriTech platform.',
-        date: new Date().toISOString(),
-      },
+    return this.sendByType('test_email', to, {
+      message: 'This is a test email from the AgriTech platform.',
+      date: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Send a raw email with pre-built HTML (no template lookup).
+   * Use sparingly — prefer sendByType for all template-based emails.
+   */
+  async sendRaw(to: string, subject: string, html: string, text?: string): Promise<boolean> {
+    if (!this.isConfigured()) {
+      return false;
+    }
+
+    try {
+      await this.transporter.sendMail({
+        from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
+        to,
+        subject,
+        html,
+        text,
+      });
+      this.logger.log(`Raw email sent to ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send raw email: ${error.message}`);
+      return false;
+    }
   }
 }

@@ -23740,7 +23740,7 @@ CREATE TRIGGER set_pest_disease_reports_updated_at
 
 CREATE TABLE IF NOT EXISTS email_templates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   type VARCHAR(100) NOT NULL,
@@ -23758,16 +23758,22 @@ CREATE TABLE IF NOT EXISTS email_templates (
 
 ALTER TABLE email_templates ENABLE ROW LEVEL SECURITY;
 
+-- Org-scoped templates: members can access their org's templates
 CREATE POLICY "org_access" ON email_templates
-  FOR ALL USING (public.is_organization_member(organization_id));
+  FOR ALL USING (
+    organization_id IS NULL
+    OR public.is_organization_member(organization_id)
+  );
 
 CREATE INDEX IF NOT EXISTS idx_email_templates_org ON email_templates (organization_id, category);
 CREATE INDEX IF NOT EXISTS idx_email_templates_type ON email_templates (type);
 CREATE INDEX IF NOT EXISTS idx_email_templates_active ON email_templates (is_active);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_templates_global_type_unique ON email_templates (type) WHERE organization_id IS NULL;
 
 CREATE TRIGGER set_email_templates_updated_at
   BEFORE UPDATE ON email_templates
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
 
 

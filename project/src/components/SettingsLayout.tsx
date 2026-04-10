@@ -426,7 +426,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     ));
 
   return (
-    <div className="relative flex min-h-0 h-full min-w-0 w-full flex-1 flex-col bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
+    <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
       {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
       <TooltipProvider delayDuration={200}>
         <div
@@ -535,7 +535,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
       {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
@@ -572,7 +572,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           </button>
         </div>
         
-        <div className="flex-1 px-3 pt-3 pb-24 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-8 md:px-6 md:pt-6 lg:p-10 lg:pb-10 min-w-0">
+        <div className="flex-1 min-w-0 max-w-full px-3 pt-3 pb-24 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-8 md:px-6 md:pt-6 lg:p-10 lg:pb-10">
           {children}
         </div>
       </div>

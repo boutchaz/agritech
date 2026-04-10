@@ -14,7 +14,6 @@ import {
   Tag,
   RefreshCw,
   ChevronRight,
-  Building2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -49,11 +48,6 @@ interface EmailTemplate {
   updated_at: string;
 }
 
-interface Organization {
-  id: string;
-  name: string;
-}
-
 // ─── Constants ───────────────────────────────────────────────────────
 
 const CATEGORIES: { key: EmailTemplateCategory | 'all'; label: string }[] = [
@@ -84,41 +78,25 @@ function EmailTemplatesPage() {
 
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<EmailTemplateCategory | 'all'>('all');
-  const [orgFilter, setOrgFilter] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editSubject, setEditSubject] = useState('');
   const [editHtmlBody, setEditHtmlBody] = useState('');
   const [showPreview, setShowPreview] = useState(false);
 
-  // Fetch organizations for filter dropdown
-  const { data: organizations = [] } = useQuery({
-    queryKey: ['admin-orgs-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('id, name')
-        .order('name');
-      if (error) throw error;
-      return (data ?? []) as Organization[];
-    },
-  });
-
-  // Fetch email templates
+  // Fetch global email templates (organization_id IS NULL)
   const { data: templates = [], isLoading, refetch } = useQuery({
-    queryKey: ['admin-email-templates', activeCategory, orgFilter],
+    queryKey: ['admin-email-templates', activeCategory],
     queryFn: async () => {
       let query = supabase
         .from('email_templates')
         .select('*')
+        .is('organization_id', null)
         .order('category')
         .order('name');
 
       if (activeCategory !== 'all') {
         query = query.eq('category', activeCategory);
-      }
-      if (orgFilter !== 'all') {
-        query = query.eq('organization_id', orgFilter);
       }
 
       const { data, error } = await query;
@@ -195,13 +173,6 @@ function EmailTemplatesPage() {
     onError: () => toast.error('Failed to duplicate template'),
   });
 
-  // Derived
-  const orgMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const org of organizations) map[org.id] = org.name;
-    return map;
-  }, [organizations]);
-
   const filteredTemplates = useMemo(() => {
     if (!search) return templates;
     const q = search.toLowerCase();
@@ -209,10 +180,9 @@ function EmailTemplatesPage() {
       (tpl) =>
         tpl.name.toLowerCase().includes(q) ||
         tpl.type.toLowerCase().includes(q) ||
-        (tpl.description?.toLowerCase().includes(q) ?? false) ||
-        (orgMap[tpl.organization_id]?.toLowerCase().includes(q) ?? false),
+        (tpl.description?.toLowerCase().includes(q) ?? false),
     );
-  }, [templates, search, orgMap]);
+  }, [templates, search]);
 
   const groupedTemplates = useMemo(() => {
     const groups: Record<string, EmailTemplate[]> = {};
@@ -274,16 +244,6 @@ function EmailTemplatesPage() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
-        <select
-          value={orgFilter}
-          onChange={(e) => setOrgFilter(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-auto"
-        >
-          <option value="all">All organizations</option>
-          {organizations.map((org) => (
-            <option key={org.id} value={org.id}>{org.name}</option>
-          ))}
-        </select>
       </div>
 
       {/* Category pills */}
@@ -362,8 +322,7 @@ function EmailTemplatesPage() {
                           )}
                         </div>
                         <p className="text-xs text-gray-400 truncate mt-0.5">
-                          <Building2 className="h-3 w-3 inline mr-1" />
-                          {orgMap[tpl.organization_id] ?? tpl.organization_id.slice(0, 8)}
+                          {tpl.type}
                         </p>
                       </div>
                       <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
@@ -428,15 +387,6 @@ function EmailTemplatesPage() {
               </div>
 
               <div className="p-4 space-y-4">
-                {/* Organization */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Organization</span>
-                  <span className="text-xs text-gray-600 flex items-center gap-1">
-                    <Building2 className="h-3 w-3" />
-                    {orgMap[selectedTemplate.organization_id] ?? selectedTemplate.organization_id.slice(0, 8)}
-                  </span>
-                </div>
-
                 {/* Active toggle */}
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Active</span>

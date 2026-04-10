@@ -235,36 +235,31 @@ export class RemindersService {
       return false;
     }
 
-    const templateName = this.getEmailTemplate(reminderType);
+    const templateType = this.getEmailTemplateType(reminderType);
 
-    return this.emailService.sendEmail({
-      to: profile.email,
-      subject: this.getReminderTitle(reminderType, task),
-      template: templateName,
-      context: {
-        firstName: profile.first_name || 'User',
-        taskTitle: task.title,
-        taskDescription: task.description || 'No description',
-        dueDate: new Date(task.due_date).toLocaleDateString(),
-        reminderType,
-        taskUrl: `${process.env.FRONTEND_URL}/workforce/tasks`,
-      },
+    return this.emailService.sendByType(templateType, profile.email, {
+      firstName: profile.first_name || 'User',
+      taskTitle: task.title,
+      taskDescription: task.description || 'No description',
+      dueDate: new Date(task.due_date).toLocaleDateString(),
+      reminderType,
+      taskUrl: `${process.env.FRONTEND_URL}/workforce/tasks`,
     });
   }
 
-  private getEmailTemplate(reminderType: string): string {
+  private getEmailTemplateType(reminderType: string): string {
     switch (reminderType) {
       case 'due_soon':
-        return 'task-due-soon';
+        return 'task_due_soon';
       case 'due_today':
-        return 'task-due-today';
+        return 'task_due_today';
       case 'overdue_1d':
       case 'overdue_3d':
       case 'overdue_7d':
       case 'overdue_14d':
-        return 'task-overdue';
+        return 'task_overdue';
       default:
-        return 'task-reminder';
+        return 'task_overdue';
     }
   }
 

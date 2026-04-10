@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateEmailTemplateDto, EmailTemplateCategory, UpdateEmailTemplateDto } from './dto';
 
@@ -15,10 +15,162 @@ export interface SeedEmailTemplate {
 }
 
 @Injectable()
-export class EmailTemplatesService {
+export class EmailTemplatesService implements OnModuleInit {
   private readonly logger = new Logger(EmailTemplatesService.name);
 
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async onModuleInit() {
+    try {
+      await this.seedGlobalTemplates();
+    } catch (error) {
+      this.logger.error(`Failed to seed global email templates: ${error.message}`);
+    }
+  }
+
+  async seedGlobalTemplates(): Promise<number> {
+    const client = this.databaseService.getAdminClient();
+
+    // Get existing global template types to avoid duplicates
+    const { data: existing } = await client
+      .from('email_templates')
+      .select('type')
+      .is('organization_id', null);
+
+    const existingTypes = new Set((existing ?? []).map((r) => r.type));
+
+    const templates = this.getGlobalTemplates();
+    const toInsert = templates.filter((t) => !existingTypes.has(t.type));
+
+    if (toInsert.length === 0) {
+      this.logger.log(`Global email templates already seeded (${existingTypes.size} types)`);
+      return 0;
+    }
+
+    let seeded = 0;
+
+    for (const template of toInsert) {
+      const { error } = await client
+        .from('email_templates')
+        .insert({
+          ...template,
+          organization_id: null,
+        });
+
+      if (!error) {
+        seeded++;
+      } else {
+        this.logger.error(`Failed to seed global template "${template.type}": ${error.message}`);
+      }
+    }
+
+    if (seeded > 0) {
+      this.logger.log(`Seeded ${seeded} global email templates`);
+    }
+
+    return seeded;
+  }
+
+  async findGlobalByType(type: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('email_templates')
+      .select('*')
+      .is('organization_id', null)
+      .eq('type', type)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error(`Failed to fetch global template "${type}": ${error.message}`);
+      return null;
+    }
+
+    return data;
+  }
+
+  private getGlobalTemplates(): SeedEmailTemplate[] {
+    return [
+      ...this.getDefaultTemplates(),
+      {
+        name: 'Welcome - Account Created',
+        description: 'Sent to new users when their account is created',
+        type: 'user_created',
+        category: EmailTemplateCategory.GENERAL,
+        subject: 'Welcome to AgriTech - Your Account Details',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Welcome to AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #2e7d32; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.button { display: inline-block; padding: 12px 30px; background-color: #2e7d32; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.button:hover { background-color: #1b5e20; }.password-box { background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin: 20px 0; text-align: center; }.password { font-size: 18px; font-weight: bold; color: #2e7d32; letter-spacing: 2px; }.warning { color: #d32f2f; font-size: 14px; margin-top: 10px; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Welcome to AgriTech!</h2><p>Dear <strong>{{firstName}} {{lastName}}</strong>,</p><p>Your account has been successfully created for <strong>{{organizationName}}</strong>.</p><p>You can now access the AgriTech platform to manage your agricultural activities.</p><div class="password-box"><p>Your temporary password is:</p><div class="password">{{tempPassword}}</div><p class="warning">Please change your password after your first login for security reasons.</p></div><p style="text-align: center;"><a href="{{loginUrl}}" class="button">Login to AgriTech</a></p><p><strong>Login URL:</strong> <a href="{{loginUrl}}">{{loginUrl}}</a></p><p><strong>Your email:</strong> {{email}}</p><hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;"><p><em>If you have any questions or need assistance, please contact your organization administrator.</em></p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'Welcome to AgriTech!\n\nDear {{firstName}} {{lastName}},\n\nYour account has been created for {{organizationName}}.\nTemporary password: {{tempPassword}}\nLogin: {{loginUrl}}\n\nPlease change your password after first login.',
+        variables: ['firstName', 'lastName', 'email', 'tempPassword', 'organizationName', 'loginUrl'],
+        is_system: true,
+      },
+      {
+        name: 'Password Reset',
+        description: 'Sent when a user password is reset by an administrator',
+        type: 'password_reset',
+        category: EmailTemplateCategory.GENERAL,
+        subject: 'Your Password Has Been Reset',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Password Reset - AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #2e7d32; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.button { display: inline-block; padding: 12px 30px; background-color: #2e7d32; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.button:hover { background-color: #1b5e20; }.password-box { background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 5px; padding: 15px; margin: 20px 0; text-align: center; }.password { font-size: 18px; font-weight: bold; color: #e65100; letter-spacing: 2px; }.warning { color: #d32f2f; font-size: 14px; margin-top: 10px; }.info { background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Password Has Been Reset</h2><p>Dear <strong>{{firstName}}</strong>,</p><p>Your AgriTech password has been reset by your administrator.</p><div class="password-box"><p>Your new temporary password is:</p><div class="password">{{tempPassword}}</div><p class="warning">This password will expire in 7 days. Please change it as soon as possible.</p></div><div class="info"><strong>Security Notice:</strong> For your account security, please log in immediately with your new password, change your password after logging in, and do not share this password with anyone.</div><p style="text-align: center;"><a href="{{loginUrl}}" class="button">Login to AgriTech</a></p><hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;"><p><em>If you did not request this password reset, please contact your organization administrator immediately.</em></p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'Password Reset\n\nDear {{firstName}},\n\nYour password has been reset.\nNew temporary password: {{tempPassword}}\nLogin: {{loginUrl}}\n\nPlease change your password immediately.',
+        variables: ['firstName', 'tempPassword', 'loginUrl'],
+        is_system: true,
+      },
+      {
+        name: 'Test Email',
+        description: 'Test email to verify SMTP configuration',
+        type: 'test_email',
+        category: EmailTemplateCategory.GENERAL,
+        subject: 'Test Email from AgriTech',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Test Email</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #2e7d32; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Test Email</h2><p>{{message}}</p><p><strong>Date:</strong> {{date}}</p><p>If you received this email, the email service is working correctly!</p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'Test Email\n\n{{message}}\nDate: {{date}}\n\nIf you received this email, the email service is working correctly!',
+        variables: ['message', 'date'],
+        is_system: true,
+      },
+      {
+        name: 'Task Due Soon',
+        description: 'Sent when a task is due tomorrow',
+        type: 'task_due_soon',
+        category: EmailTemplateCategory.TASK,
+        subject: 'Task Due Tomorrow: {{taskTitle}}',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Task Due Soon - AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #16a34a; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.task-box { background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; border-radius: 4px; }.task-title { font-size: 18px; font-weight: bold; color: #15803d; margin: 0 0 10px 0; }.task-description { color: #555; margin: 10px 0; font-size: 14px; }.task-meta { color: #666; font-size: 13px; margin: 10px 0; }.button { display: inline-block; padding: 12px 30px; background-color: #16a34a; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.info-box { background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 5px; padding: 15px; margin: 20px 0; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Task Due Tomorrow</h2><p>Hi <strong>{{firstName}}</strong>,</p><p>This is a friendly reminder that the following task is due <strong>tomorrow</strong>:</p><div class="task-box"><div class="task-title">{{taskTitle}}</div><div class="task-description">{{taskDescription}}</div><div class="task-meta"><strong>Due Date:</strong> {{dueDate}}</div></div><div class="info-box"><p>Please make sure to complete this task on time to avoid delays.</p></div><p style="text-align: center;"><a href="{{taskUrl}}" class="button">View Task Details</a></p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'Task Due Tomorrow\n\nHi {{firstName}},\n\nTask: {{taskTitle}}\nDescription: {{taskDescription}}\nDue Date: {{dueDate}}\n\nView: {{taskUrl}}',
+        variables: ['firstName', 'taskTitle', 'taskDescription', 'dueDate', 'taskUrl', 'reminderType'],
+        is_system: true,
+      },
+      {
+        name: 'Task Due Today',
+        description: 'Sent when a task is due today',
+        type: 'task_due_today',
+        category: EmailTemplateCategory.TASK,
+        subject: 'URGENT: Task Due TODAY - {{taskTitle}}',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Task Due Today - AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #f59e0b; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.task-box { background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }.task-title { font-size: 18px; font-weight: bold; color: #d97706; margin: 0 0 10px 0; }.task-description { color: #555; margin: 10px 0; font-size: 14px; }.task-meta { color: #666; font-size: 13px; margin: 10px 0; }.urgent-notice { background-color: #fee2e2; border: 2px solid #dc2626; border-radius: 5px; padding: 15px; margin: 20px 0; color: #991b1b; font-weight: bold; }.button { display: inline-block; padding: 12px 30px; background-color: #f59e0b; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.info-box { background-color: #fffbeb; border: 1px solid #fcd34d; border-radius: 5px; padding: 15px; margin: 20px 0; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Task Due TODAY</h2><p>Hi <strong>{{firstName}}</strong>,</p><div class="urgent-notice">URGENT: This task is due TODAY!</div><p>The following task requires your immediate attention:</p><div class="task-box"><div class="task-title">{{taskTitle}}</div><div class="task-description">{{taskDescription}}</div><div class="task-meta"><strong>Due Date:</strong> {{dueDate}}</div></div><div class="info-box"><p>Please complete this task as soon as possible to avoid it becoming overdue.</p></div><p style="text-align: center;"><a href="{{taskUrl}}" class="button">Complete Task Now</a></p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'URGENT: Task Due TODAY\n\nHi {{firstName}},\n\nTask: {{taskTitle}}\nDescription: {{taskDescription}}\nDue Date: {{dueDate}}\n\nComplete now: {{taskUrl}}',
+        variables: ['firstName', 'taskTitle', 'taskDescription', 'dueDate', 'taskUrl', 'reminderType'],
+        is_system: true,
+      },
+      {
+        name: 'Task Overdue',
+        description: 'Sent when a task is past its due date',
+        type: 'task_overdue',
+        category: EmailTemplateCategory.TASK,
+        subject: 'OVERDUE: {{taskTitle}}',
+        html_body: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Task Overdue - AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #dc2626; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.task-box { background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0; border-radius: 4px; }.task-title { font-size: 18px; font-weight: bold; color: #991b1b; margin: 0 0 10px 0; }.task-description { color: #555; margin: 10px 0; font-size: 14px; }.task-meta { color: #666; font-size: 13px; margin: 10px 0; }.critical-notice { background-color: #fee2e2; border: 2px solid #dc2626; border-radius: 5px; padding: 15px; margin: 20px 0; color: #991b1b; font-weight: bold; font-size: 16px; }.status-badge { display: inline-block; background-color: #dc2626; color: white; padding: 5px 12px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top: 10px; }.button { display: inline-block; padding: 12px 30px; background-color: #dc2626; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.info-box { background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 5px; padding: 15px; margin: 20px 0; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Task OVERDUE</h2><p>Hi <strong>{{firstName}}</strong>,</p><div class="critical-notice">CRITICAL: This task is now OVERDUE!</div><p>The following task requires your immediate attention:</p><div class="task-box"><div class="task-title">{{taskTitle}}</div><div class="task-description">{{taskDescription}}</div><div class="task-meta"><strong>Was Due:</strong> {{dueDate}}</div><div class="status-badge">OVERDUE</div></div><div class="info-box"><p><strong>This task is now overdue and requires immediate action.</strong> Please complete it as soon as possible.</p></div><p style="text-align: center;"><a href="{{taskUrl}}" class="button">Complete Task Immediately</a></p></div><div class="footer"><p>&copy; 2025 AgriTech. All rights reserved.</p></div></div></body></html>`,
+        text_body: 'OVERDUE Task\n\nHi {{firstName}},\n\nTask: {{taskTitle}}\nDescription: {{taskDescription}}\nWas Due: {{dueDate}}\n\nComplete immediately: {{taskUrl}}',
+        variables: ['firstName', 'taskTitle', 'taskDescription', 'dueDate', 'taskUrl', 'reminderType'],
+        is_system: true,
+      },
+      {
+        name: 'Audit Reminder',
+        description: 'Sent as a reminder for upcoming compliance audits',
+        type: 'audit_reminder',
+        category: EmailTemplateCategory.REMINDER,
+        subject: 'Rappel d\'Audit - {{certificationType}}',
+        html_body: `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Rappel d'Audit - AgriTech</title><style>body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }.container { border: 1px solid #ddd; border-radius: 8px; padding: 30px; background-color: #f9f9f9; }.header { text-align: center; margin-bottom: 30px; }.logo { font-size: 24px; font-weight: bold; color: #16a34a; }.content { background-color: #fff; padding: 20px; border-radius: 6px; }.audit-box { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }.audit-title { font-size: 18px; font-weight: bold; color: #92400e; margin: 0 0 10px 0; }.audit-meta { color: #666; font-size: 14px; margin: 10px 0; }.button { display: inline-block; padding: 12px 30px; background-color: #16a34a; color: #fff; text-decoration: none; border-radius: 5px; margin: 20px 0; }.checklist { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 15px; margin: 20px 0; }.footer { text-align: center; margin-top: 30px; font-size: 12px; color: #666; }</style></head><body><div class="container"><div class="header"><div class="logo">AgriTech</div></div><div class="content"><h2>Rappel d'Audit</h2><p>Bonjour <strong>{{firstName}}</strong>,</p><p>Ceci est un rappel pour votre prochain audit de certification :</p><div class="audit-box"><div class="audit-title">{{certificationType}}</div><div class="audit-meta"><strong>Numero de certification :</strong> {{certificationNumber}}<br><strong>Date d'audit :</strong> {{auditDate}}</div></div><div class="checklist"><strong>Liste de verification avant l'audit :</strong><br>- Tous les documents sont a jour<br>- Les registres de tracabilite sont complets<br>- Les controles de conformite sont effectues<br>- Le personnel est informe de l'audit<br>- Les non-conformites precedentes sont resolues</div><p style="text-align: center;"><a href="{{dashboardUrl}}" class="button">Voir les Details</a></p></div><div class="footer"><p>&copy; 2026 AgriTech. Tous droits reserves.</p></div></div></body></html>`,
+        text_body: 'Rappel d\'Audit\n\nBonjour {{firstName}},\n\nCertification: {{certificationType}}\nNumero: {{certificationNumber}}\nDate d\'audit: {{auditDate}}\n\nVoir: {{dashboardUrl}}',
+        variables: ['firstName', 'certificationType', 'certificationNumber', 'auditDate', 'reminderType', 'dashboardUrl'],
+        is_system: true,
+      },
+    ];
+  }
 
   private async verifyOrganizationAccess(
     userId: string,

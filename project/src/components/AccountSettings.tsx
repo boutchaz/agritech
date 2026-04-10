@@ -484,15 +484,15 @@ const AccountSettings = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
               <User className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {t('account.title', 'Account Settings')}
             </h2>
           </div>
@@ -505,7 +505,7 @@ const AccountSettings = () => {
           variant="default" 
           onClick={handleSave} 
           disabled={saving} 
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+          className="h-12 w-full shrink-0 rounded-2xl bg-emerald-600 px-8 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:w-auto"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -685,35 +685,35 @@ const AccountSettings = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
+                  <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+                    <div className="min-w-0 space-y-2">
                       <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">First Name</Label>
                       <Input
                         id="first_name"
                         value={profile.first_name || ''}
                         onChange={(e) => handleInputChange('first_name', e.target.value)}
-                        className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 focus:ring-emerald-500/20"
+                        className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 px-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="min-w-0 space-y-2">
                       <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Last Name</Label>
                       <Input
                         id="last_name"
                         value={profile.last_name || ''}
                         onChange={(e) => handleInputChange('last_name', e.target.value)}
-                        className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 focus:ring-emerald-500/20"
+                        className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 px-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="min-w-0 space-y-2">
                     <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Email Address</Label>
-                    <div className="relative group">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <div className="group relative min-w-0">
+                      <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
                       <Input
                         value={user?.email || ''}
                         disabled
-                        className="h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-bold pl-11 pr-5 opacity-60 cursor-not-allowed"
+                        className="h-12 min-w-0 w-full max-w-full cursor-not-allowed rounded-2xl border-slate-200 bg-slate-100 pl-11 pr-5 font-bold opacity-60 dark:border-slate-700 dark:bg-slate-800"
                       />
                       <div className="absolute right-4 top-1/2 -translate-y-1/2">
                         <Lock className="h-3.5 w-3.5 text-slate-400" />
@@ -729,7 +729,7 @@ const AccountSettings = () => {
 
         {/* Preferences Tab */}
         {activeTab === 'preferences' && (
-          <div className="max-w-4xl space-y-8">
+          <div className="min-w-0 max-w-4xl space-y-8">
             {/* Experience Level */}
             <div className="p-1 rounded-[2.5rem] bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 shadow-inner overflow-hidden">
               <ExperienceLevelSelector />
