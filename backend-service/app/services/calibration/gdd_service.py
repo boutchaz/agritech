@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from datetime import date
 from typing import Any
 
@@ -56,12 +57,24 @@ def compute_daily_gdd(
 
 
 def estimate_chill_hours(temp_max: float, temp_min: float) -> float:
-    """Estimate daily chill-hour contribution (T < 7.2 C window)."""
+    """Estimate daily chill-hour contribution (T < 7.2 °C window).
+
+    Uses a sinusoidal model to simulate 24 hourly temperatures from
+    daily min/max (min at 6 am, max at 3 pm) — same approach as the
+    frontend temperature counter.
+    """
     if temp_min >= 7.2:
         return 0.0
     if temp_max <= 0:
         return 0.0
-    return min(12.0, max(0.0, (7.2 - temp_min) * 1.5))
+    midpoint = (temp_min + temp_max) / 2.0
+    amplitude = (temp_max - temp_min) / 2.0
+    count = 0
+    for hour in range(24):
+        hourly = midpoint + amplitude * math.sin(((hour - 9) / 24) * 2 * math.pi)
+        if hourly < 7.2:
+            count += 1
+    return float(count)
 
 
 def _parse_row_date(row: dict[str, Any]) -> date | None:

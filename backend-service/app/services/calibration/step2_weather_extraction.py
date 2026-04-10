@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections import defaultdict
 from datetime import date, datetime
 
@@ -40,11 +41,19 @@ def _drought_threshold(month: int, crop_type: str) -> int:
 
 
 def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
+    """Sinusoidal model: simulate 24 hourly temperatures, count hours < 7.2 °C."""
     if temp_min >= 7.2:
         return 0.0
     if temp_max <= 0:
         return 0.0
-    return round(min(12.0, max(0.0, (7.2 - temp_min) * 1.5)), 2)
+    midpoint = (temp_min + temp_max) / 2.0
+    amplitude = (temp_max - temp_min) / 2.0
+    count = 0
+    for hour in range(24):
+        hourly = midpoint + amplitude * math.sin(((hour - 9) / 24) * 2 * math.pi)
+        if hourly < 7.2:
+            count += 1
+    return float(count)
 
 
 def extract_weather_history(

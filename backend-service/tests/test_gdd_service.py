@@ -42,9 +42,9 @@ def test_gdd_formula_tupper_no_effect_when_below() -> None:
 
 
 def test_chill_hours_cold_night() -> None:
-    # temp_min=2.0, temp_max=10.0 → (7.2 - 2.0) * 1.5 = 7.8
+    # temp_min=2.0, temp_max=10.0 → sinusoidal model: 15 hours below 7.2°C
     ch = estimate_chill_hours(temp_max=10.0, temp_min=2.0)
-    assert round(ch, 4) == 7.8
+    assert ch == 15.0
 
 
 def test_chill_hours_warm_night_zero() -> None:
