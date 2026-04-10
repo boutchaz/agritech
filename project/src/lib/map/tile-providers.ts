@@ -21,8 +21,8 @@ interface TileLayerOptions {
 const ESRI_REFERENCE_LABELS =
   'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
-/** Google Satellite — no labels, most up-to-date imagery. */
-const GOOGLE_SATELLITE_URL = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+const ESRI_WORLD_IMAGERY_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 
 function createDefaultLayers(options: TileLayerOptions): TileLayerSet {
   const streets = new TileLayer({
@@ -35,9 +35,9 @@ function createDefaultLayers(options: TileLayerOptions): TileLayerSet {
   const satellite = new TileLayer({
     preload: 0,
     source: new XYZ({
-      url: GOOGLE_SATELLITE_URL,
-      maxZoom: 20,
-      attributions: 'Imagery \u00a9 Google',
+      url: ESRI_WORLD_IMAGERY_URL,
+      maxZoom: 19,
+      attributions: 'Tiles \u00a9 Esri',
     }),
     visible: options.initialMapType === 'satellite',
     properties: { role: 'satellite' },
@@ -123,15 +123,9 @@ export function createTileLayers(provider: MapTileProvider, options: TileLayerOp
 
 /**
  * Resolves which raster stack to use.
- * - VITE_MAP_PROVIDER=default → always free tiles (OSM/Esri), even if VITE_MAPBOX_TOKEN is set — saves Mapbox Raster/Static tile quota.
- * - VITE_MAP_PROVIDER=mapbox → Mapbox when token is set, else default.
- * - Unset VITE_MAP_PROVIDER → org preference if provided, else Mapbox when token is set (legacy).
- */
-/**
- * Resolves which raster stack to use.
- * - VITE_MAP_PROVIDER=default → free tiles (OSM + Esri Clarity satellite).
+ * - VITE_MAP_PROVIDER=default → free tiles (OSM streets + Esri World Imagery satellite).
  * - VITE_MAP_PROVIDER=mapbox  → Mapbox when token is set, else default.
- * - Unset VITE_MAP_PROVIDER   → default (Esri Clarity — free, recent imagery for Morocco).
+ * - Unset VITE_MAP_PROVIDER   → org preference when set, else default.
  */
 export function resolveMapProvider(orgMapProvider?: 'default' | 'mapbox' | null): MapTileProvider {
   const envRaw = import.meta.env.VITE_MAP_PROVIDER;
@@ -156,6 +150,5 @@ export function resolveMapProvider(orgMapProvider?: 'default' | 'mapbox' | null)
     return token ? 'mapbox' : 'default';
   }
 
-  // Default: Esri Clarity has recent, free satellite imagery for Morocco
   return 'default';
 }

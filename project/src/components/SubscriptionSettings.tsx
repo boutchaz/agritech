@@ -204,14 +204,14 @@ const SubscriptionSettings = () => {
 
   if (!hasSubscription || showModularPicker) {
     return (
-      <div className="p-4 sm:p-8 space-y-8 animate-in fade-in duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+      <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
+        <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
                 <Package className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+              <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
                 {t('subscription.modular.title', 'Choose Your Modules')}
               </h2>
             </div>
@@ -230,22 +230,22 @@ const SubscriptionSettings = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-5">
+        <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-5">
             <SubscriptionModulePicker
               selectedModules={selectedModules}
               onChange={setSelectedModules}
             />
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             <HectarePricingCalculator
               hectares={modularHectares}
               onChange={setModularHectares}
             />
           </div>
 
-          <div className="lg:col-span-4">
+          <div className="min-w-0 lg:col-span-4">
             <SubscriptionQuoteSummary
               selectedModules={selectedModules}
               hectares={modularHectares}
@@ -426,14 +426,14 @@ const SubscriptionSettings = () => {
     : null;
 
   return (
-    <div className="p-4 sm:p-8 space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
+      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
               <CreditCard className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {t('subscription.title', 'Subscription')}
             </h2>
           </div>

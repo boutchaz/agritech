@@ -109,7 +109,7 @@ const ModulesSettings = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
         <div className="space-y-1">

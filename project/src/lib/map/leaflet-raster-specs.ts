@@ -13,13 +13,13 @@ export interface LeafletRasterLayerSpec {
 
 const ESRI_REFERENCE =
   'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const ESRI_WORLD_IMAGERY =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const OSM = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-/** Google Satellite — no labels, most up-to-date imagery. */
-const GOOGLE_SATELLITE = 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
 
 /**
  * Leaflet base stack aligned with OpenLayers tile-providers: Mapbox only when enabled,
- * otherwise OSM + Esri. Satellite "labels" use Esri reference — not Mapbox satellite-streets — to avoid doubling Mapbox raster traffic.
+ * otherwise OSM + Esri World Imagery. Optional reference labels overlay matches the parcel map stack.
  */
 export function getLeafletRasterLayerSpecs(
   provider: MapTileProvider,
@@ -35,12 +35,18 @@ export function getLeafletRasterLayerSpecs(
     }
     const layers: LeafletRasterLayerSpec[] = [
       {
-        url: GOOGLE_SATELLITE,
-        attribution: 'Imagery \u00a9 Google',
-        maxZoom: 20,
+        url: ESRI_WORLD_IMAGERY,
+        attribution: '\u00a9 <a href="https://www.esri.com/">Esri</a>',
+        maxZoom: 19,
       },
     ];
-    // Google Hybrid already includes labels, skip Esri reference
+    if (withLabels) {
+      layers.push({
+        url: ESRI_REFERENCE,
+        attribution: 'Labels \u00a9 Esri',
+        maxZoom: 19,
+      });
+    }
     return layers;
   }
 

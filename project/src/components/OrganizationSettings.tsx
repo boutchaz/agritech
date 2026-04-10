@@ -220,15 +220,15 @@ const OrganizationSettings = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 border-b border-slate-100 dark:border-slate-800 pb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl">
+      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
               <Building className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight uppercase">
+            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               {t('organization.title')}
             </h2>
           </div>
@@ -237,14 +237,14 @@ const OrganizationSettings = () => {
           </p>
         </div>
         
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <Button 
             variant="outline"
             onClick={async () => {
               const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
               window.open(url, '_blank', 'noopener,noreferrer');
             }}
-            className="h-12 px-6 rounded-2xl border-slate-200 dark:border-slate-700 text-xs font-semibold uppercase tracking-widest hover:bg-slate-50 transition-all"
+            className="h-12 w-full rounded-2xl border-slate-200 px-6 text-xs font-semibold uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700 sm:w-auto"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">Preview Marketplace</span>
@@ -256,7 +256,7 @@ const OrganizationSettings = () => {
               variant="default" 
               onClick={handleSave} 
               disabled={saving} 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest h-12 px-8 rounded-2xl shadow-lg shadow-emerald-100 dark:shadow-none transition-all duration-300"
+              className="h-12 w-full rounded-2xl bg-emerald-600 px-8 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:w-auto"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -286,28 +286,34 @@ const OrganizationSettings = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 w-fit overflow-x-auto no-scrollbar">
+      <div
+        className={cn(
+          "grid w-full max-w-full gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700/50 dark:bg-slate-900/50",
+          tabs.length > 1 ? "grid-cols-2" : "grid-cols-1",
+        )}
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all whitespace-nowrap",
+              "flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[10px] font-medium uppercase tracking-widest transition-all sm:px-6",
               activeTab === tab.id
-                ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-100 dark:border-slate-700"
-                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                ? "border border-slate-100 bg-white text-emerald-600 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-400"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300",
             )}
           >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
+            <tab.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* General Settings Tab */}
       {activeTab === 'general' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-7 space-y-8">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          <div className="min-w-0 space-y-8 lg:col-span-7">
             {/* Basic Information */}
             <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
               <CardHeader className="p-8 pb-4">
@@ -443,7 +449,7 @@ const OrganizationSettings = () => {
             </Card>
           </div>
 
-          <div className="lg:col-span-5 space-y-8">
+          <div className="min-w-0 space-y-8 lg:col-span-5">
             {/* Contact Information */}
             <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
               <CardHeader className="p-8 pb-4">

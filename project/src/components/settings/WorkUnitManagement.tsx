@@ -427,7 +427,7 @@ export function WorkUnitManagement() {
   return (
     <>
       <ListPageLayout
-        className="space-y-8 animate-in fade-in duration-500"
+        className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500"
         header={
           <div className="flex flex-col justify-between gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end">
             <div className="space-y-1">
