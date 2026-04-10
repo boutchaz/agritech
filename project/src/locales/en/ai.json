@@ -325,6 +325,12 @@
       "fullscreen": "Full screen",
       "fullscreenTitle": "Spectral thresholds — enlarged view"
     },
+    "zones": {
+      "title": "Intra-parcel zoning",
+      "mapPlaceholder": "Zoning map",
+      "rasterPixels": "Raster pixels:",
+      "needsBoundary": "Zoning needs the parcel boundary to display on the map. Add or update the parcel geometry."
+    },
     "expertLecture": {
       "title": "Expert Audit",
       "rulesApplied": "Protocol Rules Applied",

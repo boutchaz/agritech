@@ -325,6 +325,12 @@
       "fullscreen": "Plein écran",
       "fullscreenTitle": "Seuils spectraux — vue agrandie"
     },
+    "zones": {
+      "title": "ZONAGE INTRA-PARCELLAIRE",
+      "mapPlaceholder": "Carte de zonage",
+      "rasterPixels": "Pixels raster :",
+      "needsBoundary": "Le zonage nécessite la limite de la parcelle pour être affiché sur la carte. Ajoutez ou mettez à jour la géométrie de la parcelle."
+    },
     "expertLecture": {
       "title": "Audit Expert",
       "rulesApplied": "Règles du protocole appliquées",
