@@ -43,14 +43,18 @@ import {
 import { detectPhaseAgeFromReferentiel } from "./phase-age-detector";
 
 /**
- * Calibration satellite lookback depth depends on tree age, per spec.
+ * Calibration satellite lookback depth depends on tree phase from referentiel.
  *
- * | Parcel Age        | Lookback                  |
- * |-------------------|---------------------------|
- * | ≥ 3 years         | 36 months                 |
- * | 2–3 years         | 24 months                 |
- * | < 2 years         | Jan 1 of planting year    |
- * | No planting year  | 24 months (default)       |
+ * | Phase              | Lookback                  |
+ * |--------------------|---------------------------|
+ * | pleine_production  | 36 months                 |
+ * | senescence         | 36 months                 |
+ * | entree_production  | 24 months                 |
+ * | juvenile           | Jan 1 of planting year    |
+ * | No planting year   | 24 months (default)       |
+ *
+ * Phase thresholds come from the crop referentiel (e.g. olive: juvenile < 5y,
+ * entree_production < 10y) via detectPhaseAgeFromReferentiel.
  *
  * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
  * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
@@ -61,22 +65,38 @@ import { detectPhaseAgeFromReferentiel } from "./phase-age-detector";
  */
 const MAX_LOOKBACK_DAYS = 1090;
 
-function getCalibrationLookbackDate(plantingYear: number | null): string {
+function getCalibrationLookbackDate(
+  plantingYear: number | null,
+  cropType?: string | null,
+  system?: string | null,
+): string {
   const now = new Date();
 
   let start: Date;
 
   if (plantingYear != null) {
-    const parcelAge = now.getFullYear() - plantingYear;
+    const ageAns = now.getFullYear() - plantingYear;
 
-    if (parcelAge >= 3) {
-      // 36 months, clamped to MAX_LOOKBACK_DAYS
+    // Resolve phase from referentiel if crop data is available
+    let phase: string;
+    if (cropType) {
+      const ref = getLocalCropReference(cropType);
+      phase = ref
+        ? detectPhaseAgeFromReferentiel(ageAns, system ?? 'intensif', ref)
+        : 'unknown';
+    } else {
+      phase = 'unknown';
+    }
+
+    if (phase === 'pleine_production' || phase === 'senescence') {
+      // Mature trees: 36 months
       start = new Date();
       start.setMonth(start.getMonth() - 36);
-    } else if (parcelAge < 2) {
+    } else if (phase === 'juvenile') {
+      // Young trees: from planting year
       start = new Date(`${plantingYear}-01-01`);
     } else {
-      // 2–3 years: 24 months
+      // entree_production or unknown: 24 months
       start = new Date();
       start.setMonth(start.getMonth() - 24);
     }
@@ -581,7 +601,7 @@ export class CalibrationService {
         started_at: startedAt,
         calibration_version: "v3",
         profile_snapshot: {
-          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system) },
           parcel: {
             id: parcel.id,
             crop_type: parcel.cropType,
@@ -752,7 +772,7 @@ export class CalibrationService {
         previous_baseline: previousBaseline,
         calibration_version: "v3",
         profile_snapshot: {
-          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
+          request: { ...dto, lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system) },
           recalibration: {
             motif,
             motif_detail: dto.recalibration_motif_detail ?? null,
@@ -1092,7 +1112,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 5;
     const completedAt = new Date().toISOString();
-    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -1204,7 +1224,7 @@ export class CalibrationService {
     const calibrationData = {
       ...existingPartialData,
       version: "v2",
-      request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear) },
+      request: { ...dto, mode_calibrage: "partial", lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system) },
       recalibration: {
         motif,
         motif_detail: dto.recalibration_motif_detail ?? null,
@@ -1414,7 +1434,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const totalSteps = 7;
     const completedAt = new Date().toISOString();
-    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear);
+    const calibrationDataStart = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const emitProgress = (step: number, stepKey: string, message: string) =>
       this.emitCalibrationProgress(organizationId, parcelId, calibrationId, step, totalSteps, stepKey, message);
 
@@ -1515,7 +1535,7 @@ export class CalibrationService {
         return coord;
       });
 
-      const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
+      const sinceDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
       const today = new Date().toISOString().split("T")[0];
 
       const rasterResult = await this.satelliteProxy.proxy("POST", "/calibration/v2/extract-raster", {
@@ -1706,7 +1726,7 @@ export class CalibrationService {
       request: {
         ...this.toJsonObject(existingCalibrationData.request),
         ...dto,
-        lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear),
+        lookback_start_date: getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system),
       },
       parcel: {
         id: parcel.id,
@@ -2369,7 +2389,7 @@ export class CalibrationService {
     const satelliteImages = await this.fetchSatelliteImages(
       parcelId,
       organizationId,
-      getCalibrationLookbackDate(parcel.plantingYear),
+      getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system),
     );
     const hasMinSatellite = satelliteImages.length >= 10;
     checks.push(
@@ -2763,7 +2783,7 @@ export class CalibrationService {
     const supabase = this.databaseService.getAdminClient();
     const { data: parcelAiRow } = await supabase
       .from("parcels")
-      .select("ai_phase, ai_enabled, ai_observation_only, planting_year")
+      .select("ai_phase, ai_enabled, ai_observation_only, planting_year, crop_type, planting_system")
       .eq("id", parcelId)
       .maybeSingle();
 
@@ -2782,7 +2802,7 @@ export class CalibrationService {
     );
 
     const dataEnd = new Date().toISOString().split("T")[0];
-    const dataStart = getCalibrationLookbackDate(parcelAiRow?.planting_year ?? null);
+    const dataStart = getCalibrationLookbackDate(parcelAiRow?.planting_year ?? null, parcelAiRow?.crop_type, parcelAiRow?.planting_system);
 
     // Resolve provider: org-configured first, then system fallback
     const { provider, model } = await this.aiReportsService.resolveProvider(organizationId);
@@ -3377,7 +3397,7 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear);
+    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
 
     const { data, error } = await supabase
       .from("weather_daily_data")
@@ -3412,7 +3432,7 @@ export class CalibrationService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const startDate = getCalibrationLookbackDate(parcel.plantingYear);
+    const startDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const endDate = new Date().toISOString().split("T")[0];
 
     const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {

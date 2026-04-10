@@ -1,4 +1,5 @@
 import {  useState, useEffect, useCallback, useMemo, useRef  } from "react";
+import { toast } from 'sonner';
 import { 
   LineChart, 
   Line, 
@@ -213,14 +214,21 @@ const TimeSeriesChart = ({
     if (!organizationId || isSyncingAll) return;
     setIsSyncingAll(true);
     try {
-      await apiRequest(`/api/v1/parcels/${parcelId}/sync-and-calibrate`, {
+      const result = await apiRequest<{ status: string; message: string }>(`/api/v1/parcels/${parcelId}/sync-and-calibrate`, {
         method: 'POST',
       }, organizationId);
+      if (result.status === 'started') {
+        toast.success(t('timeSeries.calibration.syncStarted', 'Satellite sync started. Calibration will follow automatically.'));
+      } else {
+        toast.warning(result.message || t('timeSeries.calibration.syncSkipped', 'Sync was skipped.'));
+      }
     } catch (err) {
-      console.error('Failed to trigger full sync:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('Failed to trigger full sync:', message);
+      toast.error(message);
     }
     setIsSyncingAll(false);
-  }, [organizationId, parcelId, isSyncingAll]);
+  }, [organizationId, parcelId, isSyncingAll, t]);
 
   useEffect(() => {
     if (startDate) {
