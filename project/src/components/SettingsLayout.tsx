@@ -23,6 +23,8 @@ import {
   PanelLeft,
   ChevronDown,
   Home,
+  Megaphone,
+  BookOpen,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -246,6 +248,22 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: FileText,
             path: "/settings/documents",
             description: t("settings.menu.documentsDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "banners",
+            name: t("settings.banners.title", "Banners"),
+            icon: Megaphone,
+            path: "/settings/banners",
+            description: t("settings.banners.description", "In-app announcements"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "changelog",
+            name: t("settings.changelog.title", "Changelog"),
+            icon: BookOpen,
+            path: "/settings/changelog",
+            description: t("settings.changelog.description", "Product change history"),
             roles: ADMIN_ROLES,
           },
         ],

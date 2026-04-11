@@ -1353,7 +1353,7 @@
       "legal": "Legal",
       "terms": "Terms of Service",
       "privacy": "Privacy Policy",
-      "madeIn": "Made with 🌱 in Morocco",
+      "madeInCredit": "Made with love in Morocco by <codelovers>CodeLovers</codelovers>",
       "copyright": "All rights reserved.",
       "features": "Features",
       "pricing": "Pricing",
@@ -1663,6 +1663,10 @@
       "dangerZoneDescription": "Manage demo data and critical actions",
       "legal": "Legal",
       "legalDescription": "Terms of service and privacy policy",
+      "banners": "Banners",
+      "bannersDescription": "In-app announcements",
+      "changelog": "Changelog",
+      "changelogDescription": "Product change history",
       "sections": {
         "personal": "Personal",
         "organization": "Organization",
@@ -1672,6 +1676,17 @@
         "system": "System"
       }
     }
+  },
+  "banners": {
+    "title": "Banners",
+    "description": "Temporary in-app messages for your organization",
+    "empty": "No banners yet. Create one to notify your team.",
+    "dismissible": "Dismissible"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Public history of product changes",
+    "empty": "No changelog entries yet. Document your first release."
   },
   "emailTemplates": {
     "title": "Email Templates",

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -1634,14 +1634,15 @@ const AICalibrationPage = () => {
   const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
+  const [lastCalibrationLaunchAt, setLastCalibrationLaunchAt] = useState<number | null>(null);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
-  const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
-  const { data: phase } = useCalibrationPhase(parcelId);
+  const { data: calibration, isLoading: isCalibrationLoading, refetch: refetchCalibration } = useAICalibration(parcelId);
+  const { data: phase, refetch: refetchPhase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
   const calibrationProgress = useCalibrationProgress(parcelId);
 
-  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
+  const { data: reportData, isLoading: isReportLoading, refetch: refetchReport } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { data: annualPlan } = useAIPlan(parcelId);
   const { data: aiRecommendations } = useAIRecommendations(parcelId);
@@ -1669,6 +1670,9 @@ const AICalibrationPage = () => {
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && parcelData?.ai_observation_only === true;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
+  const isWaitingForCalibrationResult =
+    lastCalibrationLaunchAt !== null &&
+    !(hasV2Report || calibrationCompletedButPhaseStuck || phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || isFailed);
 
   const handleOpenPartialRecalibration = () => {
     setIsPartialWizardOpen(true);
@@ -1691,6 +1695,39 @@ const AICalibrationPage = () => {
   const handleCloseFullWizard = () => {
     setIsFullWizardOpen(false);
   };
+
+  const handleCalibrationLaunchStarted = () => {
+    setLastCalibrationLaunchAt(Date.now());
+    setIsFullWizardOpen(false);
+  };
+
+  useEffect(() => {
+    if (!parcelId || (!isWaitingForCalibrationResult && !isCalibrating)) {
+      return;
+    }
+
+    const pollCalibrationState = () => {
+      void refetchCalibration();
+      void refetchPhase();
+      void refetchReport();
+      void refetchParcel();
+    };
+
+    pollCalibrationState();
+    const intervalId = window.setInterval(pollCalibrationState, 4000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    isCalibrating,
+    isWaitingForCalibrationResult,
+    parcelId,
+    refetchCalibration,
+    refetchParcel,
+    refetchPhase,
+    refetchReport,
+  ]);
 
   if (isCalibrationLoading || isReportLoading) {
     return <SectionLoader className="h-64 py-0" />;
@@ -1816,7 +1853,11 @@ const AICalibrationPage = () => {
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
+            <CalibrationWizard
+              parcelId={parcelId}
+              parcelData={parcelData}
+              onStarted={handleCalibrationLaunchStarted}
+            />
           </div>
       </ResponsiveDialog>
 
@@ -1911,8 +1952,12 @@ const AICalibrationPage = () => {
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
       )}
 
-      {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && (
-        <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
+      {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && !isWaitingForCalibrationResult && (
+        <CalibrationWizard
+          parcelId={parcelId}
+          parcelData={parcelData}
+          onStarted={handleCalibrationLaunchStarted}
+        />
       )}
 
       {isCalibrating && (

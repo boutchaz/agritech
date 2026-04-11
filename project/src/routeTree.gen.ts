@@ -89,7 +89,9 @@ import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './ro
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
 import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
+import { Route as AuthenticatedsettingsSettingsChangelogRouteImport } from './routes/_authenticated/(settings)/settings.changelog'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
+import { Route as AuthenticatedsettingsSettingsBannersRouteImport } from './routes/_authenticated/(settings)/settings.banners'
 import { Route as AuthenticatedsettingsSettingsAiRouteImport } from './routes/_authenticated/(settings)/settings.ai'
 import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
 import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
@@ -612,10 +614,22 @@ const AuthenticatedsettingsSettingsCostCentersRoute =
     path: '/cost-centers',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsChangelogRoute =
+  AuthenticatedsettingsSettingsChangelogRouteImport.update({
+    id: '/changelog',
+    path: '/changelog',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedsettingsSettingsBiologicalAssetsRoute =
   AuthenticatedsettingsSettingsBiologicalAssetsRouteImport.update({
     id: '/biological-assets',
     path: '/biological-assets',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsBannersRoute =
+  AuthenticatedsettingsSettingsBannersRouteImport.update({
+    id: '/banners',
+    path: '/banners',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsAiRoute =
@@ -1089,7 +1103,9 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/settings/banners': typeof AuthenticatedsettingsSettingsBannersRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
+  '/settings/changelog': typeof AuthenticatedsettingsSettingsChangelogRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
@@ -1228,7 +1244,9 @@ export interface FileRoutesByTo {
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/settings/banners': typeof AuthenticatedsettingsSettingsBannersRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
+  '/settings/changelog': typeof AuthenticatedsettingsSettingsChangelogRoute
   '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
@@ -1372,7 +1390,9 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
   '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/_authenticated/(settings)/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/_authenticated/(settings)/settings/banners': typeof AuthenticatedsettingsSettingsBannersRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
+  '/_authenticated/(settings)/settings/changelog': typeof AuthenticatedsettingsSettingsChangelogRoute
   '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
@@ -1519,7 +1539,9 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/account-mappings'
     | '/settings/ai'
+    | '/settings/banners'
     | '/settings/biological-assets'
+    | '/settings/changelog'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
@@ -1658,7 +1680,9 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/account-mappings'
     | '/settings/ai'
+    | '/settings/banners'
     | '/settings/biological-assets'
+    | '/settings/changelog'
     | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
@@ -1801,7 +1825,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/account'
     | '/_authenticated/(settings)/settings/account-mappings'
     | '/_authenticated/(settings)/settings/ai'
+    | '/_authenticated/(settings)/settings/banners'
     | '/_authenticated/(settings)/settings/biological-assets'
+    | '/_authenticated/(settings)/settings/changelog'
     | '/_authenticated/(settings)/settings/cost-centers'
     | '/_authenticated/(settings)/settings/danger-zone'
     | '/_authenticated/(settings)/settings/dashboard'
@@ -2436,11 +2462,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsCostCentersRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
+    '/_authenticated/(settings)/settings/changelog': {
+      id: '/_authenticated/(settings)/settings/changelog'
+      path: '/changelog'
+      fullPath: '/settings/changelog'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsChangelogRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
     '/_authenticated/(settings)/settings/biological-assets': {
       id: '/_authenticated/(settings)/settings/biological-assets'
       path: '/biological-assets'
       fullPath: '/settings/biological-assets'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/banners': {
+      id: '/_authenticated/(settings)/settings/banners'
+      path: '/banners'
+      fullPath: '/settings/banners'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsBannersRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/ai': {
@@ -3170,7 +3210,9 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
   AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   AuthenticatedsettingsSettingsAiRoute: typeof AuthenticatedsettingsSettingsAiRoute
+  AuthenticatedsettingsSettingsBannersRoute: typeof AuthenticatedsettingsSettingsBannersRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
+  AuthenticatedsettingsSettingsChangelogRoute: typeof AuthenticatedsettingsSettingsChangelogRoute
   AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
@@ -3195,8 +3237,12 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
     AuthenticatedsettingsSettingsAccountMappingsRoute:
       AuthenticatedsettingsSettingsAccountMappingsRoute,
     AuthenticatedsettingsSettingsAiRoute: AuthenticatedsettingsSettingsAiRoute,
+    AuthenticatedsettingsSettingsBannersRoute:
+      AuthenticatedsettingsSettingsBannersRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:
       AuthenticatedsettingsSettingsBiologicalAssetsRoute,
+    AuthenticatedsettingsSettingsChangelogRoute:
+      AuthenticatedsettingsSettingsChangelogRoute,
     AuthenticatedsettingsSettingsCostCentersRoute:
       AuthenticatedsettingsSettingsCostCentersRoute,
     AuthenticatedsettingsSettingsDangerZoneRoute:

@@ -1342,7 +1342,7 @@
       "legal": "قانوني",
       "terms": "الشروط والأحكام",
       "privacy": "سياسة الخصوصية",
-      "madeIn": "صُنع بـ 🌱 في المغرب",
+      "madeInCredit": "صُنع بكل حب في المغرب بواسطة <codelovers>CodeLovers</codelovers>",
       "copyright": "جميع الحقوق محفوظة.",
       "features": "المميزات",
       "pricing": "الأسعار",
@@ -1652,8 +1652,23 @@
         "accounting": "المحاسبة والمالية",
         "content": "المحتوى والعرض",
         "system": "النظام"
-      }
+      },
+      "banners": "اللافتات",
+      "bannersDescription": "إعلانات داخل التطبيق",
+      "changelog": "سجل التغييرات",
+      "changelogDescription": "تاريخ تغييرات المنتج"
     }
+  },
+  "banners": {
+    "title": "اللافتات",
+    "description": "رسائل مؤقتة داخل التطبيق لمنظمتك",
+    "empty": "لا توجد لافتات. أنشئ واحدة لإعلام فريقك.",
+    "dismissible": "قابلة للإخفاء"
+  },
+  "changelog": {
+    "title": "سجل التغييرات",
+    "description": "التاريخ العام لتغييرات المنتج",
+    "empty": "لا توجد إدخلات. وثّق أول إصدار لك."
   },
   "emailTemplates": {
     "title": "قوالب البريد الإلكتروني",

@@ -23776,4 +23776,111 @@ CREATE TRIGGER set_email_templates_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 
+-- =====================================================
+-- BANNERS
+-- =====================================================
+-- Admin-configurable in-app banners for temporary operational messaging:
+-- maintenance windows, degraded service warnings, feature rollout notices, etc.
+
+CREATE TABLE IF NOT EXISTS banners (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'info' CHECK (severity IN ('info', 'success', 'warning', 'critical')),
+  audience TEXT NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'admins', 'managers', 'growers')),
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  dismissible BOOLEAN NOT NULL DEFAULT true,
+  cta_label TEXT,
+  cta_url TEXT,
+  priority INTEGER NOT NULL DEFAULT 0,
+  start_at TIMESTAMPTZ,
+  end_at TIMESTAMPTZ,
+  impressions INTEGER NOT NULL DEFAULT 0,
+  dismissals INTEGER NOT NULL DEFAULT 0,
+  created_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON banners
+  FOR ALL USING (public.is_organization_member(organization_id));
+
+CREATE INDEX IF NOT EXISTS idx_banners_org ON banners (organization_id);
+CREATE INDEX IF NOT EXISTS idx_banners_active ON banners (organization_id, enabled, start_at, end_at);
+
+CREATE TRIGGER set_banners_updated_at
+  BEFORE UPDATE ON banners
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- BANNER DISMISSALS
+-- =====================================================
+-- Tracks which users have dismissed which banners, preventing re-show.
+
+CREATE TABLE IF NOT EXISTS banner_dismissals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  banner_id UUID NOT NULL REFERENCES banners(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  dismissed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(banner_id, user_id)
+);
+
+ALTER TABLE banner_dismissals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON banner_dismissals
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM banners b
+      WHERE b.id = banner_dismissals.banner_id
+      AND public.is_organization_member(b.organization_id)
+    )
+  );
+
+
+-- =====================================================
+-- CHANGELOGS
+-- =====================================================
+-- Durable, browsable history of user-facing product changes.
+
+CREATE TABLE IF NOT EXISTS changelogs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  version TEXT,
+  category TEXT NOT NULL DEFAULT 'feature' CHECK (category IN ('feature', 'improvement', 'fix', 'breaking', 'infra')),
+  published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  is_global BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE changelogs ENABLE ROW LEVEL SECURITY;
+
+-- Global changelogs are visible to everyone; org-specific ones only to org members
+CREATE POLICY "changelog_read" ON changelogs
+  FOR SELECT USING (
+    is_global = true
+    OR (organization_id IS NOT NULL AND public.is_organization_member(organization_id))
+  );
+
+CREATE POLICY "changelog_manage" ON changelogs
+  FOR ALL USING (public.is_organization_member(COALESCE(organization_id, '00000000-0000-0000-0000-000000000000')));
+
+
+CREATE INDEX IF NOT EXISTS idx_changelogs_published ON changelogs (published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_changelogs_org ON changelogs (organization_id);
+CREATE INDEX IF NOT EXISTS idx_changelogs_global ON changelogs (is_global) WHERE is_global = true;
+
+CREATE TRIGGER set_changelogs_updated_at
+  BEFORE UPDATE ON changelogs
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 

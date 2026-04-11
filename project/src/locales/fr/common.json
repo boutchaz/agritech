@@ -1353,7 +1353,7 @@
       "legal": "Légal",
       "terms": "Mentions légales",
       "privacy": "Politique de confidentialité",
-      "madeIn": "Made with 🌱 in Morocco",
+      "madeInCredit": "Fait avec amour au Maroc par <codelovers>CodeLovers</codelovers>",
       "copyright": "Tous droits réservés.",
       "features": "Fonctionnalités",
       "pricing": "Tarifs",
@@ -1659,6 +1659,10 @@
       "dangerZoneDescription": "Gérer les données de démo et actions critiques",
       "legal": "Mentions Légales",
       "legalDescription": "CGU et politique de confidentialité",
+      "banners": "Bannières",
+      "bannersDescription": "Annonces dans l'application",
+      "changelog": "Journal des modifications",
+      "changelogDescription": "Historique des changements produit",
       "sections": {
         "personal": "Personnel",
         "organization": "Organisation",
@@ -1668,6 +1672,17 @@
         "system": "Système"
       }
     }
+  },
+  "banners": {
+    "title": "Bannières",
+    "description": "Messages temporaires dans l'application pour votre organisation",
+    "empty": "Aucune bannière. Créez-en une pour informer votre équipe.",
+    "dismissible": "Masquable"
+  },
+  "changelog": {
+    "title": "Journal des modifications",
+    "description": "Historique public des changements produit",
+    "empty": "Aucune entrée. Documentez votre première version."
   },
   "emailTemplates": {
     "title": "Templates d'Emails",

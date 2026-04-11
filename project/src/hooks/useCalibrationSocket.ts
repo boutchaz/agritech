@@ -56,6 +56,9 @@ export function useCalibrationSocket(parcelId: string): void {
         queryKey: ['ai-calibration', parcelId],
       });
       queryClient.invalidateQueries({
+        queryKey: ['parcel', parcelId],
+      });
+      queryClient.invalidateQueries({
         queryKey: ['ai-plan', parcelId, organizationId],
       });
       queryClient.invalidateQueries({

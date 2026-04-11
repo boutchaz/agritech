@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
+import { useTranslation, Trans } from 'react-i18next';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import {
   MapPin,
@@ -512,10 +512,12 @@ const LandingPage = () => {
               </h2>
             </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-start max-w-[1000px] mx-auto relative gap-12 md:gap-0">
+            <div className="relative mx-auto flex max-w-[1000px] flex-col items-center gap-12 md:flex-row md:items-start md:justify-between md:gap-0">
               {[1, 2, 3].map((n, idx) => (
                 <React.Fragment key={n}>
-                  <div className={`flex-1 text-center px-4 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${idx > 0 ? 'delay-200' : ''}`}>
+                  <div
+                    className={`w-full max-w-md text-center px-4 md:max-w-none md:flex-1 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${idx > 0 ? 'delay-200' : ''}`}
+                  >
                     <div className="relative inline-block group mb-8">
                       <div className="w-16 h-16 bg-background border-2 border-primary text-primary rounded-2xl flex items-center justify-center font-[Montserrat,sans-serif] text-2xl font-extrabold shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 transform group-hover:rotate-12">
                         {n}
@@ -887,7 +889,23 @@ const LandingPage = () => {
 
           <div className="flex flex-col sm:flex-row justify-between items-center pt-10 border-t border-white/5 text-white/40 text-sm gap-6">
             <p className="font-medium">&copy; {new Date().getFullYear()} AGROGINA. {t('landing.footer.copyright')}</p>
-            <p className="px-4 py-1 bg-white/5 rounded-full border border-white/5 font-bold uppercase tracking-tighter">{t('landing.footer.madeIn')}</p>
+            <p className="max-w-full px-4 py-2 text-center text-xs font-medium normal-case leading-snug tracking-normal text-white/70 sm:text-sm">
+              <span className="inline-flex flex-wrap items-center justify-center gap-x-1 rounded-full border border-white/10 bg-white/5 px-4 py-1.5">
+                <Trans
+                  i18nKey="landing.footer.madeInCredit"
+                  components={{
+                    codelovers: (
+                      <a
+                        href="https://wearecodelovers.com/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary"
+                      />
+                    ),
+                  }}
+                />
+              </span>
+            </p>
           </div>
         </div>
       </footer>

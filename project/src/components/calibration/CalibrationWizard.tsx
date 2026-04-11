@@ -32,6 +32,7 @@ import { ValidationStep } from './steps/ValidationStep';
 interface CalibrationWizardProps {
   parcelId: string;
   parcelData?: Parcel | null;
+  onStarted?: () => void;
 }
 
 interface WizardStepDefinition {
@@ -66,7 +67,7 @@ function mapWaterSourceForAnalysis(source: CalibrationWizardFormValues['water_so
   return source;
 }
 
-export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardProps) {
+export function CalibrationWizard({ parcelId, parcelData, onStarted }: CalibrationWizardProps) {
   const { t } = useTranslation('ai');
   const { currentOrganization } = useAuth();
   const startCalibration = useStartCalibration(parcelId);
@@ -443,6 +444,7 @@ export function CalibrationWizard({ parcelId, parcelData }: CalibrationWizardPro
     // Keep draft until calibration completes successfully.
     // If processing fails, the user can retry without re-entering data.
     resetStore();
+    onStarted?.();
     toast.success('Calibrage lance.');
   };
 

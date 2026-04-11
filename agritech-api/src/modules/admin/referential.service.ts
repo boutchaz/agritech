@@ -5,6 +5,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import {
+  buildReferentialSchema,
+  formatZodErrors,
+} from '../../../../shared/referential-schema';
 
 export interface ReferentialSummary {
   crop: string;
@@ -108,7 +112,19 @@ export class ReferentialService {
     }
 
     const original = data[section];
-    const errors = this.validateStructure(original, value, section);
+    const structuralErrors = this.validateStructure(original, value, section);
+    const merged = { ...data, [section]: value };
+    const schemaErrors = this.validateWithSchema(crop, merged);
+    const errors = [...structuralErrors, ...schemaErrors];
+    return { valid: errors.length === 0, errors };
+  }
+
+  async validateReferential(
+    crop: string,
+    value: unknown,
+  ): Promise<{ valid: boolean; errors: ValidationError[] }> {
+    await this.getOne(crop);
+    const errors = this.validateDocument(crop, value);
     return { valid: errors.length === 0, errors };
   }
 
@@ -129,7 +145,10 @@ export class ReferentialService {
 
     // Validate structure before writing
     const original = data[section];
-    const errors = this.validateStructure(original, value, section);
+    const structuralErrors = this.validateStructure(original, value, section);
+    const merged = { ...data, [section]: value };
+    const schemaErrors = this.validateWithSchema(crop, merged);
+    const errors = [...structuralErrors, ...schemaErrors];
     if (errors.length > 0) {
       throw new BadRequestException({ message: 'Schema validation failed', errors });
     }
@@ -166,6 +185,53 @@ export class ReferentialService {
     }
 
     return { success: true, crop, section };
+  }
+
+  async updateReferential(
+    crop: string,
+    value: unknown,
+  ): Promise<{ success: boolean; crop: string }> {
+    await this.getOne(crop);
+
+    const errors = this.validateDocument(crop, value);
+    if (errors.length > 0) {
+      throw new BadRequestException({ message: 'Schema validation failed', errors });
+    }
+
+    const normalizedCrop = crop.toLowerCase();
+    const referenceData = this.normalizeDocument(
+      normalizedCrop,
+      value as Record<string, unknown>,
+    );
+    const metadata = referenceData.metadata as Record<string, unknown>;
+    const version =
+      typeof metadata.version === 'string' && metadata.version.trim().length > 0
+        ? metadata.version
+        : 'unknown';
+
+    const { error } = await this.supabase
+      .from('crop_ai_references')
+      .update({
+        reference_data: referenceData,
+        version,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('crop_type', normalizedCrop);
+
+    if (error) {
+      throw new BadRequestException(`Failed to update referential: ${error.message}`);
+    }
+
+    this.logger.log(`Updated referential "${normalizedCrop}"`);
+
+    try {
+      const { reloadCropReferences } = require('../calibration/crop-reference-loader');
+      reloadCropReferences();
+    } catch {
+      // loader may not be available in all contexts
+    }
+
+    return { success: true, crop: normalizedCrop };
   }
 
   async create(
@@ -287,6 +353,44 @@ export class ReferentialService {
     }
 
     return errors;
+  }
+
+  private validateDocument(
+    crop: string,
+    value: unknown,
+  ): ValidationError[] {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return [{ path: '', message: 'Referential must be a JSON object' }];
+    }
+    return this.validateWithSchema(crop, value);
+  }
+
+  private validateWithSchema(
+    crop: string,
+    value: unknown,
+  ): ValidationError[] {
+    const result = buildReferentialSchema(crop.toLowerCase()).safeParse(value);
+    if (result.success) {
+      return [];
+    }
+    return formatZodErrors(result.error);
+  }
+
+  private normalizeDocument(
+    crop: string,
+    value: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const cloned = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+    const metadata =
+      cloned.metadata && typeof cloned.metadata === 'object' && !Array.isArray(cloned.metadata)
+        ? { ...(cloned.metadata as Record<string, unknown>) }
+        : {};
+
+    metadata.culture = crop;
+    metadata.last_modified = new Date().toISOString().slice(0, 10);
+    cloned.metadata = metadata;
+
+    return cloned;
   }
 
   private extractSchema(value: unknown): unknown {

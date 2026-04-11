@@ -147,6 +147,22 @@ export class AdminController {
     return this.referentialService.getOne(crop);
   }
 
+  @Put('referentials/:crop')
+  async updateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.updateReferential(crop, body);
+  }
+
+  @Post('referentials/:crop/validate')
+  async validateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.validateReferential(crop, body);
+  }
+
   @Get('referentials/:crop/:section')
   async getReferentialSection(
     @Param('crop') crop: string,

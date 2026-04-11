@@ -7,6 +7,7 @@ import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
 import MobileBottomNav from '../components/MobileBottomNav'
+import BannerDisplay from '../components/BannerDisplay'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { useAuth } from '../hooks/useAuth'
 import { useSubscription } from '../hooks/useSubscription'
@@ -158,6 +159,7 @@ function AuthenticatedLayout() {
         >
           <LegacyUserBanner />
           <SubscriptionBanner />
+          <BannerDisplay />
           <NotificationRealtimeBridge />
           {/* <header className="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <div className="px-6 py-4 flex items-center justify-between">
