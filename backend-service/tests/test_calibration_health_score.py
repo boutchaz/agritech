@@ -173,3 +173,36 @@ def test_step8_anomalies_reduce_stability() -> None:
         unstable.health_score.components["stability"]
         < stable.health_score.components["stability"]
     )
+
+
+def test_step8_ignores_interpolated_points_in_recent_medians() -> None:
+    _, step3, step5, step7 = _base_inputs()
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {
+                "NDVI": [
+                    {
+                        "date": date(2025, 9, 1).isoformat(),
+                        "value": 0.6,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": date(2025, 10, 1).isoformat(),
+                        "value": 0.2,
+                        "interpolated": True,
+                    },
+                ],
+                "NDMI": [{"date": date(2025, 10, 1).isoformat(), "value": 0.46}],
+                "NDRE": [{"date": date(2025, 10, 1).isoformat(), "value": 0.52}],
+            },
+            "cloud_coverage_mean": 12,
+            "filtered_image_count": 0,
+            "outlier_count": 0,
+            "interpolated_dates": [date(2025, 10, 1).isoformat()],
+            "raster_paths": {"NDVI": [], "NDMI": [], "NDRE": []},
+        }
+    )
+
+    output = calculate_health_score(step1=step1, step3=step3, step5=step5, step7=step7)
+
+    assert output.health_score.components["vigor"] > 70

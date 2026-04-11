@@ -42,10 +42,13 @@ def detect_anomalies(
     anomalies: list[AnomalyRecord] = []
 
     for index, points in satellite.index_time_series.items():
-        if len(points) < 6:
+        observed_points = [
+            point for point in points if not point.interpolated and not point.outlier
+        ]
+        if len(observed_points) < 6:
             continue
 
-        ordered = sorted(points, key=lambda point: point.date)
+        ordered = sorted(observed_points, key=lambda point: point.date)
 
         # Referential thresholds: flag points below alerte (and optionally below vigilance)
         if reference_data and planting_system:

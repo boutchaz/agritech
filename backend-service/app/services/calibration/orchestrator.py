@@ -19,13 +19,13 @@ from .pipeline.s1_satellite_extraction import (
 )
 from .pipeline.s2_weather_extraction import extract_weather_history
 from .pipeline.s3_percentile_calculation import calculate_percentiles
+from .pipeline.s3_percentile_calculation import MIN_PERCENTILE_SAMPLES
 from .pipeline.s4_phenology_detection import detect_phenology
 from .pipeline.s5_anomaly_detection import detect_anomalies
 from .pipeline.s6_yield_potential import calculate_yield_potential
 from .pipeline.s7_zone_detection import classify_zones
 from .pipeline.s8_health_score import calculate_health_score
 from .support.gdd_service import precompute_gdd_rows
-from .referential_utils import get_gdd_tbase_tupper
 from .types import (
     CalibrationInput,
     CalibrationMetadata,
@@ -136,6 +136,20 @@ def _latest_analysis_fields(
     return parsed, data if isinstance(data, dict) else {}
 
 
+def _observed_points(points: list[Any]) -> list[Any]:
+    return [
+        point for point in points if not point.interpolated and not point.outlier
+    ]
+
+
+def _observed_month_span(points: list[Any]) -> int:
+    if not points:
+        return 0
+    first = min(point.date for point in points)
+    last = max(point.date for point in points)
+    return ((last.year - first.year) * 12) + (last.month - first.month) + 1
+
+
 def run_calibration_pipeline(
     *,
     calibration_input: CalibrationInput,
@@ -165,12 +179,16 @@ def run_calibration_pipeline(
         storage=storage,
         reference_data=calibration_input.reference_data,
     )
+    observed_ndvi_points = _observed_points(step1.index_time_series.get("NDVI", []))
+    if len(observed_ndvi_points) < MIN_PERCENTILE_SAMPLES:
+        raise ValueError(
+            "Calibration requires at least 10 observed NDVI images after filtering"
+        )
 
-    frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)
     step2 = extract_weather_history(
         weather_data=weather_rows,
         crop_type=calibration_input.crop_type,
-        frost_threshold=frost_threshold,
+        reference_data=calibration_input.reference_data,
     )
 
     # Crop-aware GDD: replace naive cumulative_gdd with gdd_service model
@@ -219,6 +237,8 @@ def run_calibration_pipeline(
         planting_system=calibration_input.planting_system,
         reference_data=calibration_input.reference_data,
     )
+    if not step4.yearly_stages:
+        raise ValueError("Unable to detect phenology from observed satellite history")
     step5 = detect_anomalies(
         step1,
         step2,
@@ -242,7 +262,7 @@ def run_calibration_pipeline(
         density_per_hectare=calibration_input.density_per_hectare,
     )
 
-    ndvi_points = step1.index_time_series.get("NDVI", [])
+    ndvi_points = observed_ndvi_points
     ndvi_values = [point.value for point in ndvi_points] if ndvi_points else [0.0]
     median_ndvi = float(np.median(ndvi_values))
 
@@ -266,7 +286,9 @@ def run_calibration_pipeline(
 
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
-        ndvi_percentiles = next(iter(step3.global_percentiles.values()))
+        raise ValueError(
+            "Calibration requires enough observed satellite history to compute NDVI percentiles"
+        )
     step7 = classify_zones(raster, ndvi_percentiles)
 
     step8 = calculate_health_score(
@@ -285,7 +307,7 @@ def run_calibration_pipeline(
 
     confidence = calculate_confidence_score(
         ConfidenceInput(
-            satellite_months=max(1, len(ndvi_points) // 2),
+            satellite_months=max(1, _observed_month_span(ndvi_points)),
             soil_analysis_date=None if soil_date is None else soil_date.date(),
             soil_fields=soil_fields,
             water_analysis_date=None if water_date is None else water_date.date(),
@@ -305,14 +327,14 @@ def run_calibration_pipeline(
 
     data_quality_flags: list[str] = []
 
-    ndvi_valid_count = len([p for p in ndvi_points if not p.outlier])
+    ndvi_valid_count = len(ndvi_points)
     if ndvi_valid_count < MIN_SATELLITE_IMAGES:
         data_quality_flags.append("insufficient_satellite_data")
 
     if not has_real_zones:
         data_quality_flags.append("single_pixel_zones")
 
-    if calibration_input.crop_type in EVERGREEN_CROPS:
+    if calibration_input.crop_type in EVERGREEN_CROPS and not step4.referential_cycle_used:
         data_quality_flags.append("evergreen_phenology_approximate")
 
     return CalibrationOutput(

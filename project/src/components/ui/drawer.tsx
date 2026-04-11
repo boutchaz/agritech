@@ -47,7 +47,9 @@ const DrawerContent = React.forwardRef<
         side === "right" && "inset-y-0 right-0 h-full w-full max-w-lg border-l border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
         side === "left" && "inset-y-0 left-0 h-full w-full max-w-lg border-r border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
         side === "top" && "inset-x-0 top-0 border-b border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-        side === "bottom" && "inset-x-0 bottom-0 border-t border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        /* flex + min-h-0 + overflow-hidden: inner flex-1 overflow-y-auto gets a real max height (otherwise the sheet grows to content and touch-scroll fails on Android). */
+        side === "bottom" &&
+          "inset-x-0 bottom-0 flex min-h-0 flex-col overflow-hidden border-t border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         className
       )}
       {...props}

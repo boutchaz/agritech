@@ -75,3 +75,40 @@ def test_step2_computes_chill_hours_in_winter() -> None:
     )
 
     assert output.chill_hours > 0
+
+
+def test_step2_reads_heat_and_wind_thresholds_from_referential() -> None:
+    weather = _build_weather(days=220)
+    reference_data = {
+        "alertes": [
+            {"code": "X1", "seuil": "Tmax > 40°C (3j) + HR < 30%"},
+            {"code": "X2", "seuil": "T > 38 + HR < 25% + vent > 30 km/h"},
+        ]
+    }
+
+    output = extract_weather_history(
+        weather_data=weather,
+        crop_type="agrumes",
+        reference_data=reference_data,
+    )
+
+    event_types = {event.event_type for event in output.extreme_events}
+    assert "high_wind" in event_types
+    assert "heatwave" not in event_types
+
+
+def test_step2_reads_frost_threshold_from_referential_alerts() -> None:
+    weather = _build_weather(days=100)
+    reference_data = {
+        "alertes": [
+            {"code": "GEL", "seuil": "Tmin prévue < 0°C"},
+        ]
+    }
+
+    output = extract_weather_history(
+        weather_data=weather,
+        crop_type="agrumes",
+        reference_data=reference_data,
+    )
+
+    assert all(event.event_type != "late_frost" for event in output.extreme_events)

@@ -81,3 +81,40 @@ def test_step3_uses_referential_stades_bbch_for_periods_when_present() -> None:
     # "flowering" (May only) and "maturation" (Nov-Dec) may be excluded
     # when the period has fewer than MIN_PERIOD_SAMPLES observations
     assert "NDVI" in output.phenology_period_percentiles["dormancy"]
+
+
+def test_step3_excludes_interpolated_points_from_percentiles() -> None:
+    points = []
+    for month in range(1, 11):
+        points.append(
+            {
+                "date": date(2025, month, 15).isoformat(),
+                "value": 0.4,
+                "outlier": False,
+                "interpolated": False,
+            }
+        )
+    for month in range(1, 11):
+        points.append(
+            {
+                "date": date(2026, month, 15).isoformat(),
+                "value": 0.95,
+                "outlier": False,
+                "interpolated": True,
+            }
+        )
+
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {"NDVI": points},
+            "cloud_coverage_mean": 12,
+            "filtered_image_count": 0,
+            "outlier_count": 0,
+            "interpolated_dates": [date(2026, month, 15).isoformat() for month in range(1, 11)],
+            "raster_paths": {"NDVI": []},
+        }
+    )
+
+    output = calculate_percentiles(step1)
+
+    assert round(output.global_percentiles["NDVI"].mean, 4) == 0.4

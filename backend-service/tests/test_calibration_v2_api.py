@@ -118,6 +118,29 @@ def test_run_v2_rejects_missing_required_fields_with_422() -> None:
     assert response.status_code == 422
 
 
+def test_run_v2_rejects_unsupported_crop_type() -> None:
+    payload = _build_v2_payload()
+    payload["calibration_input"]["crop_type"] = "bananier"
+
+    response = client.post("/api/calibration/v2/run", json=payload)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Unsupported crop_type 'bananier'"
+
+
+def test_run_v2_rejects_sparse_satellite_history_after_filtering() -> None:
+    payload = _build_v2_payload()
+    payload["satellite_images"] = payload["satellite_images"][:3]
+
+    response = client.post("/api/calibration/v2/run", json=payload)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == {
+        "step": "pipeline",
+        "reason": "Calibration requires at least 10 observed NDVI images after filtering",
+    }
+
+
 def test_precompute_gdd_v2_updates_rows() -> None:
     payload = {
         "latitude": 31.63,

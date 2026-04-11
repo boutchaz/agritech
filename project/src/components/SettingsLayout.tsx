@@ -579,7 +579,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
       {/* Mobile Settings Drawer */}
       <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <DrawerContent side="bottom" hideClose className="max-h-[85vh] rounded-t-[2.5rem] p-0 bg-white dark:bg-slate-900 border-none shadow-2xl">
-          <DrawerHeader className="px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
+          <DrawerHeader className="shrink-0 px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
@@ -600,8 +600,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             </div>
           </DrawerHeader>
           <div
-            className="overflow-y-auto px-4 py-6 no-scrollbar"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 24px)" }}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 no-scrollbar touch-pan-y"
+            style={{ paddingBottom: "calc(max(14px, env(safe-area-inset-bottom, 0px)) + 24px)" }}
           >
             <button
               type="button"

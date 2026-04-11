@@ -125,6 +125,16 @@ class OliveStadesBbchGddContext:
     month_max_gdd: dict[int, float]
 
 
+@dataclass(frozen=True)
+class WeatherThresholdConfig:
+    frost_threshold_c: float
+    heatwave_threshold_c: float
+    drought_days_dry_season: int
+    drought_days_transition: int
+    drought_days_rainy_season: int
+    hot_wind_kmh: float
+
+
 def parse_olive_stades_bbch_gdd_context(
     reference_data: dict[str, Any] | None,
 ) -> OliveStadesBbchGddContext | None:
@@ -484,6 +494,25 @@ def _referentials_dir() -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
+@lru_cache(maxsize=8)
+def _load_referential_data_from_file(crop_type: str) -> dict[str, Any] | None:
+    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
+    if not filename:
+        return None
+    root = _referentials_dir()
+    if root is None:
+        return None
+    path = root / filename
+    if not path.is_file():
+        return None
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
     """Read tbase_c and plafond_c from referential ``gdd`` object."""
     if not isinstance(gdd, dict):
@@ -502,19 +531,8 @@ def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
 @lru_cache(maxsize=8)
 def _load_gdd_from_referential_file(crop_type: str) -> tuple[float | None, float | None]:
     """Load ``gdd.tbase_c`` / ``gdd.plafond_c`` from referentials JSON on disk."""
-    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
-    if not filename:
-        return None, None
-    root = _referentials_dir()
-    if root is None:
-        return None, None
-    path = root / filename
-    if not path.is_file():
-        return None, None
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
+    data = _load_referential_data_from_file(crop_type)
+    if not data:
         return None, None
     return _parse_gdd_block(data.get("gdd"))
 
@@ -562,7 +580,180 @@ def get_gdd_tbase_tupper(
 
 def clear_gdd_referential_cache() -> None:
     """Clear LRU cache (for tests that swap referential files)."""
+    _load_referential_data_from_file.cache_clear()
     _load_gdd_from_referential_file.cache_clear()
+
+
+_DEFAULT_WEATHER_THRESHOLDS: dict[str, WeatherThresholdConfig] = {
+    "olivier": WeatherThresholdConfig(
+        frost_threshold_c=-2.0,
+        heatwave_threshold_c=38.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=60.0,
+    ),
+    "agrumes": WeatherThresholdConfig(
+        frost_threshold_c=0.0,
+        heatwave_threshold_c=40.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=30.0,
+    ),
+    "avocatier": WeatherThresholdConfig(
+        frost_threshold_c=0.0,
+        heatwave_threshold_c=35.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=25.0,
+    ),
+    "palmier_dattier": WeatherThresholdConfig(
+        frost_threshold_c=-5.0,
+        heatwave_threshold_c=45.0,
+        drought_days_dry_season=90,
+        drought_days_transition=45,
+        drought_days_rainy_season=45,
+        hot_wind_kmh=60.0,
+    ),
+}
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _upper_bound(value: Any) -> float | None:
+    if isinstance(value, (list, tuple)) and value:
+        numeric = [float(v) for v in value if isinstance(v, (int, float))]
+        if numeric:
+            return max(numeric)
+    return _as_float(value)
+
+
+def _extract_heat_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        if "Tmax" not in seuil:
+            continue
+        matches = re.findall(r"Tmax\s*>\s*(-?\d+(?:\.\d+)?)", seuil)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return min(candidates) if candidates else None
+
+
+def _extract_frost_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        if "Tmin" not in seuil:
+            continue
+        matches = re.findall(r"Tmin(?:\s*(?:prévue|mesurée))?\s*<\s*(-?\d+(?:\.\d+)?)", seuil)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return max(candidates) if candidates else None
+
+
+def _extract_hot_wind_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        matches = re.findall(r"vent\s*>\s*(-?\d+(?:\.\d+)?)", seuil, flags=re.IGNORECASE)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return min(candidates) if candidates else None
+
+
+def get_weather_thresholds(
+    crop_type: str,
+    reference_data: dict[str, Any] | None = None,
+) -> WeatherThresholdConfig:
+    data = (
+        reference_data
+        if isinstance(reference_data, dict) and reference_data
+        else _load_referential_data_from_file(crop_type)
+    )
+    defaults = _DEFAULT_WEATHER_THRESHOLDS.get(
+        crop_type,
+        WeatherThresholdConfig(
+            frost_threshold_c=0.0,
+            heatwave_threshold_c=38.0,
+            drought_days_dry_season=60,
+            drought_days_transition=30,
+            drought_days_rainy_season=20,
+            hot_wind_kmh=60.0,
+        ),
+    )
+    if not isinstance(data, dict):
+        return defaults
+
+    climate = data.get("exigences_climatiques")
+    frost_threshold = defaults.frost_threshold_c
+    heat_threshold = defaults.heatwave_threshold_c
+    hot_wind_kmh = defaults.hot_wind_kmh
+
+    if isinstance(climate, dict):
+        explicit_heat = (
+            _as_float(climate.get("temperature_stress_chaleur_C"))
+            or _as_float(climate.get("temperature_max_toleree_C"))
+        )
+        if explicit_heat is not None:
+            heat_threshold = explicit_heat
+
+        explicit_frost = (
+            _upper_bound(climate.get("gel_feuilles_hass_C"))
+            or _upper_bound(climate.get("gel_palmes_C"))
+            or _as_float(climate.get("temperature_stress_froid_C"))
+        )
+        if explicit_frost is not None and explicit_frost <= 2.0:
+            frost_threshold = explicit_frost
+
+    alerts = data.get("alertes")
+    alert_frost = _extract_frost_from_alerts(alerts)
+    if alert_frost is not None:
+        frost_threshold = alert_frost
+
+    alert_heat = _extract_heat_from_alerts(alerts)
+    if alert_heat is not None:
+        heat_threshold = alert_heat
+
+    alert_hot_wind = _extract_hot_wind_from_alerts(alerts)
+    if alert_hot_wind is not None:
+        hot_wind_kmh = alert_hot_wind
+
+    return WeatherThresholdConfig(
+        frost_threshold_c=frost_threshold,
+        heatwave_threshold_c=heat_threshold,
+        drought_days_dry_season=defaults.drought_days_dry_season,
+        drought_days_transition=defaults.drought_days_transition,
+        drought_days_rainy_season=defaults.drought_days_rainy_season,
+        hot_wind_kmh=hot_wind_kmh,
+    )
 
 
 # --- Maturity phase age spans (half-open: age in [start, end) years) -----------------

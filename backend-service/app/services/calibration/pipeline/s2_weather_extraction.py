@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date
+
+from ..referential_utils import get_weather_thresholds
 
 from ..types import ExtremeEvent, MonthlyWeatherAggregate, Step2Output, WeatherDay
 
@@ -40,6 +42,24 @@ def _drought_threshold(month: int, crop_type: str) -> int:
     return 20  # rainy season (Nov-Mar)
 
 
+def _drought_threshold_from_config(
+    month: int,
+    crop_type: str,
+    *,
+    reference_data: dict[str, object] | None = None,
+) -> int:
+    config = get_weather_thresholds(crop_type, reference_data)
+    if crop_type == "palmier_dattier":
+        if month in _DRY_SEASON_MONTHS:
+            return config.drought_days_dry_season
+        return config.drought_days_rainy_season
+    if month in _DRY_SEASON_MONTHS:
+        return config.drought_days_dry_season
+    if month in _TRANSITION_MONTHS:
+        return config.drought_days_transition
+    return config.drought_days_rainy_season
+
+
 def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
     """Sinusoidal model: simulate 24 hourly temperatures, count hours < 7.2 °C."""
     if temp_min >= 7.2:
@@ -59,8 +79,9 @@ def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
 def extract_weather_history(
     weather_data: list[dict[str, object]],
     crop_type: str,
-    frost_threshold: float = 0.0,
-    heat_threshold: float = 38.0,
+    frost_threshold: float | None = None,
+    heat_threshold: float | None = None,
+    reference_data: dict[str, object] | None = None,
 ) -> Step2Output:
     """Extract weather history: daily records, precipitation, extremes, chill hours.
 
@@ -74,6 +95,15 @@ def extract_weather_history(
 
     drought_streak = 0
     heat_streak = 0
+
+    thresholds = get_weather_thresholds(crop_type, reference_data)
+    effective_frost_threshold = (
+        thresholds.frost_threshold_c if frost_threshold is None else frost_threshold
+    )
+    effective_heat_threshold = (
+        thresholds.heatwave_threshold_c if heat_threshold is None else heat_threshold
+    )
+    effective_hot_wind_kmh = thresholds.hot_wind_kmh
 
     ordered_rows = sorted(weather_data, key=lambda row: str(row.get("date", "")))
 
@@ -98,14 +128,14 @@ def extract_weather_history(
         month_key = current_date.strftime("%Y-%m")
         monthly_precip[month_key] += precip
 
-        if current_date.month >= 3 and temp_min < frost_threshold:
+        if current_date.month >= 3 and temp_min < effective_frost_threshold:
             extremes.append(
                 ExtremeEvent(
                     date=current_date, event_type="late_frost", severity="high"
                 )
             )
 
-        if temp_max > heat_threshold:
+        if temp_max > effective_heat_threshold:
             heat_streak += 1
         else:
             heat_streak = 0
@@ -118,14 +148,18 @@ def extract_weather_history(
             drought_streak += 1
         else:
             drought_streak = 0
-        if drought_streak == _drought_threshold(current_date.month, crop_type):
+        if drought_streak == _drought_threshold_from_config(
+            current_date.month,
+            crop_type,
+            reference_data=reference_data,
+        ):
             extremes.append(
                 ExtremeEvent(
                     date=current_date, event_type="prolonged_drought", severity="medium"
                 )
             )
 
-        if wind > 60:
+        if wind > effective_hot_wind_kmh:
             extremes.append(
                 ExtremeEvent(
                     date=current_date, event_type="high_wind", severity="medium"

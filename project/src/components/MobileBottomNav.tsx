@@ -344,7 +344,7 @@ const MobileBottomNav = () => {
 
       <Drawer open={isMoreOpen} onOpenChange={setIsMoreOpen}>
         <DrawerContent side="bottom" hideClose className="max-h-[70vh] rounded-t-2xl p-0">
-          <DrawerHeader className="border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+          <DrawerHeader className="shrink-0 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-base font-semibold">
                 {t("mobileNav.allModules", "All Modules")}
@@ -360,8 +360,8 @@ const MobileBottomNav = () => {
             </div>
           </DrawerHeader>
           <div
-            className="overflow-y-auto px-2 py-2"
-            style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-2 touch-pan-y"
+            style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom, 0px))" }}
           >
             <div className="grid grid-cols-3 gap-1">
               {moreMenuItems.map((item) => {
