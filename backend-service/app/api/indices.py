@@ -23,6 +23,7 @@ from app.models.schemas import (
     ErrorResponse,
 )
 from app.services.satellite import get_satellite_provider
+from app.services.satellite.utils.sentinel2_dates import dedupe_s2_available_dates_by_day
 from app.services.supabase_service import supabase_service
 import logging
 import ee
@@ -1657,6 +1658,7 @@ async def get_available_dates(
                     }
 
             available_dates = sorted(dates_dict.values(), key=lambda x: x["date"])
+            available_dates = dedupe_s2_available_dates_by_day(available_dates)
 
             total_elapsed = time.monotonic() - t_start
             logger.info(

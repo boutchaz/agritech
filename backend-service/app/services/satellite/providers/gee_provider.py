@@ -20,6 +20,7 @@ from app.services.satellite.interfaces import (
 )
 from app.services.earth_engine import earth_engine_service
 from app.services.satellite.types import parse_geometry
+from app.services.satellite.utils.sentinel2_dates import dedupe_s2_available_dates_by_day
 
 logger = logging.getLogger(__name__)
 
@@ -404,8 +405,10 @@ class GEEProvider(ISatelliteProvider):
                         'available': True
                     }
 
-        # Sort by date
-        available_dates = sorted(dates_dict.values(), key=lambda x: x['date'])
+        # Sort by date; dedupe if multiple images share a calendar day for this AOI
+        available_dates = dedupe_s2_available_dates_by_day(
+            sorted(dates_dict.values(), key=lambda x: x["date"])
+        )
 
         return {
             "available_dates": available_dates,

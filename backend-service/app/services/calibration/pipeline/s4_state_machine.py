@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from enum import Enum
 
-from ..support.gdd_service import estimate_chill_hours
+from ..support.gdd_service import compute_daily_gdd, estimate_chill_hours
 
 
 class OlivePhase(Enum):
@@ -73,22 +73,20 @@ def compute_daily_signals(
     prev_nirv: float | None,
     prev_ndvi: float | None,
     days_since_prev_satellite: int,
+    tbase: float = 7.5,
+    tupper: float = 30.0,
 ) -> DailySignals:
     """Compute all daily signals needed by the state machine.
 
-    Follows ``protocole_phenologique.phases.calculs_preliminaires``:
-    - GDD_jour = max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)
-    - Tmoy = (Tmax + Tmin) / 2
-    - Precip_30j = sum(precip) over last 30 days
-    - Tmax_30j_pct = % of last 30 days where Tmax > 30
-    - dNIRv_dt, dNDVI_dt = derivatives from previous satellite observation
+    GDD uses the shared ``compute_daily_gdd`` from gdd_service with
+    ``tbase`` and ``tupper`` read from the crop's referential.
     """
     tmax = float(weather_day.get("temp_max") or weather_day.get("temperature_max") or 0.0)
     tmin = float(weather_day.get("temp_min") or weather_day.get("temperature_min") or 0.0)
     precip = float(weather_day.get("precip") or weather_day.get("precipitation_sum") or 0.0)
 
     tmoy = (tmax + tmin) / 2.0
-    gdd_jour = max(0.0, (min(tmax, 30.0) + max(tmin, 7.5)) / 2.0 - 7.5)
+    gdd_jour = compute_daily_gdd(tmax, tmin, tbase, tupper)
 
     precip_30j = sum(
         float(w.get("precip") or w.get("precipitation_sum") or 0.0)
@@ -467,6 +465,7 @@ _PHASE_HANDLERS: dict = {
 from ..referential_utils import (
     get_cycle_months_from_stades_bbch,
     cycle_year_for_date,
+    get_gdd_tbase_tupper,
 )
 from collections import defaultdict
 from statistics import mean as _mean
@@ -521,6 +520,12 @@ def run_olive_state_machine(
     cfg = extract_phase_config(reference_data)
     gdd_ref = reference_data.get("gdd") if reference_data else None
     cfg.chill_threshold = resolve_chill_threshold(variety, gdd_ref)
+
+    # Read GDD formula parameters from referential
+    crop_type = "olivier"  # TODO: make generic when other crops get protocole_phenologique
+    ref_tbase, ref_tupper = get_gdd_tbase_tupper(crop_type, reference_data)
+    gdd_tbase = ref_tbase if ref_tbase is not None else 7.5
+    gdd_tupper = ref_tupper if ref_tupper is not None else 30.0
 
     # Compute Tmoy_Q25 from all weather data
     tmoy_q25 = _compute_tmoy_q25(weather_days)
@@ -601,6 +606,8 @@ def run_olive_state_machine(
                 prev_nirv=prev_nirv,
                 prev_ndvi=prev_ndvi,
                 days_since_prev_satellite=days_since,
+                tbase=gdd_tbase,
+                tupper=gdd_tupper,
             )
             machine.process_day(signals)
 

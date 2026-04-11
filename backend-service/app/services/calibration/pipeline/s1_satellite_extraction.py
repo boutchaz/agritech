@@ -241,6 +241,10 @@ def extract_satellite_history(
 
     for raw_image in images:
         cloud = _to_number(raw_image.get("cloud_coverage", 0))
+        # TODO: cloud_coverage filter is redundant — SCL pixel masking at
+        # download time (cloud_masking.filter_by_scl_coverage) already
+        # excludes cloud-contaminated dates.  Kept for now as a safety net;
+        # remove once SCL pipeline is fully validated end-to-end.
         if cloud > max_cloud_coverage:
             filtered_image_count += 1
             continue
@@ -296,6 +300,10 @@ def extract_satellite_history(
         sorted_points = sorted(index_points[index], key=lambda item: item.date)
         enriched_points: list[IndexTimePoint] = []
 
+        # TODO: linear interpolation is not in the referential spec — the DB
+        # should already contain clean per-date median values from SCL-filtered
+        # pixels.  Kept for now to fill short gaps between Sentinel-2 revisits;
+        # reconsider once data pipeline is fully validated.
         for idx, current in enumerate(sorted_points):
             enriched_points.append(current)
             if idx == len(sorted_points) - 1:

@@ -43,6 +43,7 @@ from app.services.satellite.utils.statistics import calculate_statistics_from_ar
 from app.services.satellite.utils.index_calculator import (
     calculate_all_indices as calculate_indices_numpy,
 )
+from app.services.satellite.utils.sentinel2_dates import dedupe_s2_available_dates_by_day
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -739,13 +740,16 @@ class CDSEProvider(ISatelliteProvider):
             # Process items
             available_dates = []
             for item in items:
+                dt_raw = item.properties.get("datetime")
+                if not dt_raw:
+                    continue
                 available_dates.append(
                     {
-                        "date": item.properties["datetime"][:10],
+                        "date": dt_raw[:10],
                         "cloud_coverage": item.properties.get("eo:cloud_cover", 0),
                         "timestamp": int(
                             datetime.fromisoformat(
-                                item.properties["datetime"].replace("Z", "+00:00")
+                                str(dt_raw).replace("Z", "+00:00")
                             ).timestamp()
                             * 1000
                         ),
@@ -753,9 +757,12 @@ class CDSEProvider(ISatelliteProvider):
                     }
                 )
 
+            # STAC can return multiple granules per day (tiles/orbits); one row per day for the AOI.
+            normalized = dedupe_s2_available_dates_by_day(available_dates)
+
             return {
-                "available_dates": available_dates,
-                "total_images": len(available_dates),
+                "available_dates": normalized,
+                "total_images": len(normalized),
                 "date_range": {"start": start_date, "end": end_date},
                 "filters": {"max_cloud_coverage": max_cloud_coverage},
                 "metadata": {"provider": self.provider_name},

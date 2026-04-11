@@ -49,11 +49,17 @@ def compute_daily_gdd(
     tbase: float,
     tupper: float | None = None,
 ) -> float:
-    """GDD with optional upper-temperature cap (De Melo-Abreu)."""
-    tmoy = (temp_max + temp_min) / 2.0
-    if tupper is not None:
-        tmoy = min(tmoy, tupper)
-    return max(0.0, tmoy - tbase)
+    """GDD using referential formula: cap Tmax at plafond, floor Tmin at tbase.
+
+    Formula: ``max(0, (min(Tmax, plafond) + max(Tmin, tbase)) / 2 - tbase)``
+
+    This matches the olive referential (Moriondo et al. 2001) and generalizes
+    to all crops by reading ``gdd.tbase_c`` and ``gdd.plafond_c`` from the
+    crop's referential JSON.
+    """
+    capped_max = min(temp_max, tupper) if tupper is not None else temp_max
+    floored_min = max(temp_min, tbase)
+    return max(0.0, (capped_max + floored_min) / 2.0 - tbase)
 
 
 def estimate_chill_hours(temp_max: float, temp_min: float) -> float:
@@ -235,6 +241,46 @@ def compute_olive_gdd_two_phase(
     return result
 
 
+def _resolve_chill_threshold_from_ref(
+    variety: str | None,
+    reference_data: dict[str, Any] | None,
+) -> int | None:
+    """Read variety-specific chill threshold from referential.
+
+    Returns the **lower bound** of ``gdd.seuils_chill_units_par_variete[variety]``,
+    or ``None`` if the referential has no chill data (crop doesn't need chill gating).
+    """
+    if not reference_data:
+        return None
+    gdd_block = reference_data.get("gdd")
+    if not isinstance(gdd_block, dict):
+        return None
+    seuils = gdd_block.get("seuils_chill_units_par_variete")
+    if not isinstance(seuils, dict):
+        return None
+    # Has chill data — resolve variety or fallback
+    if variety:
+        entry = seuils.get(variety)
+        if isinstance(entry, (list, tuple)) and len(entry) >= 1:
+            return int(entry[0])
+    # Fallback: use lowest threshold across all varieties
+    all_thresholds = [
+        int(v[0]) for v in seuils.values()
+        if isinstance(v, (list, tuple)) and len(v) >= 1
+    ]
+    return min(all_thresholds) if all_thresholds else 150
+
+
+def _has_activation_forcing(reference_data: dict[str, Any] | None) -> bool:
+    """Check if the referential requires NIRv activation gating for GDD."""
+    if not reference_data:
+        return False
+    gdd_block = reference_data.get("gdd")
+    if not isinstance(gdd_block, dict):
+        return False
+    return bool(gdd_block.get("activation_forcing"))
+
+
 def precompute_gdd_rows(
     rows: list[dict[str, Any]],
     crop_type: str,
@@ -244,38 +290,53 @@ def precompute_gdd_rows(
     nirv_series: list[dict[str, Any]] | None = None,
     reference_data: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    _ = variety
+    """Compute daily GDD for any crop, reading rules from its referential.
+
+    The function is generic — it reads ``gdd.tbase_c``, ``gdd.plafond_c``,
+    and optionally ``gdd.seuils_chill_units_par_variete`` from the crop's
+    referential JSON.  Chill gating and NIRv activation are applied only
+    when the referential provides them.
+
+    For olive (which has chill + NIRv + BBCH month filtering), this delegates
+    to ``compute_olive_gdd_two_phase``.  For other crops, a simpler
+    temperature-only model is used with the same corrected formula.
+    """
     if crop_type not in CROP_TYPE_TO_REFERENTIAL_JSON:
         return rows, 0
 
-    # --- Olive: two-phase De Melo-Abreu model ---
-    if crop_type == "olivier":
-        threshold = chill_threshold or CHILL_THRESHOLD_DEFAULT.get("olivier", 150)
+    tbase, tupper = get_gdd_tbase_tupper(crop_type, reference_data)
+    if tbase is None:
+        return rows, 0
+
+    column = f"gdd_{crop_type}"
+    has_chill = _resolve_chill_threshold_from_ref(variety, reference_data) is not None
+    has_forcing = _has_activation_forcing(reference_data)
+
+    # Crops with chill gating + activation forcing → full two-phase model
+    if has_chill or has_forcing:
+        threshold = chill_threshold or _resolve_chill_threshold_from_ref(variety, reference_data) or 150
         result = compute_olive_gdd_two_phase(
             rows,
             chill_threshold=threshold,
             nirv_series=nirv_series or [],
             reference_data=reference_data,
+            tbase=tbase,
+            tupper=tupper,
         )
         updated = sum(
             1
             for orig, new in zip(rows, result)
-            if orig.get("gdd_olivier") is None and new.get("gdd_olivier") is not None
+            if orig.get(column) is None and new.get(column) is not None
         )
         return result, updated
 
-    # --- Other crops: simple GDD with Tupper cap ---
-    tbase, tupper = get_gdd_tbase_tupper(crop_type, reference_data)
-    if tbase is None:
-        return rows, 0
-    column = f"gdd_{crop_type}"
+    # Crops without chill/forcing → simple daily GDD from referential formula
     updated = 0
     result_rows: list[dict[str, Any]] = []
 
     for row in rows:
         copied = dict(row)
-        current_value = copied.get(column)
-        if current_value is not None:
+        if copied.get(column) is not None:
             result_rows.append(copied)
             continue
 

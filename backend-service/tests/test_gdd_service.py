@@ -15,25 +15,32 @@ compute_olive_gdd_two_phase = getattr(gdd_module, "compute_olive_gdd_two_phase")
 
 
 def test_gdd_formula_positive_result() -> None:
-    # Tbase=7.5 for olivier: (30+20)/2 - 7.5 = 17.5
+    # Referential formula: (min(Tmax,tupper) + max(Tmin,tbase)) / 2 - tbase
+    # (min(30,∞) + max(20,7.5)) / 2 - 7.5 = (30+20)/2 - 7.5 = 17.5
     assert compute_daily_gdd(temp_max=30.0, temp_min=20.0, tbase=7.5) == 17.5
 
 
 def test_gdd_formula_floor_at_zero() -> None:
-    # (8+2)/2 = 5.0, 5.0 - 7.5 = -2.5 → clamped to 0
-    assert compute_daily_gdd(temp_max=8.0, temp_min=2.0, tbase=7.5) == 0.0
+    # (min(8,∞) + max(2,7.5)) / 2 - 7.5 = (8+7.5)/2 - 7.5 = 0.25
+    assert compute_daily_gdd(temp_max=8.0, temp_min=2.0, tbase=7.5) == 0.25
 
 
 def test_gdd_formula_tupper_cap() -> None:
-    # Without cap: (40+30)/2 = 35.0, 35 - 7.5 = 27.5
+    # Without cap: (40 + max(30,7.5)) / 2 - 7.5 = (40+30)/2 - 7.5 = 27.5
     assert compute_daily_gdd(temp_max=40.0, temp_min=30.0, tbase=7.5) == 27.5
-    # With cap=30: min(35, 30) = 30, 30 - 7.5 = 22.5
+    # With tupper=30: (min(40,30) + max(30,7.5)) / 2 - 7.5 = (30+30)/2 - 7.5 = 22.5
     assert compute_daily_gdd(temp_max=40.0, temp_min=30.0, tbase=7.5, tupper=30.0) == 22.5
 
 
 def test_gdd_formula_tupper_no_effect_when_below() -> None:
-    # (20+10)/2 = 15.0 < 30.0 cap → no effect. 15 - 7.5 = 7.5
+    # (min(20,30) + max(10,7.5)) / 2 - 7.5 = (20+10)/2 - 7.5 = 7.5
     assert compute_daily_gdd(temp_max=20.0, temp_min=10.0, tbase=7.5, tupper=30.0) == 7.5
+
+
+def test_gdd_formula_floors_tmin_at_tbase() -> None:
+    # Tmin=5 < tbase=7.5 → floored to 7.5
+    # (min(20,30) + max(5,7.5)) / 2 - 7.5 = (20+7.5)/2 - 7.5 = 6.25
+    assert compute_daily_gdd(temp_max=20.0, temp_min=5.0, tbase=7.5, tupper=30.0) == 6.25
 
 
 # ---------------------------------------------------------------------------
@@ -73,8 +80,8 @@ def test_batch_agrumes_applies_tupper() -> None:
     ]
     updated_rows, count = precompute_gdd_rows(rows, "agrumes")
     assert count == 1
-    # tupper=36 for agrumes: min((42+28)/2, 36) = min(35, 36) = 35. GDD = 35 - 13 = 22
-    assert updated_rows[0]["gdd_agrumes"] == 22.0
+    # tupper=36 for agrumes: (min(42,36) + max(28,13)) / 2 - 13 = (36+28)/2 - 13 = 19.0
+    assert updated_rows[0]["gdd_agrumes"] == 19.0
 
 
 def test_batch_skips_existing_values_non_olive() -> None:
