@@ -19,6 +19,7 @@ import { isRTLLocale } from '../lib/is-rtl-locale'
 import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 import { NotificationRealtimeBridge } from '@/components/NotificationRealtimeBridge';
+import { PullToRefresh } from '@/components/PullToRefresh';
 
 
 export const Route = createFileRoute('/_authenticated')({
@@ -186,9 +187,11 @@ function AuthenticatedLayout() {
           >
             <ErrorBoundary>
               {/* No flex-1: let content define height so main scrolls on tablet/WebKit (flex-1 + min-h-0 traps overflow). */}
-              <div className="flex min-h-0 min-w-0 w-full flex-col">
-                <Outlet />
-              </div>
+              <PullToRefresh>
+                <div className="flex min-h-0 min-w-0 w-full flex-col">
+                  <Outlet />
+                </div>
+              </PullToRefresh>
             </ErrorBoundary>
           </main>
         </div>
