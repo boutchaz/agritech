@@ -316,11 +316,12 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     setIsMobileMenuOpen(false);
   };
 
-  const renderItem = (item: SettingsMenuItem) => {
+  /** Compact = icon rail (desktop collapsed). Mobile drawer always passes `false` so labels stay visible. */
+  const renderItem = (item: SettingsMenuItem, compact: boolean) => {
     const Icon = item.icon;
     const active = isActive(item.path);
 
-    if (isCollapsed) {
+    if (compact) {
       return (
         <Tooltip key={item.id}>
           <TooltipTrigger asChild>
@@ -377,10 +378,10 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     );
   };
 
-  const renderSections = () =>
+  const renderSections = (compact: boolean) =>
     visibleSections.map((section, sectionIndex) => (
       <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
-        {!isCollapsed && (
+        {!compact && (
           <div className="px-3 mb-2 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -403,14 +404,14 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             )}
           </div>
         )}
-        {(isCollapsed || isSectionExpanded(section.id)) && (
+        {(compact || isSectionExpanded(section.id)) && (
           <div
             className={cn(
               "space-y-1",
-              isCollapsed && "flex flex-col items-center gap-2",
+              compact && "flex flex-col items-center gap-2",
             )}
           >
-            {section.items.map(renderItem)}
+            {section.items.map((item) => renderItem(item, compact))}
           </div>
         )}
       </div>
@@ -495,7 +496,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             )}
             data-tour="settings-menu"
           >
-            {renderSections()}
+            {renderSections(isCollapsed)}
           </nav>
 
           {/* Collapse Toggle (duplicate control for mouse users) */}
@@ -525,7 +526,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
         {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[calc(4rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
@@ -563,7 +564,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
         </div>
         
         {/* Same width + padding as accounting list pages (e.g. invoices.tsx inner wrapper) */}
-        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 pb-4 sm:p-4 md:p-6 md:pb-6">
+        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 pb-6 sm:p-4 md:p-6 md:pb-6">
           {children}
         </div>
       </div>
@@ -610,7 +611,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                 {t("settings.backToDashboard", "Return to Dashboard")}
               </span>
             </button>
-            {renderSections()}
+            {renderSections(false)}
           </div>
         </DrawerContent>
       </Drawer>

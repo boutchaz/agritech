@@ -87,11 +87,11 @@
   }
 
   /**
-   * Mobile bottom nav (4rem) + safe-area — scoped to the authenticated app shell.
-   * Set `data-authenticated-app` on the h-dvh column that wraps main + MobileBottomNav.
+   * Mobile bottom nav (4rem) + safe-area + content gap — scoped to the authenticated app shell.
+   * The fixed bar is 4rem + safe-area; scrollports add 1.5rem so the last line is not flush with tabs.
+   * Set `data-authenticated-app` on the column that wraps main + MobileBottomNav.
    * - --app-layout-bottom-pad: use on <main data-main-scroll> (pb-app-shell-main).
-   * - --app-nested-scroll-bottom-pad: use on any inner overflow-y-auto that fills the screen on mobile
-   *   (e.g. settings content column) so scroll-end clears the tab bar (pb-app-shell-nested-scroll).
+   * - --app-nested-scroll-bottom-pad: use on inner overflow-y-auto (e.g. settings content column).
    */
   [data-authenticated-app] {
     --app-layout-bottom-pad: max(0.5rem, env(safe-area-inset-bottom, 0px));
@@ -99,8 +99,12 @@
   }
   @media (max-width: 767.98px) {
     [data-authenticated-app] {
-      --app-layout-bottom-pad: calc(4rem + env(safe-area-inset-bottom, 0px));
-      --app-nested-scroll-bottom-pad: calc(4rem + env(safe-area-inset-bottom, 0px));
+      --app-layout-bottom-pad: calc(
+        4rem + 1.5rem + env(safe-area-inset-bottom, 0px)
+      );
+      --app-nested-scroll-bottom-pad: calc(
+        4rem + 1.5rem + env(safe-area-inset-bottom, 0px)
+      );
     }
   }
 }

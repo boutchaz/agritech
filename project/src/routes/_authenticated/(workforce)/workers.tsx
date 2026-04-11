@@ -90,7 +90,7 @@ function WorkersPage() {
           />
         }
       >
-        <div className="p-4 sm:p-6">
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto mt-8 sm:mt-12">
             <Card>
               <CardContent className="p-6 sm:p-8 text-center">
@@ -134,7 +134,7 @@ function WorkersPage() {
         />
       }
     >
-      <div className="p-3 sm:p-4 lg:p-6">
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           {isChildRoute ? (
             <Outlet />
           ) : farmsLoading ? (

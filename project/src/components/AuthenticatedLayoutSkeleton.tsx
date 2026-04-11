@@ -128,7 +128,7 @@ export function AuthenticatedLayoutSkeleton() {
             data-main-scroll
             className={cn(
               'flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80',
-              'max-md:pb-[calc(4rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))]',
+              'max-md:pb-[calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))]',
               'md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:[scroll-padding-bottom:max(0.5rem,env(safe-area-inset-bottom,0px))]',
             )}
           >

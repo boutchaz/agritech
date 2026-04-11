@@ -122,7 +122,7 @@ const ACTIVE_CROP_CYCLE_STATUSES: CropCycleStatus[] = [
 
 type CropCycleListStatusFilter = "all" | "active" | CropCycleStatus;
 
-export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) {
+export function CropCyclesList({ initialCampaignId }: CropCyclesListProps) {
   const { hasRole, currentOrganization } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -234,9 +234,11 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   const watchedExpectedHarvestEnd = form.watch("expected_harvest_end");
   const watchedParcelId = form.watch("parcel_id");
 
-  if (watchedFarmId && watchedFarmId !== selectedFarmId) {
-    setSelectedFarmId(watchedFarmId);
-  }
+  useEffect(() => {
+    if (watchedFarmId && watchedFarmId !== selectedFarmId) {
+      setSelectedFarmId(watchedFarmId);
+    }
+  }, [watchedFarmId, selectedFarmId]);
 
   useEffect(() => {
     if (
@@ -509,7 +511,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
     }
   };
 
-  const getStatusBadge = (status: CropCycleStatus) => {
+  const getStatusBadge = (status: CropCycleStatus | null | undefined) => {
     const config: Record<
       CropCycleStatus,
       { icon: typeof Play; color: string; label: string }
@@ -545,7 +547,11 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
         label: t("cropCycles.status.cancelled", "Cancelled"),
       },
     };
-    const { icon: Icon, color, label } = config[status];
+    const resolved: CropCycleStatus =
+      status && Object.prototype.hasOwnProperty.call(config, status)
+        ? status
+        : "planned";
+    const { icon: Icon, color, label } = config[resolved];
     return (
       <Badge variant="outline" className={color}>
         <Icon className="h-3 w-3 mr-1" />
@@ -620,9 +626,9 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
   const totals = cropCycles.reduce(
     (acc, c) => ({
       area: acc.area + (c.planted_area_ha || 0),
-      costs: acc.costs + c.total_costs,
-      revenue: acc.revenue + c.total_revenue,
-      profit: acc.profit + c.net_profit,
+      costs: acc.costs + (c.total_costs ?? 0),
+      revenue: acc.revenue + (c.total_revenue ?? 0),
+      profit: acc.profit + (c.net_profit ?? 0),
     }),
     { area: 0, costs: 0, revenue: 0, profit: 0 },
   );
@@ -724,7 +730,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               {cycle.actual_total_yield?.toLocaleString() ||
                 cycle.expected_total_yield?.toLocaleString() ||
                 "-"}{" "}
-              {cycle.yield_unit}
+              {cycle.yield_unit ?? "kg"}
             </span>
           </div>
         </div>
@@ -735,7 +741,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               {t("cropCycles.costs", "Costs")}
             </span>
             <span className="font-medium">
-              {currencySymbol} {cycle.total_costs.toLocaleString()}
+              {currencySymbol} {(cycle.total_costs ?? 0).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between text-sm">
@@ -743,18 +749,18 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
               {t("cropCycles.revenue", "Revenue")}
             </span>
             <span className="font-medium">
-              {currencySymbol} {cycle.total_revenue.toLocaleString()}
+              {currencySymbol} {(cycle.total_revenue ?? 0).toLocaleString()}
             </span>
           </div>
           <div className="flex justify-between text-sm font-medium">
             <span>{t("cropCycles.profit", "Profit")}</span>
-            <span className={cycle.net_profit >= 0 ? "text-green-600" : "text-red-600"}>
-              {cycle.net_profit >= 0 ? (
+            <span className={(cycle.net_profit ?? 0) >= 0 ? "text-green-600" : "text-red-600"}>
+              {(cycle.net_profit ?? 0) >= 0 ? (
                 <TrendingUp className="h-4 w-4 inline mr-1" />
               ) : (
                 <TrendingDown className="h-4 w-4 inline mr-1" />
               )}
-              {currencySymbol} {cycle.net_profit.toLocaleString()}
+              {currencySymbol} {(cycle.net_profit ?? 0).toLocaleString()}
             </span>
           </div>
         </div>
@@ -1037,21 +1043,21 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps = {}) 
                     {cycle.actual_total_yield?.toLocaleString() ||
                       cycle.expected_total_yield?.toLocaleString() ||
                       "-"}{" "}
-                    {cycle.yield_unit}
+                    {cycle.yield_unit ?? "kg"}
                   </span>
                 </div>
               </td>
               <td className="px-4 py-4 align-top text-sm">
                 <div>
                   <span className="text-muted-foreground">{t("cropCycles.costs", "Costs")}: </span>
-                  <span className="font-medium">{currencySymbol} {cycle.total_costs.toLocaleString()}</span>
+                  <span className="font-medium">{currencySymbol} {(cycle.total_costs ?? 0).toLocaleString()}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">{t("cropCycles.revenue", "Revenue")}: </span>
-                  <span className="font-medium">{currencySymbol} {cycle.total_revenue.toLocaleString()}</span>
+                  <span className="font-medium">{currencySymbol} {(cycle.total_revenue ?? 0).toLocaleString()}</span>
                 </div>
-                <div className={cycle.net_profit >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                  {t("cropCycles.profit", "Profit")}: {currencySymbol} {cycle.net_profit.toLocaleString()}
+                <div className={(cycle.net_profit ?? 0) >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                  {t("cropCycles.profit", "Profit")}: {currencySymbol} {(cycle.net_profit ?? 0).toLocaleString()}
                 </div>
               </td>
               <td className="px-4 py-4 align-top text-right">{renderCycleActionsMenu(cycle)}</td>
