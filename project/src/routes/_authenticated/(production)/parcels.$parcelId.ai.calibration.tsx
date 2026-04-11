@@ -1714,7 +1714,7 @@ const AICalibrationPage = () => {
     };
 
     pollCalibrationState();
-    const intervalId = window.setInterval(pollCalibrationState, 4000);
+    const intervalId = window.setInterval(pollCalibrationState, 10000);
 
     return () => {
       window.clearInterval(intervalId);

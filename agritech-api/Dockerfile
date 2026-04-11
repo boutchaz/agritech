@@ -13,8 +13,9 @@ RUN npm install
 # Copy source code
 COPY agritech-api/ ./
 
-# Copy shared modules (referenced via relative imports)
+# Copy shared modules and symlink node_modules so zod resolves
 COPY shared/ /app/shared/
+RUN ln -s /app/agritech-api/node_modules /app/shared/node_modules
 
 # Build application
 RUN npm run build

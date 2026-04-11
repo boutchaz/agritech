@@ -114,7 +114,7 @@ const AppContent = () => {
       }
     },
     enabled: !!user && !!currentOrganization,
-    staleTime: 60000,
+    staleTime: 10 * 60 * 1000, // 10 min — settings rarely change mid-session
   });
 
   // Fetch live metrics with auto-refresh (only when live mode is enabled)

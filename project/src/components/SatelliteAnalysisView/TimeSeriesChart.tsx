@@ -197,7 +197,7 @@ const TimeSeriesChart = ({
     } catch {
       void 0;
     }
-    return getDateRangeLastNDays(730).start_date;
+    return getDateRangeLastNDays(90).start_date;
   });
   const [endDate, setEndDate] = useState(() => localCalendarISODate());
 
@@ -348,7 +348,7 @@ const TimeSeriesChart = ({
       return result;
     },
     enabled: !!organizationId && !!parcelId && selectedIndices.length > 0 && !!startDate && !!endDate,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 min — satellite data updates at most daily
   });
 
   const forceSync = useCallback(async () => {
@@ -438,7 +438,7 @@ const TimeSeriesChart = ({
       return json.data || [];
     },
     enabled: showTemperature && !!organizationId && !!parcelId && !!startDate && !!endDate,
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity, // historical weather data never changes
   });
 
   const isValidIndexValue = useCallback((index: TimeSeriesIndexType, value: number): boolean => {
