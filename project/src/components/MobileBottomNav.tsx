@@ -263,8 +263,12 @@ const MobileBottomNav = () => {
                 variant="ghost"
                 onClick={() => handleNavigate(item.path)}
                 className={cn(
-                  "relative flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0 overflow-hidden whitespace-normal rounded-none px-0.5 py-2 shadow-none",
+                  // Button defaults (h-10, gap-2, nowrap, px-4) win in cva merge unless overridden with !important
+                  "!h-16 !max-h-16 !min-h-16 !gap-1 !whitespace-normal !rounded-none !px-0.5 !py-0 !shadow-none",
+                  "[&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:shrink-0",
+                  "relative flex min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center overflow-hidden",
                   "transition-colors duration-200",
+                  "pb-1.5",
                   active
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-slate-500 dark:text-slate-400",
@@ -272,15 +276,15 @@ const MobileBottomNav = () => {
                 aria-label={getLabel(item.labelKey, item.fallback)}
                 aria-current={active ? "page" : undefined}
               >
-                <div className="relative flex-shrink-0">
-                  <Icon className="w-5 h-5" />
+                <div className="relative flex h-5 w-full shrink-0 items-center justify-center">
+                  <Icon className="h-5 w-5" />
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center">
                       {item.badge > 99 ? "99+" : item.badge}
                     </span>
                   )}
                 </div>
-                <span className="mt-1.5 line-clamp-2 w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
+                <span className="line-clamp-2 w-full max-w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
                   {getLabel(item.labelKey, item.fallback)}
                 </span>
                 {active && (
@@ -295,7 +299,9 @@ const MobileBottomNav = () => {
             variant="ghost"
             onClick={() => setIsMoreOpen(true)}
             className={cn(
-              "relative flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0 overflow-hidden whitespace-normal rounded-none px-0.5 py-2 shadow-none",
+              "!h-16 !max-h-16 !min-h-16 !gap-1 !whitespace-normal !rounded-none !px-0.5 !py-0 !shadow-none",
+              "[&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:shrink-0",
+              "relative flex min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center overflow-hidden pb-1.5",
               "transition-colors duration-200",
               isMoreActive || isMoreOpen
                 ? "text-emerald-600 dark:text-emerald-400"
@@ -303,8 +309,10 @@ const MobileBottomNav = () => {
             )}
             aria-label={t("mobileNav.more", "More")}
           >
-            <MoreHorizontal className="w-5 h-5" />
-            <span className="mt-1.5 line-clamp-2 w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
+            <div className="flex h-5 w-full shrink-0 items-center justify-center">
+              <MoreHorizontal className="h-5 w-5" />
+            </div>
+            <span className="line-clamp-2 w-full max-w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
               {t("mobileNav.more", "More")}
             </span>
             {isMoreActive && (

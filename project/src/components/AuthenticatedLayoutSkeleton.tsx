@@ -23,7 +23,10 @@ export function AuthenticatedLayoutSkeleton() {
 
   return (
     <div className={isDark ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-dvh min-h-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <div
+        data-authenticated-app
+        className="h-dvh min-h-0 bg-slate-100 dark:bg-slate-950 overflow-hidden"
+      >
         {/* ===== SIDEBAR SKELETON ===== */}
         <div
           className={cn(
@@ -123,7 +126,7 @@ export function AuthenticatedLayoutSkeleton() {
         >
           <main
             data-main-scroll
-            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] [scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:scroll-pb-0"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-app-shell-main scroll-pb-app-shell-main"
           >
             {/* ===== PAGE HEADER SKELETON ===== */}
             <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm">

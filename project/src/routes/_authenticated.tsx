@@ -135,7 +135,10 @@ function AuthenticatedLayout() {
 
   return (
     <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="h-dvh min-h-0 min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden">
+      <div
+        data-authenticated-app
+        className="h-dvh min-h-0 min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden"
+      >
         <Sidebar
           modules={modules}
           activeModule={activeModule}
@@ -170,7 +173,7 @@ function AuthenticatedLayout() {
           </header> */}
           <main
             data-main-scroll
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] [scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:scroll-pb-0"
+            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-app-shell-main scroll-pb-app-shell-main"
           >
             <ErrorBoundary>
               {/* No flex-1: let content define height so main scrolls on tablet/WebKit (flex-1 + min-h-0 traps overflow). */}

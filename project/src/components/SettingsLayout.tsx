@@ -526,7 +526,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
       {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] [scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] dark:bg-slate-900/30 md:pb-0 md:scroll-pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-app-shell-nested-scroll scroll-pb-app-shell-nested-scroll dark:bg-slate-900/30"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
