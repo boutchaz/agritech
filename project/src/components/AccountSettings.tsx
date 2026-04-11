@@ -475,7 +475,7 @@ const AccountSettings = () => {
 
   if (!profile) {
     return (
-      <div className="p-6">
+      <div className="min-w-0">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{t('profile.errors.notFound')}</p>
         </div>

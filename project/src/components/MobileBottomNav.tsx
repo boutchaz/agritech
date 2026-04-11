@@ -259,8 +259,8 @@ const MobileBottomNav = () => {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 w-full md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="fixed bottom-0 left-0 right-0 z-50 w-full overflow-hidden md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
+        style={{ paddingBottom: "max(14px, env(safe-area-inset-bottom, 0px))" }}
       >
         {/* basis-0 + min-w-0: equal columns. whitespace-normal: override Button nowrap so tabs don't overflow-cluster on narrow widths. */}
         <div className="mx-auto flex h-16 w-full min-w-0 max-w-lg items-stretch">

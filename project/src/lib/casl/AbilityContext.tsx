@@ -64,6 +64,17 @@ function buildAbilityFromBackend(
       cannot('update', 'all');
       cannot('delete', 'all');
       can('read', 'Subscription');
+
+      // Re-apply admin management abilities after the blanket block.
+      // CASL's cannot('update','all') overrides earlier can('manage','User'),
+      // so we must re-grant User/Org/Settings management for admins to
+      // manage their organization even with an expired subscription.
+      const adminSubjects = ['User', 'Organization', 'Subscription', 'Role', 'Settings'];
+      for (const rule of abilitiesData.abilities) {
+        if (!rule.inverted && adminSubjects.includes(rule.subject)) {
+          can(rule.action as Action, rule.subject as Subject);
+        }
+      }
     } else {
       // Apply limits based on current counts
       if (currentCounts.farms >= subscription.max_farms) {

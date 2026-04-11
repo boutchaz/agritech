@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_authenticated/(settings)/settings/legal'
 
 function LegalSettings() {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Mentions Légales</h2>
         <p className="mt-1 text-sm text-gray-500">

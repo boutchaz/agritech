@@ -12,11 +12,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
  * Route: /settings/account-mappings
  */
 function AccountMappingsSettingsPage() {
-  return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
-      <AccountMappingsManagement />
-    </div>
-  );
+  return <AccountMappingsManagement />;
 }
 
 // Protect route - require admin permissions to manage account mappings

@@ -325,6 +325,25 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     cannot('update', 'all');
     cannot('delete', 'all');
     can('read', 'Subscription');
+
+    // Re-apply admin management abilities after the blanket block.
+    // CASL's cannot('update','all') overrides earlier can('manage','User'),
+    // so we must re-grant User/Org/Settings management for admins.
+    if (role.name === 'system_admin') {
+      can('manage', 'all');
+    } else if (role.name === 'organization_admin') {
+      can('manage', 'User');
+      can('invite', 'User');
+      can('remove', 'User');
+      can('read', 'Organization');
+      can('update', 'Organization');
+      can('read', 'Subscription');
+      can('update', 'Subscription');
+      can('read', 'Settings');
+      can('update', 'Settings');
+      can('manage', 'Role');
+    }
+
     return build();
   }
 

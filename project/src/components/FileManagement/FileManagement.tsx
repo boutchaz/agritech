@@ -371,7 +371,6 @@ export function FileManagement() {
 
   return (
     <ListPageLayout
-      className="p-4 sm:p-6"
       header={
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Gestion des fichiers</h2>

@@ -99,12 +99,19 @@
   }
   @media (max-width: 767.98px) {
     [data-authenticated-app] {
+      /**
+       * Physical reserve for the fixed tab bar (see spacer under <main> in _authenticated).
+       * max(14px, safe-area): some Samsung / Android builds report 0 for gesture bar — still reserve space.
+       * 4.5rem: slightly above 4rem row for large system fonts / two-line labels.
+       */
+      --app-mobile-nav-reserve: calc(
+        4.5rem + max(14px, env(safe-area-inset-bottom, 0px)) + 1rem
+      );
+      /* Extra scroll-end air inside <main> / nested scrollports (tab clearance is mostly the in-flow spacer). */
       --app-layout-bottom-pad: calc(
-        4rem + 1.5rem + env(safe-area-inset-bottom, 0px)
+        0.75rem + max(14px, env(safe-area-inset-bottom, 0px))
       );
-      --app-nested-scroll-bottom-pad: calc(
-        4rem + 1.5rem + env(safe-area-inset-bottom, 0px)
-      );
+      --app-nested-scroll-bottom-pad: calc(1rem + max(8px, env(safe-area-inset-bottom, 0px)));
     }
   }
 }

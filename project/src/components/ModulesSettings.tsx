@@ -97,7 +97,7 @@ const ModulesSettings = () => {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="min-w-0">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg flex items-center space-x-2">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <p className="text-red-600 dark:text-red-400">

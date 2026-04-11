@@ -526,15 +526,15 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
         {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[var(--app-nested-scroll-bottom-pad,1.25rem)] max-md:[scroll-padding-bottom:var(--app-nested-scroll-bottom-pad,1.25rem)] md:pb-0 md:scroll-pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
-        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-3 py-3 shadow-sm sm:px-4 md:px-6">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-between w-full h-11 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner"
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 shadow-inner dark:border-slate-700 dark:bg-slate-800 sm:px-4"
           >
             <div className="flex items-center gap-3">
               {(() => {
@@ -563,8 +563,15 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           </button>
         </div>
         
-        {/* Same width + padding as accounting list pages (e.g. invoices.tsx inner wrapper) */}
-        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 pb-6 sm:p-4 md:p-6 md:pb-6">
+        {/* Shared surface for every /settings/* child: consistent horizontal rhythm + max width */}
+        <div
+          className={cn(
+            "flex-1 min-h-0 min-w-0 w-full",
+            "mx-auto max-w-6xl xl:max-w-7xl",
+            "px-3 py-4 pb-8 sm:px-4 sm:py-5 sm:pb-10 md:px-6 md:py-6 md:pb-10",
+          )}
+          data-settings-page-surface
+        >
           {children}
         </div>
       </div>

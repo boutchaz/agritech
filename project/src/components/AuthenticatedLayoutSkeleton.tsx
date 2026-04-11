@@ -128,7 +128,7 @@ export function AuthenticatedLayoutSkeleton() {
             data-main-scroll
             className={cn(
               'flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80',
-              'max-md:pb-[calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))]',
+              'max-md:pb-3 max-md:[scroll-padding-bottom:var(--app-mobile-nav-reserve,6rem)]',
               'md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:[scroll-padding-bottom:max(0.5rem,env(safe-area-inset-bottom,0px))]',
             )}
           >
@@ -254,11 +254,18 @@ export function AuthenticatedLayoutSkeleton() {
               </div>
             </div>
           </main>
+          <div
+            aria-hidden
+            className="shrink-0 bg-transparent md:hidden h-[var(--app-mobile-nav-reserve,6.5rem)]"
+          />
         </div>
 
         {/* ===== MOBILE BOTTOM NAV SKELETON ===== */}
-        <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-around px-2 py-2">
+        <div
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 overflow-hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
+          style={{ paddingBottom: 'max(14px, env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="flex h-16 items-stretch justify-around px-0.5">
             {Array.from({ length: 5 }).map((_, mobileNavIdx) => (
               <div key={"sk-" + mobileNavIdx} className="flex flex-col items-center gap-1 px-3 py-1">
                 <Skeleton className="h-5 w-5 rounded" />

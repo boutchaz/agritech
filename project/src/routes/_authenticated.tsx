@@ -180,8 +180,8 @@ function AuthenticatedLayout() {
             data-main-scroll
             className={cn(
               'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80',
-              // Explicit values (not only CSS vars) so padding always applies to this scrollport.
-              'max-md:pb-[calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+1.5rem+env(safe-area-inset-bottom,0px))]',
+              /* Scroll-end padding: tab clearance is primarily the in-flow spacer below (Android / One UI). */
+              'max-md:pb-3 max-md:[scroll-padding-bottom:var(--app-mobile-nav-reserve,6rem)]',
               'md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:[scroll-padding-bottom:max(0.5rem,env(safe-area-inset-bottom,0px))]',
             )}
           >
@@ -194,6 +194,11 @@ function AuthenticatedLayout() {
               </PullToRefresh>
             </ErrorBoundary>
           </main>
+          {/* Fixed bottom nav is out-of-flow: this reserves real layout height so content never sits under tabs (Samsung etc.). */}
+          <div
+            aria-hidden
+            className="shrink-0 bg-transparent md:hidden h-[var(--app-mobile-nav-reserve,6.5rem)]"
+          />
         </div>
         {/* Mobile Bottom Navigation */}
         <MobileBottomNav />
