@@ -455,7 +455,7 @@ export class ProductApplicationsService {
       if (variantIds.length > 0) {
         const { data: variants, error: variantsError } = await supabase
           .from('product_variants')
-          .select('id, item_id, variant_name, unit_id, work_units:unit_id(code)')
+          .select('id, item_id, variant_name, unit_id, base_quantity, work_units:unit_id(code)')
           .in('id', variantIds)
           .eq('is_active', true);
 
@@ -467,6 +467,7 @@ export class ProductApplicationsService {
               name: v.variant_name,
               quantity: stockByVariant.get(v.id) || 0,
               unit: v.work_units?.code || null,
+              base_quantity: v.base_quantity ?? 1,
             });
           });
         }
