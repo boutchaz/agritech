@@ -264,7 +264,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: BookOpen,
             path: "/settings/changelog",
             description: t("settings.changelog.description", "Product change history"),
-            roles: ADMIN_ROLES,
+            roles: ['system_admin'] as RoleName[],
           },
         ],
       },

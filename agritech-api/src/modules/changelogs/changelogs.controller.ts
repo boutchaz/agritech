@@ -22,6 +22,7 @@ import { ChangelogsService } from './changelogs.service';
 import { CreateChangelogDto, UpdateChangelogDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { RequireRole } from '../../common/decorators/require-role.decorator';
 
 @ApiTags('changelogs')
 @ApiBearerAuth()
@@ -50,8 +51,10 @@ export class ChangelogsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new changelog entry' })
+  @RequireRole('system_admin')
+  @ApiOperation({ summary: 'Create a new changelog entry (system_admin only)' })
   @ApiResponse({ status: 201, description: 'Changelog created successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   async create(@Req() req, @Body() dto: CreateChangelogDto) {
     const organizationId = req.headers['x-organization-id'];
     const userId = req.user.sub;
@@ -59,18 +62,22 @@ export class ChangelogsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a changelog entry' })
+  @RequireRole('system_admin')
+  @ApiOperation({ summary: 'Update a changelog entry (system_admin only)' })
   @ApiParam({ name: 'id', description: 'Changelog ID' })
   @ApiResponse({ status: 200, description: 'Changelog updated successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Changelog not found' })
   async update(@Param('id') id: string, @Body() dto: UpdateChangelogDto) {
     return this.changelogsService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a changelog entry' })
+  @RequireRole('system_admin')
+  @ApiOperation({ summary: 'Delete a changelog entry (system_admin only)' })
   @ApiParam({ name: 'id', description: 'Changelog ID' })
   @ApiResponse({ status: 200, description: 'Changelog deleted successfully' })
+  @ApiResponse({ status: 403, description: 'Insufficient permissions' })
   @ApiResponse({ status: 404, description: 'Changelog not found' })
   async delete(@Param('id') id: string) {
     return this.changelogsService.delete(id);

@@ -13,6 +13,9 @@ RUN npm install
 # Copy source code
 COPY agritech-api/ ./
 
+# Copy shared modules (referenced via relative imports)
+COPY shared/ /app/shared/
+
 # Build application
 RUN npm run build
 

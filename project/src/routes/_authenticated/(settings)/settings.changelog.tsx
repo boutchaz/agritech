@@ -4,7 +4,7 @@ import RoleProtectedRoute from '@/components/RoleProtectedRoute'
 
 function ChangelogSettingsPage() {
   return (
-    <RoleProtectedRoute allowedRoles={['system_admin', 'organization_admin']}>
+    <RoleProtectedRoute allowedRoles={['system_admin']}>
       <ChangelogSettings />
     </RoleProtectedRoute>
   );

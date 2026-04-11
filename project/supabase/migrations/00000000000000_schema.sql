@@ -23871,7 +23871,16 @@ CREATE POLICY "changelog_read" ON changelogs
   );
 
 CREATE POLICY "changelog_manage" ON changelogs
-  FOR ALL USING (public.is_organization_member(COALESCE(organization_id, '00000000-0000-0000-0000-000000000000')));
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND r.name = 'system_admin'
+        AND ou.is_active = true
+    )
+  );
 
 
 CREATE INDEX IF NOT EXISTS idx_changelogs_published ON changelogs (published_at DESC);
