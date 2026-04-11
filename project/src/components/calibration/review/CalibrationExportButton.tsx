@@ -52,7 +52,12 @@ export function CalibrationExportButton({ calibrationId }: CalibrationExportButt
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isExporting} className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isExporting}
+          className="gap-2 border-white/70 bg-white text-gray-900 shadow-sm hover:bg-gray-50 hover:text-gray-900 [&_svg]:text-gray-700"
+        >
           {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           {t('calibrationReview.export.title')}
         </Button>

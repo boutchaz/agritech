@@ -35,8 +35,9 @@ const ChatPage = () => {
         subtitle={t('chat.subtitle', 'Ask questions about your farm, workers, accounting, and more')}
       />
 
-      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 lg:p-6">
-        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col">
+      {/* No bottom padding: main already reserves space for mobile nav / safe area; extra pb felt like a large gap */}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pt-3 pb-0 sm:px-4 sm:pt-4 lg:px-6 lg:pt-6">
+        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col min-h-[min(28rem,calc(100dvh-12rem))]">
           <ChatInterface />
         </div>
       </div>

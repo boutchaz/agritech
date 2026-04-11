@@ -71,8 +71,8 @@ const DashboardSkeleton = () => {
       </div>
 
       {/* ===== CONTENT SKELETON ===== */}
-      <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8">
-        <div className="space-y-8">
+      <div className="mx-auto w-full min-w-0 max-w-[1920px] space-y-6 px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 lg:py-6">
+        <div className="space-y-6">
           {/* Farm selector skeleton */}
           <Skeleton className="h-20 w-full rounded-3xl" />
 
@@ -84,12 +84,12 @@ const DashboardSkeleton = () => {
           </div>
 
           {/* Operational Tier */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-7 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7 space-y-6">
               <WidgetCardSkeleton variant="list" lines={4} rounded="rounded-[2.5rem]" />
               <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
             </div>
-            <div className="lg:col-span-5 space-y-8">
+            <div className="lg:col-span-5 space-y-6">
               <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
               <WidgetCardSkeleton variant="list" lines={3} rounded="rounded-[2.5rem]" />
             </div>

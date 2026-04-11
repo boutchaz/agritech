@@ -65,50 +65,69 @@ def _to_number_or_none(value: object) -> float | None:
     return None
 
 
-def _mark_outliers(values: list[IndexTimePoint]) -> int:
-    """Flag outliers using seasonal IQR (interquartile range).
+def _mark_temporal_artefacts(
+    values: list[IndexTimePoint],
+    spike_threshold: float = 0.30,
+    confirm_window_days: int = 10,
+    confirm_tolerance: float = 0.10,
+) -> int:
+    """Flag artefacts using temporal plausibility from the referential.
 
-    Points are grouped by quarter (Q1-Q4) and tested against 1.5*IQR within
-    each quarter.  This prevents normal seasonal variation (e.g. dormancy vs
-    peak) from being flagged as anomalous — a key problem with global sigma.
+    Implements ``protocole_phenologique.filtrage.fait_au_calibrage.plausibilite_temporelle``:
 
-    Falls back to global IQR when a quarter has < 5 points.
+    1. **Detect spike**: ``|V(t) - V(t-1)| / V(t-1) > spike_threshold``
+    2. **Confirm artefact**: within the next ``confirm_window_days``, if
+       a subsequent value returns to ±``confirm_tolerance`` of V(t-1),
+       the spike is confirmed as an artefact and marked as outlier.
+
+    This replaces the old IQR-based outlier detection.  SCL filtering at
+    download time already removes cloud-contaminated pixels; this catches
+    residual artefacts (thin shadows, sensor glitches, field-edge bleed)
+    without flagging legitimate seasonal transitions.
     """
-    if len(values) < 5:
+    if len(values) < 3:
         return 0
 
-    # Group indices by quarter (Jan-Mar=1, Apr-Jun=2, Jul-Sep=3, Oct-Dec=4)
-    quarters: dict[int, list[int]] = {1: [], 2: [], 3: [], 4: []}
-    for i, point in enumerate(values):
-        q = (point.date.month - 1) // 3 + 1
-        quarters[q].append(i)
-
-    # Pre-compute global IQR as fallback
-    all_vals = np.array([p.value for p in values], dtype=np.float64)
-    g_q1, g_q3 = float(np.percentile(all_vals, 25)), float(np.percentile(all_vals, 75))
-    g_iqr = g_q3 - g_q1
-
     count = 0
-    for _q, indices in quarters.items():
-        if not indices:
+    i = 1
+    while i < len(values):
+        prev = values[i - 1]
+        curr = values[i]
+
+        # Skip already-flagged or interpolated points
+        if prev.outlier or prev.interpolated:
+            i += 1
             continue
 
-        if len(indices) >= 5:
-            arr = np.array([values[i].value for i in indices], dtype=np.float64)
-            q1, q3 = float(np.percentile(arr, 25)), float(np.percentile(arr, 75))
-            iqr = q3 - q1
-        else:
-            q1, q3, iqr = g_q1, g_q3, g_iqr
-
-        if iqr == 0:
+        # Step 1: detect spike
+        if prev.value == 0:
+            i += 1
             continue
 
-        lower = q1 - 1.5 * iqr
-        upper = q3 + 1.5 * iqr
-        for i in indices:
-            if values[i].value < lower or values[i].value > upper:
-                values[i].outlier = True
-                count += 1
+        relative_change = abs(curr.value - prev.value) / abs(prev.value)
+        if relative_change <= spike_threshold:
+            i += 1
+            continue
+
+        # Step 2: look ahead within confirm_window_days for a snap-back
+        confirmed = False
+        for j in range(i + 1, len(values)):
+            days_ahead = (values[j].date - curr.date).days
+            if days_ahead > confirm_window_days:
+                break
+            if values[j].outlier or values[j].interpolated:
+                continue
+            # Check if it returns to ±tolerance of the pre-spike value
+            if abs(values[j].value - prev.value) / abs(prev.value) <= confirm_tolerance:
+                confirmed = True
+                break
+
+        if confirmed:
+            # Mark the spike point as artefact
+            curr.outlier = True
+            count += 1
+
+        i += 1
 
     return count
 
@@ -171,6 +190,36 @@ def _interpolate_between(
     return interpolated
 
 
+def _extract_plausibility_config(
+    reference_data: dict | None,
+) -> tuple[float, int, float]:
+    """Read plausibilite_temporelle thresholds from referential, with defaults."""
+    spike = 0.30
+    window = 10
+    tolerance = 0.10
+    if not reference_data:
+        return spike, window, tolerance
+    proto = reference_data.get("protocole_phenologique")
+    if not isinstance(proto, dict):
+        return spike, window, tolerance
+    filtrage = proto.get("filtrage")
+    if not isinstance(filtrage, dict):
+        return spike, window, tolerance
+    cal = filtrage.get("fait_au_calibrage")
+    if not isinstance(cal, dict):
+        return spike, window, tolerance
+    plaus = cal.get("plausibilite_temporelle")
+    if not isinstance(plaus, dict):
+        return spike, window, tolerance
+    # Parse condition_artefact: "|V(t) - V(t-1)| / V(t-1) > 0.30"
+    cond = plaus.get("condition_artefact", "")
+    import re
+    m = re.search(r">\s*([\d.]+)", str(cond))
+    if m:
+        spike = float(m.group(1))
+    return spike, window, tolerance
+
+
 def extract_satellite_history(
     *,
     organization_id: str,
@@ -180,6 +229,7 @@ def extract_satellite_history(
     max_cloud_coverage: float = 20.0,
     interpolate_max_gap_days: int = 15,
     fallback_series: dict[str, list[dict[str, object]]] | None = None,
+    reference_data: dict | None = None,
 ) -> Step1Output:
     index_points: dict[str, list[IndexTimePoint]] = {
         index: [] for index in SUPPORTED_INDICES
@@ -236,6 +286,9 @@ def extract_satellite_history(
                     )
                 )
 
+    # Extract plausibility config from referential
+    spike_thresh, confirm_window, confirm_tol = _extract_plausibility_config(reference_data)
+
     interpolated_dates_set: set[date] = set()
     total_outliers = 0
 
@@ -261,7 +314,12 @@ def extract_satellite_history(
                 enriched_points.append(generated_point)
 
         enriched_points = sorted(enriched_points, key=lambda item: item.date)
-        total_outliers += _mark_outliers(enriched_points)
+        total_outliers += _mark_temporal_artefacts(
+            enriched_points,
+            spike_threshold=spike_thresh,
+            confirm_window_days=confirm_window,
+            confirm_tolerance=confirm_tol,
+        )
         _smooth_series(enriched_points)
         index_points[index] = enriched_points
 

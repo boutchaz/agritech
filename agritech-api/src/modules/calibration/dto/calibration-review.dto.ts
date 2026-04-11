@@ -164,6 +164,32 @@ export interface HistoryDepth {
   date_end: string;
 }
 
+export interface PhenologyDashboardData {
+  available: boolean;
+  mode: string | null;
+  year_range: string | null;
+  referential_cycle_used: boolean;
+  mean_stages: Array<{
+    key: string;
+    label: string;
+    date: string;
+    variability_days: number;
+    gdd_correlation: number;
+  }>;
+  timelines: Array<{
+    year: number;
+    transitions: Array<{
+      phase: string;
+      start_date: string;
+      end_date: string | null;
+      gdd_at_entry: number;
+      confidence: string;
+    }>;
+    mode: string;
+  }>;
+  yearly_stages: Record<string, Record<string, string>>;
+}
+
 export interface BlockBAnalyse {
   vigor: IndexCard;
   hydric: CrossDiagnosisCard;
@@ -174,6 +200,7 @@ export interface BlockBAnalyse {
   heterogeneity_flag: boolean;
   temporal_stability: TemporalStability;
   history_depth: HistoryDepth;
+  phenology_dashboard: PhenologyDashboardData | null;
 }
 
 // ──────────────────────────────────────────────

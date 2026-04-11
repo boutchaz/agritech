@@ -5,6 +5,7 @@ import { useParcelById } from '@/hooks/useParcelsQuery';
 import { BlockASynthese } from './BlockASynthese';
 import { SpectralChart } from './SpectralChart';
 import { ZoneMap } from './ZoneMap';
+import { PhenologyDashboard } from './PhenologyDashboard';
 import { BlockDAmeliorer } from './BlockDAmeliorer';
 import { BlockGMetadonnees } from './BlockGMetadonnees';
 import { BlockHValidation } from './BlockHValidation';
@@ -118,6 +119,11 @@ export function CalibrationReviewSection({ parcelId }: CalibrationReviewSectionP
 
           {/* Section 2: Spectral thresholds */}
           <SpectralChart data={review.block_b.spectral} />
+
+          {/* Section 2b: Phenology Dashboard */}
+          {review.block_b.phenology_dashboard && (
+            <PhenologyDashboard data={review.block_b.phenology_dashboard} />
+          )}
 
           {/* Section 3: Intra-parcel zoning */}
           <ZoneMap

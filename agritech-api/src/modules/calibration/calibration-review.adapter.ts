@@ -344,6 +344,7 @@ export class CalibrationReviewAdapter {
       heterogeneity_flag: this.checkHeterogeneity(step7),
       temporal_stability: this.buildTemporalStability(step4),
       history_depth: this.buildHistoryDepth(step1),
+      phenology_dashboard: this.buildPhenologyDashboard(step4),
     };
   }
 
@@ -624,6 +625,85 @@ export class CalibrationReviewAdapter {
     }
 
     return { label, variance_percent: variancePercent, phrase };
+  }
+
+  private buildPhenologyDashboard(step4: JsonRecord): BlockBAnalyse["phenology_dashboard"] {
+    const phaseTimeline = this.asArray(step4.phase_timeline);
+    const meanDates = this.asRecord(step4.mean_dates);
+    const variability = this.asRecord(step4.inter_annual_variability_days ?? step4.inter_annual_variability);
+    const gddCorrelation = this.asRecord(step4.gdd_correlation);
+    const yearlyStages = this.asRecord(step4.yearly_stages);
+    const referentialCycleUsed = step4.referential_cycle_used === true;
+
+    // No phase_timeline means legacy detection — skip dashboard
+    if (phaseTimeline.length === 0 && Object.keys(yearlyStages).length === 0) {
+      return null;
+    }
+
+    const stageConfig = [
+      { key: "dormancy_exit", label: "Dormancy Exit" },
+      { key: "plateau_start", label: "Plateau Start" },
+      { key: "peak", label: "Peak" },
+      { key: "decline_start", label: "Decline Start" },
+      { key: "dormancy_entry", label: "Dormancy Entry" },
+    ];
+
+    const meanStages = stageConfig.map(({ key, label }) => ({
+      key,
+      label,
+      date: this.asString(meanDates[key]) ?? "",
+      variability_days: this.asNumber(variability[key], 0),
+      gdd_correlation: this.asNumber(gddCorrelation[key], 0),
+    }));
+
+    // Build timelines from phase_timeline
+    const timelines = phaseTimeline.map((tl) => {
+      const rec = this.asRecord(tl);
+      return {
+        year: this.asNumber(rec.year, 0),
+        transitions: this.asArray(rec.transitions).map((t) => {
+          const tr = this.asRecord(t);
+          return {
+            phase: this.asString(tr.phase) ?? "",
+            start_date: this.asString(tr.start_date) ?? "",
+            end_date: this.asString(tr.end_date),
+            gdd_at_entry: this.asNumber(tr.gdd_at_entry, 0),
+            confidence: this.asString(tr.confidence) ?? "MODEREE",
+          };
+        }),
+        mode: this.asString(rec.mode) ?? "NORMAL",
+      };
+    });
+
+    // Build yearly stages for table
+    const yearlyStagesOut: Record<string, Record<string, string>> = {};
+    for (const [year, stagesRaw] of Object.entries(yearlyStages)) {
+      const stages = this.asRecord(stagesRaw);
+      yearlyStagesOut[year] = {
+        dormancy_exit: this.asString(stages.dormancy_exit) ?? "",
+        plateau_start: this.asString(stages.plateau_start) ?? "",
+        peak: this.asString(stages.peak) ?? "",
+        decline_start: this.asString(stages.decline_start) ?? "",
+        dormancy_entry: this.asString(stages.dormancy_entry) ?? "",
+      };
+    }
+
+    // Determine mode and year range
+    const mode = timelines.length > 0 ? timelines[0].mode : null;
+    const years = timelines.map((t) => t.year).filter((y) => y > 0);
+    const yearRange = years.length > 0
+      ? `${Math.min(...years)}–${Math.max(...years)}`
+      : null;
+
+    return {
+      available: true,
+      mode,
+      year_range: yearRange,
+      referential_cycle_used: referentialCycleUsed,
+      mean_stages: meanStages,
+      timelines,
+      yearly_stages: yearlyStagesOut,
+    };
   }
 
   private buildHistoryDepth(step1: JsonRecord): BlockBAnalyse["history_depth"] {

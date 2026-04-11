@@ -48,11 +48,13 @@ const InlineFarmSelector = ({
 
   if (currentFarm) {
     const farmRow = farmsList.find((f) => f.id === currentFarm.id);
+    const farmInList = Boolean(farmRow);
     const displayArea =
       farmRow && 'total_area' in farmRow && farmRow.total_area != null
         ? Number(farmRow.total_area)
         : (currentFarm as { total_area?: number }).total_area;
-    const selectValue = farmRow ? currentFarm.id : '';
+    // Always keep a non-empty value when currentFarm exists — empty string breaks Radix Select (no matching item → blank trigger).
+    const selectValue = currentFarm.id;
 
     return (
       <div className={cn("flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-4", className)}>
@@ -81,12 +83,17 @@ const InlineFarmSelector = ({
               if (farm) setCurrentFarm(farm);
             }}
           >
-            <SelectTrigger className="w-full sm:w-48 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-xl h-10 text-xs font-bold uppercase tracking-tight">
+            <SelectTrigger className="w-full sm:w-48 bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-xl h-10 text-xs font-bold uppercase tracking-tight text-slate-900 dark:text-slate-100">
               <SelectValue placeholder={currentFarm.name} />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl">
               {farmsList.map((farm) => (
-                <SelectItem key={farm.id} value={farm.id} className="rounded-lg py-3 focus:bg-emerald-50 dark:focus:bg-emerald-900/20">
+                <SelectItem
+                  key={farm.id}
+                  value={farm.id}
+                  textValue={farm.name}
+                  className="rounded-lg py-3 focus:bg-emerald-50 dark:focus:bg-emerald-900/20"
+                >
                   <div className="flex items-center justify-between w-full gap-4">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -98,6 +105,18 @@ const InlineFarmSelector = ({
                   </div>
                 </SelectItem>
               ))}
+              {!farmInList && (
+                <SelectItem
+                  value={currentFarm.id}
+                  textValue={currentFarm.name}
+                  className="rounded-lg py-3 focus:bg-emerald-50 dark:focus:bg-emerald-900/20"
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="font-bold uppercase tracking-tight text-xs">{currentFarm.name}</span>
+                  </div>
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -136,7 +155,12 @@ const InlineFarmSelector = ({
             </SelectTrigger>
             <SelectContent className="rounded-2xl border-none shadow-2xl">
               {farmsList.map((farm) => (
-                <SelectItem key={farm.id} value={farm.id} className="rounded-xl py-4 px-6 focus:bg-blue-50 dark:focus:bg-blue-900/20">
+                <SelectItem
+                  key={farm.id}
+                  value={farm.id}
+                  textValue={farm.name}
+                  className="rounded-xl py-4 px-6 focus:bg-blue-50 dark:focus:bg-blue-900/20"
+                >
                   <div className="flex items-center justify-between w-full gap-8">
                     <div className="flex items-center gap-3">
                       <MapPin className="h-4 w-4 text-blue-600" />

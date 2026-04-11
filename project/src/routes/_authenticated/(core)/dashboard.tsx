@@ -218,14 +218,14 @@ const AppContent = () => {
         }
       />
 
-      <div className="p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8">
+      <div className="mx-auto w-full min-w-0 max-w-[1920px] space-y-6 px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 lg:py-6">
         {isLiveMode ? (
-          <div className="animate-in fade-in duration-500 space-y-8">
+          <div className="animate-in fade-in duration-500 space-y-6">
             {/* Live Dashboard Content */}
             <LiveSummaryCards summary={liveSummary} isLoading={summaryLoading} />
 
             {/* Main Grid - Heat Map and Concurrent Users */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Heat Map - Takes 8 columns */}
               <div className="lg:col-span-8">
                 <ActivityHeatMap
@@ -246,7 +246,7 @@ const AppContent = () => {
             </div>
 
             {/* Secondary Grid - Operations and Activities */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Active Operations */}
               <ActiveOperationsWidget
                 operations={liveMetrics?.activeOperations.operations || []}
@@ -282,7 +282,7 @@ const AppContent = () => {
             )}
           </div>
         ) : (
-          <div className="animate-in fade-in duration-500 space-y-8">
+          <div className="animate-in fade-in duration-500 space-y-6">
             <Dashboard sensorData={[]} settings={dashboardSettings} />
           </div>
         )}

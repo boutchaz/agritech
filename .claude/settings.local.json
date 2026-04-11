@@ -108,7 +108,13 @@
       "Bash(npx vite:*)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse snapshot:*)",
       "Bash($B click:*)",
-      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse screenshot:*)"
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse screenshot:*)",
+      "Bash($B console:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse network:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse click:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse js ':*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse text:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse js:*)"
     ],
     "deny": [],
     "ask": []

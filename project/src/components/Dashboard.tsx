@@ -171,7 +171,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Farm Selection Context */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
         <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
@@ -194,9 +194,9 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
       </div>
 
       {/* Main Operational Tier: Actionable Insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Tasks & Workforce */}
-        <div className="lg:col-span-7 space-y-8">
+        <div className="lg:col-span-7 space-y-6">
           <div data-tour="dashboard-tasks" className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <UpcomingTasksWidget />
           </div>
@@ -207,7 +207,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
         </div>
 
         {/* Right Column: Financials & Data Analysis */}
-        <div className="lg:col-span-5 space-y-8">
+        <div className="lg:col-span-5 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <AccountingWidget />
           </div>
@@ -220,7 +220,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
 
       {/* Dynamic Widgets Tier */}
       {(settings.layout?.middleRow?.length ?? 0) > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {settings.layout.middleRow
             .filter(w => !['tasks', 'soil', 'parcels', 'stock', 'workers', 'harvests'].includes(w))
             .map((widgetType) => (
@@ -232,7 +232,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
       )}
 
       {(settings.layout?.bottomRow?.length ?? 0) > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {settings.layout.bottomRow.map((widgetType) => (
             <div key={`bottom-${widgetType}`} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
               {renderWidget(widgetType)}

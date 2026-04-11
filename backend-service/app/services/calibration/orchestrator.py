@@ -177,6 +177,7 @@ def run_calibration_pipeline(
         parcel_id=calibration_input.parcel_id,
         images=_normalize_satellite_images(satellite_images),
         storage=storage,
+        reference_data=calibration_input.reference_data,
     )
 
     frost_threshold = FROST_THRESHOLD_BY_CROP.get(calibration_input.crop_type, 0.0)

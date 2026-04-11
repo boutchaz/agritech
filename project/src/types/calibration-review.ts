@@ -138,6 +138,47 @@ export interface BlockBAnalyse {
   heterogeneity_flag: boolean;
   temporal_stability: TemporalStability;
   history_depth: HistoryDepth;
+  phenology_dashboard: PhenologyDashboardData | null;
+}
+
+// ── Phenology Dashboard (from step4 state machine) ──
+
+export interface PhaseTransitionEntry {
+  phase: string;
+  start_date: string;
+  end_date: string | null;
+  gdd_at_entry: number;
+  confidence: string;
+}
+
+export interface SeasonTimelineEntry {
+  year: number;
+  transitions: PhaseTransitionEntry[];
+  mode: string; // NORMAL | AMORCAGE
+}
+
+export interface PhenologyMeanStage {
+  key: string;
+  label: string;
+  date: string;
+  variability_days: number;
+  gdd_correlation: number;
+}
+
+export interface PhenologyDashboardData {
+  available: boolean;
+  mode: string | null;
+  year_range: string | null;
+  referential_cycle_used: boolean;
+  mean_stages: PhenologyMeanStage[];
+  timelines: SeasonTimelineEntry[];
+  yearly_stages: Record<string, {
+    dormancy_exit: string;
+    plateau_start: string;
+    peak: string;
+    decline_start: string;
+    dormancy_entry: string;
+  }>;
 }
 
 // ── Block C — Anomalies (Phase 2) ──
