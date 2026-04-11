@@ -1299,6 +1299,10 @@
       "simple": "Simple and accessible",
       "simpleDesc": "No technical jargon, quick to learn"
     },
+    "regions": {
+      "title": "Supported Agricultural Regions",
+      "subtitle": "Our platform is available for agricultural land in the following countries:"
+    },
     "pricing": {
       "title": "Custom Pricing",
       "subtitle": "Every farm is unique. Contact us for a quote tailored to your needs.",

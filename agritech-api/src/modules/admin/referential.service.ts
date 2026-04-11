@@ -8,7 +8,7 @@ import { DatabaseService } from '../database/database.service';
 import {
   buildReferentialSchema,
   formatZodErrors,
-} from '../../../../shared/referential-schema';
+} from '../../common/utils/referential-schema';
 
 export interface ReferentialSummary {
   crop: string;

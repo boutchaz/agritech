@@ -23,6 +23,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/bg-360-day.webp';
 import { appConfig } from '@/config/app';
 import { toast } from 'sonner';
+import SupportedRegionsSection from './SupportedRegionsSection';
 
 const LandingPage = () => {
   const { t } = useTranslation();
@@ -579,6 +580,9 @@ const LandingPage = () => {
           </div>
         </section>
 
+
+        {/* SUPPORTED REGIONS */}
+        <SupportedRegionsSection />
 
         {/* PRICING */}
         <section id="pricing" className="py-24 bg-secondary/50 text-center relative overflow-hidden">

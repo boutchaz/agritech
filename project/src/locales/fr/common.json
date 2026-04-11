@@ -1299,6 +1299,10 @@
       "simple": "Simple et accessible",
       "simpleDesc": "Interface évolutive : mode avancé pour ingénieurs, intermédiaire, ou basique pour une prise en main immédiate."
     },
+    "regions": {
+      "title": "Régions Agricoles Supportées",
+      "subtitle": "Notre plateforme est disponible pour les terres agricoles dans les pays suivants :"
+    },
     "pricing": {
       "title": "Tarification sur mesure",
       "subtitle": "Chaque exploitation est unique. Contactez-nous pour un devis adapté à vos besoins.",

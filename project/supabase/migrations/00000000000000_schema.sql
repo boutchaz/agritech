@@ -23893,3 +23893,94 @@ CREATE TRIGGER set_changelogs_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 
+
+
+-- =====================================================
+-- SUPPORTED COUNTRIES
+-- =====================================================
+-- Platform-level table tracking which countries the platform supports.
+-- Managed by internal admins. No organization_id — this is global data.
+
+CREATE TABLE IF NOT EXISTS supported_countries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  country_code TEXT NOT NULL UNIQUE,
+  country_name TEXT NOT NULL,
+  region TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE supported_countries IS 'Platform-level list of countries where the platform is available for agricultural land';
+
+ALTER TABLE supported_countries ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can read supported countries (public info)
+CREATE POLICY "supported_countries_read" ON supported_countries
+  FOR SELECT USING (true);
+
+-- Only service_role can manage (admin API uses service_role client)
+CREATE POLICY "supported_countries_manage" ON supported_countries
+  FOR ALL USING (
+    auth.role() = 'service_role'
+  );
+
+CREATE INDEX IF NOT EXISTS idx_supported_countries_region ON supported_countries (region);
+CREATE INDEX IF NOT EXISTS idx_supported_countries_enabled ON supported_countries (enabled) WHERE enabled = true;
+
+CREATE TRIGGER set_supported_countries_updated_at
+  BEFORE UPDATE ON supported_countries
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed initial supported countries
+INSERT INTO supported_countries (country_code, country_name, region, enabled, display_order) VALUES
+  -- Africa
+  ('MA', 'Morocco', 'Africa', true, 1),
+  ('ZA', 'South Africa', 'Africa', true, 2),
+  -- Europe
+  ('FR', 'France', 'Europe', true, 1),
+  ('ES', 'Spain', 'Europe', true, 2),
+  ('IT', 'Italy', 'Europe', true, 3),
+  ('PT', 'Portugal', 'Europe', true, 4),
+  ('AL', 'Albania', 'Europe', true, 5),
+  ('AD', 'Andorra', 'Europe', true, 6),
+  ('BA', 'Bosnia and Herzegovina', 'Europe', true, 7),
+  ('XK', 'Kosovo', 'Europe', true, 8),
+  ('LI', 'Liechtenstein', 'Europe', true, 9),
+  ('MD', 'Moldova', 'Europe', true, 10),
+  ('ME', 'Montenegro', 'Europe', true, 11),
+  ('MK', 'North Macedonia', 'Europe', true, 12),
+  ('NO', 'Norway', 'Europe', true, 13),
+  ('SM', 'San Marino', 'Europe', true, 14),
+  ('RS', 'Serbia', 'Europe', true, 15),
+  ('CH', 'Switzerland', 'Europe', true, 16),
+  ('UA', 'Ukraine', 'Europe', true, 17),
+  ('GB', 'United Kingdom', 'Europe', true, 18),
+  -- North America
+  ('US', 'United States', 'North America', true, 1),
+  ('CA', 'Canada', 'North America', true, 2),
+  ('MX', 'Mexico', 'North America', true, 3),
+  ('GT', 'Guatemala', 'North America', true, 4),
+  ('SV', 'El Salvador', 'North America', true, 5),
+  ('CR', 'Costa Rica', 'North America', true, 6),
+  ('PA', 'Panama', 'North America', true, 7),
+  ('PR', 'Puerto Rico', 'North America', true, 8),
+  -- South America
+  ('AR', 'Argentina', 'South America', true, 1),
+  ('BR', 'Brazil', 'South America', true, 2),
+  ('CL', 'Chile', 'South America', true, 3),
+  ('CO', 'Colombia', 'South America', true, 4),
+  ('EC', 'Ecuador', 'South America', true, 5),
+  ('PY', 'Paraguay', 'South America', true, 6),
+  ('UY', 'Uruguay', 'South America', true, 7),
+  -- Oceania
+  ('AU', 'Australia', 'Oceania', true, 1),
+  ('NZ', 'New Zealand', 'Oceania', true, 2),
+  -- Central Asia
+  ('KZ', 'Kazakhstan', 'Central Asia', true, 1),
+  ('KG', 'Kyrgyzstan', 'Central Asia', true, 2),
+  -- Middle East
+  ('TR', 'Turkey', 'Middle East', true, 1)
+ON CONFLICT (country_code) DO NOTHING;
