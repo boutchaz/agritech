@@ -372,13 +372,17 @@ class EarthEngineService:
         ).strftime("%Y-%m-%d")
 
         if use_aoi_cloud_filter:
-            # AOI-level: no tile pre-filter, SCL-only at 20m decides
+            # Two-gate cloud filter:
+            # 1) Tile-level pre-filter at 25% to reject obviously cloudy tiles
+            #    (SCL alone is unreliable for small AOIs — misclassifies cloud pixels)
+            # 2) SCL AOI-level filter at max_cloud for fine-grained check
             collection = (
                 ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
                 .filterBounds(aoi)
                 .filterDate(start_date, end_dt_inclusive)
+                .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", 25))
             )
-            logger.info("Applying SCL-based AOI cloud filtering at 20m")
+            logger.info("Applying tile pre-filter (25%%) + SCL AOI cloud filtering at 20m")
             collection = CloudMaskingService.filter_by_scl_coverage(
                 collection, aoi, max_cloud
             )
