@@ -5,6 +5,7 @@ from typing import Any
 
 from ..referential_utils import (
     get_phase_boundaries_from_reference,
+    get_variety_yield_profile,
     span_for_rendement_key,
 )
 from ..types import (
@@ -45,11 +46,13 @@ def _resolve_bracket(
 ) -> tuple[str, tuple[float, float]]:
     boundaries = get_phase_boundaries_from_reference(reference_data)
     best: tuple[str, tuple[float, float], int] | None = None
+    has_age_scoped_entries = False
 
     for key, raw_value in rendement_map.items():
         span = span_for_rendement_key(str(key), boundaries)
         if span is None:
             continue
+        has_age_scoped_entries = True
         lo, hi = span
         if age < lo or age >= hi:
             continue
@@ -60,6 +63,9 @@ def _resolve_bracket(
 
     if best is not None:
         return best[0], best[1]
+
+    if has_age_scoped_entries:
+        return "unknown", (0.0, 0.0)
 
     if rendement_map:
         key = next(iter(rendement_map.keys()))
@@ -189,46 +195,28 @@ def calculate_yield_potential(
     year = current_year if current_year is not None else datetime.now().year
     age = 0 if planting_year is None else max(0, year - planting_year)
 
-    rendement_map: dict[str, Any] = {}
-    varieties = reference_data.get("varietes")
-    if isinstance(varieties, list):
-        # Parcel variety (from calibration_input) is matched to referential varietes by nom or code.
-        normalized_variety = (variety or "").strip().lower()
-        matched_item: dict[str, Any] | None = None
-        for item in varieties:
-            if not isinstance(item, dict):
-                continue
-            name = str(item.get("nom", "")).strip().lower()
-            code = str(item.get("code", "")).strip().lower()
-            if normalized_variety and normalized_variety not in {name, code}:
-                continue
-            matched_item = item
-            break
-
-        # Fallback: when variety doesn't match any referential entry,
-        # use the first variety that has rendement_kg_arbre data.
-        if matched_item is None:
-            for item in varieties:
-                if isinstance(item, dict) and isinstance(
-                    item.get("rendement_kg_arbre"), dict
-                ):
-                    matched_item = item
-                    break
-
-        if matched_item is not None:
-            candidate = matched_item.get("rendement_kg_arbre")
-            if isinstance(candidate, dict):
-                rendement_map = candidate
+    profile = get_variety_yield_profile(reference_data, variety)
+    rendement_map = profile.yield_curve if profile is not None else {}
+    reference_unit = profile.yield_unit if profile is not None else "kg/tree"
 
     bracket, (min_ref, max_ref) = _resolve_bracket(age, rendement_map, reference_data)
     historical_avg = _historical_average(harvest_records)
 
-    convert = lambda v: _kg_per_tree_to_t_per_ha(
-        v,
-        density_per_hectare=density_per_hectare,
-        plant_count=plant_count,
-        area_hectares=area_hectares,
+    has_density = (density_per_hectare is not None and density_per_hectare > 0) or (
+        plant_count and area_hectares and area_hectares > 0
     )
+
+    if reference_unit == "t/ha":
+        convert = lambda v: v
+        output_unit = "t/ha"
+    else:
+        convert = lambda v: _kg_per_tree_to_t_per_ha(
+            v,
+            density_per_hectare=density_per_hectare,
+            plant_count=plant_count,
+            area_hectares=area_hectares,
+        )
+        output_unit = "t/ha" if has_density else "kg/tree"
 
     min_value = convert(min_ref)
     max_value = convert(max_ref)
@@ -250,10 +238,6 @@ def calculate_yield_potential(
         elif alternance.detected and alternance.current_year_type == "off":
             min_value = min_value * 0.7
 
-    has_density = (density_per_hectare is not None and density_per_hectare > 0) or (
-        plant_count and area_hectares and area_hectares > 0
-    )
-
     yield_potential = YieldPotential(
         minimum=round(min_value, 4),
         maximum=round(max_value, 4),
@@ -262,7 +246,7 @@ def calculate_yield_potential(
         historical_average=(
             None if historical_avg is None else round(convert(historical_avg), 4)
         ),
-        unit="t/ha" if has_density else "kg/tree",
+        unit=output_unit,
     )
 
     return Step6Output(yield_potential=yield_potential, alternance=alternance)

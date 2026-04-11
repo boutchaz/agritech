@@ -19,13 +19,13 @@ from .pipeline.s1_satellite_extraction import (
 )
 from .pipeline.s2_weather_extraction import extract_weather_history
 from .pipeline.s3_percentile_calculation import calculate_percentiles
-from .pipeline.s3_percentile_calculation import MIN_PERCENTILE_SAMPLES
 from .pipeline.s4_phenology_detection import detect_phenology
 from .pipeline.s5_anomaly_detection import detect_anomalies
 from .pipeline.s6_yield_potential import calculate_yield_potential
 from .pipeline.s7_zone_detection import classify_zones
 from .pipeline.s8_health_score import calculate_health_score
 from .support.gdd_service import precompute_gdd_rows
+from .referential_utils import get_calibration_capabilities
 from .types import (
     CalibrationInput,
     CalibrationMetadata,
@@ -179,10 +179,18 @@ def run_calibration_pipeline(
         storage=storage,
         reference_data=calibration_input.reference_data,
     )
-    observed_ndvi_points = _observed_points(step1.index_time_series.get("NDVI", []))
-    if len(observed_ndvi_points) < MIN_PERCENTILE_SAMPLES:
+    capabilities = get_calibration_capabilities(
+        calibration_input.crop_type,
+        calibration_input.reference_data,
+    )
+    if not capabilities.supported:
         raise ValueError(
-            "Calibration requires at least 10 observed NDVI images after filtering"
+            f"Calibration is not supported for crop_type '{calibration_input.crop_type}'"
+        )
+    observed_ndvi_points = _observed_points(step1.index_time_series.get("NDVI", []))
+    if len(observed_ndvi_points) < capabilities.min_observed_images:
+        raise ValueError(
+            f"Calibration requires at least {capabilities.min_observed_images} observed NDVI images after filtering"
         )
 
     step2 = extract_weather_history(
@@ -336,6 +344,8 @@ def run_calibration_pipeline(
 
     if calibration_input.crop_type in EVERGREEN_CROPS and not step4.referential_cycle_used:
         data_quality_flags.append("evergreen_phenology_approximate")
+    if step4.status != "ok":
+        data_quality_flags.append(f"phenology_{step4.status}")
 
     return CalibrationOutput(
         parcel_id=calibration_input.parcel_id,

@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { PageLoader } from '@/components/ui/loader';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function TasksLayout() {
   const { t } = useTranslation();
@@ -23,10 +23,35 @@ function TasksLayout() {
   }
 
   const navItems = [
-    { to: '/tasks', label: t('tasks.list'), icon: CheckSquare, tourId: undefined },
-    { to: '/tasks/calendar', label: t('tasks.calendar'), icon: Calendar, tourId: 'task-calendar' },
-    { to: '/tasks/kanban', label: t('tasks.kanban', 'Board'), icon: Columns3, tourId: 'task-kanban' },
+    {
+      to: '/tasks',
+      value: 'list' as const,
+      label: t('tasks.list'),
+      icon: CheckSquare,
+      tourId: undefined,
+    },
+    {
+      to: '/tasks/calendar',
+      value: 'calendar' as const,
+      label: t('tasks.calendar'),
+      icon: Calendar,
+      tourId: 'task-calendar',
+    },
+    {
+      to: '/tasks/kanban',
+      value: 'kanban' as const,
+      label: t('tasks.kanban', 'Board'),
+      icon: Columns3,
+      tourId: 'task-kanban',
+    },
   ];
+
+  const activeTab =
+    location.pathname.startsWith('/tasks/kanban')
+      ? 'kanban'
+      : location.pathname.startsWith('/tasks/calendar')
+        ? 'calendar'
+        : 'list';
 
   return (
     <>
@@ -44,32 +69,22 @@ function TasksLayout() {
       <div className="p-3 sm:p-4 lg:p-6">
         {/* Navigation Tabs - hide on task detail page */}
         {!isTaskDetailPage && (
-          <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-8" aria-label={t('tasks.navigation')}>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = item.to === '/tasks'
-                  ? location.pathname === item.to || location.pathname === '/tasks/'
-                  : location.pathname.startsWith(item.to);
-
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    data-tour={item.tourId}
-                    className={cn(
-                      "flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors",
-                      isActive
-                        ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
-                    )}
-                  >
-                    <Icon className="w-5 h-5" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
+          <div className="mb-6">
+            <Tabs value={activeTab} className="w-full">
+              <TabsList aria-label={t('tasks.navigation')} className="h-auto w-full min-w-0 justify-start">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <TabsTrigger key={item.to} value={item.value} asChild>
+                      <Link to={item.to} data-tour={item.tourId}>
+                        <Icon className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
+                        {item.label}
+                      </Link>
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
           </div>
         )}
 

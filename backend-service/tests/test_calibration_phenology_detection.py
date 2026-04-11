@@ -327,9 +327,16 @@ def test_step4_sparse_data_skips_year() -> None:
     step2 = _build_step2_weather()
 
     output = detect_phenology(step1, step2)
-    today = date.today()
-    assert output.mean_dates.dormancy_exit == today
-    assert output.mean_dates.peak == today
+    assert output.status == "insufficient_data"
+    assert output.mean_dates.dormancy_exit is None
+    assert output.mean_dates.peak is None
+    assert output.missing_stages == [
+        "dormancy_exit",
+        "peak",
+        "plateau_start",
+        "decline_start",
+        "dormancy_entry",
+    ]
 
 
 # --- Unit tests: chronologie phénologique (step4 internals) ---
@@ -397,7 +404,7 @@ def test_temporal_order_valid_true_and_false() -> None:
     assert _temporal_order_valid(bad) is False
 
 
-@patch("app.services.calibration.step4_phenology_detection.date")
+@patch("app.services.calibration.archived.step4_legacy.date")
 def test_fallback_stages_empty_dates_uses_today(mock_date) -> None:
     fixed = date(2019, 4, 1)
     mock_date.today.return_value = fixed
@@ -468,20 +475,19 @@ def test_find_constrained_stages_only_dormancy_period_uses_argmax_all() -> None:
 
 def test_find_constrained_stages_temporal_invalid_falls_back_to_fallback_stages() -> None:
     """When ordering checks fail, implementation returns _fallback_stages(dates, smoothed_values)."""
-    import app.services.calibration.step4_phenology_detection as s4
-
     vals = [0.3, 0.4, 0.5, 0.6, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     pts = [(date(2024, m, 15), vals[m - 1]) for m in range(1, 13)]
     sorted_pts = sorted(pts, key=lambda item: item[0])
     dates_s = [p[0] for p in sorted_pts]
     smoothed = _safe_smooth([p[1] for p in sorted_pts])
-    fb = _fallback_stages(dates_s, smoothed)
-    prev_tv = s4._temporal_order_valid
-    s4._temporal_order_valid = lambda _stages: False
+    fn_globals = _find_constrained_stages_for_year.__globals__
+    prev_tv = fn_globals["_temporal_order_valid"]
+    fn_globals["_temporal_order_valid"] = lambda _stages: False
     try:
-        out = s4._find_constrained_stages_for_year(pts, DEFAULT_PERIODS)
+        fb = _fallback_stages(dates_s, smoothed)
+        out = _find_constrained_stages_for_year(pts, DEFAULT_PERIODS)
     finally:
-        s4._temporal_order_valid = prev_tv
+        fn_globals["_temporal_order_valid"] = prev_tv
     assert out == fb
 
 

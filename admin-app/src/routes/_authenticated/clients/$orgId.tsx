@@ -1,0 +1,705 @@
+import { createFileRoute, Link } from '@tanstack/react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import {
+  ArrowLeft,
+  RefreshCw,
+  Building2,
+  Users,
+  Sprout,
+  MapPin,
+  HardDrive,
+  Activity,
+  Calendar,
+  CreditCard,
+  Database,
+  Download,
+  Upload,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
+import { apiRequest } from '@/lib/api-client';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
+import clsx from 'clsx';
+
+interface OrgUsage {
+  id: string;
+  name: string;
+  countryCode: string;
+  createdAt: string;
+  isActive: boolean;
+  planType: string;
+  subscriptionStatus: string;
+  mrr: number;
+  arr: number;
+  farmsCount: number;
+  parcelsCount: number;
+  usersCount: number;
+  storageUsedMb: number;
+  lastActivityAt: string;
+  events7d: number;
+  events30d: number;
+}
+
+interface OrgUser {
+  id: string;
+  user_id: string;
+  is_active: boolean;
+  created_at: string;
+  profiles: {
+    full_name: string | null;
+    email: string | null;
+  } | null;
+  roles: {
+    name: string;
+  } | null;
+}
+
+interface DemoDataStats {
+  organizationId: string;
+  stats: Record<string, number>;
+  total: number;
+}
+
+function OrgDetailPage() {
+  const { orgId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'demo-data'>('overview');
+
+  // Org usage from admin endpoint
+  const { data: usage, isLoading, refetch } = useQuery({
+    queryKey: ['admin-org-usage', orgId],
+    queryFn: () => apiRequest<OrgUsage>(`/api/v1/admin/orgs/${orgId}/usage`),
+  });
+
+  // Org details from Supabase
+  const { data: org } = useQuery({
+    queryKey: ['admin-org-detail', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', orgId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Subscription
+  const { data: subscription } = useQuery({
+    queryKey: ['admin-org-subscription', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Users
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin-org-users', orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organization_users')
+        .select('id, user_id, is_active, created_at, profiles(full_name, email), roles(name)')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as OrgUser[];
+    },
+    enabled: activeTab === 'users',
+  });
+
+  // Demo data stats
+  const { data: demoStats, refetch: refetchDemoStats } = useQuery({
+    queryKey: ['admin-org-demo-stats', orgId],
+    queryFn: () => apiRequest<DemoDataStats>(`/api/v1/organizations/${orgId}/demo-data/stats`),
+    enabled: activeTab === 'demo-data',
+  });
+
+  // Extend subscription
+  const [extendDays, setExtendDays] = useState(30);
+  const extendMutation = useMutation({
+    mutationFn: (days: number) =>
+      apiRequest(`/api/v1/admin/subscriptions/${orgId}/extend`, {
+        method: 'POST',
+        body: JSON.stringify({ days, reason: 'Admin extension' }),
+      }),
+    onSuccess: () => {
+      toast.success(`Subscription extended by ${extendDays} days`);
+      queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
+      refetch();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Demo data mutations
+  const seedMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(`/api/v1/organizations/${orgId}/demo-data/seed`, { method: 'POST' }),
+    onSuccess: () => {
+      toast.success('Demo data seeded successfully');
+      refetchDemoStats();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(`/api/v1/organizations/${orgId}/demo-data/clear`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast.success('All data cleared');
+      refetchDemoStats();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const clearDemoOnlyMutation = useMutation({
+    mutationFn: () =>
+      apiRequest(`/api/v1/organizations/${orgId}/demo-data/clear-demo-only`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast.success('Demo data cleared');
+      refetchDemoStats();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      const data = await apiRequest<unknown>(`/api/v1/organizations/${orgId}/demo-data/export`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `org-export-${orgId}-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    onSuccess: () => toast.success('Data exported'),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const importMutation = useMutation({
+    mutationFn: async () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      return new Promise<void>((resolve, reject) => {
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return resolve();
+          try {
+            const text = await file.text();
+            const json = JSON.parse(text);
+            await apiRequest(`/api/v1/organizations/${orgId}/demo-data/import`, {
+              method: 'POST',
+              body: JSON.stringify(json),
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        };
+        input.click();
+      });
+    },
+    onSuccess: () => {
+      toast.success('Data imported');
+      refetchDemoStats();
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const tabs = [
+    { key: 'overview' as const, label: 'Overview' },
+    { key: 'users' as const, label: 'Users' },
+    { key: 'demo-data' as const, label: 'Demo Data' },
+  ];
+
+  return (
+    <div className="admin-page">
+      {/* Header */}
+      <div className="mb-6">
+        <Link
+          to="/clients"
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-3"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Clients
+        </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">
+                {usage?.name ?? org?.name ?? 'Loading...'}
+              </h1>
+              {(usage?.isActive ?? org?.is_active) != null && (
+                <span
+                  className={clsx(
+                    'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                    (usage?.isActive ?? org?.is_active)
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'bg-gray-100 text-gray-500',
+                  )}
+                >
+                  {(usage?.isActive ?? org?.is_active) ? 'Active' : 'Inactive'}
+                </span>
+              )}
+            </div>
+            {org?.city && (
+              <p className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                <MapPin className="h-3.5 w-3.5" /> {org.city}{org.country ? `, ${org.country}` : ''}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* Usage Stats Cards */}
+      {usage && (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <StatCard icon={Sprout} label="Farms" value={usage.farmsCount} />
+          <StatCard icon={MapPin} label="Parcels" value={usage.parcelsCount} />
+          <StatCard icon={Users} label="Users" value={usage.usersCount} />
+          <StatCard icon={HardDrive} label="Storage" value={`${usage.storageUsedMb.toFixed(1)} MB`} />
+          <StatCard icon={Activity} label="Events (7d)" value={usage.events7d} />
+          <StatCard icon={Activity} label="Events (30d)" value={usage.events30d} />
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="mb-4 border-b border-gray-200">
+        <nav className="flex gap-4 -mb-px">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={clsx(
+                'px-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                activeTab === tab.key
+                  ? 'border-emerald-600 text-emerald-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Tab Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      ) : activeTab === 'overview' ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Subscription Card */}
+          <div className="rounded-lg border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+              <CreditCard className="h-4 w-4" /> Subscription
+            </h3>
+            {subscription ? (
+              <dl className="space-y-2.5 text-sm">
+                <Row label="Status">
+                  <SubBadge status={subscription.status} />
+                </Row>
+                <Row label="Formula">
+                  <span className="capitalize font-medium">{subscription.formula ?? '—'}</span>
+                </Row>
+                <Row label="Billing">
+                  <span className="capitalize">{subscription.billing_cycle ?? '—'}</span>
+                </Row>
+                <Row label="Hectares">{subscription.contracted_hectares ?? '—'} ha</Row>
+                <Row label="Amount TTC">
+                  {subscription.amount_ttc
+                    ? `${subscription.amount_ttc} ${subscription.currency}`
+                    : '—'}
+                </Row>
+                <Row label="Period Start">
+                  {subscription.current_period_start
+                    ? new Date(subscription.current_period_start).toLocaleDateString('fr-FR')
+                    : '—'}
+                </Row>
+                <Row label="Period End">
+                  {subscription.current_period_end
+                    ? new Date(subscription.current_period_end).toLocaleDateString('fr-FR')
+                    : '—'}
+                </Row>
+                <Row label="Limits">
+                  {subscription.max_farms} farms / {subscription.max_users} users
+                </Row>
+                {subscription.selected_modules && (
+                  <Row label="Modules">
+                    <div className="flex flex-wrap gap-1">
+                      {(subscription.selected_modules as string[]).map((m: string) => (
+                        <span key={m} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </Row>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-gray-400">No subscription</p>
+            )}
+          </div>
+
+          {/* Extend Subscription Card */}
+          <div className="rounded-lg border border-gray-200 bg-white p-5">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+              <Calendar className="h-4 w-4" /> Extend Subscription
+            </h3>
+            {subscription ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1.5">Days to add</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[7, 14, 30, 90, 365].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setExtendDays(d)}
+                        className={clsx(
+                          'px-3 py-1.5 rounded text-xs font-medium',
+                          extendDays === d
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                        )}
+                      >
+                        {d}d
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <input
+                  type="number"
+                  value={extendDays}
+                  onChange={(e) => setExtendDays(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => extendMutation.mutate(extendDays)}
+                  disabled={extendMutation.isPending}
+                  className="w-full px-4 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {extendMutation.isPending ? 'Extending...' : `Extend by ${extendDays} days`}
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Create a subscription first</p>
+            )}
+          </div>
+
+          {/* Revenue Card */}
+          {usage && (
+            <div className="rounded-lg border border-gray-200 bg-white p-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+                <Building2 className="h-4 w-4" /> Revenue
+              </h3>
+              <dl className="space-y-2.5 text-sm">
+                <Row label="MRR">
+                  <span className="font-mono font-medium">{usage.mrr.toFixed(2)} MAD</span>
+                </Row>
+                <Row label="ARR">
+                  <span className="font-mono font-medium">{usage.arr.toFixed(2)} MAD</span>
+                </Row>
+                <Row label="Plan">
+                  <span className="capitalize">{usage.planType ?? '—'}</span>
+                </Row>
+                <Row label="Sub Status">
+                  <SubBadge status={usage.subscriptionStatus} />
+                </Row>
+                <Row label="Last Activity">
+                  {usage.lastActivityAt
+                    ? new Date(usage.lastActivityAt).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </Row>
+              </dl>
+            </div>
+          )}
+
+          {/* Org Info Card */}
+          {org && (
+            <div className="rounded-lg border border-gray-200 bg-white p-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+                <Building2 className="h-4 w-4" /> Organization Info
+              </h3>
+              <dl className="space-y-2.5 text-sm">
+                <Row label="Slug">{org.slug}</Row>
+                <Row label="Email">{org.email ?? '—'}</Row>
+                <Row label="Phone">{org.phone ?? '—'}</Row>
+                <Row label="Account Type">
+                  <span className="capitalize">{org.account_type}</span>
+                </Row>
+                <Row label="Created">
+                  {new Date(org.created_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </Row>
+              </dl>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'users' ? (
+        <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+          <table className="w-full">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">User</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Role</th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase text-gray-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Joined</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-4 py-12 text-center text-gray-500">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((u) => (
+                  <tr key={u.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <p className="text-sm font-medium text-gray-900">
+                        {u.profiles?.full_name ?? 'Unnamed'}
+                      </p>
+                      <p className="text-xs text-gray-500">{u.profiles?.email ?? '—'}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                        {u.roles?.name ?? '—'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={clsx(
+                          'inline-flex px-2 py-0.5 rounded-full text-xs font-medium',
+                          u.is_active
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-gray-100 text-gray-500',
+                        )}
+                      >
+                        {u.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500">
+                      {new Date(u.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Demo Data Tab */
+        <div className="space-y-6">
+          {/* Stats */}
+          {demoStats && (
+            <div className="rounded-lg border border-gray-200 bg-white p-5">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+                <Database className="h-4 w-4" /> Data Statistics
+              </h3>
+              <div className="mb-3 text-sm text-gray-500">
+                Total records: <span className="font-semibold text-gray-900">{demoStats.total}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                {Object.entries(demoStats.stats)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([table, count]) => (
+                    <div
+                      key={table}
+                      className="rounded border border-gray-100 bg-gray-50 px-3 py-2"
+                    >
+                      <p className="text-xs text-gray-500 truncate">{table}</p>
+                      <p className="text-sm font-semibold text-gray-900">{count}</p>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="rounded-lg border border-gray-200 bg-white p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">Actions</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <DemoButton
+                icon={Sprout}
+                label="Seed Demo Data"
+                description="Generate sample farms, parcels, tasks, and more"
+                onClick={() => seedMutation.mutate()}
+                loading={seedMutation.isPending}
+                color="emerald"
+              />
+              <DemoButton
+                icon={Download}
+                label="Export Data"
+                description="Download all organization data as JSON"
+                onClick={() => exportMutation.mutate()}
+                loading={exportMutation.isPending}
+                color="blue"
+              />
+              <DemoButton
+                icon={Upload}
+                label="Import Data"
+                description="Import data from a JSON export file"
+                onClick={() => importMutation.mutate()}
+                loading={importMutation.isPending}
+                color="blue"
+              />
+              <DemoButton
+                icon={Trash2}
+                label="Clear Demo Data Only"
+                description="Remove only seeded demo data, keep real data"
+                onClick={() => {
+                  if (confirm('Clear demo data only? Real data will be preserved.')) {
+                    clearDemoOnlyMutation.mutate();
+                  }
+                }}
+                loading={clearDemoOnlyMutation.isPending}
+                color="amber"
+              />
+              <DemoButton
+                icon={Trash2}
+                label="Clear ALL Data"
+                description="Remove all data for this organization"
+                onClick={() => {
+                  if (confirm('This will delete ALL data for this organization. Are you sure?')) {
+                    clearMutation.mutate();
+                  }
+                }}
+                loading={clearMutation.isPending}
+                color="red"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="text-gray-500 shrink-0">{label}</dt>
+      <dd className="text-right">{children}</dd>
+    </div>
+  );
+}
+
+function SubBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    active: 'bg-emerald-50 text-emerald-700',
+    trialing: 'bg-blue-50 text-blue-700',
+    past_due: 'bg-amber-50 text-amber-700',
+    suspended: 'bg-red-50 text-red-700',
+    canceled: 'bg-gray-100 text-gray-500',
+    terminated: 'bg-red-100 text-red-800',
+  };
+  return (
+    <span
+      className={clsx(
+        'inline-flex px-2 py-0.5 rounded text-xs font-medium',
+        colors[status] ?? 'bg-gray-100 text-gray-600',
+      )}
+    >
+      {status}
+    </span>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-gray-400 shrink-0" />
+        <span className="text-lg font-bold text-gray-900">{value}</span>
+      </div>
+      <p className="text-[11px] text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function DemoButton({
+  icon: Icon,
+  label,
+  description,
+  onClick,
+  loading,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  description: string;
+  onClick: () => void;
+  loading: boolean;
+  color: 'emerald' | 'blue' | 'amber' | 'red';
+}) {
+  const colorMap = {
+    emerald: 'border-emerald-200 hover:bg-emerald-50 text-emerald-700',
+    blue: 'border-blue-200 hover:bg-blue-50 text-blue-700',
+    amber: 'border-amber-200 hover:bg-amber-50 text-amber-700',
+    red: 'border-red-200 hover:bg-red-50 text-red-700',
+  };
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={loading}
+      className={clsx(
+        'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors disabled:opacity-50',
+        colorMap[color],
+      )}
+    >
+      {loading ? (
+        <Loader2 className="h-5 w-5 animate-spin shrink-0 mt-0.5" />
+      ) : (
+        <Icon className="h-5 w-5 shrink-0 mt-0.5" />
+      )}
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+    </button>
+  );
+}
+
+export const Route = createFileRoute('/_authenticated/clients/$orgId')({
+  component: OrgDetailPage,
+});

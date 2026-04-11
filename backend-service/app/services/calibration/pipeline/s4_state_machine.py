@@ -164,9 +164,42 @@ class PhaseConfig:
 
     # PHASE_4/6 → PHASE_0
     cold_streak_days: int = 10
+    dormancy_nirvp_norm_max: float = 0.15
 
     # Chill
     chill_threshold: int = 150
+
+
+def _as_condition_text(value: object) -> str:
+    if isinstance(value, dict):
+        candidate = value.get("condition")
+        return candidate if isinstance(candidate, str) else ""
+    return value if isinstance(value, str) else ""
+
+
+def _extract_threshold(
+    text: str,
+    label: str,
+) -> float | None:
+    import re
+
+    pattern = rf"{re.escape(label)}\s*[><=≤≥]+\s*(-?\d+(?:\.\d+)?)"
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    return None
+
+
+def _extract_days_threshold(text: str) -> int | None:
+    import re
+
+    match = re.search(r"(?:≥|>=|>\s*=?)\s*(\d+)\s*jours", text, flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    match = re.search(r"pendant\s*(\d+)\s*jours", text, flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return None
 
 
 def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
@@ -188,37 +221,106 @@ def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
     if not isinstance(phases, dict):
         return cfg
 
-    # PHASE_1 exit GDD — from protocole or stades_bbch
-    # protocole says "GDD_cumul >= 350", stades_bbch BBCH 51 (boutons floraux) = [500,600]
-    # We use the protocole value as it's the phase-level rule
     p1 = phases.get("PHASE_1")
     if isinstance(p1, dict):
-        sortie = p1.get("condition_sortie")
-        if isinstance(sortie, dict):
-            cond = sortie.get("condition", "")
-            gdd_val = _extract_gdd_from_condition(cond)
-            if gdd_val is not None:
-                cfg.gdd_debourrement_exit = gdd_val
-            tmoy_val = _extract_tmoy_from_condition(cond)
-            if tmoy_val is not None:
-                cfg.tmoy_floraison_min = tmoy_val
+        sortie = _as_condition_text(p1.get("condition_sortie"))
+        gdd_val = _extract_gdd_from_condition(sortie)
+        if gdd_val is not None:
+            cfg.gdd_debourrement_exit = gdd_val
+        tmoy_val = _extract_tmoy_from_condition(sortie)
+        if tmoy_val is not None:
+            cfg.tmoy_floraison_min = tmoy_val
 
-    # PHASE_2 exit GDD
     p2 = phases.get("PHASE_2")
     if isinstance(p2, dict):
-        sortie = p2.get("condition_sortie")
-        if isinstance(sortie, dict):
-            cond = sortie.get("condition", "")
-            gdd_val = _extract_gdd_from_condition(cond)
-            if gdd_val is not None:
-                cfg.gdd_floraison_exit = gdd_val
+        sortie = _as_condition_text(p2.get("condition_sortie"))
+        gdd_val = _extract_gdd_from_condition(sortie)
+        if gdd_val is not None:
+            cfg.gdd_floraison_exit = gdd_val
+        tmoy_val = _extract_tmoy_from_condition(sortie)
+        if tmoy_val is not None:
+            cfg.tmoy_heat_sustained = tmoy_val
+        heat_days = _extract_days_threshold(sortie)
+        if heat_days is not None:
+            cfg.heat_sustained_days = heat_days
 
-    # PHASE_0 warm skip — from verification_prealable
     p0 = phases.get("PHASE_0")
     if isinstance(p0, dict):
-        pre = p0.get("verification_prealable", "")
-        if "15" in str(pre):
-            cfg.warm_skip_tmoy_q25 = 15.0
+        pre = str(p0.get("verification_prealable", ""))
+        q25_skip = _extract_threshold(pre, "Tmoy_Q25")
+        if q25_skip is not None:
+            cfg.warm_skip_tmoy_q25 = q25_skip
+        sortie = _as_condition_text(p0.get("condition_sortie"))
+        warm_days = _extract_days_threshold(sortie)
+        if warm_days is not None:
+            cfg.warm_streak_days = warm_days
+        nirvp_norm = _extract_threshold(str(p0.get("condition_entree", "")), "NIRvP_norm")
+        if nirvp_norm is not None:
+            cfg.dormancy_nirvp_norm_max = nirvp_norm
+
+    p3 = phases.get("PHASE_3")
+    if isinstance(p3, dict):
+        clarification = str(p3.get("clarification", ""))
+        hot_pct = _extract_threshold(clarification, "Tmax_30j_pct")
+        if hot_pct is not None:
+            # Parsed for completeness; current state machine approximates recurrence with hot_streak_days.
+            pass
+        precip_val = _extract_threshold(clarification, "Precip_30j")
+        if precip_val is not None:
+            cfg.precip_dry_threshold = precip_val
+        sortie = _as_condition_text(p3.get("condition_sortie"))
+        tmax_val = _extract_threshold(sortie, "Tmax")
+        if tmax_val is not None:
+            cfg.tmax_stress_threshold = tmax_val
+        hot_days = _extract_days_threshold(sortie)
+        if hot_days is not None:
+            cfg.hot_dry_streak_days = hot_days
+
+    p4 = phases.get("PHASE_4")
+    if isinstance(p4, dict):
+        reprise = _as_condition_text(p4.get("condition_sortie_reprise"))
+        precip_episode = _extract_threshold(reprise, "Precip_episode")
+        if precip_episode is not None:
+            cfg.precip_reprise_threshold = precip_episode
+        reprise_tmoy = _extract_tmoy_from_condition(reprise)
+        if reprise_tmoy is not None:
+            cfg.tmoy_reprise_max = reprise_tmoy
+
+        dormance = _as_condition_text(p4.get("condition_sortie_dormance"))
+        q25_skip = _extract_threshold(dormance, "Tmoy_Q25")
+        if q25_skip is not None:
+            cfg.warm_skip_tmoy_q25 = q25_skip
+        nirvp_norm = _extract_threshold(dormance, "NIRvP_norm")
+        if nirvp_norm is not None:
+            cfg.dormancy_nirvp_norm_max = nirvp_norm
+
+    p6 = phases.get("PHASE_6")
+    if isinstance(p6, dict):
+        maintien = str(p6.get("condition_maintien", ""))
+        precip_recent = (
+            _extract_threshold(maintien, "Precip_recentes")
+            or _extract_threshold(maintien, "Precip_episode")
+        )
+        if precip_recent is not None:
+            cfg.precip_reprise_threshold = precip_recent
+        reprise_tmoy = _extract_tmoy_from_condition(maintien)
+        if reprise_tmoy is not None:
+            cfg.tmoy_reprise_max = reprise_tmoy
+
+        sortie = _as_condition_text(p6.get("condition_sortie"))
+        q25_skip = _extract_threshold(sortie, "Tmoy_Q25")
+        if q25_skip is not None:
+            cfg.warm_skip_tmoy_q25 = q25_skip
+        nirvp_norm = _extract_threshold(sortie, "NIRvP_norm")
+        if nirvp_norm is not None:
+            cfg.dormancy_nirvp_norm_max = nirvp_norm
+
+        cold_days = _extract_days_threshold(sortie)
+        if cold_days is not None:
+            cfg.cold_streak_days = cold_days
+
+    if cfg.cold_streak_days == PhaseConfig().cold_streak_days:
+        cfg.cold_streak_days = cfg.warm_streak_days
 
     return cfg
 
@@ -226,7 +328,7 @@ def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
 def _extract_gdd_from_condition(cond: str) -> float | None:
     """Extract GDD threshold from a condition string like 'GDD_cumul >= 350'."""
     import re
-    match = re.search(r"GDD_cumul\s*[>>=]+\s*(\d+)", cond)
+    match = re.search(r"GDD_cumul\s*[><=≤≥]+\s*(\d+(?:\.\d+)?)", cond)
     if match:
         return float(match.group(1))
     return None
@@ -235,7 +337,7 @@ def _extract_gdd_from_condition(cond: str) -> float | None:
 def _extract_tmoy_from_condition(cond: str) -> float | None:
     """Extract Tmoy threshold from a condition string like 'Tmoy >= 18'."""
     import re
-    match = re.search(r"Tmoy\s*[>>=]+\s*(\d+)", cond)
+    match = re.search(r"Tmoy\s*[><=≤≥]+\s*(\d+(?:\.\d+)?)", cond)
     if match:
         return float(match.group(1))
     return None
@@ -473,7 +575,7 @@ from datetime import timedelta
 
 
 def _compute_tmoy_q25(weather_days: list[dict]) -> float:
-    """Compute 25th percentile of daily Tmoy across all weather data."""
+    """Compute 25th percentile of daily Tmoy for one cycle."""
     import numpy as np
     tmoys = []
     for w in weather_days:
@@ -527,9 +629,6 @@ def run_olive_state_machine(
     gdd_tbase = ref_tbase if ref_tbase is not None else 7.5
     gdd_tupper = ref_tupper if ref_tupper is not None else 30.0
 
-    # Compute Tmoy_Q25 from all weather data
-    tmoy_q25 = _compute_tmoy_q25(weather_days)
-
     # Build satellite lookups
     nirv_lookup = _build_satellite_lookup(nirv_series)
     ndvi_lookup = _build_satellite_lookup(ndvi_series)
@@ -568,9 +667,11 @@ def run_olive_state_machine(
         if first_date and last_date and (last_date - first_date).days < 120:
             continue
 
+        cycle_tmoy_q25 = _compute_tmoy_q25(year_weather)
+
         # Create state machine for this year
         machine = OlivePhaseStateMachine(
-            tmoy_q25=tmoy_q25,
+            tmoy_q25=cycle_tmoy_q25,
             config=cfg,
         )
 
@@ -653,12 +754,25 @@ def _find_transition(transitions: list[PhaseTransition], phase: OlivePhase) -> P
     return None
 
 
+def _find_transition_after(
+    transitions: list[PhaseTransition],
+    phase: OlivePhase,
+    after_date: date,
+) -> PhaseTransition | None:
+    for t in transitions:
+        if t.phase == phase and t.start_date > after_date:
+            return t
+    return None
+
+
 def _day_of_year_to_date(year: int, doy: int) -> date:
     base = date(year, 1, 1)
     return base.fromordinal(base.toordinal() + max(0, doy - 1))
 
 
-def _extract_phenology_dates(transitions: list[PhaseTransition]) -> dict[str, date] | None:
+def _extract_phenology_dates(
+    transitions: list[PhaseTransition],
+) -> dict[str, date | None] | None:
     """Map state machine transitions to PhenologyDates fields.
 
     Mapping (from design.md):
@@ -666,44 +780,43 @@ def _extract_phenology_dates(transitions: list[PhaseTransition]) -> dict[str, da
       PHASE_1→2 transition     →  plateau_start
       PHASE_2 midpoint/exit    →  peak
       PHASE_2→3 transition     →  decline_start
-      PHASE_4 start or last    →  dormancy_entry
+      PHASE_0 return           →  dormancy_entry
     """
     debourrement = _find_transition(transitions, OlivePhase.DEBOURREMENT)
     floraison = _find_transition(transitions, OlivePhase.FLORAISON)
     nouaison = _find_transition(transitions, OlivePhase.NOUAISON)
-    stress = _find_transition(transitions, OlivePhase.STRESS_ESTIVAL)
-    dormance = _find_transition(transitions, OlivePhase.DORMANCE)
 
     if not debourrement:
         return None
 
     dormancy_exit = debourrement.start_date
-
-    plateau_start = floraison.start_date if floraison else dormancy_exit + timedelta(days=60)
+    plateau_start = floraison.start_date if floraison else None
 
     if floraison and floraison.end_date:
         peak = floraison.start_date + (floraison.end_date - floraison.start_date) // 2
-    elif floraison:
-        peak = floraison.start_date + timedelta(days=15)
     else:
-        peak = plateau_start + timedelta(days=30)
+        peak = None
 
-    decline_start = nouaison.start_date if nouaison else peak + timedelta(days=14)
+    decline_start = nouaison.start_date if nouaison else None
 
-    if stress:
-        dormancy_entry = stress.start_date
-    elif transitions:
-        dormancy_entry = transitions[-1].end_date or transitions[-1].start_date
-    else:
-        dormancy_entry = decline_start + timedelta(days=90)
+    dormance_return = _find_transition_after(
+        transitions,
+        OlivePhase.DORMANCE,
+        dormancy_exit,
+    )
+    dormancy_entry = dormance_return.start_date if dormance_return else None
 
-    return {
+    dates: dict[str, date | None] = {
         "dormancy_exit": dormancy_exit,
         "plateau_start": plateau_start,
         "peak": peak,
         "decline_start": decline_start,
         "dormancy_entry": dormancy_entry,
     }
+    if all(value is None for value in dates.values()):
+        return None
+
+    return dates
 
 
 def _nearest_cumulative_gdd(stage_date: date, cumulative_gdd: dict[str, float]) -> float:
@@ -726,23 +839,21 @@ def map_timelines_to_step4output(
     """Convert state machine timelines to backward-compatible Step4Output."""
     stage_names = ["dormancy_exit", "peak", "plateau_start", "decline_start", "dormancy_entry"]
 
-    yearly_stages: dict[int, dict[str, date]] = {}
+    yearly_stages: dict[int, dict[str, date | None]] = {}
     for tl in timelines:
         dates = _extract_phenology_dates(tl.transitions)
-        if dates:
+        if dates and any(value is not None for value in dates.values()):
             yearly_stages[tl.year] = dates
 
     if not yearly_stages:
-        today = date.today()
         return Step4Output(
-            mean_dates=PhenologyDates(
-                dormancy_exit=today, peak=today, plateau_start=today,
-                decline_start=today, dormancy_entry=today,
-            ),
+            mean_dates=PhenologyDates(),
             yearly_stages={},
             inter_annual_variability_days={s: 0.0 for s in stage_names},
             gdd_correlation={s: 0.0 for s in stage_names},
             referential_cycle_used=True,
+            status="insufficient_data",
+            missing_stages=list(stage_names),
             phase_timeline=[
                 {
                     "year": tl.year,
@@ -762,39 +873,63 @@ def map_timelines_to_step4output(
             ],
         )
 
-    # Use the first year's stages directly for mean_dates when only 1 year,
-    # or compute mean across years using ordinal offsets from cycle start
-    # to avoid DOY wrap-around issues in cross-year cycles (olive: Dec-Nov).
-    first_year = min(yearly_stages.keys())
-    first_stages = yearly_stages[first_year]
-
-    mean_dates_dict: dict[str, date] = {}
+    reference_year = min(yearly_stages.keys())
+    mean_dates_dict: dict[str, date | None] = {}
     variability: dict[str, float] = {}
     gdd_correlation: dict[str, float] = {}
+    missing_stages: list[str] = []
 
     for stage in stage_names:
-        all_dates = [yearly_stages[year][stage] for year in sorted(yearly_stages.keys())]
+        available_dates = [
+            yearly_stages[year][stage]
+            for year in sorted(yearly_stages.keys())
+            if yearly_stages[year][stage] is not None
+        ]
 
-        if len(all_dates) == 1:
-            mean_dates_dict[stage] = all_dates[0]
+        if not available_dates:
+            mean_dates_dict[stage] = None
             variability[stage] = 0.0
+            gdd_correlation[stage] = 0.0
+            missing_stages.append(stage)
+            continue
+
+        if stage == "dormancy_exit":
+            if len(available_dates) == 1:
+                mean_dates_dict[stage] = available_dates[0]
+                variability[stage] = 0.0
+            else:
+                doy_values = [d.timetuple().tm_yday for d in available_dates]
+                avg_doy = int(round(_mean(doy_values)))
+                mean_dates_dict[stage] = _day_of_year_to_date(reference_year, avg_doy)
+                variability[stage] = float(round(pstdev(doy_values), 3))
         else:
-            # Use offset from each year's dormancy_exit to avoid cross-year DOY issues
             offsets = []
             for year in sorted(yearly_stages.keys()):
                 exit_date = yearly_stages[year]["dormancy_exit"]
                 stage_date = yearly_stages[year][stage]
+                if exit_date is None or stage_date is None:
+                    continue
                 offsets.append((stage_date - exit_date).days)
-            avg_offset = int(round(_mean(offsets)))
-            mean_dates_dict[stage] = first_stages["dormancy_exit"] + timedelta(days=avg_offset)
-            variability[stage] = float(round(pstdev(offsets), 3))
-
-        doy_values = [d.timetuple().tm_yday for d in all_dates]
+            if not offsets:
+                mean_dates_dict[stage] = available_dates[0]
+                variability[stage] = 0.0
+            else:
+                avg_offset = int(round(_mean(offsets)))
+                base_exit = mean_dates_dict["dormancy_exit"]
+                mean_dates_dict[stage] = (
+                    base_exit + timedelta(days=avg_offset)
+                    if base_exit is not None
+                    else available_dates[0]
+                )
+                variability[stage] = (
+                    float(round(pstdev(offsets), 3)) if len(offsets) > 1 else 0.0
+                )
 
         gdd_values = [
-            _nearest_cumulative_gdd(yearly_stages[year][stage], cumulative_gdd)
-            for year in sorted(yearly_stages.keys())
+            _nearest_cumulative_gdd(stage_date, cumulative_gdd)
+            for stage_date in available_dates
         ]
+        doy_values = [d.timetuple().tm_yday for d in available_dates]
         if len(doy_values) > 1 and len(set(gdd_values)) > 1:
             corr = float(np.corrcoef(np.array(doy_values), np.array(gdd_values))[0, 1])
             gdd_correlation[stage] = 0.0 if np.isnan(corr) else round(corr, 4)
@@ -842,6 +977,8 @@ def map_timelines_to_step4output(
         inter_annual_variability_days=variability,
         gdd_correlation=gdd_correlation,
         referential_cycle_used=True,
+        status="degraded" if missing_stages else "ok",
+        missing_stages=missing_stages,
         phase_timeline=phase_timeline_data,
     )
 

@@ -34,6 +34,47 @@
     "plafond_c": 36.0,
     "reference": "Calibration engine — citrus growing degree days (caps)"
   },
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": 0.0,
+      "detection_months": [
+        3,
+        4,
+        5
+      ],
+      "severity": "high"
+    },
+    "canicule": {
+      "tmax_c": 40.0,
+      "consecutive_days": 3,
+      "severity": "high"
+    },
+    "vent_chaud": {
+      "temperature_c": 38.0,
+      "wind_kmh": 30.0,
+      "humidity_max_pct": 25.0,
+      "severity": "medium"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5.0,
+      "dry_season_days": 60,
+      "transition_days": 30,
+      "rainy_season_days": 20,
+      "severity": "medium"
+    }
+  },
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "legacy",
+    "required_indices": [
+      "NDVI",
+      "NIRv",
+      "NDMI"
+    ],
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24
+  },
   "especes": {
     "orange": {
       "nom_scientifique": "Citrus sinensis",
@@ -574,6 +615,7 @@
         40,
         50
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         20,
         35
@@ -598,6 +640,7 @@
         25,
         35
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         40,
         60
@@ -622,6 +665,7 @@
         15,
         20
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         50,
         80
@@ -708,6 +752,91 @@
       }
     }
   },
+  "varietes_calibrage": [
+    {
+      "code": "ORANGE_NAVEL",
+      "nom": "Orange Navel",
+      "aliases": [
+        "NAVELINE",
+        "Naveline",
+        "WASH_NAVEL",
+        "Washington Navel",
+        "NAVELATE",
+        "Navelate",
+        "SALUSTIANA",
+        "Salustiana",
+        "SANGUINELLI",
+        "Sanguinelli"
+      ],
+      "yield_unit": "t/ha",
+      "yield_curve_key": "orange_navel"
+    },
+    {
+      "code": "ORANGE_VALENCIA",
+      "nom": "Orange Valencia",
+      "aliases": [
+        "VALENCIA",
+        "Valencia",
+        "Valencia Late",
+        "MAROC_LATE",
+        "Maroc Late"
+      ],
+      "yield_unit": "t/ha",
+      "yield_curve_key": "orange_valencia"
+    },
+    {
+      "code": "CLEMENTINE",
+      "nom": "Clémentine / Mandarine",
+      "aliases": [
+        "CLEM_COMMUNE",
+        "Clémentine Commune",
+        "NULES",
+        "Nules",
+        "MARISOL",
+        "Marisol",
+        "NOUR",
+        "Nour",
+        "NADORCOTT",
+        "Nadorcott",
+        "Nadorcott/Afourer",
+        "Afourer",
+        "ORTANIQUE",
+        "Ortanique",
+        "NOVA",
+        "Nova"
+      ],
+      "yield_unit": "t/ha",
+      "yield_curve_key": "clementine"
+    },
+    {
+      "code": "CITRON",
+      "nom": "Citron",
+      "aliases": [
+        "EUREKA",
+        "Eureka",
+        "LISBON",
+        "Lisbon",
+        "VERNA",
+        "Verna",
+        "MEYER",
+        "Meyer"
+      ],
+      "yield_unit": "t/ha",
+      "yield_curve_key": "citron"
+    },
+    {
+      "code": "POMELO",
+      "nom": "Pomelo",
+      "aliases": [
+        "STAR_RUBY",
+        "Star Ruby",
+        "MARSH",
+        "Marsh"
+      ],
+      "yield_unit": "t/ha",
+      "yield_curve_key": "pomelo"
+    }
+  ],
   "rendement_t_ha": {
     "orange_navel": {
       "juvenile": [

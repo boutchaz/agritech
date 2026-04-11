@@ -8,7 +8,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..archived.step4_legacy import detect_phenology_legacy
+from ..archived.step4_legacy import (
+    DEFAULT_PERIODS,
+    _day_of_year_to_date,
+    _fallback_stages,
+    _find_constrained_stages_for_year,
+    _find_decline_start,
+    _find_dormancy_entry,
+    _find_dormancy_exit,
+    _find_plateau_start,
+    _nearest_cumulative_gdd,
+    _safe_smooth,
+    _temporal_order_valid,
+    _values_at_indices,
+    detect_phenology_legacy,
+)
 from .s4_state_machine import (
     run_olive_state_machine,
     map_timelines_to_step4output,
@@ -42,21 +56,37 @@ def detect_phenology(
     (currently olive), uses a GDD-driven state machine.  Otherwise
     falls back to the legacy signal-based approach.
     """
+    observed_satellite_data = _observed_satellite_data(satellite_data)
+
     if _has_protocole_phenologique(reference_data):
         return _detect_with_state_machine(
-            satellite_data, weather_data,
+            observed_satellite_data, weather_data,
             variety=variety,
             reference_data=reference_data,
         )
 
     return detect_phenology_legacy(
-        satellite_data,
+        observed_satellite_data,
         weather_data,
         index_key=index_key,
         crop_type=crop_type,
         variety=variety,
         planting_system=planting_system,
         reference_data=reference_data,
+    )
+
+
+def _observed_satellite_data(satellite_data: Step1Output) -> Step1Output:
+    filtered_series = {
+        index_name: [
+            point
+            for point in points
+            if not point.interpolated and not point.outlier
+        ]
+        for index_name, points in satellite_data.index_time_series.items()
+    }
+    return satellite_data.model_copy(
+        update={"index_time_series": filtered_series},
     )
 
 

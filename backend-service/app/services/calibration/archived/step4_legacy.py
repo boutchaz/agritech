@@ -295,6 +295,14 @@ def detect_phenology_legacy(
 
     Kept as fallback for crops without ``protocole_phenologique``.
     """
+    stage_names = [
+        "dormancy_exit",
+        "peak",
+        "plateau_start",
+        "decline_start",
+        "dormancy_entry",
+    ]
+
     resolved_index = index_key
     if reference_data and planting_system:
         ref_index = get_index_key_from_referential(reference_data, planting_system)
@@ -342,15 +350,8 @@ def detect_phenology_legacy(
         )
 
     if not yearly_stages:
-        fallback_date = date.today()
         return Step4Output(
-            mean_dates=PhenologyDates(
-                dormancy_exit=fallback_date,
-                peak=fallback_date,
-                plateau_start=fallback_date,
-                decline_start=fallback_date,
-                dormancy_entry=fallback_date,
-            ),
+            mean_dates=PhenologyDates(),
             yearly_stages={},
             inter_annual_variability_days={
                 "dormancy_exit": 0.0,
@@ -367,15 +368,10 @@ def detect_phenology_legacy(
                 "dormancy_entry": 0.0,
             },
             referential_cycle_used=referential_cycle_used,
+            status="insufficient_data",
+            missing_stages=stage_names,
         )
 
-    stage_names = [
-        "dormancy_exit",
-        "peak",
-        "plateau_start",
-        "decline_start",
-        "dormancy_entry",
-    ]
     reference_year = min(yearly_stages.keys())
 
     mean_dates_dict: dict[str, date] = {}
@@ -427,4 +423,5 @@ def detect_phenology_legacy(
         inter_annual_variability_days=variability,
         gdd_correlation=gdd_correlation,
         referential_cycle_used=referential_cycle_used,
+        status="ok",
     )

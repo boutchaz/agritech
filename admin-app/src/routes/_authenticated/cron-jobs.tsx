@@ -11,6 +11,9 @@ import {
   Loader2,
   Zap,
   Search,
+  History,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
@@ -75,10 +78,23 @@ function formatRelative(iso: string | null): string {
   return d.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+interface JobLog {
+  id: string;
+  job_type: string;
+  status: string;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  errors: unknown;
+  input_data: unknown;
+  created_by: string | null;
+}
+
 function CronJobsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterModule, setFilterModule] = useState<string | 'all'>('all');
+  const [activeTab, setActiveTab] = useState<'live' | 'logs'>('live');
 
   const { data: jobs = [], isLoading, refetch } = useQuery({
     queryKey: ['admin-cron-jobs'],
@@ -145,6 +161,40 @@ function CronJobsPage() {
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="flex gap-4 -mb-px">
+          <button
+            type="button"
+            onClick={() => setActiveTab('live')}
+            className={clsx(
+              'flex items-center gap-2 px-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+              activeTab === 'live'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+            )}
+          >
+            <Clock className="h-4 w-4" /> Live Jobs
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('logs')}
+            className={clsx(
+              'flex items-center gap-2 px-1 py-2.5 text-sm font-medium border-b-2 transition-colors',
+              activeTab === 'logs'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+            )}
+          >
+            <History className="h-4 w-4" /> Job Logs
+          </button>
+        </nav>
+      </div>
+
+      {activeTab === 'logs' ? (
+        <JobLogsTab />
+      ) : (
+      <>
       {/* Stats */}
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -314,6 +364,145 @@ function CronJobsPage() {
           ))}
         </div>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+// --- Job Logs Tab ---
+
+const LOG_PAGE_SIZE = 20;
+
+function JobLogsTab() {
+  const [page, setPage] = useState(0);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-job-logs', page],
+    queryFn: () =>
+      apiRequest<{ data: JobLog[]; total: number }>(
+        `/api/v1/admin/jobs?limit=${LOG_PAGE_SIZE}&offset=${page * LOG_PAGE_SIZE}`,
+      ),
+  });
+
+  const logs = data?.data ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / LOG_PAGE_SIZE);
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-emerald-50 text-emerald-700';
+      case 'failed': return 'bg-red-50 text-red-700';
+      case 'running': return 'bg-blue-50 text-blue-700';
+      case 'pending': return 'bg-amber-50 text-amber-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const formatDuration = (start: string | null, end: string | null): string => {
+    if (!start || !end) return '—';
+    const ms = new Date(end).getTime() - new Date(start).getTime();
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+    return `${Math.round(ms / 60_000)}m`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  if (logs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-16">
+        <History className="h-10 w-10 text-gray-300 mb-3" />
+        <p className="text-sm font-medium text-gray-500">No job logs yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px]">
+            <thead className="border-b border-gray-200 bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Job Type</th>
+                <th className="px-4 py-3 text-center text-xs font-medium uppercase text-gray-500">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Started</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Duration</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Errors</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {logs.map((log) => (
+                <tr key={log.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-mono font-medium text-gray-900">{log.job_type}</span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={clsx('inline-flex px-2 py-0.5 rounded text-xs font-medium', statusColor(log.status))}>
+                      {log.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500">
+                    {log.started_at
+                      ? new Date(log.started_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">
+                    {formatDuration(log.started_at, log.completed_at)}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-red-600 max-w-[200px] truncate">
+                    {log.errors ? String(typeof log.errors === 'object' ? JSON.stringify(log.errors) : log.errors) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {total > LOG_PAGE_SIZE && (
+          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+            <p className="text-xs text-gray-700">
+              <span className="font-medium">{page * LOG_PAGE_SIZE + 1}</span> to{' '}
+              <span className="font-medium">{Math.min((page + 1) * LOG_PAGE_SIZE, total)}</span>{' '}
+              of <span className="font-medium">{total}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="px-3 py-1 text-sm text-gray-700">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

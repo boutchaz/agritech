@@ -6,6 +6,7 @@ from typing import Any, cast
 from ..referential_utils import (
     DEFAULT_MATURITY_PHASE_BOUNDARIES,
     get_phase_boundaries_from_reference,
+    get_variety_yield_profile,
     iter_yield_curve_age_brackets,
 )
 from ..types import MaturityPhase
@@ -37,33 +38,22 @@ DEFAULT_INDEX_MULTIPLIERS = {
 def _lookup_variety_yield_curve(
     reference_data: dict[str, object], variety: str | None
 ) -> dict[str, YieldValue]:
-    """Look up yield-by-age curve for the parcel's variety from the crop referential.
-
-    The variety comes from the parcel (calibration_input.variety) and must match
-    a variete in reference_data.varietes by nom or code (case-insensitive).
-    """
+    """Look up yield-by-age curve for the parcel's variety from the crop referential."""
     if variety is None:
         return {}
 
-    varieties = reference_data.get("varietes")
-    if not isinstance(varieties, list):
+    profile = get_variety_yield_profile(cast(dict[str, Any], reference_data), variety)
+    if profile is None or profile.generic_curve:
         return {}
 
-    target = variety.strip().lower()
-    for raw_item in varieties:
-        if not isinstance(raw_item, dict):
+    typed_curve: dict[str, YieldValue] = {}
+    for key, value in profile.yield_curve.items():
+        if isinstance(value, (int, float, str, list, tuple)):
+            typed_curve[str(key)] = cast(YieldValue, value)
+        elif isinstance(value, dict):
             continue
-        item = cast(dict[str, object], raw_item)
-        name = str(item.get("nom", "")).strip().lower()
-        code = str(item.get("code", "")).strip().lower()
-        if name == target or code == target:
-            curve = item.get("rendement_kg_arbre")
-            if isinstance(curve, dict):
-                typed_curve: dict[str, YieldValue] = {}
-                for key, value in curve.items():
-                    if isinstance(value, (int, float, str, list, tuple)):
-                        typed_curve[str(key)] = cast(YieldValue, value)
-                return typed_curve
+    if typed_curve:
+        return typed_curve
     return {}
 
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 import math
 from datetime import date, timedelta
 from importlib import import_module
+from pathlib import Path
+from unittest.mock import patch
 
 sm = import_module("app.services.calibration.pipeline.s4_state_machine")
 
@@ -13,6 +15,14 @@ SeasonTimeline = getattr(sm, "SeasonTimeline")
 compute_daily_signals = getattr(sm, "compute_daily_signals")
 DailySignals = getattr(sm, "DailySignals")
 OlivePhaseStateMachine = getattr(sm, "OlivePhaseStateMachine")
+
+
+def _load_olive_referential() -> dict:
+    import json
+
+    path = Path(__file__).resolve().parents[2] / "agritech-api" / "referentials" / "DATA_OLIVIER.json"
+    with path.open(encoding="utf-8") as f:
+        return json.load(f)
 
 
 def test_olive_phase_enum_values() -> None:
@@ -450,20 +460,86 @@ PhaseConfig = getattr(sm, "PhaseConfig")
 
 def test_extract_phase_config_from_olive_referential() -> None:
     """Config extracted from real olive referential matches protocole values."""
-    import json
-    with open("../agritech-api/referentials/DATA_OLIVIER.json") as f:
-        ref = json.load(f)
+    ref = _load_olive_referential()
     cfg = extract_phase_config(ref)
+    assert cfg.warm_skip_tmoy_q25 == 15.0
+    assert cfg.warm_streak_days == 10
     assert cfg.gdd_debourrement_exit == 350.0
     assert cfg.gdd_floraison_exit == 700.0
     assert cfg.tmoy_floraison_min == 18.0
+    assert cfg.tmoy_heat_sustained == 25.0
+    assert cfg.tmax_stress_threshold == 30.0
+    assert cfg.precip_dry_threshold == 5.0
+    assert cfg.precip_reprise_threshold == 20.0
+    assert cfg.tmoy_reprise_max == 25.0
+    assert cfg.dormancy_nirvp_norm_max == 0.15
 
 
 def test_extract_phase_config_without_referential() -> None:
     """Defaults used when no referential is provided."""
     cfg = extract_phase_config(None)
+    assert cfg.warm_streak_days == 10
     assert cfg.gdd_debourrement_exit == 350.0
     assert cfg.gdd_floraison_exit == 700.0
+
+
+def test_extract_phase_config_parses_custom_protocol_strings() -> None:
+    cfg = extract_phase_config(
+        {
+            "protocole_phenologique": {
+                "phases": {
+                    "PHASE_0": {
+                        "verification_prealable": "SI Tmoy_Q25 >= 13.5",
+                        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.12",
+                        "condition_sortie": {
+                            "condition": "Tmoy > Tmoy_Q25 durablement (≥ 7 jours consécutifs)"
+                        },
+                    },
+                    "PHASE_1": {
+                        "condition_sortie": {
+                            "condition": "GDD_cumul >= 280 ET Tmoy >= 17"
+                        }
+                    },
+                    "PHASE_2": {
+                        "condition_sortie": {
+                            "condition": "GDD_cumul > 620 OU Tmoy > 24 pendant ≥ 4 jours"
+                        }
+                    },
+                    "PHASE_3": {
+                        "clarification": "Tmax_30j_pct > 65 ET Precip_30j < 8",
+                        "condition_sortie": {
+                            "condition": "etat_signal = SIGNAL_PUR ET Tmax > 33 pendant ≥ 2 jours"
+                        },
+                    },
+                    "PHASE_4": {
+                        "condition_sortie_reprise": {
+                            "condition": "Precip_episode > 18 ET Tmoy < 22 ET dNIRv_dt > 0"
+                        },
+                        "condition_sortie_dormance": {
+                            "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 13.5 ET NIRvP_norm < 0.12"
+                        },
+                    },
+                    "PHASE_6": {
+                        "condition_maintien": "Precip_recentes > 18 ET Tmoy < 22 ET dNIRv_dt > 0"
+                    },
+                }
+            }
+        }
+    )
+
+    assert cfg.warm_skip_tmoy_q25 == 13.5
+    assert cfg.warm_streak_days == 7
+    assert cfg.gdd_debourrement_exit == 280.0
+    assert cfg.tmoy_floraison_min == 17.0
+    assert cfg.gdd_floraison_exit == 620.0
+    assert cfg.tmoy_heat_sustained == 24.0
+    assert cfg.heat_sustained_days == 4
+    assert cfg.precip_dry_threshold == 8.0
+    assert cfg.tmax_stress_threshold == 33.0
+    assert cfg.hot_dry_streak_days == 2
+    assert cfg.precip_reprise_threshold == 18.0
+    assert cfg.tmoy_reprise_max == 22.0
+    assert cfg.dormancy_nirvp_norm_max == 0.12
 
 
 # ---------------------------------------------------------------------------
@@ -536,9 +612,7 @@ def _make_nirv_series_year() -> list[dict]:
 
 def test_full_season_produces_timeline() -> None:
     """A full Moroccan olive year produces a SeasonTimeline with ≥ 4 phases."""
-    import json
-    with open("../agritech-api/referentials/DATA_OLIVIER.json") as f:
-        ref = json.load(f)
+    ref = _load_olive_referential()
 
     weather = _make_morocco_weather_year()
     nirv = _make_nirv_series_year()
@@ -566,6 +640,57 @@ def test_full_season_produces_timeline() -> None:
         assert tl.transitions[i].start_date >= tl.transitions[i - 1].start_date
 
 
+def test_run_state_machine_uses_cycle_local_tmoy_q25() -> None:
+    """Each cycle year should use its own temperature baseline."""
+    captured_tmoy_q25: list[float] = []
+
+    class FakeMachine:
+        def __init__(self, tmoy_q25: float, **kwargs) -> None:
+            _ = kwargs
+            captured_tmoy_q25.append(tmoy_q25)
+            self.transitions = [
+                PhaseTransition(
+                    phase=OlivePhase.DORMANCE,
+                    start_date=date(2000, 1, 1),
+                    confidence="ELEVEE",
+                )
+            ]
+
+        def process_day(self, signals) -> None:
+            if self.transitions[0].start_date == date(2000, 1, 1):
+                self.transitions[0].start_date = signals.current_date
+
+    weather_days: list[dict] = []
+
+    cold_base = date(2023, 12, 1)
+    for i in range(365):
+        d = cold_base + timedelta(days=i)
+        weather_days.append(
+            {"date": d, "temp_min": 2.0, "temp_max": 12.0, "precip": 1.0}
+        )
+
+    warm_base = date(2024, 12, 1)
+    for i in range(365):
+        d = warm_base + timedelta(days=i)
+        weather_days.append(
+            {"date": d, "temp_min": 14.0, "temp_max": 28.0, "precip": 0.5}
+        )
+
+    with patch.object(sm, "OlivePhaseStateMachine", FakeMachine):
+        timelines = run_olive_state_machine(
+            weather_days=weather_days,
+            nirv_series=[],
+            ndvi_series=[],
+            reference_data=None,
+        )
+
+    assert len(timelines) == 2
+    assert len(captured_tmoy_q25) == 2
+    assert captured_tmoy_q25[0] < captured_tmoy_q25[1]
+    assert captured_tmoy_q25[0] == 7.0
+    assert captured_tmoy_q25[1] == 21.0
+
+
 # ---------------------------------------------------------------------------
 # Task 12: Map SeasonTimeline to Step4Output
 # ---------------------------------------------------------------------------
@@ -575,9 +700,7 @@ map_timelines_to_step4output = getattr(sm, "map_timelines_to_step4output")
 
 def test_timeline_maps_to_step4output() -> None:
     """A full SeasonTimeline maps to valid Step4Output with reasonable date gaps."""
-    import json
-    with open("../agritech-api/referentials/DATA_OLIVIER.json") as f:
-        ref = json.load(f)
+    ref = _load_olive_referential()
 
     weather = _make_morocco_weather_year()
     nirv = _make_nirv_series_year()
@@ -599,11 +722,14 @@ def test_timeline_maps_to_step4output() -> None:
     # Dates should be populated
     assert output.mean_dates.dormancy_exit is not None
     assert output.mean_dates.peak is not None
-    assert output.mean_dates.dormancy_entry is not None
+    assert output.status in {"ok", "degraded"}
 
     # Date gaps should be reasonable (≥ 14 days between exit and peak)
     exit_to_peak = (output.mean_dates.peak - output.mean_dates.dormancy_exit).days
     assert exit_to_peak >= 14, f"exit_to_peak={exit_to_peak} days, expected >= 14"
+
+    if output.mean_dates.dormancy_entry is None:
+        assert "dormancy_entry" in output.missing_stages
 
     # phase_timeline should be populated
     assert output.phase_timeline is not None
@@ -660,9 +786,7 @@ def _make_step1_step2(weather: list[dict], nirv: list[dict]):
 
 def test_detect_phenology_uses_state_machine_for_olive() -> None:
     """With olive referential, detect_phenology uses state machine → phase_timeline populated."""
-    import json
-    with open("../agritech-api/referentials/DATA_OLIVIER.json") as f:
-        ref = json.load(f)
+    ref = _load_olive_referential()
 
     weather = _make_morocco_weather_year()
     nirv = _make_nirv_series_year()
@@ -693,6 +817,215 @@ def test_detect_phenology_uses_legacy_for_agrumes() -> None:
     assert output.phase_timeline is None  # legacy path doesn't set this
 
 
+def test_detect_phenology_filters_interpolated_and_outlier_points_for_state_machine() -> None:
+    from app.services.calibration.types import PhenologyDates, Step1Output, Step2Output
+
+    captured: dict[str, object] = {}
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {
+                "NIRv": [
+                    {
+                        "date": "2024-01-15",
+                        "value": 0.10,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-02-15",
+                        "value": 0.95,
+                        "outlier": False,
+                        "interpolated": True,
+                    },
+                    {
+                        "date": "2024-03-15",
+                        "value": 0.01,
+                        "outlier": True,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-04-15",
+                        "value": 0.20,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                ],
+                "NDVI": [
+                    {
+                        "date": "2024-01-15",
+                        "value": 0.30,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-02-15",
+                        "value": 0.99,
+                        "outlier": False,
+                        "interpolated": True,
+                    },
+                    {
+                        "date": "2024-03-15",
+                        "value": 0.02,
+                        "outlier": True,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-04-15",
+                        "value": 0.40,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                ],
+            },
+            "cloud_coverage_mean": 5.0,
+            "filtered_image_count": 4,
+            "outlier_count": 1,
+            "interpolated_dates": ["2024-02-15"],
+            "raster_paths": {"NIRv": [], "NDVI": []},
+        }
+    )
+    step2 = Step2Output.model_validate(
+        {
+            "daily_weather": [],
+            "monthly_aggregates": [],
+            "cumulative_gdd": {},
+            "chill_hours": 0.0,
+            "extreme_events": [],
+        }
+    )
+
+    def _fake_state_machine(**kwargs):
+        captured["nirv_series"] = kwargs["nirv_series"]
+        captured["ndvi_series"] = kwargs["ndvi_series"]
+        return []
+
+    stub_output = getattr(
+        import_module("app.services.calibration.types"),
+        "Step4Output",
+    )(
+        mean_dates=PhenologyDates(
+            dormancy_exit=date(2024, 1, 1),
+            peak=date(2024, 2, 1),
+            plateau_start=date(2024, 1, 15),
+            decline_start=date(2024, 3, 1),
+            dormancy_entry=date(2024, 4, 1),
+        ),
+        yearly_stages={},
+        inter_annual_variability_days={},
+        gdd_correlation={},
+        referential_cycle_used=True,
+        phase_timeline=[],
+    )
+
+    with (
+        patch.object(detect_phenology_mod, "run_olive_state_machine", side_effect=_fake_state_machine),
+        patch.object(detect_phenology_mod, "map_timelines_to_step4output", return_value=stub_output),
+    ):
+        detect_phenology(
+            step1,
+            step2,
+            crop_type="olivier",
+            reference_data={"protocole_phenologique": {"phases": {"PHASE_0": {}}}},
+        )
+
+    assert captured["nirv_series"] == [
+        {"date": "2024-01-15", "value": 0.1},
+        {"date": "2024-04-15", "value": 0.2},
+    ]
+    assert captured["ndvi_series"] == [
+        {"date": "2024-01-15", "value": 0.3},
+        {"date": "2024-04-15", "value": 0.4},
+    ]
+
+
+def test_detect_phenology_filters_interpolated_and_outlier_points_for_legacy() -> None:
+    from app.services.calibration.types import PhenologyDates, Step1Output, Step2Output
+
+    captured: dict[str, object] = {}
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {
+                "NIRv": [
+                    {
+                        "date": "2024-01-15",
+                        "value": 0.10,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-02-15",
+                        "value": 0.95,
+                        "outlier": False,
+                        "interpolated": True,
+                    },
+                    {
+                        "date": "2024-03-15",
+                        "value": 0.01,
+                        "outlier": True,
+                        "interpolated": False,
+                    },
+                    {
+                        "date": "2024-04-15",
+                        "value": 0.20,
+                        "outlier": False,
+                        "interpolated": False,
+                    },
+                ]
+            },
+            "cloud_coverage_mean": 5.0,
+            "filtered_image_count": 4,
+            "outlier_count": 1,
+            "interpolated_dates": ["2024-02-15"],
+            "raster_paths": {"NIRv": []},
+        }
+    )
+    step2 = Step2Output.model_validate(
+        {
+            "daily_weather": [],
+            "monthly_aggregates": [],
+            "cumulative_gdd": {},
+            "chill_hours": 0.0,
+            "extreme_events": [],
+        }
+    )
+
+    stub_output = getattr(
+        import_module("app.services.calibration.types"),
+        "Step4Output",
+    )(
+        mean_dates=PhenologyDates(
+            dormancy_exit=date(2024, 1, 1),
+            peak=date(2024, 2, 1),
+            plateau_start=date(2024, 1, 15),
+            decline_start=date(2024, 3, 1),
+            dormancy_entry=date(2024, 4, 1),
+        ),
+        yearly_stages={},
+        inter_annual_variability_days={},
+        gdd_correlation={},
+        referential_cycle_used=False,
+    )
+
+    def _fake_legacy(*args, **kwargs):
+        captured["satellite_data"] = args[0]
+        return stub_output
+
+    with patch.object(detect_phenology_mod, "detect_phenology_legacy", side_effect=_fake_legacy):
+        detect_phenology(
+            step1,
+            step2,
+            crop_type="agrumes",
+            reference_data={},
+        )
+
+    filtered_series = captured["satellite_data"].index_time_series["NIRv"]
+    assert [point.date.isoformat() for point in filtered_series] == [
+        "2024-01-15",
+        "2024-04-15",
+    ]
+    assert [point.value for point in filtered_series] == [0.1, 0.2]
+
+
 # ---------------------------------------------------------------------------
 # Task 14: Integration test — mejjat parcel data shape
 # ---------------------------------------------------------------------------
@@ -707,9 +1040,7 @@ def test_mejjat_parcel_shape() -> None:
     - 2026 cycle year truncated (< 120 days) → should be skipped
     - No yearly stage should have exit-to-peak gap < 14 days
     """
-    import json
-    with open("../agritech-api/referentials/DATA_OLIVIER.json") as f:
-        ref = json.load(f)
+    ref = _load_olive_referential()
 
     # Build weather: Apr 2023 – Mar 2026 (~1091 days)
     weather = []
@@ -758,10 +1089,11 @@ def test_mejjat_parcel_shape() -> None:
         assert exit_to_peak >= 14, (
             f"Year {year_key}: exit_to_peak={exit_to_peak} days (expected >= 14)"
         )
-        exit_to_entry = (stages.dormancy_entry - stages.dormancy_exit).days
-        assert exit_to_entry >= 60, (
-            f"Year {year_key}: exit_to_entry={exit_to_entry} days (expected >= 60)"
-        )
+        if stages.dormancy_entry is not None:
+            exit_to_entry = (stages.dormancy_entry - stages.dormancy_exit).days
+            assert exit_to_entry >= 60, (
+                f"Year {year_key}: exit_to_entry={exit_to_entry} days (expected >= 60)"
+            )
 
     # Phase timeline should have at least DEBOURREMENT and STRESS for some year
     all_phases = set()

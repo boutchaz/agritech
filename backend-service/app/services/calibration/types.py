@@ -64,11 +64,11 @@ class PercentileSet(BaseModel):
 
 
 class PhenologyDates(BaseModel):
-    dormancy_exit: date
-    peak: date
-    plateau_start: date
-    decline_start: date
-    dormancy_entry: date
+    dormancy_exit: date | None = None
+    peak: date | None = None
+    plateau_start: date | None = None
+    decline_start: date | None = None
+    dormancy_entry: date | None = None
 
 
 class ExtremeEvent(BaseModel):
@@ -210,6 +210,8 @@ class Step4Output(BaseModel):
     inter_annual_variability_days: dict[str, float]
     gdd_correlation: dict[str, float]
     referential_cycle_used: bool | None = None
+    status: Literal["ok", "degraded", "insufficient_data"] = "ok"
+    missing_stages: list[str] = Field(default_factory=list)
     phase_timeline: list[dict[str, Any]] | None = Field(
         default=None,
         description="Per-season state machine output (olive protocole_phenologique).",

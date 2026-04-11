@@ -25,7 +25,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { to: '/', label: 'Référentiels', icon: Database, match: (p: string) => p === '/' || p.startsWith('/referentiels') },
-    { to: '/clients', label: 'Clients', icon: Building2 },
+    { to: '/clients', label: 'Clients', icon: Building2, match: (p: string) => p === '/clients' || p.startsWith('/clients/') },
     { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
     { to: '/email-templates', label: 'Email Templates', icon: Mail },
     { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },

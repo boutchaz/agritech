@@ -112,3 +112,34 @@ def test_step2_reads_frost_threshold_from_referential_alerts() -> None:
     )
 
     assert all(event.event_type != "late_frost" for event in output.extreme_events)
+
+
+def test_step2_prefers_canonical_seuils_meteo_over_alert_parsing() -> None:
+    weather = _build_weather(days=220)
+    reference_data = {
+        "seuils_meteo": {
+            "gel": {"threshold_c": 0.0},
+            "canicule": {"tmax_c": 41.0, "consecutive_days": 3},
+            "vent_chaud": {"temperature_c": 38.0, "wind_kmh": 30.0},
+            "secheresse": {
+                "rain_mm_max_per_day": 5.0,
+                "dry_season_days": 60,
+                "transition_days": 30,
+                "rainy_season_days": 20
+            }
+        },
+        "alertes": [
+            {"code": "X1", "seuil": "Tmax > 40°C (3j) + HR < 30%"},
+            {"code": "X2", "seuil": "T > 38 + HR < 25% + vent > 30 km/h"}
+        ]
+    }
+
+    output = extract_weather_history(
+        weather_data=weather,
+        crop_type="agrumes",
+        reference_data=reference_data,
+    )
+
+    event_types = {event.event_type for event in output.extreme_events}
+    assert "high_wind" in event_types
+    assert "heatwave" not in event_types

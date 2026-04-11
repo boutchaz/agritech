@@ -36,6 +36,48 @@
       200
     ]
   },
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": -2.0,
+      "detection_months": [
+        3,
+        4,
+        5
+      ],
+      "severity": "high"
+    },
+    "canicule": {
+      "tmax_c": 38.0,
+      "consecutive_days": 3,
+      "severity": "high"
+    },
+    "vent_chaud": {
+      "temperature_c": 38.0,
+      "wind_kmh": 60.0,
+      "humidity_max_pct": 25.0,
+      "severity": "medium"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5.0,
+      "dry_season_days": 60,
+      "transition_days": 30,
+      "rainy_season_days": 20,
+      "severity": "medium"
+    }
+  },
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "state_machine",
+    "required_indices": [
+      "NDVI",
+      "NIRv",
+      "NDMI",
+      "NDRE"
+    ],
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24
+  },
   "varietes": [
     {
       "code": "PM",
@@ -433,6 +475,7 @@
         60,
         80
       ],
+      "indice_cle": "MSAVI2",
       "indice_satellite_cle": "MSAVI"
     },
     "intensif": {
@@ -477,6 +520,7 @@
         40,
         60
       ],
+      "indice_cle": "NIRv",
       "indice_satellite_cle": "NIRv"
     },
     "super_intensif": {
@@ -521,6 +565,7 @@
         20,
         40
       ],
+      "indice_cle": "NDVI",
       "indice_satellite_cle": "NDVI"
     }
   },
