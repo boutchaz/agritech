@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
 export interface SupportedCountry {
@@ -28,11 +28,13 @@ export interface UpdateSupportedCountryDto {
 }
 
 @Injectable()
-export class SupportedCountriesService {
+export class SupportedCountriesService implements OnModuleInit {
   private readonly logger = new Logger(SupportedCountriesService.name);
-  private readonly supabaseAdmin;
+  private supabaseAdmin;
 
-  constructor(private databaseService: DatabaseService) {
+  constructor(private databaseService: DatabaseService) {}
+
+  onModuleInit() {
     this.supabaseAdmin = this.databaseService.getAdminClient();
   }
 

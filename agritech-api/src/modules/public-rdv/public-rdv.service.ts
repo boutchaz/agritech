@@ -1,19 +1,21 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DatabaseService } from '../database/database.service';
 import { CreateSiamRdvDto } from './dto/create-siam-rdv.dto';
 
 @Injectable()
-export class PublicRdvService {
+export class PublicRdvService implements OnModuleInit {
   private readonly logger = new Logger(PublicRdvService.name);
-  private readonly supabaseAdmin: ReturnType<DatabaseService['getAdminClient']> | null;
+  private supabaseAdmin: ReturnType<DatabaseService['getAdminClient']> | null = null;
 
   constructor(
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
-  ) {
+  ) {}
+
+  onModuleInit() {
     try {
       this.supabaseAdmin = this.databaseService.getAdminClient();
     } catch {
