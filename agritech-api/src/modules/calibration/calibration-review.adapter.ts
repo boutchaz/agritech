@@ -178,8 +178,80 @@ export class CalibrationReviewAdapter {
         : null,
       strengths,
       concerns,
-      summary_narrative: null,
+      summary_narrative: this.buildSummaryNarrative(
+        Math.round(healthTotal),
+        healthMatch.label,
+        Math.round(confidenceNormalized),
+        confidenceMatch.level,
+        hasYield ? { min: Math.round(yieldMin * 10) / 10, max: Math.round(yieldMax * 10) / 10, unit: "t/ha" } : null,
+        strengths,
+        concerns,
+      ),
     };
+  }
+
+  private buildSummaryNarrative(
+    healthScore: number,
+    healthLabel: HealthLabel,
+    _confidenceScore: number,
+    confidenceLevel: ConfidenceLevel,
+    yieldRange: { min: number; max: number; unit: string } | null,
+    strengths: StrengthItem[],
+    concerns: ConcernItem[],
+  ): string {
+    const parts: string[] = [];
+
+    // Health sentence
+    const healthDescriptions: Record<HealthLabel, string> = {
+      excellent: `La parcelle affiche un excellent état de santé (${healthScore}/100)`,
+      bon: `La parcelle est en bon état général (${healthScore}/100)`,
+      moyen: `La parcelle présente un état moyen (${healthScore}/100) nécessitant attention`,
+      faible: `La parcelle montre des signes de faiblesse (${healthScore}/100)`,
+      critique: `La parcelle est en état critique (${healthScore}/100) et nécessite une intervention urgente`,
+    };
+    parts.push(healthDescriptions[healthLabel] + ".");
+
+    // Yield sentence
+    if (yieldRange) {
+      parts.push(`Le potentiel de rendement estimé se situe entre ${yieldRange.min} et ${yieldRange.max} ${yieldRange.unit}.`);
+    }
+
+    // Strengths
+    if (strengths.length > 0) {
+      const strengthNames = strengths.map((s) => s.component.toLowerCase());
+      if (strengthNames.length === 1) {
+        parts.push(`Point fort identifié : ${strengthNames[0]}.`);
+      } else {
+        parts.push(`Points forts : ${strengthNames.join(", ")}.`);
+      }
+    }
+
+    // Concerns
+    if (concerns.length > 0) {
+      const critiques = concerns.filter((c) => c.severity === "critique");
+      const vigilances = concerns.filter((c) => c.severity === "vigilance");
+      if (critiques.length > 0) {
+        const names = critiques.map((c) => c.component.toLowerCase());
+        parts.push(`Alerte critique sur ${names.join(" et ")}.`);
+      }
+      if (vigilances.length > 0) {
+        const names = vigilances.map((c) => c.component.toLowerCase());
+        parts.push(`Points de vigilance : ${names.join(", ")}.`);
+      }
+    }
+
+    // Confidence caveat
+    const confCaveats: Record<ConfidenceLevel, string> = {
+      eleve: "",
+      moyen: "Le score de confiance est modéré — une vérification terrain est conseillée.",
+      faible: "Attention : le score de confiance est faible. Complétez vos données pour améliorer la précision.",
+      minimal: "Le score de confiance est minimal — ces résultats sont indicatifs uniquement.",
+    };
+    if (confCaveats[confidenceLevel]) {
+      parts.push(confCaveats[confidenceLevel]);
+    }
+
+    return parts.join(" ");
   }
 
   private deriveStrengthsAndConcerns(

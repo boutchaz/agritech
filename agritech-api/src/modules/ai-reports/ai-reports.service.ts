@@ -35,6 +35,7 @@ import {
 } from './prompts';
 import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
 import { AIProviderType } from '../organization-ai-settings/dto';
+import { AiQuotaService } from '../ai-quota/ai-quota.service';
 
 @Injectable()
 export class AIReportsService {
@@ -51,6 +52,7 @@ export class AIReportsService {
     @Inject(forwardRef(() => OrganizationAISettingsService))
     private readonly aiSettingsService: OrganizationAISettingsService,
     private readonly weatherProvider: WeatherProvider,
+    private readonly aiQuotaService: AiQuotaService,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
@@ -377,11 +379,13 @@ export class AIReportsService {
 
   /**
    * Generate an AI narrative summary for a calibration review's block_a data.
-   * Returns a short paragraph (2-4 sentences) describing the parcel state.
-   * Fails silently and returns null if no provider is available.
+   * Uses the same provider resolution as other AI features:
+   *   org-configured BYOK provider → system ZAI fallback.
+   * Counts against the 'calibration' AI quota. Fails silently → null.
    */
   async generateCalibrationSummary(
     organizationId: string,
+    userId: string,
     blockA: {
       health_score: number;
       health_label: string;
@@ -393,23 +397,43 @@ export class AIReportsService {
     },
   ): Promise<string | null> {
     try {
+      // 1. Quota check
+      const quotaResult = await this.aiQuotaService.checkAndConsume(
+        organizationId,
+        userId,
+        'calibration',
+      );
+      if (!quotaResult.allowed) {
+        this.logger.warn(`Calibration summary skipped — quota exceeded for org ${organizationId}`);
+        return null;
+      }
+
+      // 2. Resolve provider (org BYOK → system ZAI)
       const { provider: providerType, model } = await this.resolveProvider(organizationId);
       const provider = this.providers.get(providerType);
       if (!provider) return null;
 
+      // 3. Resolve API key (org setting → env var fallback)
       const providerTypeForSettings = providerType as unknown as AIProviderType;
-      const apiKey = await this.aiSettingsService.getDecryptedApiKey(organizationId, providerTypeForSettings);
-      const envKeys: Record<string, string> = {
-        [AIProvider.OPENAI]: this.configService.get<string>('OPENAI_API_KEY') ?? '',
-        [AIProvider.GEMINI]: this.configService.get<string>('GOOGLE_AI_API_KEY') ?? '',
-        [AIProvider.GROQ]: this.configService.get<string>('GROQ_API_KEY') ?? '',
-        [AIProvider.ZAI]: this.configService.get<string>('ZAI_API_KEY') ?? '',
+      const apiKey = await this.aiSettingsService.getDecryptedApiKey(
+        organizationId,
+        providerTypeForSettings,
+      );
+      const envKeyMap: Record<string, string | undefined> = {
+        [AIProvider.OPENAI]: this.configService.get<string>('OPENAI_API_KEY'),
+        [AIProvider.GEMINI]: this.configService.get<string>('GOOGLE_AI_API_KEY'),
+        [AIProvider.GROQ]: this.configService.get<string>('GROQ_API_KEY'),
+        [AIProvider.ZAI]: this.configService.get<string>('ZAI_API_KEY'),
       };
-      const effectiveApiKey = apiKey || envKeys[providerType];
-      if (!effectiveApiKey) return null;
+      const effectiveApiKey = apiKey || envKeyMap[providerType];
+      if (!effectiveApiKey) {
+        this.logger.warn(`No API key available for ${providerType} — calibration summary skipped`);
+        return null;
+      }
 
       provider.setApiKey(effectiveApiKey);
 
+      // 4. Generate
       const dataContext = JSON.stringify(blockA, null, 2);
 
       const systemPrompt = `Tu es un agronome expert marocain. On te donne les résultats structurés d'un calibrage satellite d'une parcelle agricole. Rédige un résumé narratif concis (2-4 phrases) en français, destiné à un agriculteur. Le résumé doit être clair, actionnable et mentionner les points clés : état de santé, confiance, rendement attendu, forces et faiblesses principales. Ne répète pas les chiffres bruts, interprète-les. Pas de markdown, pas de listes, juste du texte fluide.`;
@@ -427,8 +451,20 @@ export class AIReportsService {
         },
       });
 
+      // 5. Log usage (fire-and-forget)
+      this.aiQuotaService.logUsage(
+        organizationId,
+        userId,
+        'calibration',
+        providerType,
+        response.model,
+        response.tokensUsed,
+        quotaResult.isByok,
+      ).catch(() => {});
+
       return response.content.trim();
     } catch (error) {
+      if (error instanceof BadRequestException) throw error;
       this.logger.warn(`Failed to generate calibration summary: ${error.message}`);
       return null;
     }

@@ -2196,6 +2196,7 @@ export class CalibrationService {
   async getCalibrationReview(
     parcelId: string,
     organizationId: string,
+    userId?: string,
   ): Promise<CalibrationReviewView> {
     const ALLOWED_STATUSES = [
       "completed",
@@ -2289,13 +2290,20 @@ export class CalibrationService {
 
     const review = this.calibrationReviewAdapter.transform(snapshotInput);
 
-    // Enrich block_a with AI-generated narrative summary
-    const summaryNarrative = await this.aiReportsService.generateCalibrationSummary(
-      organizationId,
-      review.block_a,
-    );
-    if (summaryNarrative) {
-      review.block_a.summary_narrative = summaryNarrative;
+    // Enrich block_a with AI-generated narrative (falls back to deterministic text)
+    if (userId) {
+      try {
+        const aiNarrative = await this.aiReportsService.generateCalibrationSummary(
+          organizationId,
+          userId,
+          review.block_a,
+        );
+        if (aiNarrative) {
+          review.block_a.summary_narrative = aiNarrative;
+        }
+      } catch (err) {
+        this.logger.warn(`AI summary enrichment failed, using fallback: ${err.message}`);
+      }
     }
 
     return review;

@@ -206,7 +206,8 @@ export class CalibrationController {
     @Req() req: Request,
   ) {
     const organizationId = this.getOrganizationId(req);
-    return this.calibrationService.getCalibrationReview(parcelId, organizationId);
+    const userId = (req as any).user?.id;
+    return this.calibrationService.getCalibrationReview(parcelId, organizationId, userId);
   }
 
   @Post("validate")
