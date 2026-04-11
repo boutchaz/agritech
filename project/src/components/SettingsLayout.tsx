@@ -23,7 +23,6 @@ import {
   PanelLeft,
   ChevronDown,
   Home,
-  Mail,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -247,14 +246,6 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: FileText,
             path: "/settings/documents",
             description: t("settings.menu.documentsDescription"),
-            roles: ADMIN_ROLES,
-          },
-          {
-            id: "email-templates",
-            name: t("settings.menu.emailTemplates", "Email Templates"),
-            icon: Mail,
-            path: "/settings/email-templates",
-            description: t("settings.menu.emailTemplatesDescription", "Manage email notification templates"),
             roles: ADMIN_ROLES,
           },
         ],
@@ -572,7 +563,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           </button>
         </div>
         
-        <div className="flex-1 min-w-0 max-w-full px-3 pt-3 pb-24 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-8 md:px-6 md:pt-6 lg:p-10 lg:pb-10">
+        {/* Same width + padding as accounting list pages (e.g. invoices.tsx inner wrapper) */}
+        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           {children}
         </div>
       </div>
