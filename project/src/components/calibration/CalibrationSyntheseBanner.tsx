@@ -82,6 +82,15 @@ export function CalibrationSyntheseBanner({ parcelId, onNavigateToReview }: Cali
         </div>
       </div>
 
+      {/* AI Summary Narrative */}
+      {a.summary_narrative && (
+        <div className="px-4 pt-3 pb-0">
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            {a.summary_narrative}
+          </p>
+        </div>
+      )}
+
       {/* Body */}
       <div className="px-4 py-4">
         <div className="flex flex-wrap items-start gap-5">

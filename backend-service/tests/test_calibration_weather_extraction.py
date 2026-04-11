@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from importlib import import_module
 
 
-step2_module = import_module("app.services.calibration.step2_weather_extraction")
+step2_module = import_module("app.services.calibration.pipeline.s2_weather_extraction")
 extract_weather_history = getattr(step2_module, "extract_weather_history")
 
 

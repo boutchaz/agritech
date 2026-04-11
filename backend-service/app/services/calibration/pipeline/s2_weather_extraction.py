@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 from datetime import date, datetime
 
-from .types import ExtremeEvent, MonthlyWeatherAggregate, Step2Output, WeatherDay
+from ..types import ExtremeEvent, MonthlyWeatherAggregate, Step2Output, WeatherDay
 
 
 def _to_float(value: object, default: float = 0.0) -> float:

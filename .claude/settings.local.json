@@ -105,7 +105,10 @@
       "Bash(ls agritech-api/referentials/)",
       "Bash(mkdir -p /Users/boutchaz/Documents/CodeLovers/agritech/agritech-api/referentials)",
       "Bash(cp /Users/boutchaz/Documents/CodeLovers/agritech/referentials/DATA_*.json /Users/boutchaz/Documents/CodeLovers/agritech/referentials/MOTEUR_CONFIG.json /Users/boutchaz/Documents/CodeLovers/agritech/agritech-api/referentials/)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse snapshot:*)",
+      "Bash($B click:*)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse screenshot:*)"
     ],
     "deny": [],
     "ask": []

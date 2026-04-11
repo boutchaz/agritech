@@ -3,7 +3,7 @@ from importlib import import_module
 from typing import Optional
 
 
-storage_module = import_module("app.services.calibration.raster_storage")
+storage_module = import_module("app.services.calibration.support.raster_storage")
 CalibrationRasterStorage = getattr(storage_module, "CalibrationRasterStorage")
 RasterStorageConfig = getattr(storage_module, "RasterStorageConfig")
 

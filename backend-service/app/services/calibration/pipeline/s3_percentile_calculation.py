@@ -6,11 +6,11 @@ from typing import Any
 
 import numpy as np
 
-from .referential_utils import (
+from ..referential_utils import (
     DEFAULT_PERIODS,
     get_phenology_periods_from_stades_bbch,
 )
-from .types import PercentileSet, Step1Output, Step3Output
+from ..types import PercentileSet, Step1Output, Step3Output
 
 
 # Minimum observations for meaningful percentile statistics.

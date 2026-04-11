@@ -1,20 +1,24 @@
+"""Legacy signal-based phenology detection (curve fitting).
+
+Fallback for crops without a ``protocole_phenologique`` in their referential.
+"""
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import date
+from datetime import date, timedelta
 from statistics import mean, pstdev
 from typing import Any
 
 import numpy as np
 
-from .referential_utils import (
+from ..referential_utils import (
     DEFAULT_PERIODS,
     get_cycle_months_from_stades_bbch,
     get_index_key_from_referential,
     get_phenology_periods_from_stades_bbch,
     group_points_by_cycle_year,
 )
-from .types import PhenologyDates, Step1Output, Step2Output, Step4Output
+from ..types import PhenologyDates, Step1Output, Step2Output, Step4Output
 
 
 def _safe_smooth(values: list[float]) -> list[float]:
@@ -43,28 +47,6 @@ def _find_constrained_stages_for_year(
     points: list[tuple[date, float]],
     phenology_periods: dict[str, set[int]],
 ) -> dict[str, date]:
-    """
-    Identify and return key phenological stage dates for a specific year from input time series data.
-
-    Args:
-        points (list[tuple[date, float]]): 
-            List of (date, value) tuples representing observations within a year.
-        phenology_periods (dict[str, set[int]]): 
-            Mapping of phenological stage names (e.g., "dormancy", "growth", etc.) to sets of 
-            integer month values corresponding to each stage.
-
-    Returns:
-        dict[str, date]: 
-            Dictionary where the keys are phenological stage names (such as 'dormancy_exit', 
-            'plateau_start', 'decline_start', 'dormancy_entry', etc.) and the values are the 
-            estimated dates at which these stages occur during the given year.
-
-    Notes:
-        - If there are too few points or values for robust estimation, this function will fallback 
-          to a default mechanism to select the stage dates.
-        - This function internally smooths the input value series for improved robustness.
-        - The actual phenological stage names returned may depend on the implementation logic.
-    """
     sorted_points = sorted(points, key=lambda item: item[0])
     dates = [item[0] for item in sorted_points]
     values = _safe_smooth([item[1] for item in sorted_points])
@@ -101,6 +83,9 @@ def _find_constrained_stages_for_year(
     if amplitude <= 0:
         return _fallback_stages(dates, values)
 
+    if peak_value > 0 and amplitude / peak_value < 0.15:
+        return _fallback_stages(dates, values)
+
     plateau_threshold = 0.95 * peak_value
     dormancy_exit_threshold = dormancy_baseline + 0.15 * amplitude
     dormancy_entry_threshold = dormancy_baseline + 0.20 * amplitude
@@ -110,25 +95,16 @@ def _find_constrained_stages_for_year(
     )
 
     plateau_start_idx = _find_plateau_start(values, peak_idx, plateau_threshold)
-
     decline_start_idx = _find_decline_start(values, peak_idx, plateau_threshold)
 
     dormancy_entry_idx = _find_dormancy_entry(
-        dates,
-        values,
-        decline_start_idx,
-        dormancy_months,
-        dormancy_entry_threshold,
-        peak_idx,
+        dates, values, decline_start_idx, dormancy_months,
+        dormancy_entry_threshold, peak_idx,
     )
 
     stages = _build_result(
-        dates,
-        dormancy_exit_idx,
-        peak_idx,
-        plateau_start_idx,
-        decline_start_idx,
-        dormancy_entry_idx,
+        dates, dormancy_exit_idx, peak_idx, plateau_start_idx,
+        decline_start_idx, dormancy_entry_idx,
     )
 
     if _temporal_order_valid(stages):
@@ -138,11 +114,8 @@ def _find_constrained_stages_for_year(
 
 
 def _find_dormancy_exit(
-    dates: list[date],
-    values: list[float],
-    dormancy_months: set[int],
-    active_months: set[int],
-    threshold: float,
+    dates: list[date], values: list[float],
+    dormancy_months: set[int], active_months: set[int], threshold: float,
 ) -> int:
     last_dormancy_idx = 0
     for i, d in enumerate(dates):
@@ -177,12 +150,8 @@ def _find_decline_start(values: list[float], peak_idx: int, threshold: float) ->
 
 
 def _find_dormancy_entry(
-    dates: list[date],
-    values: list[float],
-    decline_start_idx: int,
-    dormancy_months: set[int],
-    threshold: float,
-    peak_idx: int,
+    dates: list[date], values: list[float], decline_start_idx: int,
+    dormancy_months: set[int], threshold: float, peak_idx: int,
 ) -> int:
     for i in range(decline_start_idx + 1, len(values)):
         if dates[i].month in dormancy_months and values[i] <= threshold:
@@ -196,12 +165,8 @@ def _find_dormancy_entry(
 
 
 def _build_result(
-    dates: list[date],
-    dormancy_exit_idx: int,
-    peak_idx: int,
-    plateau_start_idx: int,
-    decline_start_idx: int,
-    dormancy_entry_idx: int,
+    dates: list[date], dormancy_exit_idx: int, peak_idx: int,
+    plateau_start_idx: int, decline_start_idx: int, dormancy_entry_idx: int,
 ) -> dict[str, date]:
     return {
         "dormancy_exit": dates[dormancy_exit_idx],
@@ -213,12 +178,27 @@ def _build_result(
 
 
 def _temporal_order_valid(stages: dict[str, date]) -> bool:
-    return (
+    order_ok = (
         stages["dormancy_exit"] < stages["plateau_start"]
         and stages["plateau_start"] <= stages["peak"]
         and stages["peak"] < stages["decline_start"]
         and stages["decline_start"] < stages["dormancy_entry"]
     )
+    if not order_ok:
+        return False
+
+    exit_to_peak = (stages["peak"] - stages["dormancy_exit"]).days
+    peak_to_decline = (stages["decline_start"] - stages["peak"]).days
+    exit_to_entry = (stages["dormancy_entry"] - stages["dormancy_exit"]).days
+
+    if exit_to_peak < 14:
+        return False
+    if peak_to_decline < 7:
+        return False
+    if exit_to_entry < 90:
+        return False
+
+    return True
 
 
 def _fallback_stages(dates: list[date], values: list[float]) -> dict[str, date]:
@@ -261,12 +241,28 @@ def _fallback_stages(dates: list[date], values: list[float]) -> dict[str, date]:
         local_min_idx = int(np.argmin(tail))
         dormancy_entry_idx = decline_idx + local_min_idx
 
-    return {
+    stages = {
         "dormancy_exit": dates[dormancy_exit_idx],
         "peak": dates[max_idx],
         "plateau_start": dates[plateau_idx],
         "decline_start": dates[decline_idx],
         "dormancy_entry": dates[dormancy_entry_idx],
+    }
+
+    if _temporal_order_valid(stages):
+        return stages
+
+    first, last = dates[0], dates[-1]
+    span = (last - first).days
+    if span < 30:
+        return stages
+
+    return {
+        "dormancy_exit": first + timedelta(days=int(span * 0.05)),
+        "plateau_start": first + timedelta(days=int(span * 0.35)),
+        "peak": first + timedelta(days=int(span * 0.45)),
+        "decline_start": first + timedelta(days=int(span * 0.55)),
+        "dormancy_entry": first + timedelta(days=int(span * 0.90)),
     }
 
 
@@ -286,7 +282,7 @@ def _nearest_cumulative_gdd(
     return float(cumulative_gdd[candidate_keys[0]])
 
 
-def detect_phenology(
+def detect_phenology_legacy(
     satellite_data: Step1Output,
     weather_data: Step2Output,
     index_key: str = "NIRv",
@@ -295,6 +291,10 @@ def detect_phenology(
     planting_system: str | None = None,
     reference_data: dict[str, Any] | None = None,
 ) -> Step4Output:
+    """Legacy signal-based phenology detection.
+
+    Kept as fallback for crops without ``protocole_phenologique``.
+    """
     resolved_index = index_key
     if reference_data and planting_system:
         ref_index = get_index_key_from_referential(reference_data, planting_system)
@@ -332,6 +332,10 @@ def detect_phenology(
     yearly_stages: dict[int, dict[str, date]] = {}
     for year, points in grouped.items():
         if len(points) < 5:
+            continue
+        sorted_pts = sorted(points, key=lambda p: p[0])
+        date_span = (sorted_pts[-1][0] - sorted_pts[0][0]).days
+        if date_span < 120:
             continue
         yearly_stages[year] = _find_constrained_stages_for_year(
             points, phenology_periods
@@ -374,7 +378,7 @@ def detect_phenology(
     ]
     reference_year = min(yearly_stages.keys())
 
-    mean_dates: dict[str, date] = {}
+    mean_dates_dict: dict[str, date] = {}
     variability: dict[str, float] = {}
     gdd_correlation: dict[str, float] = {}
 
@@ -384,7 +388,7 @@ def detect_phenology(
             for year in sorted(yearly_stages.keys())
         ]
         avg_doy = int(round(mean(doy_values)))
-        mean_dates[stage] = _day_of_year_to_date(reference_year, avg_doy)
+        mean_dates_dict[stage] = _day_of_year_to_date(reference_year, avg_doy)
         variability[stage] = (
             float(round(pstdev(doy_values), 3)) if len(doy_values) > 1 else 0.0
         )
@@ -413,11 +417,11 @@ def detect_phenology(
 
     return Step4Output(
         mean_dates=PhenologyDates(
-            dormancy_exit=mean_dates["dormancy_exit"],
-            peak=mean_dates["peak"],
-            plateau_start=mean_dates["plateau_start"],
-            decline_start=mean_dates["decline_start"],
-            dormancy_entry=mean_dates["dormancy_entry"],
+            dormancy_exit=mean_dates_dict["dormancy_exit"],
+            peak=mean_dates_dict["peak"],
+            plateau_start=mean_dates_dict["plateau_start"],
+            decline_start=mean_dates_dict["decline_start"],
+            dormancy_entry=mean_dates_dict["dormancy_entry"],
         ),
         yearly_stages=yearly_stages_out,
         inter_annual_variability_days=variability,

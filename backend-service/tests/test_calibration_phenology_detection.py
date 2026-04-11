@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 types_module = import_module("app.services.calibration.types")
-step4_module = import_module("app.services.calibration.step4_phenology_detection")
+step4_module = import_module("app.services.calibration.pipeline.s4_phenology_detection")
 
 Step1Output = getattr(types_module, "Step1Output")
 Step2Output = getattr(types_module, "Step2Output")

@@ -376,6 +376,65 @@ export class AIReportsService {
   }
 
   /**
+   * Generate an AI narrative summary for a calibration review's block_a data.
+   * Returns a short paragraph (2-4 sentences) describing the parcel state.
+   * Fails silently and returns null if no provider is available.
+   */
+  async generateCalibrationSummary(
+    organizationId: string,
+    blockA: {
+      health_score: number;
+      health_label: string;
+      confidence_score: number;
+      confidence_level: string;
+      yield_range: { min: number; max: number; unit: string } | null;
+      strengths: Array<{ component: string; phrase: string }>;
+      concerns: Array<{ component: string; phrase: string; severity: string }>;
+    },
+  ): Promise<string | null> {
+    try {
+      const { provider: providerType, model } = await this.resolveProvider(organizationId);
+      const provider = this.providers.get(providerType);
+      if (!provider) return null;
+
+      const providerTypeForSettings = providerType as unknown as AIProviderType;
+      const apiKey = await this.aiSettingsService.getDecryptedApiKey(organizationId, providerTypeForSettings);
+      const envKeys: Record<string, string> = {
+        [AIProvider.OPENAI]: this.configService.get<string>('OPENAI_API_KEY') ?? '',
+        [AIProvider.GEMINI]: this.configService.get<string>('GOOGLE_AI_API_KEY') ?? '',
+        [AIProvider.GROQ]: this.configService.get<string>('GROQ_API_KEY') ?? '',
+        [AIProvider.ZAI]: this.configService.get<string>('ZAI_API_KEY') ?? '',
+      };
+      const effectiveApiKey = apiKey || envKeys[providerType];
+      if (!effectiveApiKey) return null;
+
+      provider.setApiKey(effectiveApiKey);
+
+      const dataContext = JSON.stringify(blockA, null, 2);
+
+      const systemPrompt = `Tu es un agronome expert marocain. On te donne les résultats structurés d'un calibrage satellite d'une parcelle agricole. Rédige un résumé narratif concis (2-4 phrases) en français, destiné à un agriculteur. Le résumé doit être clair, actionnable et mentionner les points clés : état de santé, confiance, rendement attendu, forces et faiblesses principales. Ne répète pas les chiffres bruts, interprète-les. Pas de markdown, pas de listes, juste du texte fluide.`;
+
+      const userPrompt = `Voici les données du calibrage :\n${dataContext}\n\nRédige le résumé narratif.`;
+
+      const response = await provider.generate({
+        systemPrompt,
+        userPrompt,
+        config: {
+          provider: providerType,
+          model,
+          temperature: 0.5,
+          maxTokens: 512,
+        },
+      });
+
+      return response.content.trim();
+    } catch (error) {
+      this.logger.warn(`Failed to generate calibration summary: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
    * Validate analysis data - comprehensive calibration and validation
    * Returns detailed status with accuracy scoring and recommendations
    */

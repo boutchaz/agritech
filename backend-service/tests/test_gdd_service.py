@@ -1,7 +1,7 @@
 from importlib import import_module
 
 
-gdd_module = import_module("app.services.calibration.gdd_service")
+gdd_module = import_module("app.services.calibration.support.gdd_service")
 
 compute_daily_gdd = getattr(gdd_module, "compute_daily_gdd")
 estimate_chill_hours = getattr(gdd_module, "estimate_chill_hours")

@@ -6,7 +6,7 @@ from typing import Any, Literal, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from .types import GeoJsonFeatureCollection, PercentileSet, Step7Output, ZoneSummary
+from ..types import GeoJsonFeatureCollection, PercentileSet, Step7Output, ZoneSummary
 
 
 def _class_for_value(value: float, percentiles: PercentileSet) -> str:

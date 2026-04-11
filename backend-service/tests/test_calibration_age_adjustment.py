@@ -1,7 +1,7 @@
 from importlib import import_module
 from typing import Callable, cast
 
-age_adjustment_module = import_module("app.services.calibration.age_adjustment")
+age_adjustment_module = import_module("app.services.calibration.support.age_adjustment")
 
 determine_maturity_phase = cast(
     Callable[..., object], getattr(age_adjustment_module, "determine_maturity_phase")

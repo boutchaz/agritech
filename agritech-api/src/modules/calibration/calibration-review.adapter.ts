@@ -178,6 +178,7 @@ export class CalibrationReviewAdapter {
         : null,
       strengths,
       concerns,
+      summary_narrative: null,
     };
   }
 

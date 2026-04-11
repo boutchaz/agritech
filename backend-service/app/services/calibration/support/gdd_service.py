@@ -4,7 +4,7 @@ import math
 from datetime import date
 from typing import Any
 
-from .referential_utils import (
+from ..referential_utils import (
     CROP_TYPE_TO_REFERENTIAL_JSON,
     FALLBACK_GDD_TBASE,
     FALLBACK_GDD_TUPPER,

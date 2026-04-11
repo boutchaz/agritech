@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -210,6 +210,10 @@ class Step4Output(BaseModel):
     inter_annual_variability_days: dict[str, float]
     gdd_correlation: dict[str, float]
     referential_cycle_used: bool | None = None
+    phase_timeline: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Per-season state machine output (olive protocole_phenologique).",
+    )
 
 
 class Step5Output(BaseModel):

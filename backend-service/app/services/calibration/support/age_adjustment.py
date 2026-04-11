@@ -3,12 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, cast
 
-from .referential_utils import (
+from ..referential_utils import (
     DEFAULT_MATURITY_PHASE_BOUNDARIES,
     get_phase_boundaries_from_reference,
     iter_yield_curve_age_brackets,
 )
-from .types import MaturityPhase
+from ..types import MaturityPhase
 
 YieldValue = float | int | str | list[float] | tuple[float, float]
 

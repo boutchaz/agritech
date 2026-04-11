@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from statistics import median
 
-from .types import (
+from ..types import (
     HealthScore,
     Step1Output,
     Step3Output,

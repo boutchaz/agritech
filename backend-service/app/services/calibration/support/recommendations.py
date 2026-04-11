@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from .types import MaturityPhase, Recommendation, Step2Output, Step5Output, Step8Output
+from ..types import MaturityPhase, Recommendation, Step2Output, Step5Output, Step8Output
 
 
 def _severity_from_score(score: float) -> Literal["low", "medium", "high"]:

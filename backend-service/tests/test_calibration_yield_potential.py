@@ -1,7 +1,7 @@
 from importlib import import_module
 
 
-step6_module = import_module("app.services.calibration.step6_yield_potential")
+step6_module = import_module("app.services.calibration.pipeline.s6_yield_potential")
 types_module = import_module("app.services.calibration.types")
 
 calculate_yield_potential = getattr(step6_module, "calculate_yield_potential")

@@ -2287,7 +2287,18 @@ export class CalibrationService {
       })),
     };
 
-    return this.calibrationReviewAdapter.transform(snapshotInput);
+    const review = this.calibrationReviewAdapter.transform(snapshotInput);
+
+    // Enrich block_a with AI-generated narrative summary
+    const summaryNarrative = await this.aiReportsService.generateCalibrationSummary(
+      organizationId,
+      review.block_a,
+    );
+    if (summaryNarrative) {
+      review.block_a.summary_narrative = summaryNarrative;
+    }
+
+    return review;
   }
 
   async checkCalibrationReadiness(

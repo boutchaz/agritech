@@ -3,7 +3,7 @@ from importlib import import_module
 import numpy as np
 
 
-step7_module = import_module("app.services.calibration.step7_zone_detection")
+step7_module = import_module("app.services.calibration.pipeline.s7_zone_detection")
 types_module = import_module("app.services.calibration.types")
 
 classify_zones = getattr(step7_module, "classify_zones")

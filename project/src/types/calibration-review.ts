@@ -38,6 +38,8 @@ export interface BlockASynthese {
   } | null;
   strengths: StrengthItem[];
   concerns: ConcernItem[];
+  /** AI-generated narrative summary of the calibration results */
+  summary_narrative: string | null;
 }
 
 // ── Block B — Analyse detaillee ──

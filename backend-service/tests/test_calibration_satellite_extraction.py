@@ -2,8 +2,8 @@ from datetime import date, timedelta
 from importlib import import_module
 
 
-step1_module = import_module("app.services.calibration.step1_satellite_extraction")
-storage_module = import_module("app.services.calibration.raster_storage")
+step1_module = import_module("app.services.calibration.pipeline.s1_satellite_extraction")
+storage_module = import_module("app.services.calibration.support.raster_storage")
 
 extract_satellite_history = getattr(step1_module, "extract_satellite_history")
 SUPPORTED_INDICES = getattr(step1_module, "SUPPORTED_INDICES")

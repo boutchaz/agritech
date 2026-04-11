@@ -7,21 +7,21 @@ from typing import Any
 
 import numpy as np
 
-from .age_adjustment import (
+from .support.age_adjustment import (
     determine_maturity_phase,
     get_threshold_adjustment,
 )
-from .confidence import (
+from .support.confidence import (
     ConfidenceInput,
     calculate_confidence_score,
 )
-from .step1_satellite_extraction import (
+from .pipeline.s1_satellite_extraction import (
     extract_satellite_history,
 )
-from .step2_weather_extraction import extract_weather_history
-from .step3_percentile_calculation import calculate_percentiles
-from .step4_phenology_detection import detect_phenology
-from .gdd_service import precompute_gdd_rows
+from .pipeline.s2_weather_extraction import extract_weather_history
+from .pipeline.s3_percentile_calculation import calculate_percentiles
+from .pipeline.s4_phenology_detection import detect_phenology
+from .support.gdd_service import precompute_gdd_rows
 from .referential_utils import get_gdd_tbase_tupper
 from .types import (
     CalibrationInput,
@@ -143,19 +143,19 @@ def run_calibration_pipeline(
     previous_output: CalibrationOutput | None = None,
 ) -> CalibrationOutput:
     step5_fn = getattr(
-        import_module("app.services.calibration.step5_anomaly_detection"),
+        import_module("app.services.calibration.pipeline.s5_anomaly_detection"),
         "detect_anomalies",
     )
     step6_fn = getattr(
-        import_module("app.services.calibration.step6_yield_potential"),
+        import_module("app.services.calibration.pipeline.s6_yield_potential"),
         "calculate_yield_potential",
     )
     step7_fn = getattr(
-        import_module("app.services.calibration.step7_zone_detection"),
+        import_module("app.services.calibration.pipeline.s7_zone_detection"),
         "classify_zones",
     )
     step8_fn = getattr(
-        import_module("app.services.calibration.step8_health_score"),
+        import_module("app.services.calibration.pipeline.s8_health_score"),
         "calculate_health_score",
     )
 
@@ -214,7 +214,7 @@ def run_calibration_pipeline(
         for agg in step2.monthly_aggregates:
             agg.gdd_total = round(monthly_gdd_totals.get(agg.month, 0.0), 3)
 
-    from .step2a_signal_classification import classify_signal
+    from .pipeline.s2a_signal_classification import classify_signal
 
     signal_classification = classify_signal(step1, step2, calibration_input.crop_type)
 

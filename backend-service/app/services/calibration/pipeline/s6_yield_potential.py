@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from .referential_utils import (
+from ..referential_utils import (
     get_phase_boundaries_from_reference,
     span_for_rendement_key,
 )
-from .types import (
+from ..types import (
     AlternanceInfo,
     MaturityPhase,
     Step1Output,

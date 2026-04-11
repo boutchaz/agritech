@@ -2,7 +2,7 @@ from datetime import date
 from importlib import import_module
 from typing import Callable, Protocol, cast
 
-confidence_module = import_module("app.services.calibration.confidence")
+confidence_module = import_module("app.services.calibration.support.confidence")
 
 ConfidenceInput = cast(type, getattr(confidence_module, "ConfidenceInput"))
 calculate_confidence_score = cast(

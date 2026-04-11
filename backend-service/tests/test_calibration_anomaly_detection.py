@@ -3,7 +3,7 @@ from importlib import import_module
 
 
 types_module = import_module("app.services.calibration.types")
-step5_module = import_module("app.services.calibration.step5_anomaly_detection")
+step5_module = import_module("app.services.calibration.pipeline.s5_anomaly_detection")
 
 Step1Output = getattr(types_module, "Step1Output")
 Step2Output = getattr(types_module, "Step2Output")

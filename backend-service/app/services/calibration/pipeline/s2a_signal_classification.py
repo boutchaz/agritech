@@ -17,7 +17,7 @@ from __future__ import annotations
 from datetime import timedelta
 from statistics import mean, median
 
-from .types import (
+from ..types import (
     SignalClassificationOutput,
     Step1Output,
     Step2Output,

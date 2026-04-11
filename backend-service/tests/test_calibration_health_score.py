@@ -3,7 +3,7 @@ from importlib import import_module
 
 
 types_module = import_module("app.services.calibration.types")
-step8_module = import_module("app.services.calibration.step8_health_score")
+step8_module = import_module("app.services.calibration.pipeline.s8_health_score")
 
 Step1Output = getattr(types_module, "Step1Output")
 Step3Output = getattr(types_module, "Step3Output")

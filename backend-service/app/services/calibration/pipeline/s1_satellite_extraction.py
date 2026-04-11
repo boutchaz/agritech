@@ -7,7 +7,7 @@ from typing import Iterable
 import numpy as np
 from scipy.signal import savgol_filter
 
-from .types import IndexTimePoint, Step1Output
+from ..types import IndexTimePoint, Step1Output
 
 
 SUPPORTED_INDICES = (

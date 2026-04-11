@@ -111,6 +111,15 @@ export function BlockASynthese({ data, onScrollToBlock }: BlockASyntheseProps) {
         </div>
       </div>
 
+      {/* AI Summary Narrative */}
+      {data.summary_narrative && (
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            {data.summary_narrative}
+          </p>
+        </div>
+      )}
+
       {/* Bottom row: Points forts + Points de vigilance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100 dark:border-gray-800">
         <div>
