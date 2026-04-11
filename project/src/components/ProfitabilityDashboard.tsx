@@ -78,15 +78,18 @@ const ProfitabilityDashboard = () => {
     staleTime: 5 * 60 * 1000,
   });
 
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+
   // Fetch costs
   const { data: costs = [], isLoading: costsLoading } = useQuery({
-    queryKey: ['costs', currentOrganization?.id, selectedParcel, startDate, endDate],
+    queryKey: ['costs', currentOrganization?.id, selectedParcel, startDate, endDate, activeFiscalYearId],
     queryFn: async () => {
       if (!currentOrganization) return [];
       return profitabilityApi.getCosts({
         start_date: startDate,
         end_date: endDate,
         parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
+        fiscal_year_id: activeFiscalYearId,
       }, currentOrganization.id);
     },
     enabled: !!currentOrganization,
@@ -95,13 +98,14 @@ const ProfitabilityDashboard = () => {
 
   // Fetch revenues
   const { data: revenues = [], isLoading: revenuesLoading } = useQuery({
-    queryKey: ['revenues', currentOrganization?.id, selectedParcel, startDate, endDate],
+    queryKey: ['revenues', currentOrganization?.id, selectedParcel, startDate, endDate, activeFiscalYearId],
     queryFn: async () => {
       if (!currentOrganization) return [];
       return profitabilityApi.getRevenues({
         start_date: startDate,
         end_date: endDate,
         parcel_id: selectedParcel !== 'all' ? selectedParcel : undefined,
+        fiscal_year_id: activeFiscalYearId,
       }, currentOrganization.id);
     },
     enabled: !!currentOrganization,

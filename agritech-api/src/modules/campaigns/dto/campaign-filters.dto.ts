@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum, IsIn, IsNumber } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsIn, IsNumber, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CampaignType, CampaignStatus } from './create-campaign.dto';
 
@@ -13,6 +13,11 @@ export class CampaignFiltersDto {
   @IsOptional()
   @IsEnum(CampaignStatus)
   status?: CampaignStatus;
+
+  @ApiPropertyOptional({ description: 'Filter by primary fiscal year' })
+  @IsOptional()
+  @IsUUID()
+  primary_fiscal_year_id?: string;
 
   @ApiPropertyOptional({ description: 'Search by name or description' })
   @IsOptional()

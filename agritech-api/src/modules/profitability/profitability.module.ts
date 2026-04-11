@@ -4,9 +4,10 @@ import { ProfitabilityService } from './profitability.service';
 import { DatabaseModule } from '../database/database.module';
 import { CaslModule } from '../casl/casl.module';
 import { JournalEntriesModule } from '../journal-entries/journal-entries.module';
+import { FiscalYearsModule } from '../fiscal-years/fiscal-years.module';
 
 @Module({
-  imports: [DatabaseModule, CaslModule, JournalEntriesModule],
+  imports: [DatabaseModule, CaslModule, JournalEntriesModule, FiscalYearsModule],
   controllers: [ProfitabilityController],
   providers: [ProfitabilityService],
   exports: [ProfitabilityService],

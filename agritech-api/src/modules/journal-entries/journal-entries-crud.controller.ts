@@ -54,6 +54,7 @@ export class JournalEntriesCrudController {
   @ApiQuery({ name: 'cost_center_id', required: false })
   @ApiQuery({ name: 'farm_id', required: false })
   @ApiQuery({ name: 'parcel_id', required: false })
+  @ApiQuery({ name: 'fiscal_year_id', required: false, description: 'Filter by fiscal year' })
   @ApiResponse({ status: 200, description: 'Journal entries retrieved successfully' })
   async findAll(
     @Req() req: any,
@@ -72,6 +73,7 @@ export class JournalEntriesCrudController {
     @Query('cost_center_id') costCenterId?: string,
     @Query('farm_id') farmId?: string,
     @Query('parcel_id') parcelId?: string,
+    @Query('fiscal_year_id') fiscalYearId?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.journalEntriesService.findAll(organizationId, {
@@ -88,6 +90,7 @@ export class JournalEntriesCrudController {
       cost_center_id: costCenterId,
       farm_id: farmId,
       parcel_id: parcelId,
+      fiscal_year_id: fiscalYearId,
     });
   }
 

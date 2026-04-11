@@ -691,7 +691,20 @@
       "topRow": "Top Row",
       "middleRow": "Middle Row",
       "bottomRow": "Bottom Row",
-      "helper": "Hold Ctrl/Cmd to select multiple options"
+      "helper": "Hold Ctrl/Cmd to select multiple options",
+      "structureTitle": "How the dashboard is organized",
+      "structureIntro": "The top of your dashboard is fixed: farm context, KPI cards, tasks, workforce, accounting, and analyses always appear in that order.",
+      "fixedStripLabel": "Fixed — always on",
+      "fixedStripDetail": "Farm selector · 4 KPIs · Tasks & crew · Accounting & lab analyses",
+      "optionalBlockTitle": "Optional widgets below",
+      "optionalTwoCol": "Wide row (2 columns on large screens)",
+      "optionalThreeCol": "Tile row (3 columns on large screens)",
+      "toggleHint": "Tap a card to show or hide that widget on the dashboard.",
+      "previewFixed": "Fixed layout",
+      "previewOptional": "Your optional widgets",
+      "legacyBottomNote": "Some saved tiles are not shown on the dashboard yet and are ignored: {{keys}}",
+      "toggleOn": "Shown",
+      "toggleOff": "Hidden"
     },
     "layoutOptions": {
       "soil": "Soil Data",
@@ -708,7 +721,8 @@
     "preview": {
       "title": "Layout Preview"
     },
-    "save": {
+    "save": "Save",
+    "saveResult": {
       "success": "Settings saved successfully",
       "failed": "Failed to save settings",
       "failedDescription": "An error occurred while saving the settings."

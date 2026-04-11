@@ -113,7 +113,8 @@ const AppContent = () => {
     }
   }, [selectedFiscalYear, fiscalYears]);
 
-  const { data: report, isLoading, error } = useProfitLoss(startDate, endDate);
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+  const { data: report, isLoading, error } = useProfitLoss(startDate, endDate, activeFiscalYearId);
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 

@@ -34,6 +34,27 @@ export class EmailService {
     });
   }
 
+  getRedactedConfig() {
+    const host = this.configService.get<string>('SMTP_HOST') || '';
+    const port = this.configService.get<string>('SMTP_PORT') || '1025';
+    const secure = this.configService.get<string>('SMTP_SECURE') === 'true';
+    const user = this.configService.get<string>('SMTP_USER') || '';
+    const pass = this.configService.get<string>('SMTP_PASS') || '';
+    const from = this.configService.get<string>('EMAIL_FROM') || 'noreply@agritech.com';
+    const enabled = this.configService.get<string>('EMAIL_ENABLED', 'true') === 'true';
+
+    return {
+      host,
+      port: parseInt(port),
+      secure,
+      user: user ? `${user.slice(0, 3)}***${user.includes('@') ? user.slice(user.indexOf('@')) : ''}` : '',
+      password_set: !!pass,
+      from,
+      enabled,
+      configured: this.isConfigured(),
+    };
+  }
+
   isConfigured(): boolean {
     const enabled = this.configService.get<string>('EMAIL_ENABLED', 'true') === 'true';
     if (!enabled) {

@@ -269,7 +269,8 @@ const AppContent = () => {
     }
   }, [selectedFiscalYear, fiscalYears]);
 
-  const { data: cashFlowReport, isLoading, error } = useCashFlow(startDate, endDate);
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+  const { data: cashFlowReport, isLoading, error } = useCashFlow(startDate, endDate, activeFiscalYearId);
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 

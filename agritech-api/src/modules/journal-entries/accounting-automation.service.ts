@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { CreateJournalEntryDto, JournalEntryType, JournalEntryStatus } from './dto/create-journal-entry.dto';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
@@ -12,6 +13,7 @@ export class AccountingAutomationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly fiscalYearsService: FiscalYearsService,
   ) {}
 
   /**
@@ -64,6 +66,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const fiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, dateStr);
+
     // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -79,6 +85,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       })
       .select()
       .single();
@@ -97,6 +104,7 @@ export class AccountingAutomationService {
         credit: 0,
         description: description,
         ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -105,6 +113,7 @@ export class AccountingAutomationService {
         credit: amount,
         description: `Payment for ${costType}`,
         ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       },
     ];
 
@@ -198,6 +207,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const revDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const revFiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, revDateStr);
+
     // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -213,6 +226,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       })
       .select()
       .single();
@@ -231,6 +245,7 @@ export class AccountingAutomationService {
         credit: 0,
         description: `Receipt for ${revenueType}`,
         ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -239,6 +254,7 @@ export class AccountingAutomationService {
         credit: amount,
         description: description,
         ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       },
     ];
 
@@ -463,6 +479,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const wpDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const wpFiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, wpDateStr);
+
     // Create journal entry
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -478,6 +498,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       })
       .select()
       .single();
@@ -496,6 +517,7 @@ export class AccountingAutomationService {
         credit: 0,
         description: `Salary/Wages payment for ${workerName}`,
         farm_id: farmId || null,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -504,6 +526,7 @@ export class AccountingAutomationService {
         credit: amount,
         description: `Payment to ${workerName} - ${paymentType}`,
         farm_id: farmId || null,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       },
     ];
 

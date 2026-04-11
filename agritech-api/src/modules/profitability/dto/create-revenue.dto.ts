@@ -62,4 +62,9 @@ export class CreateRevenueDto {
   @IsString()
   @IsOptional()
   currency?: string;
+
+  @ApiProperty({ description: 'Fiscal year ID (auto-resolved from date if omitted)', required: false })
+  @IsUUID()
+  @IsOptional()
+  fiscal_year_id?: string;
 }

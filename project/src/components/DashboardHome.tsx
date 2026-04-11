@@ -110,7 +110,8 @@ const DashboardHome = () => {
           Bienvenue sur {appConfig.name}
         </h1>
         <p className="text-green-100">
-          {currentOrganization?.name} {currentFarm && `• ${currentFarm.name}`}
+          {currentOrganization?.name}
+          {currentFarm?.name ? ` • ${currentFarm.name}` : ''}
         </p>
       </div>
 

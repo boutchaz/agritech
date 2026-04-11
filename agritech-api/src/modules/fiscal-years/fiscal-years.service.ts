@@ -256,4 +256,32 @@ export class FiscalYearsService {
 
     return data;
   }
+
+  /**
+   * Resolve the fiscal year ID for a given date.
+   * Looks for an open fiscal year whose date range contains the given date.
+   * Falls back to the active fiscal year if no match is found.
+   */
+  async resolveFiscalYear(organizationId: string, date: string): Promise<string | null> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('fiscal_years')
+      .select('id, start_date')
+      .eq('organization_id', organizationId)
+      .lte('start_date', date)
+      .gte('end_date', date)
+      .order('start_date', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      this.logger.warn(`Failed to resolve fiscal year for date ${date}: ${error.message}`);
+      return null;
+    }
+
+    if (data?.length) return data[0].id;
+
+    // Fallback: return active fiscal year
+    const active = await this.getActive(organizationId);
+    return active?.id || null;
+  }
 }

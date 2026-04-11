@@ -1,4 +1,4 @@
-import {  useState  } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,8 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { NativeSelect } from '@/components/ui/NativeSelect';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useTrialBalance } from '@/hooks/useFinancialReports';
+import { useFiscalYears, useCurrentFiscalYear } from '@/hooks/useAgriculturalAccounting';
 import { exportTrialBalanceCsv } from '@/lib/utils/report-export';
 import { PageLoader } from '@/components/ui/loader';
 import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
@@ -42,8 +44,30 @@ const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('all');
 
-  const { data: report, isLoading, error } = useTrialBalance(asOfDate);
+  const { data: fiscalYears = [] } = useFiscalYears();
+  const { data: currentFiscalYear } = useCurrentFiscalYear();
+
+  // Auto-select current fiscal year on mount
+  useEffect(() => {
+    if (currentFiscalYear && selectedFiscalYear === 'all') {
+      setSelectedFiscalYear(currentFiscalYear.id);
+      setAsOfDate(currentFiscalYear.end_date);
+    }
+  }, [currentFiscalYear]);
+
+  useEffect(() => {
+    if (selectedFiscalYear !== 'all') {
+      const fy = fiscalYears.find(f => f.id === selectedFiscalYear);
+      if (fy) {
+        setAsOfDate(fy.end_date);
+      }
+    }
+  }, [selectedFiscalYear, fiscalYears]);
+
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+  const { data: report, isLoading, error } = useTrialBalance(asOfDate, activeFiscalYearId);
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 
@@ -72,6 +96,23 @@ const AppContent = () => {
           <Card>
             <CardContent className="pt-6">
               <div className="flex flex-wrap items-end gap-4">
+                <div className="min-w-[200px]">
+                  <Label htmlFor="fiscal_year" className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4" />
+                    {t('reportsModule.profitLoss.fiscalYear', 'Fiscal Year')}
+                  </Label>
+                  <NativeSelect
+                    id="fiscal_year"
+                    value={selectedFiscalYear}
+                    onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                    className="max-w-xs"
+                  >
+                    <option value="all">{t('reportsModule.profitLoss.allFiscalYears', 'All Fiscal Years')}</option>
+                    {fiscalYears.map(fy => (
+                      <option key={fy.id} value={fy.id}>{fy.name}</option>
+                    ))}
+                  </NativeSelect>
+                </div>
                 <div className="flex-1 min-w-[200px]">
                   <Label htmlFor="as_of_date" className="flex items-center gap-2 mb-2">
                     <Calendar className="h-4 w-4" />
@@ -81,7 +122,10 @@ const AppContent = () => {
                     id="as_of_date"
                     type="date"
                     value={asOfDate}
-                    onChange={(e) => setAsOfDate(e.target.value)}
+                    onChange={(e) => {
+                      setAsOfDate(e.target.value);
+                      setSelectedFiscalYear('all');
+                    }}
                     className="max-w-xs"
                   />
                 </div>

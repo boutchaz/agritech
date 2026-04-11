@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { NotificationsService, ADMIN_ONLY_ROLES } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
@@ -12,6 +13,7 @@ export interface CreateJournalEntryDto {
   remarks?: string;
   reference_type?: string;
   reference_number?: string;
+  fiscal_year_id?: string;
   items: {
     account_id: string;
     debit: number;
@@ -28,6 +30,7 @@ export interface UpdateJournalEntryDto {
   entry_type?: 'expense' | 'revenue' | 'transfer' | 'adjustment';
   description?: string;
   remarks?: string;
+  fiscal_year_id?: string;
   items?: {
     account_id: string;
     debit: number;
@@ -47,6 +50,7 @@ export class JournalEntriesService {
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly notificationsService: NotificationsService,
+    private readonly fiscalYearsService: FiscalYearsService,
   ) {}
 
   async findAll(organizationId: string, filters?: any) {
@@ -124,6 +128,11 @@ export class JournalEntriesService {
 
       if (filters?.parcel_id) {
         query = query.filter('journal_items.parcel_id', 'eq', filters.parcel_id);
+      }
+
+      if (filters?.fiscal_year_id) {
+        query = query.eq('fiscal_year_id', filters.fiscal_year_id);
+        countQuery = countQuery.eq('fiscal_year_id', filters.fiscal_year_id);
       }
 
       query = query.order(sortBy, { ascending: sortDir === 'asc' });
@@ -225,6 +234,10 @@ export class JournalEntriesService {
        // Generate entry number
        const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
 
+      // Resolve fiscal year from date if not provided
+      const fiscalYearId = dto.fiscal_year_id ||
+        await this.fiscalYearsService.resolveFiscalYear(organizationId, dto.entry_date);
+
       // Create journal entry
       // Note: entry_type and description columns don't exist in the database schema
       const { data: entry, error: entryError } = await supabaseClient
@@ -240,6 +253,7 @@ export class JournalEntriesService {
           total_credit: totalCredit,
           status: 'draft',
           created_by: userId,
+          ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
         })
         .select()
         .single();
@@ -259,6 +273,7 @@ export class JournalEntriesService {
         cost_center_id: item.cost_center_id,
         farm_id: item.farm_id,
         parcel_id: item.parcel_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -341,6 +356,11 @@ export class JournalEntriesService {
           throw new BadRequestException(`Failed to delete existing items: ${deleteError.message}`);
         }
 
+        // Resolve fiscal year for updated items
+        const entryDate = dto.entry_date || entry.entry_date;
+        const updateFiscalYearId = dto.fiscal_year_id || entry.fiscal_year_id ||
+          await this.fiscalYearsService.resolveFiscalYear(organizationId, entryDate);
+
         // Insert new items
         const items = dto.items.map(item => ({
           journal_entry_id: id,
@@ -351,6 +371,7 @@ export class JournalEntriesService {
           cost_center_id: item.cost_center_id,
           farm_id: item.farm_id,
           parcel_id: item.parcel_id,
+          ...(updateFiscalYearId ? { fiscal_year_id: updateFiscalYearId } : {}),
         }));
 
         const { error: insertError } = await supabaseClient

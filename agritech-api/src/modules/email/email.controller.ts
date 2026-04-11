@@ -1,5 +1,5 @@
-import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { EmailService } from './email.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
@@ -15,6 +15,12 @@ import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 @UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class EmailController {
   constructor(private readonly emailService: EmailService) {}
+
+  @Get('config')
+  @ApiOperation({ summary: 'Get current SMTP configuration (redacted)' })
+  getConfig() {
+    return this.emailService.getRedactedConfig();
+  }
 
   @Post('test')
   async sendTestEmail(@Body() body: { to: string }) {

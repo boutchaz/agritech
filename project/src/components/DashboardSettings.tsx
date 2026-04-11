@@ -1,14 +1,17 @@
-import {  useState  } from "react";
+import { useState } from "react";
 import { LayoutGrid, Save, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dashboardSettingsApi } from '../lib/api/dashboard-settings';
 import { useAuth } from '../hooks/useAuth';
 import type { DashboardSettings as DashboardSettingsType } from '../types';
-import { FormField } from './ui/FormField';
-import { Select } from './ui/Select';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const MIDDLE_WIDGET_ORDER = ['production', 'financial'] as const;
+const BOTTOM_WIDGET_ORDER = ['alerts', 'farm', 'soil'] as const;
+const BOTTOM_WIDGET_SET = new Set<string>(BOTTOM_WIDGET_ORDER);
 
 const defaultSettings: DashboardSettingsType = {
   showSoilData: true,
@@ -22,7 +25,7 @@ const defaultSettings: DashboardSettingsType = {
   layout: {
     topRow: ['soil', 'climate', 'irrigation', 'maintenance'],
     middleRow: ['production', 'financial'],
-    bottomRow: ['alerts', 'tasks']
+    bottomRow: ['alerts']
   }
 };
 
@@ -104,12 +107,12 @@ const DashboardSettings = () => {
         queryKey: ['dashboard-settings', user?.id, currentOrganization?.id]
       });
       setSuccess(true);
-      toast.success(t('dashboard.save.success'));
+      toast.success(t('dashboard.saveResult.success'));
       setTimeout(() => setSuccess(false), 3000);
     },
     onError: (error) => {
-      toast.error(t('dashboard.save.failed'), {
-        description: error instanceof Error ? error.message : t('dashboard.save.failedDescription'),
+      toast.error(t('dashboard.saveResult.failed'), {
+        description: error instanceof Error ? error.message : t('dashboard.saveResult.failedDescription'),
       });
     },
   });
@@ -171,7 +174,7 @@ const DashboardSettings = () => {
             <p className="text-red-600 dark:text-red-400">
               {saveMutation.error instanceof Error
                 ? saveMutation.error.message
-                : t('dashboard.save.failed')}
+                : t('dashboard.saveResult.failed')}
             </p>
           </div>
         </div>
@@ -180,7 +183,7 @@ const DashboardSettings = () => {
       {success && (
         <div className="bg-green-50 dark:bg-green-900/20 p-3 sm:p-4 rounded-xl">
           <p className="text-green-600 dark:text-green-400">
-            {t('dashboard.save.success')}
+            {t('dashboard.saveResult.success')}
           </p>
         </div>
       )}
@@ -313,121 +316,194 @@ const DashboardSettings = () => {
         </div>
       </div>
 
-      {/* Layout Configuration */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
+      {/* Layout — matches live Dashboard.tsx (fixed KPI + ops; optional middle & bottom rows only) */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 space-y-6">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
           {t('dashboard.sections.layout')}
         </h3>
 
-        <div className="space-y-5 sm:space-y-6">
-          <div className="min-w-0">
-            <FormField label={t('dashboard.layout.topRow')} htmlFor="topRow" helper={t('dashboard.layout.helper')}>
-              <Select
-                id="topRow"
-                multiple
-                value={layout.topRow}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, option => option.value);
-                  setSettings({
-                    ...settings,
-                    layout: {
-                      ...layout,
-                      topRow: values
-                    }
-                  });
-                }}
-                size={4}
-                className="w-full min-h-[10rem] sm:min-h-[9rem] text-base"
-              >
-              <option value="soil">{t('dashboard.layoutOptions.soil')}</option>
-              <option value="climate">{t('dashboard.layoutOptions.climate')}</option>
-              <option value="irrigation">{t('dashboard.layoutOptions.irrigation')}</option>
-              <option value="maintenance">{t('dashboard.layoutOptions.maintenance')}</option>
-              </Select>
-            </FormField>
-          </div>
-
-          <div className="min-w-0">
-            <FormField label={t('dashboard.layout.middleRow')} htmlFor="middleRow">
-              <Select
-                id="middleRow"
-                multiple
-                value={layout.middleRow}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, option => option.value);
-                  setSettings({
-                    ...settings,
-                    layout: {
-                      ...layout,
-                      middleRow: values
-                    }
-                  });
-                }}
-                size={3}
-                className="w-full min-h-[8rem] sm:min-h-[7rem] text-base"
-              >
-              <option value="production">{t('dashboard.layoutOptions.production')}</option>
-              <option value="financial">{t('dashboard.layoutOptions.financial')}</option>
-              <option value="stock">{t('dashboard.layoutOptions.stock')}</option>
-              </Select>
-            </FormField>
-          </div>
-
-          <div className="min-w-0">
-            <FormField label={t('dashboard.layout.bottomRow')} htmlFor="bottomRow">
-              <Select
-                id="bottomRow"
-                multiple
-                value={layout.bottomRow}
-                onChange={(e) => {
-                  const values = Array.from(e.target.selectedOptions, option => option.value);
-                  setSettings({
-                    ...settings,
-                    layout: {
-                      ...layout,
-                      bottomRow: values
-                    }
-                  });
-                }}
-                size={3}
-                className="w-full min-h-[8rem] sm:min-h-[7rem] text-base"
-              >
-              <option value="alerts">{t('dashboard.layoutOptions.alerts')}</option>
-              <option value="tasks">{t('dashboard.layoutOptions.tasks')}</option>
-              <option value="weather">{t('dashboard.layoutOptions.weather')}</option>
-              </Select>
-            </FormField>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/90 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {t('dashboard.layout.structureTitle')}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+            {t('dashboard.layout.structureIntro')}
+          </p>
+          <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-white/70 px-3 py-2.5 text-xs leading-snug text-slate-600 dark:border-slate-600 dark:bg-slate-950/40 dark:text-slate-300">
+            <span className="font-semibold text-slate-800 dark:text-slate-100">
+              {t('dashboard.layout.fixedStripLabel')}
+            </span>
+            <span className="mx-2 text-slate-300 dark:text-slate-600">·</span>
+            <span>{t('dashboard.layout.fixedStripDetail')}</span>
           </div>
         </div>
+
+        <div>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {t('dashboard.layout.optionalBlockTitle')}
+          </p>
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {t('dashboard.layout.toggleHint')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {t('dashboard.layout.optionalTwoCol')}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {MIDDLE_WIDGET_ORDER.map((key) => {
+              const on = layout.middleRow.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  onClick={() => {
+                    setSettings((prev) => {
+                      const L = normalizeDashboardLayout(prev.layout);
+                      const cur = [...L.middleRow];
+                      const has = cur.includes(key);
+                      const next = has ? cur.filter((k) => k !== key) : [...cur, key];
+                      const sorted = MIDDLE_WIDGET_ORDER.filter((k) => next.includes(k));
+                      return { ...prev, layout: { ...L, middleRow: sorted } };
+                    });
+                  }}
+                  className={cn(
+                    'flex min-h-[4.5rem] flex-col items-start justify-center rounded-2xl border px-4 py-3 text-left text-sm transition-colors',
+                    on
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-sm dark:border-emerald-400/60 dark:bg-emerald-950/40 dark:text-emerald-50'
+                      : 'border-slate-200 bg-slate-50/80 text-slate-600 hover:border-slate-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300',
+                  )}
+                >
+                  <span className="font-semibold">{t(`dashboard.layoutOptions.${key}`)}</span>
+                  <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {on ? t('dashboard.layout.toggleOn') : t('dashboard.layout.toggleOff')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            {t('dashboard.layout.optionalThreeCol')}
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {BOTTOM_WIDGET_ORDER.map((key) => {
+              const on = layout.bottomRow.includes(key);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="switch"
+                  aria-checked={on}
+                  onClick={() => {
+                    setSettings((prev) => {
+                      const L = normalizeDashboardLayout(prev.layout);
+                      const cur = [...L.bottomRow];
+                      const has = cur.includes(key);
+                      const next = has ? cur.filter((k) => k !== key) : [...cur, key];
+                      const sorted = BOTTOM_WIDGET_ORDER.filter((k) => next.includes(k));
+                      return { ...prev, layout: { ...L, bottomRow: sorted } };
+                    });
+                  }}
+                  className={cn(
+                    'flex min-h-[4.5rem] flex-col items-start justify-center rounded-2xl border px-4 py-3 text-left text-sm transition-colors',
+                    on
+                      ? 'border-violet-500 bg-violet-50 text-violet-950 shadow-sm dark:border-violet-400/60 dark:bg-violet-950/35 dark:text-violet-50'
+                      : 'border-slate-200 bg-slate-50/80 text-slate-600 hover:border-slate-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300',
+                  )}
+                >
+                  <span className="font-semibold">
+                    {key === 'farm'
+                      ? t('dashboard.widgets.farm.title')
+                      : t(`dashboard.layoutOptions.${key}`)}
+                  </span>
+                  <span className="mt-1 text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    {on ? t('dashboard.layout.toggleOn') : t('dashboard.layout.toggleOff')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {layout.bottomRow.some((k) => !BOTTOM_WIDGET_SET.has(k)) && (
+          <p className="text-xs text-amber-800 dark:text-amber-200/90">
+            {t('dashboard.layout.legacyBottomNote', {
+              keys: layout.bottomRow.filter((k) => !BOTTOM_WIDGET_SET.has(k)).join(', '),
+            })}
+          </p>
+        )}
       </div>
 
-      {/* Preview */}
+      {/* Preview — schematic matches dashboard grid, not legacy topRow */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">
           {t('dashboard.preview.title')}
         </h3>
-        <div className="space-y-3 sm:space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {layout.topRow.map((item) => (
-              <div key={item} className="min-h-9 sm:h-8 px-1 bg-green-100 dark:bg-green-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-green-800 dark:text-green-200">
-                {t(`dashboard.layoutOptions.${item}`)}
+        <div className="space-y-5">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t('dashboard.layout.previewFixed')}
+            </p>
+            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+              <div className="h-9 rounded-xl bg-slate-200/90 dark:bg-slate-700/80" aria-hidden />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-14 rounded-xl bg-emerald-100/90 dark:bg-emerald-900/25"
+                    aria-hidden
+                  />
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {layout.middleRow.map((item) => (
-              <div key={item} className="min-h-9 sm:h-8 px-1 bg-blue-100 dark:bg-blue-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-blue-800 dark:text-blue-200">
-                {t(`dashboard.layoutOptions.${item}`)}
+              <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 lg:gap-3">
+                <div className="h-20 rounded-2xl bg-slate-200/90 lg:col-span-7 dark:bg-slate-700/80" aria-hidden />
+                <div className="h-20 rounded-2xl bg-slate-200/90 lg:col-span-5 dark:bg-slate-700/80" aria-hidden />
               </div>
-            ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-            {layout.bottomRow.map((item) => (
-              <div key={item} className="min-h-9 sm:h-8 px-1 bg-purple-100 dark:bg-purple-900 rounded-lg text-[10px] sm:text-xs font-medium flex items-center justify-center text-center text-purple-800 dark:text-purple-200">
-                {t(`dashboard.layoutOptions.${item}`)}
+
+          {(layout.middleRow.length > 0 ||
+            BOTTOM_WIDGET_ORDER.some((k) => layout.bottomRow.includes(k))) && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {t('dashboard.layout.previewOptional')}
+              </p>
+              <div className="space-y-2">
+                {layout.middleRow.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {MIDDLE_WIDGET_ORDER.filter((k) => layout.middleRow.includes(k)).map((item) => (
+                      <div
+                        key={item}
+                        className="flex min-h-10 items-center justify-center rounded-2xl bg-emerald-100/90 px-2 text-center text-xs font-semibold text-emerald-900 dark:bg-emerald-900/30 dark:text-emerald-100"
+                      >
+                        {t(`dashboard.layoutOptions.${item}`)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {BOTTOM_WIDGET_ORDER.some((k) => layout.bottomRow.includes(k)) && (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {BOTTOM_WIDGET_ORDER.filter((k) => layout.bottomRow.includes(k)).map((item) => (
+                      <div
+                        key={item}
+                        className="flex min-h-10 items-center justify-center rounded-2xl bg-violet-100/90 px-2 text-center text-xs font-semibold text-violet-900 dark:bg-violet-900/30 dark:text-violet-100"
+                      >
+                        {item === 'farm'
+                          ? t('dashboard.widgets.farm.title')
+                          : t(`dashboard.layoutOptions.${item}`)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

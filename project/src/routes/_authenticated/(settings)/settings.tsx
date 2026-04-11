@@ -46,7 +46,7 @@ const SettingsLayoutComponent = () => {
               <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">
                 {currentOrganization.name}
               </h1>
-              {currentFarm && (
+              {currentFarm?.name && (
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest mt-1">
                   {currentFarm.name}
                 </p>

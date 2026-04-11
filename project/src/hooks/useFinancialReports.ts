@@ -23,16 +23,16 @@ export type {
 /**
  * Hook to fetch trial balance report
  */
-export function useTrialBalance(asOfDate?: string) {
+export function useTrialBalance(asOfDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'trial-balance', currentOrganization?.id, asOfDate],
+    queryKey: ['financial-reports', 'trial-balance', currentOrganization?.id, asOfDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getTrialBalance(asOfDate, currentOrganization.id);
+      return financialReportsApi.getTrialBalance(asOfDate, currentOrganization.id, fiscalYearId);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -41,16 +41,16 @@ export function useTrialBalance(asOfDate?: string) {
 /**
  * Hook to fetch balance sheet report
  */
-export function useBalanceSheet(asOfDate?: string) {
+export function useBalanceSheet(asOfDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'balance-sheet', currentOrganization?.id, asOfDate],
+    queryKey: ['financial-reports', 'balance-sheet', currentOrganization?.id, asOfDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getBalanceSheet(asOfDate, currentOrganization.id);
+      return financialReportsApi.getBalanceSheet(asOfDate, currentOrganization.id, fiscalYearId);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -59,21 +59,18 @@ export function useBalanceSheet(asOfDate?: string) {
 /**
  * Hook to fetch profit and loss statement
  */
-export function useProfitLoss(startDate: string | undefined, endDate?: string) {
+export function useProfitLoss(startDate: string | undefined, endDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'profit-loss', currentOrganization?.id, startDate, endDate],
+    queryKey: ['financial-reports', 'profit-loss', currentOrganization?.id, startDate, endDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      if (!startDate) {
-        throw new Error('Start date is required');
-      }
-      return financialReportsApi.getProfitLoss(startDate, endDate, currentOrganization.id);
+      return financialReportsApi.getProfitLoss(startDate, endDate, currentOrganization.id, fiscalYearId);
     },
-    enabled: !!currentOrganization?.id && !!startDate,
+    enabled: !!currentOrganization?.id && (!!startDate || !!fiscalYearId),
   });
 }
 
@@ -83,38 +80,39 @@ export function useProfitLoss(startDate: string | undefined, endDate?: string) {
 export function useGeneralLedger(
   accountId: string | undefined,
   startDate: string | undefined,
-  endDate?: string
+  endDate?: string,
+  fiscalYearId?: string,
 ) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'general-ledger', currentOrganization?.id, accountId, startDate, endDate],
+    queryKey: ['financial-reports', 'general-ledger', currentOrganization?.id, accountId, startDate, endDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      if (!accountId || !startDate) {
-        throw new Error('Account ID and start date are required');
+      if (!accountId) {
+        throw new Error('Account ID is required');
       }
-      return financialReportsApi.getGeneralLedger(accountId, startDate, endDate, currentOrganization.id);
+      return financialReportsApi.getGeneralLedger(accountId, startDate, endDate, currentOrganization.id, fiscalYearId);
     },
-    enabled: !!currentOrganization?.id && !!accountId && !!startDate,
+    enabled: !!currentOrganization?.id && !!accountId && (!!startDate || !!fiscalYearId),
   });
 }
 
 /**
  * Hook to fetch account summary by type
  */
-export function useAccountSummary(asOfDate?: string) {
+export function useAccountSummary(asOfDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'account-summary', currentOrganization?.id, asOfDate],
+    queryKey: ['financial-reports', 'account-summary', currentOrganization?.id, asOfDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getAccountSummary(asOfDate, currentOrganization.id);
+      return financialReportsApi.getAccountSummary(asOfDate, currentOrganization.id, fiscalYearId);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -123,11 +121,11 @@ export function useAccountSummary(asOfDate?: string) {
 /**
  * Hook to fetch balance for a specific account
  */
-export function useAccountBalance(accountId: string | undefined, asOfDate?: string) {
+export function useAccountBalance(accountId: string | undefined, asOfDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'account-balance', currentOrganization?.id, accountId, asOfDate],
+    queryKey: ['financial-reports', 'account-balance', currentOrganization?.id, accountId, asOfDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
@@ -135,7 +133,7 @@ export function useAccountBalance(accountId: string | undefined, asOfDate?: stri
       if (!accountId) {
         throw new Error('Account ID is required');
       }
-      return financialReportsApi.getAccountBalance(accountId, asOfDate, currentOrganization.id);
+      return financialReportsApi.getAccountBalance(accountId, asOfDate, currentOrganization.id, fiscalYearId);
     },
     enabled: !!currentOrganization?.id && !!accountId,
   });
@@ -144,20 +142,17 @@ export function useAccountBalance(accountId: string | undefined, asOfDate?: stri
 /**
  * Hook to fetch cash flow statement
  */
-export function useCashFlow(startDate: string | undefined, endDate?: string) {
+export function useCashFlow(startDate: string | undefined, endDate?: string, fiscalYearId?: string) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'cash-flow', currentOrganization?.id, startDate, endDate],
+    queryKey: ['financial-reports', 'cash-flow', currentOrganization?.id, startDate, endDate, fiscalYearId],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      if (!startDate) {
-        throw new Error('Start date is required');
-      }
-      return financialReportsApi.getCashFlow(startDate, endDate, currentOrganization.id);
+      return financialReportsApi.getCashFlow(startDate, endDate, currentOrganization.id, fiscalYearId);
     },
-    enabled: !!currentOrganization?.id && !!startDate,
+    enabled: !!currentOrganization?.id && (!!startDate || !!fiscalYearId),
   });
 }
