@@ -123,7 +123,10 @@ export const parcelsApi = {
    */
   async delete(parcelId: string, farmId: string, organizationId?: string): Promise<{ success: boolean; message?: string }> {
     // Backend expects DELETE with body containing parcel_id and farm_id
-    return apiClient.delete(BASE_URL, { body: JSON.stringify({ parcel_id: parcelId, farm_id: farmId }) }, organizationId);
+    return apiClient.delete(BASE_URL, {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parcel_id: parcelId, farm_id: farmId }),
+    }, organizationId);
   },
 
   /**
