@@ -94,6 +94,7 @@ const buildSnapshotInput = (): CalibrationSnapshotInput => ({
         components: {
           vigor: 80,
           temporal_stability: 79,
+          spatial_heterogeneity: 72,
           stability: 78,
           hydric: 77,
           nutritional: 76,

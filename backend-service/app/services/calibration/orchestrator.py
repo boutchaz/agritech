@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, datetime
-from importlib import import_module
 from typing import Any
 
 import numpy as np
@@ -21,6 +20,10 @@ from .pipeline.s1_satellite_extraction import (
 from .pipeline.s2_weather_extraction import extract_weather_history
 from .pipeline.s3_percentile_calculation import calculate_percentiles
 from .pipeline.s4_phenology_detection import detect_phenology
+from .pipeline.s5_anomaly_detection import detect_anomalies
+from .pipeline.s6_yield_potential import calculate_yield_potential
+from .pipeline.s7_zone_detection import classify_zones
+from .pipeline.s8_health_score import calculate_health_score
 from .support.gdd_service import precompute_gdd_rows
 from .referential_utils import get_gdd_tbase_tupper
 from .types import (
@@ -142,23 +145,6 @@ def run_calibration_pipeline(
     ndvi_raster_pixels: list[dict[str, Any]] | None = None,
     previous_output: CalibrationOutput | None = None,
 ) -> CalibrationOutput:
-    step5_fn = getattr(
-        import_module("app.services.calibration.pipeline.s5_anomaly_detection"),
-        "detect_anomalies",
-    )
-    step6_fn = getattr(
-        import_module("app.services.calibration.pipeline.s6_yield_potential"),
-        "calculate_yield_potential",
-    )
-    step7_fn = getattr(
-        import_module("app.services.calibration.pipeline.s7_zone_detection"),
-        "classify_zones",
-    )
-    step8_fn = getattr(
-        import_module("app.services.calibration.pipeline.s8_health_score"),
-        "calculate_health_score",
-    )
-
     maturity_phase = determine_maturity_phase(
         planting_year=calibration_input.planting_year,
         crop_type=calibration_input.crop_type,
@@ -233,7 +219,7 @@ def run_calibration_pipeline(
         planting_system=calibration_input.planting_system,
         reference_data=calibration_input.reference_data,
     )
-    step5 = step5_fn(
+    step5 = detect_anomalies(
         step1,
         step2,
         step4,
@@ -243,7 +229,7 @@ def run_calibration_pipeline(
         crop_type=calibration_input.crop_type,
     )
 
-    step6 = step6_fn(
+    step6 = calculate_yield_potential(
         planting_year=calibration_input.planting_year,
         crop_type=calibration_input.crop_type,
         variety=calibration_input.variety,
@@ -281,9 +267,9 @@ def run_calibration_pipeline(
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
         ndvi_percentiles = next(iter(step3.global_percentiles.values()))
-    step7 = step7_fn(raster, ndvi_percentiles)
+    step7 = classify_zones(raster, ndvi_percentiles)
 
-    step8 = step8_fn(
+    step8 = calculate_health_score(
         step1=step1,
         step3=step3,
         step5=step5,

@@ -94,6 +94,7 @@ def test_step8_returns_health_score_and_components() -> None:
     assert set(output.health_score.components.keys()) == {
         "vigor",
         "temporal_stability",
+        "spatial_heterogeneity",
         "stability",
         "hydric",
         "nutritional",
@@ -107,12 +108,44 @@ def test_step8_weighted_total_matches_formula() -> None:
 
     expected = (
         c["vigor"] * 0.30
-        + c["temporal_stability"] * 0.20
+        + c["temporal_stability"] * 0.10
+        + c["spatial_heterogeneity"] * 0.10
         + c["stability"] * 0.15
         + c["hydric"] * 0.20
         + c["nutritional"] * 0.15
     )
     assert round(expected, 4) == output.health_score.total
+
+
+def test_step8_uniform_zones_score_higher_than_mixed() -> None:
+    step1, step3, step5, _ = _base_inputs()
+    uniform = Step7Output.model_validate(
+        {
+            "zones_geojson": {"type": "FeatureCollection", "features": []},
+            "zone_summary": [{"class_name": "A", "surface_percent": 95}, {"class_name": "B", "surface_percent": 5}],
+            "spatial_pattern_type": "uniform",
+        }
+    )
+    mixed = Step7Output.model_validate(
+        {
+            "zones_geojson": {"type": "FeatureCollection", "features": []},
+            "zone_summary": [
+                {"class_name": "A", "surface_percent": 20},
+                {"class_name": "B", "surface_percent": 20},
+                {"class_name": "C", "surface_percent": 20},
+                {"class_name": "D", "surface_percent": 20},
+                {"class_name": "E", "surface_percent": 20},
+            ],
+            "spatial_pattern_type": "mixed",
+        }
+    )
+    uniform_score = calculate_health_score(step1=step1, step3=step3, step5=step5, step7=uniform)
+    mixed_score = calculate_health_score(step1=step1, step3=step3, step5=step5, step7=mixed)
+
+    assert (
+        uniform_score.health_score.components["spatial_heterogeneity"]
+        > mixed_score.health_score.components["spatial_heterogeneity"]
+    )
 
 
 def test_step8_anomalies_reduce_stability() -> None:

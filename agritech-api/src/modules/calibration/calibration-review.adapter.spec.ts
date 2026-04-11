@@ -152,6 +152,7 @@ const buildSnapshotInput = (
         components: {
           vigor: 81,
           temporal_stability: 78,
+          spatial_heterogeneity: 70,
           stability: 76,
           hydric: 22,
           nutritional: 73,

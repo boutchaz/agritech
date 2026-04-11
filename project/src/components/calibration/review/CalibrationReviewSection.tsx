@@ -94,9 +94,9 @@ export function CalibrationReviewSection({ parcelId }: CalibrationReviewSectionP
       </div>
 
       {/* ── Body: sidebar nav + content ── */}
-      <div className="flex bg-gray-50 dark:bg-gray-950 rounded-b-xl border border-t-0 border-gray-200 dark:border-gray-800">
-        {/* Sidebar nav (desktop only) */}
-        <nav className="hidden lg:flex flex-col w-48 border-r border-gray-200 dark:border-gray-800 py-4 px-2 flex-shrink-0">
+      <div className="flex items-start bg-gray-50 dark:bg-gray-950 rounded-b-xl border border-t-0 border-gray-200 dark:border-gray-800">
+        {/* Sidebar nav (desktop only) — items-start + self-start so nav isn’t stretched to content height; sticky keeps it in view while scrolling main */}
+        <nav className="sticky top-0 z-10 hidden shrink-0 self-start lg:flex w-48 flex-col border-r border-gray-200 bg-gray-50 py-4 px-2 dark:border-gray-800 dark:bg-gray-950">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-3 mb-2">
             Sections
           </p>

@@ -95,6 +95,7 @@ export interface HealthScore {
   components: {
     vigor: number;
     temporal_stability: number;
+    spatial_heterogeneity: number;
     stability: number;
     hydric: number;
     nutritional: number;
@@ -291,6 +292,7 @@ const typeContractExample = {
       components: {
         vigor: 80,
         temporal_stability: 76,
+        spatial_heterogeneity: 72,
         stability: 75,
         hydric: 79,
         nutritional: 77,
