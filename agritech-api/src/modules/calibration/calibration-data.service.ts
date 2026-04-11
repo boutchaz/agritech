@@ -54,7 +54,7 @@ export { CALIBRATION_SATELLITE_INDICES };
  * | pleine_production  | 36 months                 |
  * | senescence         | 36 months                 |
  * | entree_production  | 24 months                 |
- * | juvenile           | Jan 1 of planting year    |
+ * | juvenile           | 12 months (watch-only)    |
  * | No planting year   | 24 months (default)       |
  *
  * Phase thresholds come from the crop referentiel (e.g. olive: juvenile < 5y,
@@ -91,8 +91,9 @@ export function getCalibrationLookbackDate(
       start = new Date();
       start.setMonth(start.getMonth() - 36);
     } else if (phase === 'juvenile') {
-      // Young trees: from planting year
-      start = new Date(`${plantingYear}-01-01`);
+      // Young trees (watch-only mode): fixed 12-month window
+      start = new Date();
+      start.setMonth(start.getMonth() - 12);
     } else {
       // entree_production or unknown: 24 months
       start = new Date();
