@@ -526,7 +526,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
 
       {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-[calc(4rem+env(safe-area-inset-bottom,0px))] [scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] dark:bg-slate-900/30 md:pb-0 md:scroll-pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
@@ -564,7 +564,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
         </div>
         
         {/* Same width + padding as accounting list pages (e.g. invoices.tsx inner wrapper) */}
-        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <div className="flex-1 min-h-0 min-w-0 w-full max-w-full p-3 pb-4 sm:p-4 md:p-6 md:pb-6">
           {children}
         </div>
       </div>

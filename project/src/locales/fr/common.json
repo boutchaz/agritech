@@ -1955,6 +1955,11 @@
       "notFound": "Organisation non trouvée",
       "loadError": "Erreur lors du chargement des données de l'organisation",
       "saveError": "Erreur lors de la sauvegarde des modifications"
+    },
+    "currency": {
+      "label": "Devise",
+      "placeholder": "Sélectionner une devise",
+      "helper": "La devise sera utilisée pour tous les montants financiers (charges, factures, etc.)"
     }
   },
   "subscription": {

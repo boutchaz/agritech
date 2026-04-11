@@ -9,6 +9,7 @@ import {
   Building2,
   CreditCard,
   Mail,
+  Clock,
   Menu,
   X,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { to: '/clients', label: 'Clients', icon: Building2 },
     { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
     { to: '/email-templates', label: 'Email Templates', icon: Mail },
+    { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },
     { to: '/rdv', label: 'RDV SIAM', icon: CalendarCheck },
   ];
 

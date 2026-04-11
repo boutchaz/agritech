@@ -326,12 +326,29 @@ function EmailTemplatesPage() {
     return groups;
   }, [filteredTemplates]);
 
+  const [testRecipient, setTestRecipient] = useState('');
+  const [showTestInput, setShowTestInput] = useState(false);
+
+  const sendTestMutation = useMutation({
+    mutationFn: ({ type, to }: { type: string; to: string }) =>
+      apiRequest('/api/v1/email/test-template', {
+        method: 'POST',
+        body: JSON.stringify({ type, to }),
+      }),
+    onSuccess: () => {
+      toast.success('Test email sent!');
+      setShowTestInput(false);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to send test email'),
+  });
+
   const handleSelect = (tpl: EmailTemplate) => {
     setSelectedTemplate(tpl);
     setIsEditing(false);
     setEditSubject(tpl.subject);
     setEditHtmlBody(tpl.html_body);
     setShowPreview(false);
+    setShowTestInput(false);
   };
 
   const handleSave = () => {
@@ -496,7 +513,15 @@ function EmailTemplatesPage() {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setShowPreview(!showPreview)}
+                    onClick={() => { setShowTestInput(!showTestInput); setShowPreview(false); }}
+                    className={clsx('p-2 rounded-lg hover:bg-gray-100', showTestInput && 'bg-emerald-100')}
+                    title="Send Test Email"
+                  >
+                    <Send className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreview(!showPreview); setShowTestInput(false); }}
                     className={clsx('p-2 rounded-lg hover:bg-gray-100', showPreview && 'bg-gray-100')}
                     title="Preview"
                   >
@@ -520,6 +545,38 @@ function EmailTemplatesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Send Test Email */}
+              {showTestInput && (
+                <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 bg-emerald-50/50">
+                  <Send className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <input
+                    type="email"
+                    value={testRecipient}
+                    onChange={(e) => setTestRecipient(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && testRecipient) {
+                        sendTestMutation.mutate({ type: selectedTemplate.type, to: testRecipient });
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => testRecipient && sendTestMutation.mutate({ type: selectedTemplate.type, to: testRecipient })}
+                    disabled={!testRecipient || sendTestMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {sendTestMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Send Test
+                  </button>
+                </div>
+              )}
 
               <div className="p-4 space-y-4">
                 {/* Active toggle */}

@@ -1959,6 +1959,11 @@
       "notFound": "Organization not found",
       "loadError": "Error loading organization data",
       "saveError": "Error saving changes"
+    },
+    "currency": {
+      "label": "Currency",
+      "placeholder": "Select a currency",
+      "helper": "The currency will be used for all financial amounts (utilities, invoices, etc.)"
     }
   },
   "subscription": {

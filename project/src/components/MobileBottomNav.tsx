@@ -247,10 +247,11 @@ const MobileBottomNav = () => {
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
+        className="fixed bottom-0 left-0 right-0 z-50 w-full md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        <div className="flex items-stretch h-16 max-w-lg mx-auto">
+        {/* basis-0 + min-w-0: equal columns. whitespace-normal: override Button nowrap so tabs don't overflow-cluster on narrow widths. */}
+        <div className="mx-auto flex h-16 w-full min-w-0 max-w-lg items-stretch">
           {primaryNavItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
@@ -259,9 +260,10 @@ const MobileBottomNav = () => {
               <Button
                 key={item.id}
                 type="button"
+                variant="ghost"
                 onClick={() => handleNavigate(item.path)}
                 className={cn(
-                  "flex flex-col items-center justify-center flex-1 min-w-0 py-2 relative",
+                  "relative flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0 overflow-hidden whitespace-normal rounded-none px-0.5 py-2 shadow-none",
                   "transition-colors duration-200",
                   active
                     ? "text-emerald-600 dark:text-emerald-400"
@@ -278,7 +280,7 @@ const MobileBottomNav = () => {
                     </span>
                   )}
                 </div>
-                <span className="text-[11px] mt-1.5 font-medium overflow-hidden text-ellipsis whitespace-nowrap w-full text-center px-0.5">
+                <span className="mt-1.5 line-clamp-2 w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
                   {getLabel(item.labelKey, item.fallback)}
                 </span>
                 {active && (
@@ -290,9 +292,10 @@ const MobileBottomNav = () => {
 
           <Button
             type="button"
+            variant="ghost"
             onClick={() => setIsMoreOpen(true)}
             className={cn(
-              "flex flex-col items-center justify-center flex-1 min-w-0 py-2 relative",
+              "relative flex h-full min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-0 overflow-hidden whitespace-normal rounded-none px-0.5 py-2 shadow-none",
               "transition-colors duration-200",
               isMoreActive || isMoreOpen
                 ? "text-emerald-600 dark:text-emerald-400"
@@ -301,7 +304,7 @@ const MobileBottomNav = () => {
             aria-label={t("mobileNav.more", "More")}
           >
             <MoreHorizontal className="w-5 h-5" />
-            <span className="text-[11px] mt-1.5 font-medium overflow-hidden text-ellipsis whitespace-nowrap w-full text-center px-0.5">
+            <span className="mt-1.5 line-clamp-2 w-full px-0.5 text-center text-[10px] font-medium leading-tight text-inherit sm:text-[11px]">
               {t("mobileNav.more", "More")}
             </span>
             {isMoreActive && (

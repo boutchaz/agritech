@@ -31,6 +31,19 @@ export class EmailController {
     return { message: 'Test email sent successfully' };
   }
 
+  @Post('test-template')
+  @ApiOperation({ summary: 'Send a test email using any template by type, with sample data' })
+  async sendTestTemplate(@Body() body: { to: string; type: string }) {
+    if (!body.to || !body.type) {
+      throw new BadRequestException('Both "to" and "type" are required');
+    }
+    const sent = await this.emailService.sendTestByType(body.type, body.to);
+    if (!sent) {
+      throw new BadRequestException('Failed to send — check SMTP config and template existence');
+    }
+    return { message: `Test email sent for template "${body.type}"` };
+  }
+
   @Post('user-created')
   async sendUserCreatedEmail(@Body() body: {
     to: string;
