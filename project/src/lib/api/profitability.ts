@@ -88,6 +88,7 @@ export interface CreateCostDto {
   notes?: string;
   currency?: string;
   category_id?: string;
+  fiscal_year_id?: string;
 }
 
 export interface CreateRevenueDto {
@@ -103,12 +104,14 @@ export interface CreateRevenueDto {
   description?: string;
   notes?: string;
   currency?: string;
+  fiscal_year_id?: string;
 }
 
 export interface ProfitabilityFilters {
   start_date?: string;
   end_date?: string;
   parcel_id?: string;
+  fiscal_year_id?: string;
 }
 
 export interface ProfitabilityData {
@@ -278,6 +281,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/costs${queryString ? `?${queryString}` : ''}`;
@@ -292,6 +296,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/revenues${queryString ? `?${queryString}` : ''}`;
@@ -309,6 +314,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/analytics${queryString ? `?${queryString}` : ''}`;

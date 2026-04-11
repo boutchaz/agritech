@@ -14,8 +14,14 @@ import {
   Tag,
   RefreshCw,
   ChevronRight,
+  Server,
+  CheckCircle,
+  XCircle,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 
@@ -70,6 +76,132 @@ const CATEGORY_COLORS: Record<EmailTemplateCategory, string> = {
   reminder: 'bg-red-100 text-red-700',
   general: 'bg-slate-100 text-slate-700',
 };
+
+interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password_set: boolean;
+  from: string;
+  enabled: boolean;
+  configured: boolean;
+}
+
+// ─── SMTP Config Panel ──────────────────────────────────────────────
+
+function SmtpConfigPanel() {
+  const [testEmail, setTestEmail] = useState('');
+
+  const { data: config, isLoading } = useQuery({
+    queryKey: ['smtp-config'],
+    queryFn: () => apiRequest<SmtpConfig>('/api/v1/email/config'),
+    retry: false,
+  });
+
+  const testMutation = useMutation({
+    mutationFn: (to: string) =>
+      apiRequest('/api/v1/email/test', {
+        method: 'POST',
+        body: JSON.stringify({ to }),
+      }),
+    onSuccess: () => toast.success('Test email sent!'),
+    onError: (err: Error) => toast.error(err.message || 'Failed to send test email'),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+        <div className="flex items-center gap-2 text-sm text-gray-400">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading SMTP configuration...
+        </div>
+      </div>
+    );
+  }
+
+  if (!config) {
+    return (
+      <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="flex items-center gap-2 text-sm text-red-600">
+          <XCircle className="h-4 w-4" />
+          Could not load SMTP configuration. Make sure the API is running.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-6 rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <Server className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-semibold text-gray-900">SMTP Configuration</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {config.configured ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <CheckCircle className="h-3 w-3" /> Connected
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700">
+              <XCircle className="h-3 w-3" /> Not configured
+            </span>
+          )}
+          {!config.enabled && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+              Disabled
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid gap-x-6 gap-y-2 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Host</span>
+          <p className="text-sm font-mono text-gray-700">{config.host || '—'}</p>
+        </div>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Port</span>
+          <p className="text-sm font-mono text-gray-700">{config.port} {config.secure ? '(TLS)' : ''}</p>
+        </div>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">User</span>
+          <p className="text-sm font-mono text-gray-700">{config.user || '—'}</p>
+        </div>
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">From</span>
+          <p className="text-sm font-mono text-gray-700">{config.from}</p>
+        </div>
+      </div>
+
+      {config.configured && (
+        <div className="flex items-center gap-2 border-t border-gray-100 px-4 py-3">
+          <input
+            type="email"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            placeholder="recipient@example.com"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:max-w-xs"
+          />
+          <button
+            type="button"
+            onClick={() => testEmail && testMutation.mutate(testEmail)}
+            disabled={!testEmail || testMutation.isPending}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {testMutation.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Send className="h-3.5 w-3.5" />
+            )}
+            Send Test
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Page ────────────────────────────────────────────────────────────
 
@@ -194,12 +326,29 @@ function EmailTemplatesPage() {
     return groups;
   }, [filteredTemplates]);
 
+  const [testRecipient, setTestRecipient] = useState('');
+  const [showTestInput, setShowTestInput] = useState(false);
+
+  const sendTestMutation = useMutation({
+    mutationFn: ({ type, to }: { type: string; to: string }) =>
+      apiRequest('/api/v1/email/test-template', {
+        method: 'POST',
+        body: JSON.stringify({ type, to }),
+      }),
+    onSuccess: () => {
+      toast.success('Test email sent!');
+      setShowTestInput(false);
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to send test email'),
+  });
+
   const handleSelect = (tpl: EmailTemplate) => {
     setSelectedTemplate(tpl);
     setIsEditing(false);
     setEditSubject(tpl.subject);
     setEditHtmlBody(tpl.html_body);
     setShowPreview(false);
+    setShowTestInput(false);
   };
 
   const handleSave = () => {
@@ -231,6 +380,9 @@ function EmailTemplatesPage() {
           Refresh
         </button>
       </div>
+
+      {/* SMTP Config */}
+      <SmtpConfigPanel />
 
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -361,7 +513,15 @@ function EmailTemplatesPage() {
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => setShowPreview(!showPreview)}
+                    onClick={() => { setShowTestInput(!showTestInput); setShowPreview(false); }}
+                    className={clsx('p-2 rounded-lg hover:bg-gray-100', showTestInput && 'bg-emerald-100')}
+                    title="Send Test Email"
+                  >
+                    <Send className="h-4 w-4 text-gray-500" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowPreview(!showPreview); setShowTestInput(false); }}
                     className={clsx('p-2 rounded-lg hover:bg-gray-100', showPreview && 'bg-gray-100')}
                     title="Preview"
                   >
@@ -385,6 +545,38 @@ function EmailTemplatesPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Send Test Email */}
+              {showTestInput && (
+                <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3 bg-emerald-50/50">
+                  <Send className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <input
+                    type="email"
+                    value={testRecipient}
+                    onChange={(e) => setTestRecipient(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && testRecipient) {
+                        sendTestMutation.mutate({ type: selectedTemplate.type, to: testRecipient });
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => testRecipient && sendTestMutation.mutate({ type: selectedTemplate.type, to: testRecipient })}
+                    disabled={!testRecipient || sendTestMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {sendTestMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Send Test
+                  </button>
+                </div>
+              )}
 
               <div className="p-4 space-y-4">
                 {/* Active toggle */}

@@ -57,6 +57,7 @@ export class ProfitabilityController {
   @ApiQuery({ name: 'start_date', required: false })
   @ApiQuery({ name: 'end_date', required: false })
   @ApiQuery({ name: 'parcel_id', required: false })
+  @ApiQuery({ name: 'fiscal_year_id', required: false, description: 'Filter by fiscal year' })
   @ApiResponse({ status: 200, description: 'Costs retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Cost'))
@@ -65,6 +66,7 @@ export class ProfitabilityController {
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
     @Query('parcel_id') parcelId?: string,
+    @Query('fiscal_year_id') fiscalYearId?: string,
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
@@ -74,6 +76,7 @@ export class ProfitabilityController {
       start_date: startDate,
       end_date: endDate,
       parcel_id: parcelId,
+      fiscal_year_id: fiscalYearId,
     });
   }
 
@@ -83,6 +86,7 @@ export class ProfitabilityController {
   @ApiQuery({ name: 'start_date', required: false })
   @ApiQuery({ name: 'end_date', required: false })
   @ApiQuery({ name: 'parcel_id', required: false })
+  @ApiQuery({ name: 'fiscal_year_id', required: false, description: 'Filter by fiscal year' })
   @ApiResponse({ status: 200, description: 'Revenues retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Revenue'))
@@ -91,6 +95,7 @@ export class ProfitabilityController {
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
     @Query('parcel_id') parcelId?: string,
+    @Query('fiscal_year_id') fiscalYearId?: string,
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
@@ -100,6 +105,7 @@ export class ProfitabilityController {
       start_date: startDate,
       end_date: endDate,
       parcel_id: parcelId,
+      fiscal_year_id: fiscalYearId,
     });
   }
 
@@ -109,6 +115,7 @@ export class ProfitabilityController {
   @ApiQuery({ name: 'start_date', required: false })
   @ApiQuery({ name: 'end_date', required: false })
   @ApiQuery({ name: 'parcel_id', required: false })
+  @ApiQuery({ name: 'fiscal_year_id', required: false, description: 'Filter by fiscal year' })
   @ApiResponse({
     status: 200,
     description: 'Profitability analytics retrieved successfully',
@@ -121,6 +128,7 @@ export class ProfitabilityController {
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
     @Query('parcel_id') parcelId?: string,
+    @Query('fiscal_year_id') fiscalYearId?: string,
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
     if (!organizationId) {
@@ -130,6 +138,7 @@ export class ProfitabilityController {
       start_date: startDate,
       end_date: endDate,
       parcel_id: parcelId,
+      fiscal_year_id: fiscalYearId,
     });
   }
 

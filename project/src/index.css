@@ -85,6 +85,57 @@
     padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
       var(--safe-area-inset-bottom) var(--safe-area-inset-left);
   }
+
+  /**
+   * Mobile bottom nav (4rem) + safe-area + content gap — scoped to the authenticated app shell.
+   * The fixed bar is 4rem + safe-area; scrollports add 1.5rem so the last line is not flush with tabs.
+   * Set `data-authenticated-app` on the column that wraps main + MobileBottomNav.
+   * - --app-layout-bottom-pad: use on <main data-main-scroll> (pb-app-shell-main).
+   * - --app-nested-scroll-bottom-pad: use on inner overflow-y-auto (e.g. settings content column).
+   */
+  [data-authenticated-app] {
+    --app-layout-bottom-pad: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    --app-nested-scroll-bottom-pad: 0px;
+  }
+  @media (max-width: 767.98px) {
+    [data-authenticated-app] {
+      /**
+       * Physical reserve for the fixed tab bar (see spacer under <main> in _authenticated).
+       * max(14px, safe-area): some Samsung / Android builds report 0 for gesture bar — still reserve space.
+       * 4.5rem: slightly above 4rem row for large system fonts / two-line labels.
+       */
+      --app-mobile-nav-reserve: calc(
+        4.5rem + max(14px, env(safe-area-inset-bottom, 0px)) + 1rem
+      );
+      /* Extra scroll-end air inside <main> / nested scrollports (tab clearance is mostly the in-flow spacer). */
+      --app-layout-bottom-pad: calc(
+        0.75rem + max(14px, env(safe-area-inset-bottom, 0px))
+      );
+      --app-nested-scroll-bottom-pad: calc(1rem + max(8px, env(safe-area-inset-bottom, 0px)));
+    }
+  }
+}
+
+@layer utilities {
+  /* Fallbacks: safe when class is used outside [data-authenticated-app] (e.g. Storybook). */
+  .pb-app-shell-main {
+    padding-bottom: var(
+      --app-layout-bottom-pad,
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+    );
+  }
+  .scroll-pb-app-shell-main {
+    scroll-padding-bottom: var(
+      --app-layout-bottom-pad,
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+    );
+  }
+  .pb-app-shell-nested-scroll {
+    padding-bottom: var(--app-nested-scroll-bottom-pad, 0px);
+  }
+  .scroll-pb-app-shell-nested-scroll {
+    scroll-padding-bottom: var(--app-nested-scroll-bottom-pad, 0px);
+  }
 }
 
 /* Prevent body/html scrolling - only allow scroll in main content area */

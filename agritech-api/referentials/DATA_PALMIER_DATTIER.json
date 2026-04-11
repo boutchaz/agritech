@@ -34,6 +34,46 @@
     "plafond_c": 45.0,
     "reference": "Calibration engine — date palm growing degree days (caps)"
   },
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": -5.0,
+      "detection_months": [
+        1,
+        2,
+        3
+      ],
+      "severity": "high"
+    },
+    "canicule": {
+      "tmax_c": 45.0,
+      "consecutive_days": 3,
+      "severity": "high"
+    },
+    "vent_chaud": {
+      "temperature_c": 42.0,
+      "wind_kmh": 60.0,
+      "humidity_max_pct": 25.0,
+      "severity": "medium"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5.0,
+      "dry_season_days": 90,
+      "transition_days": 45,
+      "rainy_season_days": 45,
+      "severity": "medium"
+    }
+  },
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "legacy",
+    "required_indices": [
+      "NDVI",
+      "NDMI"
+    ],
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24
+  },
   "caracteristiques_generales": {
     "type": "monocotyledone_arborescente",
     "origine": "Mesopotamie_Golfe_Persique",
@@ -156,6 +196,56 @@
       ]
     }
   ],
+  "varietes_calibrage": [
+    {
+      "code": "MEJHOUL",
+      "nom": "Mejhoul",
+      "aliases": [
+        "Medjool"
+      ],
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        80,
+        120
+      ]
+    },
+    {
+      "code": "BOUFEGGOUS",
+      "nom": "Boufeggous",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        60,
+        100
+      ]
+    },
+    {
+      "code": "JIHEL",
+      "nom": "Jihel",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        70,
+        100
+      ]
+    },
+    {
+      "code": "BOUSKRI",
+      "nom": "Bouskri",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        50,
+        80
+      ]
+    },
+    {
+      "code": "BOUSLIKHENE",
+      "nom": "Bouslikhène",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        60,
+        90
+      ]
+    }
+  ],
   "pollinisation": {
     "type": "manuelle_obligatoire",
     "ratio_males_pct": [
@@ -183,6 +273,7 @@
         80,
         120
       ],
+      "indice_cle": "NDVI",
       "irrigation": "khettara_seguia",
       "rendement_t_ha": [
         3,
@@ -194,6 +285,7 @@
         120,
         150
       ],
+      "indice_cle": "NDVI",
       "irrigation": "gravitaire_ameliore",
       "rendement_t_ha": [
         6,
@@ -205,6 +297,7 @@
         150,
         200
       ],
+      "indice_cle": "NDVI",
       "irrigation": "goutte_a_goutte",
       "rendement_t_ha": [
         10,
@@ -224,7 +317,59 @@
         0.2
       ]
     },
+    "traditionnel_oasien": {
+      "NDVI": {
+        "optimal": [
+          0.35,
+          0.55
+        ],
+        "vigilance": 0.3,
+        "alerte": 0.25
+      },
+      "NDMI": {
+        "optimal": [
+          0.05,
+          0.2
+        ],
+        "vigilance": 0.03,
+        "alerte": 0.0
+      }
+    },
+    "semi_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.4,
+          0.6
+        ],
+        "vigilance": 0.35,
+        "alerte": 0.3
+      },
+      "NDMI": {
+        "optimal": [
+          0.08,
+          0.24
+        ],
+        "vigilance": 0.05,
+        "alerte": 0.02
+      }
+    },
     "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.45,
+          0.65
+        ],
+        "vigilance": 0.4,
+        "alerte": 0.35
+      },
+      "NDMI": {
+        "optimal": [
+          0.1,
+          0.28
+        ],
+        "vigilance": 0.06,
+        "alerte": 0.03
+      },
       "NDVI_optimal": [
         0.45,
         0.65

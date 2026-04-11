@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -123,6 +124,235 @@ class OliveStadesBbchGddContext:
     baseline_months: frozenset[int]
     allowed_gdd_months: frozenset[int]
     month_max_gdd: dict[int, float]
+
+
+@dataclass(frozen=True)
+class WeatherThresholdConfig:
+    frost_threshold_c: float
+    heatwave_threshold_c: float
+    drought_days_dry_season: int
+    drought_days_transition: int
+    drought_days_rainy_season: int
+    hot_wind_kmh: float
+
+
+@dataclass(frozen=True)
+class CalibrationCapabilities:
+    supported: bool
+    phenology_mode: str
+    required_indices: tuple[str, ...]
+    min_observed_images: int
+    min_history_days: int
+    min_history_months_for_period_percentiles: int
+
+
+@dataclass(frozen=True)
+class VarietyYieldProfile:
+    code: str
+    name: str
+    aliases: tuple[str, ...]
+    yield_curve: dict[str, Any]
+    yield_unit: str
+    generic_curve: bool = False
+
+
+def _normalize_lookup_token(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    ascii_value = (
+        unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    )
+    return re.sub(r"[^a-z0-9]+", " ", ascii_value.lower()).strip()
+
+
+def _yield_curve_from_value(value: Any) -> tuple[dict[str, Any], bool]:
+    if isinstance(value, dict):
+        return dict(value), False
+    if isinstance(value, (list, tuple)) and len(value) >= 2:
+        # TODO: Replace generic pair ranges with phase-by-age yield curves in the
+        # referentials, starting with palmier_dattier varietes_calibrage.
+        pair = value[:2]
+        if all(isinstance(item, (int, float)) for item in pair):
+            return {"reference": [float(pair[0]), float(pair[1])]}, True
+    if isinstance(value, (int, float)):
+        number = float(value)
+        return {"reference": [number, number]}, True
+    return {}, False
+
+
+def _extract_curve_from_reference_item(
+    reference_data: dict[str, Any],
+    item: dict[str, Any],
+) -> tuple[dict[str, Any], str, bool]:
+    for field_name, unit in (
+        ("rendement_kg_arbre", "kg/tree"),
+        ("rendement_t_ha", "t/ha"),
+    ):
+        if field_name not in item:
+            continue
+        curve, generic = _yield_curve_from_value(item.get(field_name))
+        if curve:
+            return curve, unit, generic
+
+    yield_unit = item.get("yield_unit")
+    normalized_unit = (
+        yield_unit.strip().lower() if isinstance(yield_unit, str) else "kg/tree"
+    )
+    if normalized_unit == "t/ha":
+        source_field = "rendement_t_ha"
+        unit = "t/ha"
+    else:
+        source_field = "rendement_kg_arbre"
+        unit = "kg/tree"
+
+    source_key = item.get("yield_curve_key")
+    if isinstance(source_key, str):
+        source_map = reference_data.get(source_field)
+        if isinstance(source_map, dict):
+            curve, generic = _yield_curve_from_value(source_map.get(source_key))
+            if curve:
+                return curve, unit, generic
+
+    for field_name, inferred_unit in (
+        ("reference_range_kg_arbre", "kg/tree"),
+        ("reference_range_t_ha", "t/ha"),
+        ("productivite_kg", "kg/tree"),
+    ):
+        if field_name not in item:
+            continue
+        curve, generic = _yield_curve_from_value(item.get(field_name))
+        if curve:
+            return curve, inferred_unit, True
+
+    return {}, unit, False
+
+
+def _infer_citrus_yield_curve_key(
+    group_name: str,
+    item: dict[str, Any],
+) -> str | None:
+    explicit = item.get("yield_curve_key")
+    if isinstance(explicit, str) and explicit.strip():
+        return explicit.strip()
+
+    group = group_name.strip().lower()
+    name = _normalize_lookup_token(item.get("nom"))
+    code = _normalize_lookup_token(item.get("code"))
+    type_name = _normalize_lookup_token(item.get("type"))
+    haystack = " ".join(part for part in (name, code, type_name) if part)
+
+    if group == "oranges":
+        if "valencia" in haystack or "maroc late" in haystack:
+            return "orange_valencia"
+        return "orange_navel"
+    if group == "petits_agrumes":
+        return "clementine"
+    if group == "citrons":
+        return "citron"
+    if group == "pomelos":
+        return "pomelo"
+    return None
+
+
+def _build_variety_profile(
+    reference_data: dict[str, Any],
+    item: dict[str, Any],
+) -> VarietyYieldProfile | None:
+    code = str(item.get("code", "")).strip()
+    name = str(item.get("nom", "")).strip()
+    aliases: set[str] = set()
+    for candidate in (code, name):
+        normalized = _normalize_lookup_token(candidate)
+        if normalized:
+            aliases.add(normalized)
+    raw_aliases = item.get("aliases")
+    if isinstance(raw_aliases, list):
+        for alias in raw_aliases:
+            normalized = _normalize_lookup_token(alias)
+            if normalized:
+                aliases.add(normalized)
+
+    yield_curve, yield_unit, generic_curve = _extract_curve_from_reference_item(
+        reference_data,
+        item,
+    )
+    if not code and not name and not aliases:
+        return None
+    return VarietyYieldProfile(
+        code=code,
+        name=name,
+        aliases=tuple(sorted(aliases)),
+        yield_curve=yield_curve,
+        yield_unit=yield_unit,
+        generic_curve=generic_curve,
+    )
+
+
+def get_calibration_varieties(
+    reference_data: dict[str, Any],
+) -> list[VarietyYieldProfile]:
+    canonical = reference_data.get("varietes_calibrage")
+    if isinstance(canonical, list):
+        profiles = [
+            profile
+            for item in canonical
+            if isinstance(item, dict)
+            for profile in [_build_variety_profile(reference_data, item)]
+            if profile is not None
+        ]
+        if profiles:
+            return profiles
+
+    varieties = reference_data.get("varietes")
+    if isinstance(varieties, list):
+        return [
+            profile
+            for item in varieties
+            if isinstance(item, dict)
+            for profile in [_build_variety_profile(reference_data, item)]
+            if profile is not None
+        ]
+
+    if not isinstance(varieties, dict):
+        return []
+
+    yields_t_ha = reference_data.get("rendement_t_ha")
+    profiles: list[VarietyYieldProfile] = []
+    for group_name, rows in varieties.items():
+        if not isinstance(rows, list):
+            continue
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            normalized = dict(row)
+            yield_curve_key = _infer_citrus_yield_curve_key(group_name, normalized)
+            if yield_curve_key and isinstance(yields_t_ha, dict):
+                normalized["yield_unit"] = "t/ha"
+                normalized["yield_curve_key"] = yield_curve_key
+            profile = _build_variety_profile(reference_data, normalized)
+            if profile is not None:
+                profiles.append(profile)
+    return profiles
+
+
+def get_variety_yield_profile(
+    reference_data: dict[str, Any],
+    variety: str | None,
+) -> VarietyYieldProfile | None:
+    profiles = get_calibration_varieties(reference_data)
+    if not profiles:
+        return None
+
+    normalized_target = _normalize_lookup_token(variety)
+    if normalized_target:
+        for profile in profiles:
+            if normalized_target in profile.aliases:
+                return profile
+
+    for profile in profiles:
+        if profile.yield_curve:
+            return profile
+    return profiles[0]
 
 
 def parse_olive_stades_bbch_gdd_context(
@@ -258,6 +488,8 @@ def get_index_key_from_referential(
     if not isinstance(system, dict):
         return None
     indice = system.get("indice_cle")
+    if not isinstance(indice, str) or not indice.strip():
+        indice = system.get("indice_satellite_cle")
     if isinstance(indice, str) and indice.strip():
         return indice.strip()
     return None
@@ -281,11 +513,14 @@ def get_satellite_thresholds_from_referential(
     if not isinstance(system_seuils, dict):
         return None
     index_seuils = system_seuils.get(index_key)
-    if not isinstance(index_seuils, dict):
-        return None
-    optimal = index_seuils.get("optimal")
-    vigilance = index_seuils.get("vigilance")
-    alerte = index_seuils.get("alerte")
+    if isinstance(index_seuils, dict):
+        optimal = index_seuils.get("optimal")
+        vigilance = index_seuils.get("vigilance")
+        alerte = index_seuils.get("alerte")
+    else:
+        optimal = system_seuils.get(f"{index_key}_optimal")
+        vigilance = system_seuils.get(f"{index_key}_vigilance")
+        alerte = system_seuils.get(f"{index_key}_alerte")
     result: dict[str, Any] = {}
     if optimal is not None:
         result["optimal"] = (
@@ -296,6 +531,47 @@ def get_satellite_thresholds_from_referential(
     if alerte is not None and isinstance(alerte, (int, float)):
         result["alerte"] = float(alerte)
     return result if result else None
+
+
+def get_calibration_capabilities(
+    crop_type: str,
+    reference_data: dict[str, Any] | None = None,
+) -> CalibrationCapabilities:
+    data = (
+        reference_data
+        if isinstance(reference_data, dict) and reference_data
+        else _load_referential_data_from_file(crop_type)
+    )
+    defaults = CalibrationCapabilities(
+        supported=True,
+        phenology_mode="state_machine" if crop_type == "olivier" else "legacy",
+        required_indices=("NDVI", "NIRv", "NDMI", "NDRE"),
+        min_observed_images=10,
+        min_history_days=120,
+        min_history_months_for_period_percentiles=24,
+    )
+    if not isinstance(data, dict):
+        return defaults
+    raw = data.get("capacites_calibrage")
+    if not isinstance(raw, dict):
+        return defaults
+    required_indices = raw.get("required_indices")
+    return CalibrationCapabilities(
+        supported=bool(raw.get("supported", defaults.supported)),
+        phenology_mode=str(raw.get("phenology_mode", defaults.phenology_mode)),
+        required_indices=tuple(required_indices)
+        if isinstance(required_indices, list)
+        and all(isinstance(item, str) for item in required_indices)
+        else defaults.required_indices,
+        min_observed_images=int(raw.get("min_observed_images", defaults.min_observed_images)),
+        min_history_days=int(raw.get("min_history_days", defaults.min_history_days)),
+        min_history_months_for_period_percentiles=int(
+            raw.get(
+                "min_history_months_for_period_percentiles",
+                defaults.min_history_months_for_period_percentiles,
+            )
+        ),
+    )
 
 
 def cycle_year_for_date(d: Any, start_month: int, end_month: int) -> int:
@@ -484,6 +760,25 @@ def _referentials_dir() -> Path | None:
     return candidate if candidate.is_dir() else None
 
 
+@lru_cache(maxsize=8)
+def _load_referential_data_from_file(crop_type: str) -> dict[str, Any] | None:
+    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
+    if not filename:
+        return None
+    root = _referentials_dir()
+    if root is None:
+        return None
+    path = root / filename
+    if not path.is_file():
+        return None
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
     """Read tbase_c and plafond_c from referential ``gdd`` object."""
     if not isinstance(gdd, dict):
@@ -502,19 +797,8 @@ def _parse_gdd_block(gdd: Any) -> tuple[float | None, float | None]:
 @lru_cache(maxsize=8)
 def _load_gdd_from_referential_file(crop_type: str) -> tuple[float | None, float | None]:
     """Load ``gdd.tbase_c`` / ``gdd.plafond_c`` from referentials JSON on disk."""
-    filename = CROP_TYPE_TO_REFERENTIAL_JSON.get(crop_type)
-    if not filename:
-        return None, None
-    root = _referentials_dir()
-    if root is None:
-        return None, None
-    path = root / filename
-    if not path.is_file():
-        return None, None
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
+    data = _load_referential_data_from_file(crop_type)
+    if not data:
         return None, None
     return _parse_gdd_block(data.get("gdd"))
 
@@ -562,7 +846,225 @@ def get_gdd_tbase_tupper(
 
 def clear_gdd_referential_cache() -> None:
     """Clear LRU cache (for tests that swap referential files)."""
+    _load_referential_data_from_file.cache_clear()
     _load_gdd_from_referential_file.cache_clear()
+
+
+_DEFAULT_WEATHER_THRESHOLDS: dict[str, WeatherThresholdConfig] = {
+    "olivier": WeatherThresholdConfig(
+        frost_threshold_c=-2.0,
+        heatwave_threshold_c=38.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=60.0,
+    ),
+    "agrumes": WeatherThresholdConfig(
+        frost_threshold_c=0.0,
+        heatwave_threshold_c=40.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=30.0,
+    ),
+    "avocatier": WeatherThresholdConfig(
+        frost_threshold_c=0.0,
+        heatwave_threshold_c=35.0,
+        drought_days_dry_season=60,
+        drought_days_transition=30,
+        drought_days_rainy_season=20,
+        hot_wind_kmh=25.0,
+    ),
+    "palmier_dattier": WeatherThresholdConfig(
+        frost_threshold_c=-5.0,
+        heatwave_threshold_c=45.0,
+        drought_days_dry_season=90,
+        drought_days_transition=45,
+        drought_days_rainy_season=45,
+        hot_wind_kmh=60.0,
+    ),
+}
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _upper_bound(value: Any) -> float | None:
+    if isinstance(value, (list, tuple)) and value:
+        numeric = [float(v) for v in value if isinstance(v, (int, float))]
+        if numeric:
+            return max(numeric)
+    return _as_float(value)
+
+
+def _extract_heat_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        if "Tmax" not in seuil:
+            continue
+        matches = re.findall(r"Tmax\s*>\s*(-?\d+(?:\.\d+)?)", seuil)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return min(candidates) if candidates else None
+
+
+def _extract_frost_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        if "Tmin" not in seuil:
+            continue
+        matches = re.findall(r"Tmin(?:\s*(?:prévue|mesurée))?\s*<\s*(-?\d+(?:\.\d+)?)", seuil)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return max(candidates) if candidates else None
+
+
+def _extract_hot_wind_from_alerts(alerts: Any) -> float | None:
+    if not isinstance(alerts, list):
+        return None
+    candidates: list[float] = []
+    for alert in alerts:
+        if not isinstance(alert, dict):
+            continue
+        seuil = str(alert.get("seuil", ""))
+        matches = re.findall(r"vent\s*>\s*(-?\d+(?:\.\d+)?)", seuil, flags=re.IGNORECASE)
+        for raw in matches:
+            try:
+                candidates.append(float(raw))
+            except ValueError:
+                continue
+    return min(candidates) if candidates else None
+
+
+def get_weather_thresholds(
+    crop_type: str,
+    reference_data: dict[str, Any] | None = None,
+) -> WeatherThresholdConfig:
+    data = (
+        reference_data
+        if isinstance(reference_data, dict) and reference_data
+        else _load_referential_data_from_file(crop_type)
+    )
+    defaults = _DEFAULT_WEATHER_THRESHOLDS.get(
+        crop_type,
+        WeatherThresholdConfig(
+            frost_threshold_c=0.0,
+            heatwave_threshold_c=38.0,
+            drought_days_dry_season=60,
+            drought_days_transition=30,
+            drought_days_rainy_season=20,
+            hot_wind_kmh=60.0,
+        ),
+    )
+    if not isinstance(data, dict):
+        return defaults
+
+    canonical = data.get("seuils_meteo")
+    if isinstance(canonical, dict):
+        gel = canonical.get("gel") if isinstance(canonical.get("gel"), dict) else {}
+        canicule = (
+            canonical.get("canicule")
+            if isinstance(canonical.get("canicule"), dict)
+            else {}
+        )
+        vent_chaud = (
+            canonical.get("vent_chaud")
+            if isinstance(canonical.get("vent_chaud"), dict)
+            else {}
+        )
+        secheresse = (
+            canonical.get("secheresse")
+            if isinstance(canonical.get("secheresse"), dict)
+            else {}
+        )
+        return WeatherThresholdConfig(
+            frost_threshold_c=(
+                _as_float(gel.get("threshold_c")) or defaults.frost_threshold_c
+            ),
+            heatwave_threshold_c=(
+                _as_float(canicule.get("tmax_c")) or defaults.heatwave_threshold_c
+            ),
+            drought_days_dry_season=(
+                int(secheresse.get("dry_season_days"))
+                if isinstance(secheresse.get("dry_season_days"), (int, float))
+                else defaults.drought_days_dry_season
+            ),
+            drought_days_transition=(
+                int(secheresse.get("transition_days"))
+                if isinstance(secheresse.get("transition_days"), (int, float))
+                else defaults.drought_days_transition
+            ),
+            drought_days_rainy_season=(
+                int(secheresse.get("rainy_season_days"))
+                if isinstance(secheresse.get("rainy_season_days"), (int, float))
+                else defaults.drought_days_rainy_season
+            ),
+            hot_wind_kmh=(
+                _as_float(vent_chaud.get("wind_kmh")) or defaults.hot_wind_kmh
+            ),
+        )
+
+    climate = data.get("exigences_climatiques")
+    frost_threshold = defaults.frost_threshold_c
+    heat_threshold = defaults.heatwave_threshold_c
+    hot_wind_kmh = defaults.hot_wind_kmh
+
+    if isinstance(climate, dict):
+        explicit_heat = (
+            _as_float(climate.get("temperature_stress_chaleur_C"))
+            or _as_float(climate.get("temperature_max_toleree_C"))
+        )
+        if explicit_heat is not None:
+            heat_threshold = explicit_heat
+
+        explicit_frost = (
+            _upper_bound(climate.get("gel_feuilles_hass_C"))
+            or _upper_bound(climate.get("gel_palmes_C"))
+            or _as_float(climate.get("temperature_stress_froid_C"))
+        )
+        if explicit_frost is not None and explicit_frost <= 2.0:
+            frost_threshold = explicit_frost
+
+    alerts = data.get("alertes")
+    alert_frost = _extract_frost_from_alerts(alerts)
+    if alert_frost is not None:
+        frost_threshold = alert_frost
+
+    alert_heat = _extract_heat_from_alerts(alerts)
+    if alert_heat is not None:
+        heat_threshold = alert_heat
+
+    alert_hot_wind = _extract_hot_wind_from_alerts(alerts)
+    if alert_hot_wind is not None:
+        hot_wind_kmh = alert_hot_wind
+
+    return WeatherThresholdConfig(
+        frost_threshold_c=frost_threshold,
+        heatwave_threshold_c=heat_threshold,
+        drought_days_dry_season=defaults.drought_days_dry_season,
+        drought_days_transition=defaults.drought_days_transition,
+        drought_days_rainy_season=defaults.drought_days_rainy_season,
+        hot_wind_kmh=hot_wind_kmh,
+    )
 
 
 # --- Maturity phase age spans (half-open: age in [start, end) years) -----------------

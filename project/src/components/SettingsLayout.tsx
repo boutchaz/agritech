@@ -23,7 +23,6 @@ import {
   PanelLeft,
   ChevronDown,
   Home,
-  Mail,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -249,14 +248,6 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             description: t("settings.menu.documentsDescription"),
             roles: ADMIN_ROLES,
           },
-          {
-            id: "email-templates",
-            name: t("settings.menu.emailTemplates", "Email Templates"),
-            icon: Mail,
-            path: "/settings/email-templates",
-            description: t("settings.menu.emailTemplatesDescription", "Manage email notification templates"),
-            roles: ADMIN_ROLES,
-          },
         ],
       },
       {
@@ -325,11 +316,12 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     setIsMobileMenuOpen(false);
   };
 
-  const renderItem = (item: SettingsMenuItem) => {
+  /** Compact = icon rail (desktop collapsed). Mobile drawer always passes `false` so labels stay visible. */
+  const renderItem = (item: SettingsMenuItem, compact: boolean) => {
     const Icon = item.icon;
     const active = isActive(item.path);
 
-    if (isCollapsed) {
+    if (compact) {
       return (
         <Tooltip key={item.id}>
           <TooltipTrigger asChild>
@@ -386,10 +378,10 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     );
   };
 
-  const renderSections = () =>
+  const renderSections = (compact: boolean) =>
     visibleSections.map((section, sectionIndex) => (
       <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
-        {!isCollapsed && (
+        {!compact && (
           <div className="px-3 mb-2 flex items-center justify-between gap-2">
             <button
               type="button"
@@ -412,23 +404,23 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             )}
           </div>
         )}
-        {(isCollapsed || isSectionExpanded(section.id)) && (
+        {(compact || isSectionExpanded(section.id)) && (
           <div
             className={cn(
               "space-y-1",
-              isCollapsed && "flex flex-col items-center gap-2",
+              compact && "flex flex-col items-center gap-2",
             )}
           >
-            {section.items.map(renderItem)}
+            {section.items.map((item) => renderItem(item, compact))}
           </div>
         )}
       </div>
     ));
 
   return (
-    <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
-      {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
-      <TooltipProvider delayDuration={200}>
+    <TooltipProvider delayDuration={200}>
+      <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
+        {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
         <div
           className={cn(
             "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
@@ -504,7 +496,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             )}
             data-tour="settings-menu"
           >
-            {renderSections()}
+            {renderSections(isCollapsed)}
           </nav>
 
           {/* Collapse Toggle (duplicate control for mouse users) */}
@@ -531,19 +523,18 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             </Button>
           </div>
         </div>
-      </TooltipProvider>
 
-      {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
+        {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-[env(safe-area-inset-bottom,0px)] dark:bg-slate-900/30 md:pb-0"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[var(--app-nested-scroll-bottom-pad,1.25rem)] max-md:[scroll-padding-bottom:var(--app-nested-scroll-bottom-pad,1.25rem)] md:pb-0 md:scroll-pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
-        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm">
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-3 py-3 shadow-sm sm:px-4 md:px-6">
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-between w-full h-11 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-inner"
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 shadow-inner dark:border-slate-700 dark:bg-slate-800 sm:px-4"
           >
             <div className="flex items-center gap-3">
               {(() => {
@@ -572,7 +563,15 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           </button>
         </div>
         
-        <div className="flex-1 min-w-0 max-w-full px-3 pt-3 pb-24 w-full max-w-[1400px] mx-auto sm:px-4 sm:pt-4 sm:pb-8 md:px-6 md:pt-6 lg:p-10 lg:pb-10">
+        {/* Shared surface for every /settings/* child: consistent horizontal rhythm + max width */}
+        <div
+          className={cn(
+            "flex-1 min-h-0 min-w-0 w-full",
+            "mx-auto max-w-6xl xl:max-w-7xl",
+            "px-3 py-4 pb-8 sm:px-4 sm:py-5 sm:pb-10 md:px-6 md:py-6 md:pb-10",
+          )}
+          data-settings-page-surface
+        >
           {children}
         </div>
       </div>
@@ -580,7 +579,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
       {/* Mobile Settings Drawer */}
       <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <DrawerContent side="bottom" hideClose className="max-h-[85vh] rounded-t-[2.5rem] p-0 bg-white dark:bg-slate-900 border-none shadow-2xl">
-          <DrawerHeader className="px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
+          <DrawerHeader className="shrink-0 px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
@@ -601,8 +600,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             </div>
           </DrawerHeader>
           <div
-            className="overflow-y-auto px-4 py-6 no-scrollbar"
-            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 24px) + 24px)" }}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 no-scrollbar touch-pan-y"
+            style={{ paddingBottom: "calc(max(14px, env(safe-area-inset-bottom, 0px)) + 24px)" }}
           >
             <button
               type="button"
@@ -619,11 +618,12 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
                 {t("settings.backToDashboard", "Return to Dashboard")}
               </span>
             </button>
-            {renderSections()}
+            {renderSections(false)}
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 

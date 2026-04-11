@@ -1,10 +1,14 @@
 """Tests for referential_utils (French months, cycle, index key, thresholds, phenology periods)."""
 
+import json
 from datetime import date
+from pathlib import Path
 
 import pytest
 
 from app.services.calibration.referential_utils import (
+    get_calibration_capabilities,
+    get_calibration_varieties,
     clear_gdd_referential_cache,
     cycle_year_for_date,
     filter_points_to_cycle,
@@ -15,12 +19,19 @@ from app.services.calibration.referential_utils import (
     get_phase_boundaries_from_reference,
     get_phenology_periods_from_stades_bbch,
     get_satellite_thresholds_from_referential,
+    get_variety_yield_profile,
     group_points_by_cycle_year,
     parse_legacy_rendement_key_to_half_open,
     parse_olive_stades_bbch_gdd_context,
     span_for_rendement_key,
 )
 from app.services.calibration.types import MaturityPhase
+
+
+def _load_referential(filename: str) -> dict[str, object]:
+    root = Path(__file__).resolve().parents[2]
+    path = root / "agritech-api" / "referentials" / filename
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_french_month_to_num() -> None:
@@ -94,6 +105,23 @@ def test_get_satellite_thresholds_from_referential() -> None:
     assert result["alerte"] == 0.06
     assert result["optimal"] == [0.08, 0.22]
     assert get_satellite_thresholds_from_referential(reference_data, "intensif", "NDVI") is None
+
+
+def test_get_satellite_thresholds_from_legacy_flat_referential_shape() -> None:
+    reference_data = {
+        "seuils_satellite": {
+            "intensif": {
+                "NDVI_optimal": [0.45, 0.65],
+                "NDVI_alerte": 0.35,
+            }
+        }
+    }
+    result = get_satellite_thresholds_from_referential(
+        reference_data, "intensif", "NDVI"
+    )
+    assert result is not None
+    assert result["optimal"] == [0.45, 0.65]
+    assert result["alerte"] == 0.35
 
 
 def test_get_phenology_periods_from_stades_bbch() -> None:
@@ -174,6 +202,31 @@ def test_get_gdd_tbase_tupper_unknown_crop() -> None:
     assert get_gdd_tbase_tupper("ble", None) == (None, None)
 
 
+def test_get_calibration_capabilities_defaults_and_override() -> None:
+    defaults = get_calibration_capabilities("agrumes", None)
+    assert defaults.supported is True
+    assert defaults.phenology_mode == "legacy"
+    assert defaults.min_observed_images == 10
+
+    override = get_calibration_capabilities(
+        "agrumes",
+        {
+            "capacites_calibrage": {
+                "supported": False,
+                "phenology_mode": "custom",
+                "required_indices": ["NDVI"],
+                "min_observed_images": 12,
+                "min_history_days": 150,
+                "min_history_months_for_period_percentiles": 30,
+            }
+        },
+    )
+    assert override.supported is False
+    assert override.phenology_mode == "custom"
+    assert override.required_indices == ("NDVI",)
+    assert override.min_observed_images == 12
+
+
 def test_parse_olive_stades_bbch_gdd_context_baseline_and_caps() -> None:
     ref = {
         "stades_bbch": [
@@ -229,3 +282,26 @@ def test_parse_legacy_rendement_key_and_phase_span() -> None:
     boundaries = get_phase_boundaries_from_reference({})
     assert span_for_rendement_key("pleine_production", boundaries) == (10, 40)
     assert span_for_rendement_key("21-40_ans", boundaries) == (21, 41)
+
+
+def test_get_calibration_varieties_prefers_canonical_citrus_profiles() -> None:
+    reference_data = _load_referential("DATA_AGRUMES.json")
+    profiles = get_calibration_varieties(reference_data)
+
+    assert any(profile.code == "ORANGE_VALENCIA" for profile in profiles)
+    profile = get_variety_yield_profile(reference_data, "Valencia Late")
+    assert profile is not None
+    assert profile.code == "ORANGE_VALENCIA"
+    assert profile.yield_unit == "t/ha"
+    assert profile.yield_curve["pleine_production"] == [40, 60]
+
+
+def test_get_variety_yield_profile_supports_generic_date_palm_ranges() -> None:
+    reference_data = _load_referential("DATA_PALMIER_DATTIER.json")
+    profile = get_variety_yield_profile(reference_data, "Medjool")
+
+    assert profile is not None
+    assert profile.code == "MEJHOUL"
+    assert profile.yield_unit == "kg/tree"
+    assert profile.generic_curve is True
+    assert profile.yield_curve["reference"] == [80.0, 120.0]

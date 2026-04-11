@@ -96,3 +96,25 @@ def test_missing_planting_year_is_unknown_with_neutral_multiplier() -> None:
     assert getattr(phase, "value") == "unknown"
     adjustment = get_threshold_adjustment(phase)
     assert adjustment["NDVI"] == 1.0
+
+
+def test_generic_reference_range_does_not_override_age_phase_logic() -> None:
+    phase = determine_maturity_phase(
+        planting_year=2023,
+        crop_type="palmier_dattier",
+        reference_data={
+            "varietes_calibrage": [
+                {
+                    "code": "MEJHOUL",
+                    "nom": "Mejhoul",
+                    "aliases": ["Medjool"],
+                    "yield_unit": "kg/tree",
+                    "reference_range_kg_arbre": [80, 120],
+                }
+            ]
+        },
+        variety="Medjool",
+        current_year=2026,
+    )
+
+    assert getattr(phase, "value") == "juvenile"

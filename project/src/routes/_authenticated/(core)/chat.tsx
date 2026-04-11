@@ -28,7 +28,7 @@ const ChatPage = () => {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Building2, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Building2, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: Bot, label: t('chat.title', 'AI Assistant'), isActive: true },
         ]}
         title={t('chat.title', 'AI Assistant')}

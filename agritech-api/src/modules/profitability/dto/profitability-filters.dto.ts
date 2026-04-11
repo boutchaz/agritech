@@ -16,6 +16,11 @@ export class ProfitabilityFiltersDto {
   @IsUUID()
   @IsOptional()
   parcel_id?: string;
+
+  @ApiProperty({ description: 'Fiscal year ID to filter by', required: false })
+  @IsUUID()
+  @IsOptional()
+  fiscal_year_id?: string;
 }
 
 export class ProfitabilityAnalysisFiltersDto {

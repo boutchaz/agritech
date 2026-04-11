@@ -25,6 +25,7 @@ export interface JournalEntryFilters {
   cost_center_id?: string;
   farm_id?: string;
   parcel_id?: string;
+  fiscal_year_id?: string;
 }
 
 export interface PaginatedJournalEntryQuery extends PaginatedQuery {
@@ -39,6 +40,7 @@ export interface CreateJournalEntryInput {
   remarks?: string;
   reference_type?: string;
   reference_number?: string;
+  fiscal_year_id?: string;
   items: {
     account_id: string;
     debit: number;
@@ -77,6 +79,7 @@ export const journalEntriesApi = {
     if (filters?.cost_center_id) params.append('cost_center_id', filters.cost_center_id);
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters?.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
     const queryString = params.toString();
     return apiClient.get<JournalEntryWithItems[]>(`${BASE_URL}${queryString ? `?${queryString}` : ''}`);
   },

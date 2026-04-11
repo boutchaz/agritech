@@ -43,6 +43,9 @@ export class CropCyclesService {
     if (filters.campaign_id) {
       query = query.eq('campaign_id', filters.campaign_id);
     }
+    if (filters.fiscal_year_id) {
+      query = query.eq('fiscal_year_id', filters.fiscal_year_id);
+    }
     if (filters.farm_id) {
       query = query.eq('farm_id', filters.farm_id);
     }

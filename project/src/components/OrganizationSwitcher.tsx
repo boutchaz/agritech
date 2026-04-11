@@ -171,7 +171,7 @@ const OrganizationSwitcher = ({ compact = false }: OrganizationSwitcherProps) =>
         onClick={() => setIsOpen(!isOpen)}
         data-tour="user-menu"
         title={
-          !compact && currentFarm
+          !compact && currentFarm?.name
             ? `${currentOrganization.name} — ${currentFarm.name}`
             : currentOrganization.name
         }
@@ -193,7 +193,7 @@ const OrganizationSwitcher = ({ compact = false }: OrganizationSwitcherProps) =>
               <Building className="h-5 w-5 shrink-0 text-gray-500" />
               <span className="truncate text-start text-sm font-medium text-gray-900 dark:text-white">
                 {currentOrganization.name}
-                {currentFarm ? ` · ${currentFarm.name}` : ''}
+                {currentFarm?.name ? ` · ${currentFarm.name}` : ''}
               </span>
             </div>
             <ChevronDown

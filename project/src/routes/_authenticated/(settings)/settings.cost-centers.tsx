@@ -12,11 +12,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
  * Route: /settings/cost-centers
  */
 function CostCentersSettingsPage() {
-  return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
-      <CostCenterManagement />
-    </div>
-  );
+  return <CostCenterManagement />;
 }
 
 // Protect route - require admin permissions to manage cost centers

@@ -81,3 +81,65 @@ def test_step6_handles_missing_reference_data() -> None:
     assert output.yield_potential.reference_bracket == "unknown"
     assert output.yield_potential.minimum == 0
     assert output.yield_potential.maximum == 20
+
+
+def test_step6_uses_t_per_ha_reference_without_density_conversion() -> None:
+    output = calculate_yield_potential(
+        planting_year=2000,
+        crop_type="agrumes",
+        variety="Valencia Late",
+        reference_data={
+            "varietes_calibrage": [
+                {
+                    "code": "ORANGE_VALENCIA",
+                    "nom": "Orange Valencia",
+                    "aliases": ["Valencia Late", "VALENCIA"],
+                    "yield_unit": "t/ha",
+                    "yield_curve_key": "orange_valencia",
+                }
+            ],
+            "rendement_t_ha": {
+                "orange_valencia": {
+                    "juvenile": [5, 15],
+                    "entree_production": [25, 40],
+                    "pleine_production": [40, 60],
+                }
+            },
+        },
+        harvest_records=[],
+        maturity_phase=MaturityPhase.PLEINE_PRODUCTION,
+        current_year=2026,
+        density_per_hectare=400,
+    )
+
+    assert output.yield_potential.reference_bracket == "pleine_production"
+    assert output.yield_potential.minimum == 40
+    assert output.yield_potential.maximum == 60
+    assert output.yield_potential.unit == "t/ha"
+
+
+def test_step6_supports_generic_reference_range_profiles() -> None:
+    output = calculate_yield_potential(
+        planting_year=2000,
+        crop_type="palmier_dattier",
+        variety="Medjool",
+        reference_data={
+            "varietes_calibrage": [
+                {
+                    "code": "MEJHOUL",
+                    "nom": "Mejhoul",
+                    "aliases": ["Medjool"],
+                    "yield_unit": "kg/tree",
+                    "reference_range_kg_arbre": [80, 120],
+                }
+            ]
+        },
+        harvest_records=[],
+        maturity_phase=MaturityPhase.PLEINE_PRODUCTION,
+        current_year=2026,
+    )
+
+    assert output.yield_potential.reference_bracket == "reference"
+    assert output.yield_potential.minimum == 80
+    assert output.yield_potential.maximum == 120
+    assert output.yield_potential.unit == "kg/tree"

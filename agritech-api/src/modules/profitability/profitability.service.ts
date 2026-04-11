@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { CreateCostDto, CreateRevenueDto, ProfitabilityFiltersDto, ProfitabilityAnalysisFiltersDto } from './dto';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class ProfitabilityService {
   constructor(
     private databaseService: DatabaseService,
     private accountingAutomationService: AccountingAutomationService,
+    private fiscalYearsService: FiscalYearsService,
   ) {}
 
   /**
@@ -59,6 +61,9 @@ export class ProfitabilityService {
     if (filters.parcel_id) {
       query = query.eq('parcel_id', filters.parcel_id);
     }
+    if (filters.fiscal_year_id) {
+      query = query.eq('fiscal_year_id', filters.fiscal_year_id);
+    }
 
     const { data, error } = await query;
 
@@ -90,6 +95,9 @@ export class ProfitabilityService {
     }
     if (filters.parcel_id) {
       query = query.eq('parcel_id', filters.parcel_id);
+    }
+    if (filters.fiscal_year_id) {
+      query = query.eq('fiscal_year_id', filters.fiscal_year_id);
     }
 
     const { data, error } = await query;
@@ -212,12 +220,17 @@ export class ProfitabilityService {
       );
     }
 
+    // Resolve fiscal year from date if not provided
+    const costFiscalYearId = createCostDto.fiscal_year_id ||
+      await this.fiscalYearsService.resolveFiscalYear(organizationId, createCostDto.date);
+
     const { data, error } = await supabase
       .from('costs')
       .insert({
         organization_id: organizationId,
         created_by: userId,
         ...createCostDto,
+        ...(costFiscalYearId ? { fiscal_year_id: costFiscalYearId } : {}),
       })
       .select()
       .single();
@@ -269,12 +282,17 @@ export class ProfitabilityService {
       );
     }
 
+    // Resolve fiscal year from date if not provided
+    const revFiscalYearId = createRevenueDto.fiscal_year_id ||
+      await this.fiscalYearsService.resolveFiscalYear(organizationId, createRevenueDto.date);
+
     const { data, error } = await supabase
       .from('revenues')
       .insert({
         organization_id: organizationId,
         created_by: userId,
         ...createRevenueDto,
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       })
       .select()
       .single();

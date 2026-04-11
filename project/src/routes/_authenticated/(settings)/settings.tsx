@@ -30,7 +30,7 @@ const SettingsLayoutComponent = () => {
       className="min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden"
     >
       {/* Mobile-optimized header */}
-      <div className="sticky top-0 z-30 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-4 py-3 shadow-sm transition-all duration-300">
+      <div className="sticky top-0 z-30 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-3 py-3 shadow-sm transition-all duration-300 sm:px-4 md:px-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <Button
@@ -46,7 +46,7 @@ const SettingsLayoutComponent = () => {
               <h1 className="text-base font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight leading-none">
                 {currentOrganization.name}
               </h1>
-              {currentFarm && (
+              {currentFarm?.name && (
                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate uppercase tracking-widest mt-1">
                   {currentFarm.name}
                 </p>

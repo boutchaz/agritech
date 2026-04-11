@@ -33,6 +33,49 @@
     "plafond_c": 33.0,
     "reference": "Calibration engine — avocado growing degree days (caps)"
   },
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": 2.0,
+      "detection_months": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "severity": "high"
+    },
+    "canicule": {
+      "tmax_c": 38.0,
+      "consecutive_days": 3,
+      "severity": "high"
+    },
+    "vent_chaud": {
+      "temperature_c": 35.0,
+      "wind_kmh": 25.0,
+      "humidity_max_pct": 25.0,
+      "severity": "medium"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5.0,
+      "dry_season_days": 60,
+      "transition_days": 30,
+      "rainy_season_days": 20,
+      "severity": "medium"
+    }
+  },
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "legacy",
+    "required_indices": [
+      "NDVI",
+      "NIRv",
+      "NDMI",
+      "NDRE"
+    ],
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24
+  },
   "varietes": [
     {
       "code": "HASS",
@@ -412,6 +455,7 @@
         40,
         50
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         8,
         12
@@ -436,6 +480,7 @@
         25,
         35
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         12,
         20
@@ -460,6 +505,7 @@
         15,
         20
       ],
+      "indice_cle": "NIRv",
       "rendement_pleine_prod_t_ha": [
         18,
         30

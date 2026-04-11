@@ -14,6 +14,11 @@ export class CropCycleFiltersDto {
   @IsUUID()
   campaign_id?: string;
 
+  @ApiPropertyOptional({ description: 'Filter by fiscal year' })
+  @IsOptional()
+  @IsUUID()
+  fiscal_year_id?: string;
+
   @ApiPropertyOptional({ description: 'Filter by farm ID' })
   @IsOptional()
   @IsUUID()

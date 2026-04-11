@@ -63,9 +63,18 @@ def calculate_percentiles(
         if not points:
             continue
 
-        valid = [(point.date, point.value) for point in points if not point.outlier]
+        observed = [
+            (point.date, point.value)
+            for point in points
+            if not point.interpolated
+        ]
+        valid = [
+            (point.date, point.value)
+            for point in points
+            if not point.outlier and not point.interpolated
+        ]
         if not valid:
-            valid = [(point.date, point.value) for point in points]
+            valid = observed
 
         values = [value for _, value in valid]
 

@@ -204,7 +204,7 @@ const SubscriptionSettings = () => {
 
   if (!hasSubscription || showModularPicker) {
     return (
-      <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
+      <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
         <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
           <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
             <div className="flex min-w-0 items-start gap-3">
@@ -267,7 +267,7 @@ const SubscriptionSettings = () => {
 
   if (shouldShowLegacyPlans) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="min-w-0 space-y-6">
         <Button
           onClick={() => setShowPlans(false)}
           className="text-green-600 hover:text-green-700 font-medium"
@@ -429,7 +429,7 @@ const SubscriptionSettings = () => {
     : null;
 
   return (
-    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden p-4 animate-in fade-in duration-500 sm:p-8">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
       <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
         <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
           <div className="flex min-w-0 items-start gap-3">

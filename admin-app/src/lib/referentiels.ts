@@ -47,6 +47,97 @@ export const referentialApi = {
   },
 };
 
+// --- Reference Data (tables like account_templates, modules, roles, etc.) ---
+
+export type ReferenceDataTable =
+  | 'account_templates'
+  | 'account_mappings'
+  | 'modules'
+  | 'currencies'
+  | 'roles'
+  | 'work_units';
+
+export interface ImportResult {
+  success: boolean;
+  dryRun: boolean;
+  recordsProcessed: number;
+  recordsCreated: number;
+  recordsUpdated: number;
+  recordsSkipped: number;
+  errors: Array<{ row: number; error: string }>;
+  jobId?: string;
+}
+
+export interface DiffResult {
+  table: string;
+  fromVersion: string;
+  toVersion: string;
+  added: number;
+  modified: number;
+  removed: number;
+  changes: Array<{
+    type: 'added' | 'modified' | 'removed';
+    id: string;
+    field?: string;
+    oldValue?: unknown;
+    newValue?: unknown;
+  }>;
+}
+
+export interface PublishResult {
+  success: boolean;
+  publishedCount: number;
+  unpublishedCount: number;
+  errors: Array<{ id: string; error: string }>;
+}
+
+export const refDataApi = {
+  getData(table: ReferenceDataTable, query?: Record<string, string>) {
+    const params = query ? '?' + new URLSearchParams(query).toString() : '';
+    return apiRequest<{ data: Record<string, unknown>[]; total: number }>(
+      `/api/v1/admin/ref/${table}${params}`,
+    );
+  },
+
+  diff(table: ReferenceDataTable, fromVersion?: string, toVersion?: string) {
+    const params = new URLSearchParams();
+    if (fromVersion) params.set('fromVersion', fromVersion);
+    if (toVersion) params.set('toVersion', toVersion);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiRequest<DiffResult>(`/api/v1/admin/ref/${table}/diff${qs}`);
+  },
+
+  import(table: ReferenceDataTable, rows: Record<string, unknown>[], options?: { dryRun?: boolean; updateExisting?: boolean; version?: string }) {
+    return apiRequest<ImportResult>('/api/v1/admin/ref/import', {
+      method: 'POST',
+      body: JSON.stringify({
+        table,
+        rows: rows.map((data) => ({ data })),
+        dryRun: options?.dryRun ?? false,
+        updateExisting: options?.updateExisting ?? false,
+        version: options?.version,
+      }),
+    });
+  },
+
+  publish(table: ReferenceDataTable, ids: string[], unpublish = false) {
+    return apiRequest<PublishResult>('/api/v1/admin/ref/publish', {
+      method: 'POST',
+      body: JSON.stringify({ table, ids, unpublish }),
+    });
+  },
+
+  seedAccounts(organizationId: string, chartType: string, version?: string) {
+    return apiRequest<{ success: boolean; accountsCreated: number; message: string }>(
+      '/api/v1/admin/ref/seed-accounts',
+      {
+        method: 'POST',
+        body: JSON.stringify({ organizationId, chartType, version }),
+      },
+    );
+  },
+};
+
 const CROP_LABELS: Record<string, string> = {
   olivier: 'Olivier',
   agrumes: 'Agrumes',

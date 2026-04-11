@@ -30,6 +30,9 @@ export class CampaignsService {
     if (filters.status) {
       query = query.eq('status', filters.status);
     }
+    if (filters.primary_fiscal_year_id) {
+      query = query.eq('primary_fiscal_year_id', filters.primary_fiscal_year_id);
+    }
     if (filters.search) {
       const s = sanitizeSearch(filters.search);
       if (s) query = query.or(`name.ilike.%${s}%,description.ilike.%${s}%,code.ilike.%${s}%`);

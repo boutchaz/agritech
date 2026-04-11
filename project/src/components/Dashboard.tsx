@@ -52,7 +52,7 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.farm.title')}</p>
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
-                  {currentFarm ? currentFarm.name : t('dashboard.widgets.farm.noFarm')}
+                  {currentFarm?.name ?? t('dashboard.widgets.farm.noFarm')}
                 </h3>
               </div>
               <MapPin className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />

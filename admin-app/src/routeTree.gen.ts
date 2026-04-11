@@ -15,8 +15,10 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
 import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authenticated/email-templates'
+import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
 import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
+import { Route as AuthenticatedClientsOrgIdRouteImport } from './routes/_authenticated/clients/$orgId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -49,6 +51,11 @@ const AuthenticatedEmailTemplatesRoute =
     path: '/email-templates',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCronJobsRoute = AuthenticatedCronJobsRouteImport.update({
+  id: '/cron-jobs',
+  path: '/cron-jobs',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
@@ -60,34 +67,46 @@ const AuthenticatedReferentielsCropRoute =
     path: '/referentiels/$crop',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedClientsOrgIdRoute =
+  AuthenticatedClientsOrgIdRouteImport.update({
+    id: '/$orgId',
+    path: '/$orgId',
+    getParentRoute: () => AuthenticatedClientsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
-  '/clients': typeof AuthenticatedClientsRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/clients': typeof AuthenticatedClientsRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/': typeof AuthenticatedIndexRoute
+  '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/clients': typeof AuthenticatedClientsRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/_authenticated/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/_authenticated/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRouteTypes {
@@ -96,28 +115,34 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/clients'
+    | '/cron-jobs'
     | '/email-templates'
     | '/rdv'
     | '/subscription-model'
+    | '/clients/$orgId'
     | '/referentiels/$crop'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
     | '/clients'
+    | '/cron-jobs'
     | '/email-templates'
     | '/rdv'
     | '/subscription-model'
     | '/'
+    | '/clients/$orgId'
     | '/referentiels/$crop'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
     | '/_authenticated/clients'
+    | '/_authenticated/cron-jobs'
     | '/_authenticated/email-templates'
     | '/_authenticated/rdv'
     | '/_authenticated/subscription-model'
     | '/_authenticated/'
+    | '/_authenticated/clients/$orgId'
     | '/_authenticated/referentiels/$crop'
   fileRoutesById: FileRoutesById
 }
@@ -170,6 +195,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEmailTemplatesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/cron-jobs': {
+      id: '/_authenticated/cron-jobs'
+      path: '/cron-jobs'
+      fullPath: '/cron-jobs'
+      preLoaderRoute: typeof AuthenticatedCronJobsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/clients': {
       id: '/_authenticated/clients'
       path: '/clients'
@@ -184,11 +216,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReferentielsCropRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/clients/$orgId': {
+      id: '/_authenticated/clients/$orgId'
+      path: '/$orgId'
+      fullPath: '/clients/$orgId'
+      preLoaderRoute: typeof AuthenticatedClientsOrgIdRouteImport
+      parentRoute: typeof AuthenticatedClientsRoute
+    }
   }
 }
 
+interface AuthenticatedClientsRouteChildren {
+  AuthenticatedClientsOrgIdRoute: typeof AuthenticatedClientsOrgIdRoute
+}
+
+const AuthenticatedClientsRouteChildren: AuthenticatedClientsRouteChildren = {
+  AuthenticatedClientsOrgIdRoute: AuthenticatedClientsOrgIdRoute,
+}
+
+const AuthenticatedClientsRouteWithChildren =
+  AuthenticatedClientsRoute._addFileChildren(AuthenticatedClientsRouteChildren)
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
+  AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
   AuthenticatedEmailTemplatesRoute: typeof AuthenticatedEmailTemplatesRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
@@ -197,7 +248,8 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedClientsRoute: AuthenticatedClientsRoute,
+  AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
+  AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,
   AuthenticatedEmailTemplatesRoute: AuthenticatedEmailTemplatesRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,

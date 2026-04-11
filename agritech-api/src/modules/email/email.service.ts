@@ -34,6 +34,27 @@ export class EmailService {
     });
   }
 
+  getRedactedConfig() {
+    const host = this.configService.get<string>('SMTP_HOST') || '';
+    const port = this.configService.get<string>('SMTP_PORT') || '1025';
+    const secure = this.configService.get<string>('SMTP_SECURE') === 'true';
+    const user = this.configService.get<string>('SMTP_USER') || '';
+    const pass = this.configService.get<string>('SMTP_PASS') || '';
+    const from = this.configService.get<string>('EMAIL_FROM') || 'noreply@agritech.com';
+    const enabled = this.configService.get<string>('EMAIL_ENABLED', 'true') === 'true';
+
+    return {
+      host,
+      port: parseInt(port),
+      secure,
+      user: user ? `${user.slice(0, 3)}***${user.includes('@') ? user.slice(user.indexOf('@')) : ''}` : '',
+      password_set: !!pass,
+      from,
+      enabled,
+      configured: this.isConfigured(),
+    };
+  }
+
   isConfigured(): boolean {
     const enabled = this.configService.get<string>('EMAIL_ENABLED', 'true') === 'true';
     if (!enabled) {
@@ -175,6 +196,118 @@ export class EmailService {
       message: 'This is a test email from the AgriTech platform.',
       date: new Date().toISOString(),
     });
+  }
+
+  /**
+   * Send a test email for any template type using sample placeholder data.
+   * Reads the template's variables from the DB and fills them with realistic sample values.
+   */
+  async sendTestByType(type: string, to: string): Promise<boolean> {
+    if (!this.isConfigured() || !this.databaseService) {
+      return false;
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const { data: template } = await client
+      .from('email_templates')
+      .select('subject, html_body, text_body, variables')
+      .is('organization_id', null)
+      .eq('type', type)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!template) {
+      this.logger.error(`No active template for type "${type}"`);
+      return false;
+    }
+
+    const vars: string[] = Array.isArray(template.variables) ? template.variables : [];
+    const context = this.buildSampleContext(vars);
+
+    try {
+      const compiledSubject = hbs.compile(template.subject)(context);
+      const compiledHtml = hbs.compile(template.html_body)(context);
+
+      await this.transporter.sendMail({
+        from: this.configService.get('EMAIL_FROM') || 'noreply@agritech.com',
+        to,
+        subject: `[TEST] ${compiledSubject}`,
+        html: compiledHtml,
+        text: template.text_body ? hbs.compile(template.text_body)(context) : undefined,
+      });
+
+      this.logger.log(`Test email sent (type: ${type}) to ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send test email (type: ${type}): ${error.message}`);
+      return false;
+    }
+  }
+
+  private buildSampleContext(variables: string[]): Record<string, string> {
+    const samples: Record<string, string> = {
+      firstName: 'Karim',
+      lastName: 'El Amrani',
+      email: 'karim@example.com',
+      tempPassword: 'Tmp@2026!',
+      organizationName: 'Domaine Al Baraka',
+      loginUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
+      dashboardUrl: this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online',
+      taskTitle: 'Taille des oliviers - Parcelle B3',
+      taskDescription: 'Taille de formation sur les arbres de 3 ans, rangées 12-18.',
+      taskId: '00000000-0000-0000-0000-000000000001',
+      taskUrl: `${this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online'}/tasks`,
+      dueDate: new Date(Date.now() + 86400000).toLocaleDateString('fr-FR'),
+      assignerName: 'Hassan Benali',
+      priority: 'Haute',
+      reminderType: 'task',
+      message: 'Ceci est un email de test depuis la plateforme AgroGina.',
+      date: new Date().toLocaleDateString('fr-FR'),
+      certificationType: 'GlobalG.A.P.',
+      certificationNumber: 'CERT-2026-001',
+      auditDate: new Date(Date.now() + 7 * 86400000).toLocaleDateString('fr-FR'),
+      productTitle: 'Huile d\'olive extra vierge - 5L',
+      buyerName: 'Fatima Zahra',
+      buyerEmail: 'fatima@cooperative.ma',
+      buyerPhone: '+212 6 12 34 56 78',
+      sellerName: 'Domaine Al Baraka',
+      requestedQuantity: '500',
+      unitOfMeasure: 'kg',
+      quoteRequestUrl: `${this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online'}/marketplace`,
+      quotedPrice: '45.00',
+      currency: 'MAD',
+      sellerResponse: 'Disponible immédiatement. Livraison sous 48h.',
+      validUntil: new Date(Date.now() + 14 * 86400000).toLocaleDateString('fr-FR'),
+      orderNumber: 'ORD-2026-0042',
+      totalAmount: '22,500.00',
+      shippingAddress: '123 Route de Meknès, Fès 30000',
+      orderUrl: `${this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online'}/marketplace/orders`,
+      status: 'shipped',
+      statusText: 'Expédiée',
+      statusMessage: 'Votre commande a été expédiée et est en route.',
+      invoiceNumber: 'FAC-2026-0018',
+      invoiceType: 'sales',
+      invoiceTypeLabel: 'Facture de Vente',
+      invoiceIntro: 'Veuillez trouver ci-joint votre facture.',
+      invoiceDate: new Date().toLocaleDateString('fr-FR'),
+      subtotal: '19,000.00',
+      taxAmount: '3,800.00',
+      grandTotal: '22,800.00',
+      partyName: 'Coopérative Al Amal',
+      invoiceUrl: `${this.configService.get('FRONTEND_URL') || 'https://agritech-dashboard.thebzlab.online'}/accounting`,
+      itemName: 'Engrais NPK 15-15-15',
+      itemId: '00000000-0000-0000-0000-000000000002',
+      currentQuantity: '12',
+      minimumStock: '50',
+      unit: 'kg',
+      shortageQuantity: '38',
+    };
+
+    const context: Record<string, string> = {};
+    for (const v of variables) {
+      context[v] = samples[v] ?? `{{${v}}}`;
+    }
+    return context;
   }
 
   /**

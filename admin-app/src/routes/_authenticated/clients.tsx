@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
@@ -14,6 +14,7 @@ import {
   Users,
   Sprout,
   CreditCard,
+  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
@@ -294,10 +295,18 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
 
   return (
     <>
-      <tr className="hover:bg-gray-50 cursor-pointer" onClick={onToggle}>
+      <tr className="group hover:bg-gray-50 cursor-pointer" onClick={onToggle}>
         <td className="px-4 py-3">
           <div>
-            <p className="text-sm font-medium text-gray-900">{org.name}</p>
+            <Link
+              to="/clients/$orgId"
+              params={{ orgId: org.id }}
+              onClick={(e) => e.stopPropagation()}
+              className="text-sm font-medium text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center gap-1"
+            >
+              {org.name}
+              <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100" />
+            </Link>
             <p className="text-xs text-gray-400">{org.account_type}</p>
           </div>
         </td>

@@ -5,7 +5,10 @@ from statistics import mean, pstdev
 from typing import Iterable
 
 import numpy as np
-from scipy.signal import savgol_filter
+try:
+    from scipy.signal import savgol_filter
+except ModuleNotFoundError:  # pragma: no cover - exercised in minimal envs
+    savgol_filter = None
 
 from ..types import IndexTimePoint, Step1Output
 
@@ -148,6 +151,11 @@ def _smooth_series(
         Polynomial order for the local fit (2 = quadratic, preserves
         phenological curvature).
     """
+    if savgol_filter is None:
+        # Minimal deployments may omit scipy. Keep raw observed values instead
+        # of failing the entire calibration module at import time.
+        return
+
     valid_indices = [i for i, p in enumerate(points) if not p.outlier]
     if len(valid_indices) < window:
         return

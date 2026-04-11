@@ -691,7 +691,20 @@
       "topRow": "Ligne supérieure",
       "middleRow": "Ligne centrale",
       "bottomRow": "Ligne inférieure",
-      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options"
+      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options",
+      "structureTitle": "Organisation du tableau de bord",
+      "structureIntro": "Le haut du tableau de bord est fixe : contexte ferme, indicateurs, tâches, équipes, comptabilité et analyses apparaissent toujours dans cet ordre.",
+      "fixedStripLabel": "Fixe — toujours affiché",
+      "fixedStripDetail": "Sélecteur de ferme · 4 indicateurs · Tâches et équipes · Comptabilité et analyses labo",
+      "optionalBlockTitle": "Widgets optionnels en dessous",
+      "optionalTwoCol": "Rangée large (2 colonnes sur grand écran)",
+      "optionalThreeCol": "Rangée en tuiles (3 colonnes sur grand écran)",
+      "toggleHint": "Appuyez sur une carte pour afficher ou masquer le widget sur le tableau de bord.",
+      "previewFixed": "Disposition fixe",
+      "previewOptional": "Vos widgets optionnels",
+      "legacyBottomNote": "Certains blocs enregistrés ne sont pas encore affichés sur le tableau de bord et sont ignorés : {{keys}}",
+      "toggleOn": "Affiché",
+      "toggleOff": "Masqué"
     },
     "layoutOptions": {
       "soil": "Données du sol",
@@ -708,7 +721,8 @@
     "preview": {
       "title": "Aperçu de la disposition"
     },
-    "save": {
+    "save": "Enregistrer",
+    "saveResult": {
       "success": "Paramètres sauvegardés avec succès",
       "failed": "Erreur lors de la sauvegarde des paramètres",
       "failedDescription": "Une erreur s'est produite lors de la sauvegarde des paramètres."
@@ -1941,6 +1955,11 @@
       "notFound": "Organisation non trouvée",
       "loadError": "Erreur lors du chargement des données de l'organisation",
       "saveError": "Erreur lors de la sauvegarde des modifications"
+    },
+    "currency": {
+      "label": "Devise",
+      "placeholder": "Sélectionner une devise",
+      "helper": "La devise sera utilisée pour tous les montants financiers (charges, factures, etc.)"
     }
   },
   "subscription": {

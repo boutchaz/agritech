@@ -18,7 +18,7 @@ function AiSettingsPage() {
   const { data: quota, isLoading } = useAiQuota(currentOrganization?.id || null);
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
       <div>
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Brain className="w-6 h-6" />

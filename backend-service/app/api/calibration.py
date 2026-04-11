@@ -38,23 +38,24 @@ VALID_CROP_TYPES = {
 DEFAULT_CROP_TYPE = "olivier"
 
 
-# TODO: Replace fallback with proper crop/system expansion once all types are defined
 def _normalize_crop_type(crop_type: str | None) -> str:
-    """Accept any crop_type — map unknown ones to default with a log warning."""
+    """Normalize and validate crop_type against supported referentials."""
     if not crop_type or not crop_type.strip():
-        logger.warning(
-            "Empty crop_type received, defaulting to '%s'", DEFAULT_CROP_TYPE
-        )
-        return DEFAULT_CROP_TYPE
-    if crop_type in VALID_CROP_TYPES:
-        return crop_type
+        raise HTTPException(status_code=400, detail="crop_type is required")
+
+    normalized = crop_type.strip().lower()
+    if normalized in VALID_CROP_TYPES:
+        return normalized
+
     logger.warning(
-        "Unknown crop_type '%s' not in %s — defaulting to '%s'",
+        "Unsupported crop_type '%s' not in %s",
         crop_type,
         VALID_CROP_TYPES,
-        DEFAULT_CROP_TYPE,
     )
-    return DEFAULT_CROP_TYPE
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported crop_type '{crop_type}'",
+    )
 
 
 GENERIC_PHENOLOGY: list[PhenologyDefinition] = [

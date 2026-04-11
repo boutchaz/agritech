@@ -194,3 +194,36 @@ def test_step5_flags_below_referential_alerte_when_thresholds_present() -> None:
     assert len(below_alerte) >= 1
     assert below_alerte[0].index_name == "NDVI"
     assert below_alerte[0].value < 0.2
+
+
+def test_step5_ignores_interpolated_points_when_detecting_anomalies() -> None:
+    points = []
+    start = date(2024, 1, 1)
+    for idx, value in enumerate([0.6, 0.61, 0.62, 0.63, 0.64, 0.2, 0.65]):
+        points.append(
+            {
+                "date": (start + timedelta(days=15 * idx)).isoformat(),
+                "value": value,
+                "outlier": False,
+                "interpolated": idx == 5,
+            }
+        )
+
+    step1 = Step1Output.model_validate(
+        {
+            "index_time_series": {"NDVI": points},
+            "cloud_coverage_mean": 10,
+            "filtered_image_count": 0,
+            "outlier_count": 0,
+            "interpolated_dates": [(start + timedelta(days=15 * 5)).isoformat()],
+            "raster_paths": {"NDVI": []},
+        }
+    )
+
+    output = detect_anomalies(
+        satellite=step1,
+        weather=_build_step2_events(),
+        phenology=_build_step4_stub(),
+    )
+
+    assert all(item.date.isoformat() != (start + timedelta(days=15 * 5)).isoformat() for item in output.anomalies)

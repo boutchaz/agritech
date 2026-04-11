@@ -170,7 +170,7 @@ const AppContent = () => {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: isLiveMode ? Activity : Home, label: isLiveMode ? t('liveDashboard.title') : t('nav.dashboard'), isActive: true }
         ]}
         title={isLiveMode ? t('liveDashboard.title') : `${t('dashboard.title')}, ${user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''}`}

@@ -30,9 +30,12 @@ def _rolling_median(
     if not points:
         return 0.0
 
-    valid = [p for p in points if not p.outlier]
+    observed = [p for p in points if not p.interpolated]
+    valid = [p for p in observed if not p.outlier]
     if not valid:
-        valid = list(points)
+        valid = observed
+    if not valid:
+        return 0.0
 
     sorted_pts = sorted(valid, key=lambda item: item.date)[-window:]
     return float(median(p.value for p in sorted_pts))

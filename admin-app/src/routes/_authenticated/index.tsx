@@ -1,9 +1,27 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Leaf, ArrowRight, RefreshCw, Plus, X } from 'lucide-react';
-import { referentialApi, getCropLabel } from '@/lib/referentiels';
+import {
+  Leaf,
+  ArrowRight,
+  RefreshCw,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronRight as ChevronRightIcon,
+  Upload,
+  GitCompare,
+  Eye,
+  EyeOff,
+  Database,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react';
+import { referentialApi, getCropLabel, refDataApi } from '@/lib/referentiels';
+import type { ReferenceDataTable, ImportResult, DiffResult } from '@/lib/referentiels';
 import { toast } from 'sonner';
+import clsx from 'clsx';
 
 function ReferentielsDashboard() {
   const queryClient = useQueryClient();
@@ -192,6 +210,345 @@ function ReferentielsDashboard() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* Reference Data Management */}
+      <RefDataManagement />
+    </div>
+  );
+}
+
+// --- Reference Data Management ---
+
+const REF_TABLES: { value: ReferenceDataTable; label: string }[] = [
+  { value: 'account_templates', label: 'Account Templates' },
+  { value: 'account_mappings', label: 'Account Mappings' },
+  { value: 'modules', label: 'Modules' },
+  { value: 'currencies', label: 'Currencies' },
+  { value: 'roles', label: 'Roles' },
+  { value: 'work_units', label: 'Work Units' },
+];
+
+function RefDataManagement() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedTable, setSelectedTable] = useState<ReferenceDataTable>('account_templates');
+  const [activePanel, setActivePanel] = useState<'import' | 'diff' | null>(null);
+
+  // Import state
+  const [importFile, setImportFile] = useState<Record<string, unknown>[] | null>(null);
+  const [importFileName, setImportFileName] = useState('');
+  const [dryRunResult, setDryRunResult] = useState<ImportResult | null>(null);
+  const [updateExisting, setUpdateExisting] = useState(false);
+
+  // Diff state
+  const [diffResult, setDiffResult] = useState<DiffResult | null>(null);
+
+  const importMutation = useMutation({
+    mutationFn: ({ dryRun }: { dryRun: boolean }) =>
+      refDataApi.import(selectedTable, importFile!, { dryRun, updateExisting }),
+    onSuccess: (result, { dryRun }) => {
+      if (dryRun) {
+        setDryRunResult(result);
+        toast.success('Dry run completed — review results below');
+      } else {
+        toast.success(`Import completed: ${result.recordsCreated} created, ${result.recordsUpdated} updated`);
+        setImportFile(null);
+        setImportFileName('');
+        setDryRunResult(null);
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const diffMutation = useMutation({
+    mutationFn: () => refDataApi.diff(selectedTable),
+    onSuccess: (result) => {
+      setDiffResult(result);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const publishMutation = useMutation({
+    mutationFn: ({ ids, unpublish }: { ids: string[]; unpublish: boolean }) =>
+      refDataApi.publish(selectedTable, ids, unpublish),
+    onSuccess: (result) => {
+      if (result.publishedCount) toast.success(`${result.publishedCount} records published`);
+      if (result.unpublishedCount) toast.success(`${result.unpublishedCount} records unpublished`);
+      if (result.errors.length) toast.error(`${result.errors.length} errors`);
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const rows = Array.isArray(json) ? json : json.rows ?? json.data ?? [json];
+      setImportFile(rows);
+      setImportFileName(file.name);
+      setDryRunResult(null);
+    } catch {
+      toast.error('Invalid JSON file');
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <div className="mt-8">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRightIcon className="h-4 w-4 text-gray-400" />}
+        <Database className="h-4 w-4 text-gray-500" />
+        <span className="text-sm font-semibold text-gray-700">Reference Data Management</span>
+        <span className="text-xs text-gray-400 ml-2">Import, diff & publish reference tables</span>
+      </button>
+
+      {isOpen && (
+        <div className="mt-3 rounded-lg border border-gray-200 bg-white p-5 space-y-4">
+          {/* Table selector */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <label className="text-sm text-gray-500 shrink-0">Table:</label>
+            <select
+              value={selectedTable}
+              onChange={(e) => {
+                setSelectedTable(e.target.value as ReferenceDataTable);
+                setDiffResult(null);
+                setDryRunResult(null);
+              }}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              {REF_TABLES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+
+            <div className="flex gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={() => setActivePanel(activePanel === 'import' ? null : 'import')}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+                  activePanel === 'import'
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50',
+                )}
+              >
+                <Upload className="h-3.5 w-3.5" /> Import
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActivePanel(activePanel === 'diff' ? null : 'diff');
+                  if (activePanel !== 'diff') diffMutation.mutate();
+                }}
+                className={clsx(
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+                  activePanel === 'diff'
+                    ? 'bg-emerald-600 text-white'
+                    : 'border border-gray-300 text-gray-600 hover:bg-gray-50',
+                )}
+              >
+                <GitCompare className="h-3.5 w-3.5" /> Diff
+              </button>
+            </div>
+          </div>
+
+          {/* Import Panel */}
+          {activePanel === 'import' && (
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <h4 className="text-sm font-medium text-gray-700">Import Data</h4>
+
+              {/* File picker */}
+              <div>
+                <label className="block">
+                  <span className="sr-only">Choose JSON file</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileSelect}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
+                  />
+                </label>
+                {importFileName && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Loaded: <span className="font-medium">{importFileName}</span> ({importFile?.length ?? 0} rows)
+                  </p>
+                )}
+              </div>
+
+              {/* Options */}
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={updateExisting}
+                  onChange={(e) => setUpdateExisting(e.target.checked)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                Update existing records
+              </label>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => importMutation.mutate({ dryRun: true })}
+                  disabled={!importFile || importMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  {importMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                  Dry Run
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Import ${importFile?.length} rows into ${selectedTable}?`)) {
+                      importMutation.mutate({ dryRun: false });
+                    }
+                  }}
+                  disabled={!importFile || importMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {importMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  Import
+                </button>
+              </div>
+
+              {/* Dry run result */}
+              {dryRunResult && (
+                <div className={clsx(
+                  'rounded-lg border p-3 text-sm',
+                  dryRunResult.errors.length ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50',
+                )}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {dryRunResult.errors.length ? (
+                      <AlertCircle className="h-4 w-4 text-red-600" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    )}
+                    <span className="font-medium">
+                      {dryRunResult.errors.length ? 'Issues found' : 'Dry run passed'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    <span>Processed: {dryRunResult.recordsProcessed}</span>
+                    <span>Created: {dryRunResult.recordsCreated}</span>
+                    <span>Updated: {dryRunResult.recordsUpdated}</span>
+                    <span>Skipped: {dryRunResult.recordsSkipped}</span>
+                  </div>
+                  {dryRunResult.errors.length > 0 && (
+                    <ul className="mt-2 space-y-1 text-xs text-red-700">
+                      {dryRunResult.errors.slice(0, 10).map((e, i) => (
+                        <li key={i}>Row {e.row}: {e.error}</li>
+                      ))}
+                      {dryRunResult.errors.length > 10 && (
+                        <li>...and {dryRunResult.errors.length - 10} more</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Diff Panel */}
+          {activePanel === 'diff' && (
+            <div className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-gray-700">Version Diff</h4>
+                <button
+                  type="button"
+                  onClick={() => diffMutation.mutate()}
+                  disabled={diffMutation.isPending}
+                  className="text-xs text-emerald-600 hover:text-emerald-700"
+                >
+                  {diffMutation.isPending ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+
+              {diffMutation.isPending ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                </div>
+              ) : diffResult ? (
+                <div>
+                  <div className="flex items-center gap-4 mb-3 text-xs text-gray-500">
+                    <span>v{diffResult.fromVersion} &rarr; v{diffResult.toVersion}</span>
+                    <span className="text-emerald-600">+{diffResult.added} added</span>
+                    <span className="text-amber-600">~{diffResult.modified} modified</span>
+                    <span className="text-red-600">-{diffResult.removed} removed</span>
+                  </div>
+
+                  {diffResult.changes.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-4 text-center">No differences found</p>
+                  ) : (
+                    <div className="max-h-60 overflow-y-auto space-y-1">
+                      {diffResult.changes.slice(0, 50).map((change, i) => (
+                        <div
+                          key={i}
+                          className={clsx(
+                            'rounded px-3 py-1.5 text-xs',
+                            change.type === 'added' && 'bg-emerald-50 text-emerald-800',
+                            change.type === 'modified' && 'bg-amber-50 text-amber-800',
+                            change.type === 'removed' && 'bg-red-50 text-red-800',
+                          )}
+                        >
+                          <span className="font-mono font-medium">{change.id}</span>
+                          {change.field && <span className="ml-2 text-gray-500">.{change.field}</span>}
+                          {change.type === 'modified' && (
+                            <span className="ml-2">
+                              {String(change.oldValue)} &rarr; {String(change.newValue)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Publish actions from diff */}
+                  {diffResult.changes.length > 0 && (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ids = diffResult.changes
+                            .filter((c) => c.type !== 'removed')
+                            .map((c) => c.id);
+                          if (ids.length && confirm(`Publish ${ids.length} records?`)) {
+                            publishMutation.mutate({ ids, unpublish: false });
+                          }
+                        }}
+                        disabled={publishMutation.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Publish All Changes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ids = diffResult.changes
+                            .filter((c) => c.type !== 'removed')
+                            .map((c) => c.id);
+                          if (ids.length && confirm(`Unpublish ${ids.length} records?`)) {
+                            publishMutation.mutate({ ids, unpublish: true });
+                          }
+                        }}
+                        disabled={publishMutation.isPending}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        <EyeOff className="h-3.5 w-3.5" /> Unpublish
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
     </div>
