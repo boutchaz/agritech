@@ -1,4 +1,9 @@
-import { createRootRoute, Outlet, useLocation, useRouterState } from '@tanstack/react-router'
+import {
+  createRootRoute,
+  Outlet,
+  useLocation,
+  useRouterState,
+} from '@tanstack/react-router'
 import { Toaster } from 'sonner'
 import { HotkeysProvider } from '@tanstack/react-hotkeys'
 import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
@@ -10,6 +15,7 @@ import { ServiceWorkerUpdate } from '../components/ServiceWorkerUpdate'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { NotFoundPage } from '../components/NotFoundPage'
 import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from 'react'
+import { cn } from '@/lib/utils'
 
 /**
  * Wrapper that catches errors from lazy-loaded components.
@@ -149,9 +155,28 @@ function FallbackShell() {
  * Inner shell extracted to keep the JSX tree readable.
  */
 function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
+  const matches = useRouterState({ select: (s) => s.matches })
+  const isAuthenticatedApp = matches.some(
+    (m) => typeof m.routeId === 'string' && m.routeId.startsWith('/_authenticated'),
+  )
+  /** Public / onboarding: outer shell scrolls. Logged-in app: single scroll on <main> so mobile nav padding works. */
+  const allowOuterScroll = isOnboardingRoute || !isAuthenticatedApp
+
   return (
-    <div className="h-screen bg-slate-50 dark:bg-slate-950 overflow-y-auto">
-      <Outlet />
+    <div
+      className={cn(
+        'flex h-screen min-h-0 flex-col bg-slate-50 dark:bg-slate-950',
+        allowOuterScroll ? 'overflow-y-auto' : 'overflow-hidden',
+      )}
+    >
+      <div
+        className={cn(
+          'min-h-0 w-full',
+          allowOuterScroll ? '' : 'flex flex-1 flex-col overflow-hidden',
+        )}
+      >
+        <Outlet />
+      </div>
       <OfflineIndicator />
       <ServiceWorkerUpdate />
       {!isOnboardingRoute && (

@@ -417,9 +417,9 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     ));
 
   return (
-    <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
-      {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
-      <TooltipProvider delayDuration={200}>
+    <TooltipProvider delayDuration={200}>
+      <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
+        {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
         <div
           className={cn(
             "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
@@ -522,11 +522,10 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             </Button>
           </div>
         </div>
-      </TooltipProvider>
 
-      {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
+        {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
       <div
-        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 pb-app-shell-nested-scroll scroll-pb-app-shell-nested-scroll dark:bg-slate-900/30"
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[calc(4rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))] md:pb-0 md:scroll-pb-0"
         data-settings-content-scroll
       >
         {/* Mobile section title bar */}
@@ -615,7 +614,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 };
 

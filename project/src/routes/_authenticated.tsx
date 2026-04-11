@@ -1,5 +1,6 @@
 import { createFileRoute, Outlet, redirect } from '@tanstack/react-router'
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
 import SubscriptionRequired from '../components/SubscriptionRequired'
@@ -134,10 +135,13 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div className={isDarkMode ? 'dark' : ''} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div
+      className={cn(isDarkMode ? 'dark' : '', 'flex min-h-0 flex-1 flex-col')}
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
       <div
         data-authenticated-app
-        className="h-dvh min-h-0 min-w-0 bg-slate-100 dark:bg-slate-950 overflow-hidden"
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-100 dark:bg-slate-950"
       >
         <Sidebar
           modules={modules}
@@ -148,7 +152,7 @@ function AuthenticatedLayout() {
         />
         {/* Main content with margin for fixed sidebar (desktop only) */}
         <div
-          className="flex min-h-0 min-w-0 flex-col h-dvh transition-all duration-300 ease-in-out"
+          className="flex min-h-0 min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out"
           style={sidebarStyle}
         >
           <LegacyUserBanner />
@@ -173,7 +177,12 @@ function AuthenticatedLayout() {
           </header> */}
           <main
             data-main-scroll
-            className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80 pb-app-shell-main scroll-pb-app-shell-main"
+            className={cn(
+              'flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain bg-slate-50/90 dark:bg-slate-900/80',
+              // Explicit values (not only CSS vars) so padding always applies to this scrollport.
+              'max-md:pb-[calc(4rem+env(safe-area-inset-bottom,0px))] max-md:[scroll-padding-bottom:calc(4rem+env(safe-area-inset-bottom,0px))]',
+              'md:pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] md:[scroll-padding-bottom:max(0.5rem,env(safe-area-inset-bottom,0px))]',
+            )}
           >
             <ErrorBoundary>
               {/* No flex-1: let content define height so main scrolls on tablet/WebKit (flex-1 + min-h-0 traps overflow). */}

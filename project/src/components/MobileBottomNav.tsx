@@ -228,18 +228,30 @@ const MobileBottomNav = () => {
     setIsMoreOpen(false);
   };
 
+  const normalizePath = (path: string) => path.replace(/\/$/, "") || "/";
+
   const isActive = (item: NavItem | MoreMenuItem) => {
-    if (
-      item.id === "dashboard" &&
-      (location.pathname === "/" || location.pathname === "/dashboard")
-    ) {
-      return true;
+    const p = normalizePath(location.pathname);
+    if (item.id === "dashboard") {
+      return p === "/" || p === "/dashboard" || p === "/live-dashboard";
     }
     if (item.id === "settings") {
-      const p = location.pathname.replace(/\/$/, "") || "/";
       return p === "/settings" || p.startsWith("/settings/");
     }
-    return location.pathname.startsWith(item.path);
+    // "More" shortcuts: treat whole module prefix as active (paths are entry URLs, not full trees).
+    if (item.id === "marketplace") {
+      return p.startsWith("/marketplace");
+    }
+    if (item.id === "billing") {
+      return (
+        p.startsWith("/accounting/quotes") ||
+        p.startsWith("/accounting/sales-orders") ||
+        p.startsWith("/accounting/purchase-orders")
+      );
+    }
+    const base = normalizePath(item.path);
+    // Exact match or child segment (avoids "/stock" matching "/stocks" — require "/stock/…")
+    return p === base || p.startsWith(`${base}/`);
   };
 
   const isMoreActive = moreMenuItems.some((item) => isActive(item));
@@ -270,8 +282,8 @@ const MobileBottomNav = () => {
                   "transition-colors duration-200",
                   "pb-1.5",
                   active
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-slate-500 dark:text-slate-400",
+                    ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/55 font-semibold shadow-[inset_0_0_0_1px_rgb(167_243_208)] dark:shadow-[inset_0_0_0_1px_rgb(6_78_59)]"
+                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50/80 dark:hover:bg-slate-800/40",
                 )}
                 aria-label={getLabel(item.labelKey, item.fallback)}
                 aria-current={active ? "page" : undefined}
@@ -288,7 +300,10 @@ const MobileBottomNav = () => {
                   {getLabel(item.labelKey, item.fallback)}
                 </span>
                 {active && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+                  <span
+                    className="pointer-events-none absolute bottom-0 left-1/2 h-1 w-10 -translate-x-1/2 rounded-t-full bg-emerald-600 dark:bg-emerald-400"
+                    aria-hidden
+                  />
                 )}
               </Button>
             );
@@ -303,9 +318,11 @@ const MobileBottomNav = () => {
               "[&_svg]:!h-5 [&_svg]:!w-5 [&_svg]:shrink-0",
               "relative flex min-h-0 min-w-0 flex-1 basis-0 flex-col items-center justify-center overflow-hidden pb-1.5",
               "transition-colors duration-200",
-              isMoreActive || isMoreOpen
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-slate-500 dark:text-slate-400",
+              isMoreActive
+                ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/55 font-semibold shadow-[inset_0_0_0_1px_rgb(167_243_208)] dark:shadow-[inset_0_0_0_1px_rgb(6_78_59)]"
+                : isMoreOpen
+                  ? "text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800/80"
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50/80 dark:hover:bg-slate-800/40",
             )}
             aria-label={t("mobileNav.more", "More")}
           >
@@ -316,7 +333,10 @@ const MobileBottomNav = () => {
               {t("mobileNav.more", "More")}
             </span>
             {isMoreActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-emerald-600 dark:bg-emerald-400 rounded-full" />
+              <span
+                className="pointer-events-none absolute bottom-0 left-1/2 h-1 w-10 -translate-x-1/2 rounded-t-full bg-emerald-600 dark:bg-emerald-400"
+                aria-hidden
+              />
             )}
           </Button>
         </div>
