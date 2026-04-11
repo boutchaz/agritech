@@ -340,7 +340,7 @@ class EarthEngineService:
             start_dt = datetime.fromisoformat(start_date)
             end_dt = datetime.fromisoformat(end_date)
 
-            if start_dt >= end_dt:
+            if start_dt > end_dt:
                 raise ValueError("Start date must be before end date")
 
             # Allow future dates for testing/demo purposes
