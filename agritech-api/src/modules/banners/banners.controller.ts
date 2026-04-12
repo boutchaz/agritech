@@ -25,7 +25,7 @@ import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('banners')
 @ApiBearerAuth()
-@Controller('banners')
+@Controller('admin/banners')
 @UseGuards(JwtAuthGuard, OrganizationGuard)
 export class BannersController {
   constructor(private readonly bannersService: BannersService) {}

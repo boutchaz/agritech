@@ -24,6 +24,7 @@ const ALPHA2_TO_NUMERIC: Record<string, string> = {
   MX: '484', NO: '578', NZ: '554', PA: '591', PR: '630', PT: '620',
   PY: '600', RS: '688', SV: '222', SM: '674', TR: '792', UA: '804',
   US: '840', UY: '858', XK: '-99', ZA: '710',
+  EH: '732', // Western Sahara — displayed as part of Morocco
   // EU countries (reference image)
   DE: '276', NL: '528', BE: '056', AT: '040', PL: '616', CZ: '203',
   SK: '703', HU: '348', RO: '642', BG: '100', HR: '191', SI: '705',
@@ -56,9 +57,12 @@ const SupportedRegionsSection = ({ className }: SupportedRegionsSectionProps) =>
 
   const supportedNumericCodes = useMemo(() => {
     if (!countries) return new Set<string>();
-    return new Set(
+    const codes = new Set(
       countries.map((c) => ALPHA2_TO_NUMERIC[c.country_code]).filter(Boolean),
     );
+    // Morocco includes Western Sahara
+    if (codes.has('504')) codes.add('732');
+    return codes;
   }, [countries]);
 
   const groupedByRegion = useMemo(() => {
