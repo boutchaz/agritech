@@ -66,10 +66,8 @@ export class PolarProductsService {
   }
 
   async listProducts(): Promise<PolarProductSummary[]> {
-    const { polar, organizationId } = this.ensureConfigured();
-    const response = await polar.products.list({
-      organizationId,
-    });
+    const { polar } = this.ensureConfigured();
+    const response = await polar.products.list({});
 
     const items = response.result?.items || [];
 
@@ -118,9 +116,8 @@ export class PolarProductsService {
       });
     }
 
-    const { polar, organizationId } = this.ensureConfigured();
+    const { polar } = this.ensureConfigured();
     const product = await polar.products.create({
-      organizationId,
       name: dto.name,
       description: dto.description || null,
       metadata,
