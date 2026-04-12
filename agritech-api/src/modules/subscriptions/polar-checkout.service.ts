@@ -114,6 +114,11 @@ export class PolarCheckoutService {
 
   /**
    * Create a Polar checkout session via SDK.
+   *
+   * When `dynamicPriceCents` is provided, the checkout overrides the catalog
+   * price with an ad-hoc fixed price computed from the subscription model
+   * (modules × size multiplier + degressive ha tiers − discount).
+   *
    * Returns checkout URL or null if SDK not available.
    */
   async createCheckoutSession(params: {
@@ -121,15 +126,33 @@ export class PolarCheckoutService {
     successUrl?: string;
     metadata?: Record<string, string>;
     customerEmail?: string;
+    /** Computed price in cents to override catalog price */
+    dynamicPriceCents?: number;
+    /** Currency for the dynamic price (default: usd) */
+    dynamicPriceCurrency?: string;
   }): Promise<{ checkoutUrl: string; checkoutId: string } | null> {
     if (!this.polar) return null;
 
     try {
+      const prices =
+        params.dynamicPriceCents !== undefined
+          ? {
+              [params.productId]: [
+                {
+                  amountType: 'fixed' as const,
+                  priceAmount: params.dynamicPriceCents,
+                  priceCurrency: params.dynamicPriceCurrency || 'usd',
+                },
+              ],
+            }
+          : undefined;
+
       const checkout = await this.polar.checkouts.create({
         products: [params.productId],
         successUrl: params.successUrl || undefined,
         metadata: params.metadata,
         customerEmail: params.customerEmail || undefined,
+        prices: prices as any,
       });
 
       return {

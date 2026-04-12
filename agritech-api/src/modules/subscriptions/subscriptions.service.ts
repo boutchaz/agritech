@@ -242,10 +242,12 @@ export class SubscriptionsService {
         size_multiplier: String(quote.sizeMultiplier),
       };
 
+      const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
       const checkoutResult = await this.createPolarCheckoutUrl(
         productId,
         successUrl,
         metadata,
+        dynamicPriceCents,
       );
 
       const { data: existingSubscription } = await this.supabaseAdmin
@@ -364,10 +366,12 @@ export class SubscriptionsService {
       contracted_hectares: String(contractedHectares),
     };
 
+    const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
     const checkoutResult = await this.createPolarCheckoutUrl(
       productId,
       successUrl,
       metadata,
+      dynamicPriceCents,
     );
 
     const { data: existingSubscription } = await this.supabaseAdmin
@@ -1064,24 +1068,31 @@ export class SubscriptionsService {
 
   /**
    * Create a Polar checkout URL using SDK (preferred) or manual URL fallback.
+   *
+   * When `dynamicPriceCents` is provided, the checkout session overrides the
+   * catalog price with the exact amount computed from the subscription model
+   * (modules, hectares, multiplier, discount). This lets a single Polar
+   * product serve every farm-size / module combination.
    */
   private async createPolarCheckoutUrl(
     productId: string,
     successUrl: string | undefined,
     metadata: Record<string, string>,
+    dynamicPriceCents?: number,
   ): Promise<string> {
-    // Try SDK checkout session first
+    // Try SDK checkout session first (supports dynamic pricing)
     const session = await this.polarCheckout.createCheckoutSession({
       productId,
       successUrl,
       metadata,
+      dynamicPriceCents,
     });
 
     if (session) {
       return session.checkoutUrl;
     }
 
-    // Fallback to manual URL construction
+    // Fallback to manual URL construction (no dynamic pricing support)
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
     const cancelUrl = frontendUrl
       ? `${frontendUrl}/settings/subscription`
