@@ -2,8 +2,9 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AiUsageBar } from '@/components/settings/AiUsageBar';
+import { AiTokenUsage } from '@/components/settings/AiTokenUsage';
 import { AIProvidersSettings } from '@/components/settings/AIProvidersSettings';
-import { useAiQuota } from '@/hooks/useAiQuota';
+import { useAiQuota, useAiUsageLog } from '@/hooks/useAiQuota';
 import { useAuth } from '@/hooks/useAuth';
 import { Brain } from 'lucide-react';
 import { SettingsPageSkeleton } from '@/components/ui/page-skeletons';
@@ -15,7 +16,9 @@ export const Route = createFileRoute('/_authenticated/(settings)/settings/ai')({
 function AiSettingsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
-  const { data: quota, isLoading } = useAiQuota(currentOrganization?.id || null);
+  const orgId = currentOrganization?.id || null;
+  const { data: quota, isLoading } = useAiQuota(orgId);
+  const { data: usageLog, isLoading: isLoadingLog } = useAiUsageLog(orgId);
 
   return (
     <div className="min-w-0 max-w-full space-y-6 overflow-x-hidden">
@@ -47,6 +50,13 @@ function AiSettingsPage() {
             />
           </CardContent>
         </Card>
+      ) : null}
+
+      {/* Token Usage Details */}
+      {isLoadingLog ? (
+        <SettingsPageSkeleton />
+      ) : usageLog ? (
+        <AiTokenUsage usageLog={usageLog} />
       ) : null}
 
       {/* AI Provider Configuration */}

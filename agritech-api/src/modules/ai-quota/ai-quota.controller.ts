@@ -21,4 +21,15 @@ export class AiQuotaController {
     const organizationId = req.headers['x-organization-id'];
     return this.aiQuotaService.getQuotaStatus(organizationId);
   }
+
+  @Get('usage-log')
+  @ApiOperation({ summary: 'Get detailed AI usage log with token aggregates' })
+  @ApiResponse({
+    status: 200,
+    description: 'Daily token aggregates and recent usage entries for current billing period',
+  })
+  async getUsageLog(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.aiQuotaService.getUsageLog(organizationId);
+  }
 }

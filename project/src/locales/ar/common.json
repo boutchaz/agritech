@@ -1659,6 +1659,8 @@
       },
       "banners": "اللافتات",
       "bannersDescription": "إعلانات داخل التطبيق",
+      "billing": "الفوترة والفواتير",
+      "billingDescription": "إدارة الفوترة وعرض الفواتير",
       "changelog": "سجل التغييرات",
       "changelogDescription": "تاريخ تغييرات المنتج"
     }

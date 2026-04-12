@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -236,6 +237,30 @@ export class AdminController {
     @Request() req: any,
   ) {
     return this.adminService.createSubscription(orgId, body, req.user.id);
+  }
+
+  // ============================================
+  // Banners (cross-org admin management)
+  // ============================================
+
+  @Get('banners')
+  async getAllBanners() {
+    return this.adminService.getAllBanners();
+  }
+
+  @Post('banners')
+  async createBanner(@Body() body: any, @Request() req: any) {
+    return this.adminService.createBanner(body, req.user.id);
+  }
+
+  @Patch('banners/:id')
+  async updateBanner(@Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateBanner(id, body);
+  }
+
+  @Delete('banners/:id')
+  async deleteBanner(@Param('id') id: string) {
+    return this.adminService.deleteBanner(id);
   }
 
   // ============================================

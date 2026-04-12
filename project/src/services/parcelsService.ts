@@ -180,6 +180,7 @@ class ParcelsService {
       '/api/v1/parcels',
       {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parcel_id: parcelId }),
       },
       organizationId

@@ -909,4 +909,57 @@ export class AdminService {
 
     return { success: true, subscriptionId: data.id };
   }
+
+  // ============================================
+  // Banner Admin Methods (cross-org)
+  // ============================================
+
+  async getAllBanners() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createBanner(dto: any, userId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .insert({ ...dto, created_by: userId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateBanner(id: string, dto: any) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .update(dto)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new NotFoundException(`Banner ${id} not found`);
+    return data;
+  }
+
+  async deleteBanner(id: string) {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('banners')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true };
+  }
 }

@@ -1669,6 +1669,8 @@
       "legalDescription": "Terms of service and privacy policy",
       "banners": "Banners",
       "bannersDescription": "In-app announcements",
+      "billing": "Billing & Invoices",
+      "billingDescription": "Manage billing and view invoices",
       "changelog": "Changelog",
       "changelogDescription": "Product change history",
       "sections": {
