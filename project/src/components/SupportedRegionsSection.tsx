@@ -149,19 +149,18 @@ const SupportedRegionsSection = ({ className }: SupportedRegionsSectionProps) =>
                     geographies.map((geo) => {
                       const numericCode = geo.id;
                       const isSupported = supportedNumericCodes.has(numericCode);
-                      const isMoroccoRegion = numericCode === '732' && isSupported;
+                      const isWesternSahara = numericCode === '732';
                       return (
                         <Geography
                           key={geo.rsmKey}
                           geography={geo}
                           fill={isSupported ? '#34d399' : '#e2e8f0'}
-                          stroke={isMoroccoRegion ? '#34d399' : '#fff'}
-                          strokeWidth={0.5}
+                          stroke={isWesternSahara ? 'none' : '#fff'}
+                          strokeWidth={isWesternSahara ? 0 : 0.5}
                           style={{
                             default: { outline: 'none' },
                             hover: {
                               fill: isSupported ? '#10b981' : '#cbd5e1',
-                              stroke: isMoroccoRegion ? '#10b981' : '#fff',
                               outline: 'none',
                             },
                             pressed: { outline: 'none' },
