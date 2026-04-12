@@ -14,7 +14,7 @@ interface ImportWizardProps {
 }
 
 export const ImportWizard = ({ onComplete, onCancel }: ImportWizardProps) => {
-  const { t } = useTranslation();
+  useTranslation();
   const [step, setStep] = useState<Step>('select');
   const [bundlePath, setBundlePath] = useState('');
   const [passphrase, setPassphrase] = useState('');
