@@ -170,7 +170,7 @@ export class PolarProductsService {
           continue;
         }
 
-        const quote = this.pricingService.createModularQuote({
+        const quote = await this.pricingService.createModularQuoteAsync({
           selectedModules: modules,
           contractedHectares: representativeHa,
           billingCycle: cycle,
