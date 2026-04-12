@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "generate-routes": "tsr generate",
+    "build": "tsr generate && tsc && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@tanstack/router-cli": "^1.166.30",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
