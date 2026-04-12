@@ -242,7 +242,7 @@ export class SubscriptionsService {
         size_multiplier: String(quote.sizeMultiplier),
       };
 
-      const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+      const dynamicPriceCents = this.madToUsdCents(quote.cycleAmountTtc);
       const checkoutResult = await this.createPolarCheckoutUrl(
         productId,
         successUrl,
@@ -366,7 +366,7 @@ export class SubscriptionsService {
       contracted_hectares: String(contractedHectares),
     };
 
-    const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+    const dynamicPriceCents = this.madToUsdCents(quote.cycleAmountTtc);
     const checkoutResult = await this.createPolarCheckoutUrl(
       productId,
       successUrl,
@@ -1064,6 +1064,15 @@ export class SubscriptionsService {
     return this.configService.get<string>(
       `POLAR_${legacyPrefix}_SEMIANNUAL_PRODUCT_ID`,
     );
+  }
+
+  /**
+   * Convert MAD amount to USD cents for Polar checkout.
+   * Rate configurable via MAD_TO_USD_RATE env var (default: 0.098 ≈ 1 USD = 10.2 MAD).
+   */
+  private madToUsdCents(madAmount: number): number {
+    const rate = Number(this.configService.get<string>('MAD_TO_USD_RATE')) || 0.098;
+    return Math.round(madAmount * rate * 100);
   }
 
   /**

@@ -58,6 +58,15 @@ export class PolarProductsService {
     });
   }
 
+  /**
+   * Convert MAD amount to USD cents for Polar.
+   * Rate configurable via MAD_TO_USD_RATE env var (default: 0.098 ≈ 1 USD = 10.2 MAD).
+   */
+  private madToUsdCents(madAmount: number): number {
+    const rate = Number(this.configService.get<string>('MAD_TO_USD_RATE')) || 0.098;
+    return Math.round(madAmount * rate * 100);
+  }
+
   private ensureConfigured(): { polar: Polar; organizationId: string } {
     if (!this.polar || !this.organizationId) {
       throw new Error('Polar is not configured. Set POLAR_ACCESS_TOKEN and POLAR_ORGANIZATION_ID.');
@@ -177,7 +186,7 @@ export class PolarProductsService {
           discountPercent: 10,
         });
 
-        const priceInCents = Math.round(quote.cycleAmountTtc * 100);
+        const priceInCents = this.madToUsdCents(quote.cycleAmountTtc);
         const description = this.buildFormulaDescription(formula, policy, modules);
 
         const product = await this.createProduct({
