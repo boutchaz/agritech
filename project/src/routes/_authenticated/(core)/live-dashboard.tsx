@@ -42,7 +42,7 @@ const LiveDashboardPage = () => {
 
   // Set page title
   useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const farmName = currentFarm?.name ? ` - ${currentFarm.name}` : '';
     document.title = `${t('liveDashboard.pageTitle')} | ${organizationName}${farmName}`;
   }, [currentOrganization, currentFarm, t]);

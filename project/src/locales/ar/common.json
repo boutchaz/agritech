@@ -877,7 +877,7 @@
     "forgotPassword": "نسيت كلمة المرور؟",
     "signUp": "إنشاء حساب",
     "signIn": {
-      "title": "تسجيل الدخول إلى Agritech",
+      "title": "تسجيل الدخول إلى AgroGina",
       "subtitle": "مرحباً بعودتك",
       "helperText": "الوصول إلى بيانات الأقمار الصناعية ولوحة العمليات والمتعاونين من مساحة عمل آمنة.",
       "noAccount": "ليس لديك حساب بعد؟",
@@ -3058,14 +3058,14 @@
   },
   "authPages": {
     "login": {
-      "title": "تسجيل الدخول إلى Agritech",
+      "title": "تسجيل الدخول إلى AgroGina",
       "subtitle": "مرحباً بعودتك",
       "emailLabel": "البريد الإلكتروني",
       "passwordLabel": "كلمة المرور",
       "passwordPlaceholder": "أدخل كلمة المرور"
     },
     "register": {
-      "title": "إنشاء حساب Agritech",
+      "title": "إنشاء حساب AgroGina",
       "subtitle": "ابدأ في دقائق",
       "organizationLabel": "اسم المنظمة",
       "organizationPlaceholder": "التعاونية الزراعية الخضراء",
@@ -5884,7 +5884,7 @@
       "title": "المساعد الذكي",
       "subtitle": "اطرح أسئلة حول مزرعتك وعمالك ومحاسبتك والمزيد",
       "placeholder": "اسأل عن مزرعتك وعمالك ومحاسبتك ومخزونك...",
-      "welcome": "مرحباً! أنا مساعد AgriTech الخاص بك. كيف يمكنني مساعدتك اليوم؟",
+      "welcome": "مرحباً! أنا مساعد AgroGina الخاص بك. كيف يمكنني مساعدتك اليوم؟",
       "listening": "جاري الاستماع...",
       "voiceNotSupported": "الإدخال الصوتي غير مدعوم في هذا المتصفح",
       "clear": "مسح",

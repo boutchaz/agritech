@@ -120,25 +120,33 @@ const LandingPage = () => {
     return () => scrollParent.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Scroll reveal
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (!e.isIntersecting) return;
           const target = e.target as HTMLElement;
           target.classList.add('opacity-100', 'translate-y-0');
-          observer.unobserve(e.target);
+          io.unobserve(e.target);
         });
       },
       { threshold: 0.15, rootMargin: '0px 0px -50px 0px' },
     );
-    const timer = setTimeout(() => {
+
+    const observeAll = () => {
       document.querySelectorAll('.reveal-on-scroll').forEach((el) => {
-        observer.observe(el);
+        if (!el.classList.contains('opacity-100')) {
+          io.observe(el);
+        }
       });
-    }, 100);
-    return () => { clearTimeout(timer); observer.disconnect(); };
+    };
+
+    const timer = setTimeout(observeAll, 100);
+
+    const mo = new MutationObserver(() => { observeAll(); });
+    mo.observe(document.body, { childList: true, subtree: true });
+
+    return () => { clearTimeout(timer); io.disconnect(); mo.disconnect(); };
   }, []);
 
   useEffect(() => {

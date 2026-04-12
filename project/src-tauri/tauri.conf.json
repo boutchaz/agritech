@@ -6,7 +6,7 @@
     "distDir": "../dist"
   },
   "package": {
-    "productName": "AgriTech Desktop",
+    "productName": "AgroGina Desktop",
     "version": "0.1.0"
   },
   "tauri": {
@@ -53,10 +53,10 @@
       ],
       "resources": [],
       "externalBin": [],
-      "copyright": "Copyright 2026 AgriTech",
+      "copyright": "Copyright 2026 AgroGina",
       "category": "Business",
       "shortDescription": "Agricultural management desktop application",
-      "longDescription": "Standalone desktop version of AgriTech platform for offline agricultural management.",
+      "longDescription": "Standalone desktop version of AgroGina platform for offline agricultural management.",
       "deb": {
         "depends": []
       },
@@ -83,7 +83,7 @@
       {
         "fullscreen": false,
         "resizable": true,
-        "title": "AgriTech",
+        "title": "AgroGina",
         "width": 1280,
         "height": 800,
         "minWidth": 800,

@@ -29,10 +29,10 @@ async function getProducts() {
 }
 
 export const metadata: Metadata = {
-  title: 'AgriTech Market - La marketplace agricole connectée',
+  title: 'AgroGina Market - La marketplace agricole connectée',
   description: 'Achetez et vendez des produits agricoles, équipements et services. Connectez-vous directement avec les producteurs et fournisseurs du Maroc.',
   openGraph: {
-    title: 'AgriTech Market - La marketplace agricole connectée',
+    title: 'AgroGina Market - La marketplace agricole connectée',
     description: 'Achetez et vendez des produits agricoles au Maroc.',
     type: 'website',
   },

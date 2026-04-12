@@ -53,7 +53,7 @@ function ConfirmationContent() {
                         <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
                             <Leaf className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xl font-bold text-gray-900">AgriTech</span>
+                        <span className="text-xl font-bold text-gray-900">AgroGina</span>
                     </Link>
                 </div>
             </nav>

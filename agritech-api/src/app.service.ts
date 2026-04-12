@@ -7,7 +7,7 @@ export class AppService {
 
   getHealth(): { message: string; status: string; timestamp: string } {
     return {
-      message: 'AgriTech API is running',
+      message: 'AgroGina API is running',
       status: 'ok',
       timestamp: new Date().toISOString(),
     };

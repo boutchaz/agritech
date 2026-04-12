@@ -28,7 +28,7 @@ export const ImportWizard = ({ onComplete, onCancel }: ImportWizardProps) => {
       const { open } = await import('@tauri-apps/api/dialog');
       const selected = await open({
         multiple: false,
-        filters: [{ name: 'AgriTech Export', extensions: ['agritech', 'zip'] }],
+        filters: [{ name: 'AgroGina Export', extensions: ['agritech', 'zip'] }],
       });
       
       if (selected && typeof selected === 'string') {

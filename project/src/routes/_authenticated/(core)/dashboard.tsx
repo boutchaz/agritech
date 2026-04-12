@@ -138,7 +138,7 @@ const AppContent = () => {
 
   // Set page title
   useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const farmName = currentFarm?.name ? ` · ${currentFarm.name}` : '';
     const modeTitle = isLiveMode ? t('liveDashboard.title') : t('dashboard.pageTitle');
     const title = `${organizationName}${farmName} | ${modeTitle}`;
@@ -147,7 +147,7 @@ const AppContent = () => {
 
   // Structured data for SEO
   const structuredData = useMemo(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',

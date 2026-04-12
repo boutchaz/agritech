@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agritech.ma';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agrogina.ma';
 
 async function getProducts(): Promise<{ id: string }[]> {
   try {

@@ -125,9 +125,9 @@
     },
     "roiCalculator": {
       "title": "Calculez votre retour sur investissement",
-      "subtitle": "Découvrez en 30 secondes combien AgriTech peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
+      "subtitle": "Découvrez en 30 secondes combien AgroGina peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
       "calculatorTitle": "Calculateur ROI",
-      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgriTech",
+      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgroGina",
       "farmSize": "Surface agricole (hectares)",
       "farmSizeUnit": "ha",
       "currentYield": "Rendement actuel (tonnes/ha)",
@@ -877,7 +877,7 @@
     "forgotPassword": "Mot de passe oublié ?",
     "signUp": "S'inscrire",
     "signIn": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "helperText": "Accédez à vos données satellite, tableau de bord d'exploitation et collaborateurs depuis un espace sécurisé.",
       "noAccount": "Vous n'avez pas encore de compte ?",
@@ -1368,7 +1368,7 @@
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina, agritech"
+    "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -3167,14 +3167,14 @@
   },
   "authPages": {
     "login": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "emailLabel": "Adresse email",
       "passwordLabel": "Mot de passe",
       "passwordPlaceholder": "Entrez votre mot de passe"
     },
     "register": {
-      "title": "Créez votre compte Agritech",
+      "title": "Créez votre compte AgroGina",
       "subtitle": "Démarrez en quelques minutes",
       "organizationLabel": "Nom de l'organisation",
       "organizationPlaceholder": "Coopérative Agricole Verte",
@@ -6049,7 +6049,7 @@
       "title": "Assistant IA",
       "subtitle": "Posez des questions sur votre ferme, vos travailleurs, votre comptabilité et plus encore",
       "placeholder": "Demandez des informations sur votre ferme, vos travailleurs, votre comptabilité, votre stock...",
-      "welcome": "Bonjour! Je suis votre assistant AgriTech. Comment puis-je vous aider aujourd'hui?",
+      "welcome": "Bonjour! Je suis votre assistant AgroGina. Comment puis-je vous aider aujourd'hui?",
       "listening": "Écoute...",
       "voiceNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
       "clear": "Effacer",
@@ -6359,7 +6359,7 @@
     "hero": {
       "badge": "SIAM 2026 · Meknes",
       "title": "Reservez votre rendez-vous avec AGROGINA",
-      "subtitle": "Decouvrez comment notre plateforme AgriTech transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
+      "subtitle": "Decouvrez comment notre plateforme AgroGina transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
     },
     "sections": {
       "info": "Vos informations",

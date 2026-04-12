@@ -948,7 +948,7 @@ export class NotificationsService {
   <div class="content">
     <p>Bonjour,</p>
 
-    <p>Vous avez reçu une nouvelle demande de devis sur AgriTech Marketplace.</p>
+    <p>Vous avez reçu une nouvelle demande de devis sur AgroGina Marketplace.</p>
 
     <div class="info-row">
       <div class="info-label">Produit:</div>
@@ -999,7 +999,7 @@ export class NotificationsService {
 
   <div class="footer">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -1013,7 +1013,7 @@ export class NotificationsService {
    */
   private generateQuoteRequestEmailText(data: QuoteRequestEmailData): string {
     let text = `Nouvelle Demande de Devis\n\n`;
-    text += `Vous avez reçu une nouvelle demande de devis sur AgriTech Marketplace.\n\n`;
+    text += `Vous avez reçu une nouvelle demande de devis sur AgroGina Marketplace.\n\n`;
     text += `Produit: ${data.productTitle}\n`;
 
     if (data.requestedQuantity) {
@@ -1033,7 +1033,7 @@ export class NotificationsService {
 
     text += `\nRépondre à la demande: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails et envoyer votre devis.\n`;
-    text += `\n© 2025 AgriTech Marketplace\n`;
+    text += `\n© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -1219,7 +1219,7 @@ export class NotificationsService {
 
   <div class="footer">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -1258,7 +1258,7 @@ export class NotificationsService {
     text += `\nConditions et informations du vendeur:\n${data.sellerResponse}\n`;
     text += `\nConsulter le devis: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails, accepter ou décliner ce devis.\n`;
-    text += `\n© 2025 AgriTech Marketplace\n`;
+    text += `\n© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -1274,7 +1274,7 @@ export class NotificationsService {
 
     const html = this.generateOrderConfirmationEmail(data);
     const text = this.generateOrderConfirmationEmailText(data);
-    return this.sendEmail({ to: data.buyerEmail, subject: `Commande confirmée #${data.orderNumber} - AgriTech Marketplace`, html, text });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande confirmée #${data.orderNumber} - AgroGina Marketplace`, html, text });
   }
 
   /**
@@ -1287,7 +1287,7 @@ export class NotificationsService {
 
     const html = this.generateNewOrderSellerEmail(data);
     const text = this.generateNewOrderSellerEmailText(data);
-    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle commande #${data.orderNumber} - AgriTech Marketplace`, html, text });
+    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle commande #${data.orderNumber} - AgroGina Marketplace`, html, text });
   }
 
   /**
@@ -1312,7 +1312,7 @@ export class NotificationsService {
 
     const html = this.generateOrderStatusUpdateEmail(data);
     const text = this.generateOrderStatusUpdateEmailText(data);
-    return this.sendEmail({ to: data.buyerEmail, subject: `Commande #${data.orderNumber} ${statusText} - AgriTech Marketplace`, html, text });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande #${data.orderNumber} ${statusText} - AgroGina Marketplace`, html, text });
   }
 
   /**
@@ -1469,7 +1469,7 @@ export class NotificationsService {
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -1502,7 +1502,7 @@ export class NotificationsService {
     text += `Adresse de livraison: ${data.shippingAddress}\n\n`;
     text += `Voir ma commande: ${data.orderUrl}\n\n`;
     text += `Vous recevrez un email dès que le vendeur confirmera votre commande.\n\n`;
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -1626,7 +1626,7 @@ export class NotificationsService {
   </div>
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-    <p>© 2025 AgriTech Marketplace</p>
+    <p>© 2025 AgroGina Marketplace</p>
   </div>
 </body>
 </html>
@@ -1654,7 +1654,7 @@ export class NotificationsService {
     text += `Adresse de livraison: ${data.shippingAddress}\n\n`;
     text += `Gérer cette commande: ${data.orderUrl}\n\n`;
     text += `Connectez-vous à votre tableau de bord pour confirmer et traiter cette commande.\n\n`;
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
 
     return text;
   }
@@ -1769,7 +1769,7 @@ export class NotificationsService {
   </div>
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-    <p>© 2025 AgriTech Marketplace</p>
+    <p>© 2025 AgroGina Marketplace</p>
   </div>
 </body>
 </html>
@@ -1797,7 +1797,7 @@ export class NotificationsService {
       text += `N'oubliez pas de laisser un avis! Votre retour nous aide à améliorer nos services.\n\n`;
     }
 
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
 
     return text;
   }

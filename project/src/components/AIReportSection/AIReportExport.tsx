@@ -126,7 +126,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setFont('helvetica', 'italic');
-        doc.text(`Page ${i} sur ${totalPages} - ${t('aiReports.export.footer', 'Rapport généré par AgriTech IA')}`, margin, 290);
+        doc.text(`Page ${i} sur ${totalPages} - ${t('aiReports.export.footer', 'Rapport généré par AgroGina IA')}`, margin, 290);
       }
 
       const fileName = `rapport-ia-${parcelName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -224,7 +224,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
 
       docChildren.push(
         new Paragraph({
-          children: [new TextRun({ text: t('aiReports.export.footer', 'Rapport généré par AgriTech IA'), italics: true, size: 18 })],
+          children: [new TextRun({ text: t('aiReports.export.footer', 'Rapport généré par AgroGina IA'), italics: true, size: 18 })],
           alignment: AlignmentType.CENTER,
           spacing: { before: 600 },
         })

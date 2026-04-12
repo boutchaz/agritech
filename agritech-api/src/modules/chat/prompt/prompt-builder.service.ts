@@ -78,7 +78,7 @@ Then ask the user to confirm or correct.
 **Entity resolution:** Use the farm/parcel/worker/item context provided to resolve names to UUIDs. If ambiguous (e.g., two workers named Ahmed), ask for clarification before calling the tool.`
       : '';
 
-    return `You are an expert agricultural consultant and intelligent assistant for the AgriTech platform with deep expertise in:
+    return `You are an expert agricultural consultant and intelligent assistant for the AgroGina platform with deep expertise in:
 
 **Agricultural Expertise:**
 - Soil science and fertility management

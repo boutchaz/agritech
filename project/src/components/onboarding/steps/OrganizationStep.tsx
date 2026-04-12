@@ -238,7 +238,7 @@ export const OrganizationStep = ({
               success={!isCheckingSlug && slugCheck?.available}
               error={!isCheckingSlug && slugCheck && !slugCheck.available ? 'Ce slug est déjà pris' : undefined}
               isValidating={isCheckingSlug}
-              hint={`Votre URL: agritech.ma/${organizationData.slug || 'votre-slug'}`}
+              hint={`Votre URL: agrogina.ma/${organizationData.slug || 'votre-slug'}`}
             />
             
             {slugCheck && !slugCheck.available && slugCheck.suggestion && (
@@ -267,7 +267,7 @@ export const OrganizationStep = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 text-lg truncate">{organizationData.name}</p>
-                <p className="text-sm text-gray-500">agritech.ma/{organizationData.slug || 'slug'}</p>
+                <p className="text-sm text-gray-500">agrogina.ma/{organizationData.slug || 'slug'}</p>
               </div>
               {slugCheck?.available && (
                 <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0" />

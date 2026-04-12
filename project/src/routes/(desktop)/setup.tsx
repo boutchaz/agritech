@@ -65,7 +65,7 @@ function SetupPage() {
               <Building2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('desktop.setup.title', 'Set Up AgriTech Desktop')}
+              {t('desktop.setup.title', 'Set Up AgroGina Desktop')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               {t('desktop.setup.description', 'Create your local account to get started')}

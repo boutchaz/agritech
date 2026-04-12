@@ -114,7 +114,7 @@ export class AlertService {
 
     const isRecovery = alert.status === 'recovered';
     const emoji = isRecovery ? '✅' : alert.severity === 'critical' ? '🔴' : '🟡';
-    const subject = `${emoji} [AgriTech] ${alert.service} is ${alert.status.toUpperCase()}`;
+    const subject = `${emoji} [AgroGina] ${alert.service} is ${alert.status.toUpperCase()}`;
 
     const downDuration = alert.downSince
       ? this.formatDuration(Date.now() - alert.downSince.getTime())
@@ -179,10 +179,10 @@ export class AlertService {
           color,
           fields,
           timestamp: new Date().toISOString(),
-          footer: { text: 'AgriTech Monitoring' },
+          footer: { text: 'AgroGina Monitoring' },
         },
       ],
-      username: 'AgriTech Monitor',
+      username: 'AgroGina Monitor',
     };
 
     try {
@@ -213,7 +213,7 @@ export class AlertService {
       : null;
 
     const lines: string[] = [
-      `${emoji} <b>[AgriTech] ${alert.service.toUpperCase()} — ${alert.status.toUpperCase()}</b>`,
+      `${emoji} <b>[AgroGina] ${alert.service.toUpperCase()} — ${alert.status.toUpperCase()}</b>`,
       '',
       `<b>Time:</b> ${new Date().toISOString()}`,
       `<b>Service:</b> ${alert.service}`,

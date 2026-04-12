@@ -38,8 +38,8 @@ export async function generateMetadata({
   const name = category?.attributes?.name || category?.name || slug;
   const description = category?.attributes?.description || category?.description || '';
   return {
-    title: `${name} - AgriTech Market`,
-    description: description || `Découvrez les produits ${name} sur AgriTech Market.`,
+    title: `${name} - AgroGina Market`,
+    description: description || `Découvrez les produits ${name} sur AgroGina Market.`,
   };
 }
 

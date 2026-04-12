@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agritech.ma';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agrogina.ma';
 
 export default function robots(): MetadataRoute.Robots {
   return {

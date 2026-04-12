@@ -39,7 +39,7 @@ function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-md sm:p-8">
         <div className="mb-8 text-center">
-          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">AgriTech Admin</h1>
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">AgroGina Admin</h1>
           <p className="mt-2 text-sm text-gray-600 sm:text-base">Sign in to continue</p>
         </div>
 

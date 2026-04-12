@@ -155,7 +155,7 @@ export default function SettingsScreen() {
         <MenuCard
           icon="information-circle-outline"
           title={t('settings.about', 'About')}
-          subtitle="AgriTech v1.0.0"
+          subtitle="AgroGina v1.0.0"
           onPress={() => {}}
           themeColors={themeColors}
         />

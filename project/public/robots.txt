@@ -1,4 +1,4 @@
-# AgriTech - Robots.txt
+# AgroGina - Robots.txt
 # https://agritech-dashboard.thebzlab.online
 
 User-agent: *

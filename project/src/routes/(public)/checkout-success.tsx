@@ -190,7 +190,7 @@ function CheckoutSuccess() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-8">
             Need help?{' '}
             <a
-              href="mailto:support@agritech.com"
+              href="mailto:support@agrogina.com"
               className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 underline"
             >
               Contact Support

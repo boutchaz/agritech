@@ -33,7 +33,7 @@ function RegisterPage() {
 
   // Track page view on mount
   useEffect(() => {
-    trackPageView({ title: 'Create your Agritech account' })
+    trackPageView({ title: 'Create your AgroGina account' })
   }, [])
 
   // Redirect to dashboard if user is already logged in
@@ -114,7 +114,7 @@ function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create your Agritech account"
+      title="Create your AgroGina account"
       subtitle="Get started in minutes"
       helperText="Set up a workspace for your organization and invite your team once you're inside."
       switchLabel="Already have an account?"

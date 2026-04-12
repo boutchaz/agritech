@@ -14,7 +14,7 @@ const ChatPage = () => {
 
   // Set page title
   React.useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const title = `${organizationName} | ${t('chat.title', 'AI Assistant')}`;
     document.title = title;
   }, [currentOrganization, t]);

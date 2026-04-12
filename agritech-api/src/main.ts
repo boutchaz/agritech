@@ -312,11 +312,11 @@ async function bootstrap() {
 
   // Swagger API documentation
   const config = new DocumentBuilder()
-    .setTitle('AgriTech API')
+    .setTitle('AgroGina API')
     .setDescription(`
-# AgriTech Platform Business Logic API
+# AgroGina Platform Business Logic API
 
-NestJS-based backend service handling complex business logic for the AgriTech multi-tenant agricultural SaaS platform.
+NestJS-based backend service handling complex business logic for the AgroGina multi-tenant agricultural SaaS platform.
 
 ## Overview
 
@@ -359,7 +359,7 @@ All errors follow a standard format:
 \`\`\`
     `)
     .setVersion('1.0.0')
-    .setContact('AgriTech Team', 'https://agritech.thebzlab.online', 'support@thebzlab.online')
+    .setContact('AgroGina Team', 'https://agrogina.thebzlab.online', 'support@thebzlab.online')
     .setLicense('ISC', 'https://opensource.org/licenses/ISC')
     .addBearerAuth(
       {
@@ -469,7 +469,7 @@ All errors follow a standard format:
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
   ║                                                       ║
-  ║   🌾 AgriTech API Server                             ║
+   ║   🌾 AgroGina API Server                             ║
   ║                                                       ║
   ║   Server running on: http://0.0.0.0:${port}             ║
   ║   API Docs: http://0.0.0.0:${port}/api/docs             ║

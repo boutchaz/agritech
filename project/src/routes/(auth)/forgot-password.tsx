@@ -57,7 +57,7 @@ function ForgotPasswordPage() {
     <AuthLayout
       title="Reset your password"
       subtitle="We all forget sometimes"
-      helperText="Enter the email you use for Agritech and we will send you a link to create a new password."
+      helperText="Enter the email you use for AgroGina and we will send you a link to create a new password."
       switchLabel="Remembered it?"
       switchHref="/login"
       switchCta="Go back to sign in"
@@ -100,7 +100,7 @@ function ForgotPasswordPage() {
             <FormField
               label="Email address"
               htmlFor="reset-email"
-              helper="Use the email connected to your Agritech account."
+              helper="Use the email connected to your AgroGina account."
               required
             >
               <Input

@@ -79,7 +79,7 @@ const ROICalculator = ({ className }: ROICalculatorProps) => {
   }));
 
   const roiData: ROIData = useMemo(() => {
-    // AgriTech benefits (conservative estimates)
+    // AgroGina benefits (conservative estimates)
     const yieldImprovement = 0.15; // 15% yield increase
     const laborOptimization = 0.25; // 25% labor savings
     const inputOptimization = 0.20; // 20% input savings

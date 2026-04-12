@@ -152,7 +152,7 @@ export class DashboardService {
 
             const res = await fetch(url, {
                 signal: controller.signal,
-                headers: { 'User-Agent': 'AgriTech-Platform/1.0' }, // Nominatim requires a UA
+                headers: { 'User-Agent': 'AgroGina-Platform/1.0' }, // Nominatim requires a UA
             });
             clearTimeout(timeout);
 

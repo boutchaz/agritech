@@ -1104,7 +1104,7 @@ export class WorkersService {
         .eq('id', organizationId)
         .single();
 
-      const organizationName = org?.name || 'AgriTech';
+      const organizationName = org?.name || 'AgroGina';
 
       // Send welcome email with temporary password
       const emailSent = await this.emailService.sendUserCreatedEmail(

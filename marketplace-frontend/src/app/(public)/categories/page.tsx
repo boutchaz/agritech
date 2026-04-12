@@ -17,8 +17,8 @@ async function getCategories() {
 }
 
 export const metadata: Metadata = {
-  title: 'Catégories - AgriTech Market',
-  description: 'Explorez toutes les catégories de produits agricoles sur AgriTech Market.',
+  title: 'Catégories - AgroGina Market',
+  description: 'Explorez toutes les catégories de produits agricoles sur AgroGina Market.',
 };
 
 export default async function CategoriesPage() {

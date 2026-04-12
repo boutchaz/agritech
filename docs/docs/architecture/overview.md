@@ -19,7 +19,6 @@ agritech/
 ├── directus/              # Directus CMS instance
 ├── supabase/              # Supabase functions and migrations
 ├── backend-service/       # Python/FastAPI satellite and AI calibration service
-├── agritech-remotion/     # Video generation with Remotion
 ├── marketplace-frontend/  # Marketplace subdomain
 ├── docs/                  # Docusaurus documentation
 └── scripts/               # Build and deployment scripts

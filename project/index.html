@@ -9,21 +9,21 @@
 
     <!-- Primary Meta Tags -->
     <title>
-      AgriTech - Plateforme de Gestion Agricole Intelligente | Maroc
+      AgroGina - Plateforme de Gestion Agricole Intelligente | Maroc
     </title>
     <meta
       name="title"
-      content="AgriTech - Plateforme de Gestion Agricole Intelligente | Maroc"
+      content="AgroGina - Plateforme de Gestion Agricole Intelligente | Maroc"
     />
     <meta
       name="description"
-      content="AgriTech: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité. Optimisez votre exploitation avec l'agriculture de précision."
+      content="AgroGina: La plateforme complète de gestion agricole au Maroc. Gérez vos parcelles, équipes, stocks, analyses satellite et comptabilité. Optimisez votre exploitation avec l'agriculture de précision."
     />
     <meta
       name="keywords"
-      content="gestion agricole, agriculture maroc, logiciel agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, exploitation agricole, agritech"
+      content="gestion agricole, agriculture maroc, logiciel agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, exploitation agricole, agrogina"
     />
-    <meta name="author" content="AgriTech" />
+    <meta name="author" content="AgroGina" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="French" />
     <meta name="revisit-after" content="7 days" />
@@ -56,7 +56,7 @@
     />
     <meta
       property="og:title"
-      content="AgriTech - Plateforme de Gestion Agricole Intelligente"
+      content="AgroGina - Plateforme de Gestion Agricole Intelligente"
     />
     <meta
       property="og:description"
@@ -70,7 +70,7 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="fr_MA" />
     <meta property="og:locale:alternate" content="ar_MA" />
-    <meta property="og:site_name" content="AgriTech" />
+    <meta property="og:site_name" content="AgroGina" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -80,7 +80,7 @@
     />
     <meta
       name="twitter:title"
-      content="AgriTech - Plateforme de Gestion Agricole Intelligente"
+      content="AgroGina - Plateforme de Gestion Agricole Intelligente"
     />
     <meta
       name="twitter:description"
@@ -129,7 +129,7 @@
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        "name": "AgriTech",
+        "name": "AgroGina",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
         "description": "Plateforme complète de gestion agricole au Maroc. Gestion des parcelles, équipes, stocks, analyses satellite et comptabilité.",
@@ -137,7 +137,7 @@
         "image": "https://agritech-dashboard.thebzlab.online/og-image.png",
         "author": {
           "@type": "Organization",
-          "name": "AgriTech",
+          "name": "AgroGina",
           "url": "https://agritech-dashboard.thebzlab.online"
         },
         "offers": {
@@ -167,7 +167,7 @@
       {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "AgriTech",
+        "name": "AgroGina",
         "url": "https://agritech-dashboard.thebzlab.online",
         "logo": "https://agritech-dashboard.thebzlab.online/logo.png",
         "description": "La plateforme complète pour moderniser votre agriculture au Maroc",
@@ -179,7 +179,7 @@
         "contactPoint": {
           "@type": "ContactPoint",
           "contactType": "customer service",
-          "email": "contact@agritech.ma"
+          "email": "contact@agrogina.ma"
         },
         "sameAs": ["https://marketplace.thebzlab.online"]
       }
@@ -210,15 +210,15 @@
           )
         ) {
           // Only auto-reload once to avoid infinite loops
-          var reloadKey = 'agrogina:chunk-reload';
-          var lastReload = sessionStorage.getItem(reloadKey);
+          const reloadKey = 'agrogina:chunk-reload';
+          const lastReload = sessionStorage.getItem(reloadKey);
           if (!lastReload || Date.now() - parseInt(lastReload, 10) > 30000) {
             sessionStorage.setItem(reloadKey, String(Date.now()));
             console.warn('[chunk-error-handler] Stale chunk detected, reloading...');
             window.location.reload();
           } else {
             console.error('[chunk-error-handler] Reload already attempted, showing error.');
-            var root = document.getElementById('root');
+            const root = document.getElementById('root');
             if (root) {
               root.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">' +
                 '<div style="text-align:center;max-width:400px;padding:24px;">' +

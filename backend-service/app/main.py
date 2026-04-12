@@ -39,7 +39,7 @@ class NormalizePathMiddleware(BaseHTTPMiddleware):
 
 
 app = FastAPI(
-    title="AgriTech Backend Service",
+    title="AgroGina Backend Service",
     description="Agricultural technology backend service for satellite imagery analysis, PDF generation, and data processing",
     version="2.0.0",
 )
@@ -113,7 +113,7 @@ async def ready_probe():
 @app.get("/")
 async def root():
     return {
-        "service": "AgriTech Backend Service",
+        "service": "AgroGina Backend Service",
         "version": "2.0.0",
         "status": "operational",
         "features": [

@@ -235,7 +235,7 @@ export default function HomeContent({ initialCategories, initialProducts }: Home
             Prêt à vendre vos produits ?
           </h2>
           <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
-            Rejoignez des centaines de producteurs et fournisseurs qui utilisent déjà AgriTech Market
+            Rejoignez des centaines de producteurs et fournisseurs qui utilisent déjà AgroGina Market
             pour développer leur activité.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">

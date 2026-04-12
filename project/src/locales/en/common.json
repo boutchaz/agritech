@@ -125,9 +125,9 @@
     },
     "roiCalculator": {
       "title": "Calculate your return on investment",
-      "subtitle": "Discover in 30 seconds how much AgriTech can save you each year. Get a personalized report by email.",
+      "subtitle": "Discover in 30 seconds how much AgroGina can save you each year. Get a personalized report by email.",
       "calculatorTitle": "ROI Calculator",
-      "calculatorSubtitle": "Discover how much you could save with AgriTech",
+      "calculatorSubtitle": "Discover how much you could save with AgroGina",
       "farmSize": "Farm size (hectares)",
       "farmSizeUnit": "ha",
       "currentYield": "Current yield (tonnes/ha)",
@@ -877,7 +877,7 @@
     "forgotPassword": "Forgot password?",
     "signUp": "Sign up",
     "signIn": {
-      "title": "Sign in to Agritech",
+        "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "helperText": "Access your satellite insights, operations dashboard, and farm collaborators from one secure workspace.",
       "noAccount": "Don't have an account yet?",
@@ -1368,7 +1368,7 @@
     "seo": {
       "title": "AGROGINA - The All-in-One Agricultural Management Suite | Morocco",
       "description": "AGROGINA revolutionizes agriculture in Morocco. A unique platform to manage production, finance, HR, inventory and marketing. Precision agriculture and simplified farm management.",
-      "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina, agritech"
+    "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina"
     }
   },
   "suppliers": {
@@ -3171,14 +3171,14 @@
   },
   "authPages": {
     "login": {
-      "title": "Sign in to Agritech",
+        "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "emailLabel": "Email address",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password"
     },
     "register": {
-      "title": "Create your Agritech account",
+      "title": "Create your AgroGina account",
       "subtitle": "Get started in minutes",
       "organizationLabel": "Organization name",
       "organizationPlaceholder": "Green Acres Cooperative",
@@ -6230,7 +6230,7 @@
       "title": "AI Assistant",
       "subtitle": "Ask questions about your farm, workers, accounting, and more",
       "placeholder": "Ask about your farm, workers, accounting, inventory...",
-      "welcome": "Hello! I'm your AgriTech assistant. How can I help you today?",
+      "welcome": "Hello! I'm your AgroGina assistant. How can I help you today?",
       "listening": "Listening...",
       "voiceNotSupported": "Voice input is not supported in this browser",
       "clear": "Clear",
@@ -6540,7 +6540,7 @@
     "hero": {
       "badge": "SIAM 2026 · Meknes",
       "title": "Book your meeting with AGROGINA",
-      "subtitle": "Discover how our AgriTech platform transforms farm management. Personalized demo at our stand."
+      "subtitle": "Discover how our AgroGina platform transforms farm management. Personalized demo at our stand."
     },
     "sections": {
       "info": "Your information",
