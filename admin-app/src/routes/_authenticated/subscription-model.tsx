@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Save,
   Calculator,
@@ -7,8 +7,14 @@ import {
   TrendingDown,
   Maximize2,
   Percent,
+  CloudUpload,
+  RefreshCw,
+  Archive,
+  Loader2,
+  Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiRequest } from '../../lib/api-client';
 
 // ============================================
 // Pricing constants from advisor reespec
@@ -34,6 +40,25 @@ interface SizeMultiplier {
   maxHa: number | null;
   label: string;
   multiplier: number;
+}
+
+interface PolarPrice {
+  id: string;
+  amount: number | null;
+  currency: string;
+  recurringInterval: string | null;
+  amountType: string;
+}
+
+interface PolarProduct {
+  id: string;
+  name: string;
+  description: string | null;
+  isArchived: boolean;
+  recurringInterval: string | null;
+  metadata: Record<string, any>;
+  prices: PolarPrice[];
+  createdAt: string;
 }
 
 const DEFAULT_MODULES: ErpModule[] = [
@@ -69,6 +94,13 @@ const DEFAULT_SIZE_MULTIPLIERS: SizeMultiplier[] = [
 const DEFAULT_DISCOUNT = 10;
 const VAT_RATE = 20;
 
+function formatPrice(cents: number | null, currency = 'usd'): string {
+  if (cents === null) return 'Custom';
+  const amount = cents / 100;
+  const sym = currency === 'usd' ? '$' : currency.toUpperCase() + ' ';
+  return `${sym}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function SubscriptionModelPage() {
   const [modules, setModules] = useState<ErpModule[]>(DEFAULT_MODULES);
   const [haTiers, setHaTiers] = useState<HaTier[]>(DEFAULT_HA_TIERS);
@@ -82,18 +114,39 @@ function SubscriptionModelPage() {
   );
   const [simCycle, setSimCycle] = useState<'monthly' | 'annual'>('annual');
 
+  // Polar state
+  const [polarProducts, setPolarProducts] = useState<PolarProduct[]>([]);
+  const [polarLoading, setPolarLoading] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [syncingFormulas, setSyncingFormulas] = useState(false);
+
+  // Fetch Polar products
+  const fetchPolarProducts = async () => {
+    setPolarLoading(true);
+    try {
+      const products = await apiRequest<PolarProduct[]>('/api/v1/admin/polar-products');
+      setPolarProducts(products);
+    } catch (err: any) {
+      toast.error(`Failed to load Polar products: ${err.message}`);
+    } finally {
+      setPolarLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPolarProducts();
+  }, []);
+
   // Compute quote
   const quote = useMemo(() => {
     const selectedMods = modules.filter((m) => simModules.has(m.id));
     const erpMonthly = selectedMods.reduce((s, m) => s + m.pricePerMonth, 0);
 
-    // Size multiplier
     const mult = sizeMultipliers.find(
       (t) => simHectares >= t.minHa && (t.maxHa === null || simHectares < t.maxHa),
     );
     const multiplier = mult?.multiplier ?? 1;
 
-    // Degressive ha pricing
     let haAnnual = 0;
     let remaining = simHectares;
     const tierBreakdown: { label: string; ha: number; rate: number; subtotal: number }[] = [];
@@ -141,24 +194,216 @@ function SubscriptionModelPage() {
   };
 
   const handleSave = () => {
-    // TODO: persist to backend/DB when endpoint is ready
     toast.success('Subscription model saved (local only for now)');
   };
+
+  const handleCreateInPolar = async () => {
+    setCreatingProduct(true);
+    try {
+      const selectedModuleIds = Array.from(simModules);
+      const priceInCents = Math.round(quote.cycleTtc * 100);
+      const cycleName = simCycle === 'annual' ? 'Annual' : 'Monthly';
+
+      const product = await apiRequest<PolarProduct>('/api/v1/admin/polar-products', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `AgroGina Custom - ${simHectares}ha - ${cycleName}`,
+          description: `Custom quote: ${simHectares} ha, ${selectedModuleIds.length} modules, ${discount}% discount. ${cycleName} billing.`,
+          priceAmount: priceInCents,
+          currency: 'usd',
+          recurringInterval: simCycle === 'annual' ? 'year' : 'month',
+          metadata: {
+            type: 'custom_simulation',
+            hectares: String(simHectares),
+            discount_percent: String(discount),
+          },
+          selectedModules: selectedModuleIds,
+          contractedHectares: simHectares,
+          discountPercent: discount,
+        }),
+      });
+
+      toast.success(`Product created in Polar: ${product.name}`);
+      fetchPolarProducts();
+    } catch (err: any) {
+      toast.error(`Failed to create product: ${err.message}`);
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
+  const handleSyncFormulas = async () => {
+    setSyncingFormulas(true);
+    try {
+      const result = await apiRequest<{ created: PolarProduct[]; skipped: string[] }>(
+        '/api/v1/admin/polar-products/sync-formulas',
+        { method: 'POST' },
+      );
+      const msg = [
+        result.created.length ? `Created ${result.created.length} products` : '',
+        result.skipped.length ? `Skipped ${result.skipped.length} (already exist)` : '',
+      ]
+        .filter(Boolean)
+        .join('. ');
+      toast.success(msg || 'Sync complete');
+      fetchPolarProducts();
+    } catch (err: any) {
+      toast.error(`Sync failed: ${err.message}`);
+    } finally {
+      setSyncingFormulas(false);
+    }
+  };
+
+  const handleArchiveProduct = async (productId: string, productName: string) => {
+    if (!confirm(`Archive "${productName}"? It will no longer be available for purchase.`)) return;
+    try {
+      await apiRequest(`/api/v1/admin/polar-products/${productId}`, { method: 'DELETE' });
+      toast.success(`Archived: ${productName}`);
+      fetchPolarProducts();
+    } catch (err: any) {
+      toast.error(`Failed to archive: ${err.message}`);
+    }
+  };
+
+  const activeProducts = polarProducts.filter((p) => !p.isArchived);
+  const archivedProducts = polarProducts.filter((p) => p.isArchived);
 
   return (
     <div className="admin-page">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">Subscription Model</h1>
-          <p className="mt-1 text-sm text-gray-500 sm:text-base">Configure modular ERP pricing, hectare tiers & simulator</p>
+          <p className="mt-1 text-sm text-gray-500 sm:text-base">Configure modular ERP pricing, hectare tiers & sync to Polar</p>
         </div>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 sm:w-auto"
-        >
-          <Save className="h-4 w-4 shrink-0" /> Save Model
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleSyncFormulas}
+            disabled={syncingFormulas}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {syncingFormulas ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudUpload className="h-4 w-4" />}
+            Sync All Formulas
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+          >
+            <Save className="h-4 w-4" /> Save Model
+          </button>
+        </div>
+      </div>
+
+      {/* Polar Products Section */}
+      <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-indigo-600" />
+            <h2 className="text-base font-semibold text-gray-900 sm:text-lg">Polar Products</h2>
+            <span className="text-xs text-gray-400">({activeProducts.length} active, {archivedProducts.length} archived)</span>
+          </div>
+          <button
+            onClick={fetchPolarProducts}
+            disabled={polarLoading}
+            className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${polarLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
+
+        {polarLoading && polarProducts.length === 0 ? (
+          <div className="flex items-center justify-center py-8 text-gray-400">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading Polar products...
+          </div>
+        ) : activeProducts.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 py-8 text-center">
+            <Package className="mx-auto h-8 w-8 text-gray-300" />
+            <p className="mt-2 text-sm text-gray-500">No active Polar products</p>
+            <p className="text-xs text-gray-400">Use "Sync All Formulas" or create from simulator</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto -mx-px">
+            <table className="w-full min-w-[500px]">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="pb-2 text-left text-xs font-medium uppercase text-gray-500">Product</th>
+                  <th className="pb-2 text-left text-xs font-medium uppercase text-gray-500 w-24">Interval</th>
+                  <th className="pb-2 text-right text-xs font-medium uppercase text-gray-500 w-28">Price</th>
+                  <th className="pb-2 text-left text-xs font-medium uppercase text-gray-500 w-32">Formula</th>
+                  <th className="pb-2 text-right text-xs font-medium uppercase text-gray-500 w-20">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {activeProducts.map((p) => (
+                  <tr key={p.id}>
+                    <td className="py-2">
+                      <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                      <p className="text-xs text-gray-400 truncate max-w-xs">{p.description}</p>
+                    </td>
+                    <td className="py-2">
+                      <span className="inline-flex rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                        {p.recurringInterval || p.prices[0]?.recurringInterval || 'one-time'}
+                      </span>
+                    </td>
+                    <td className="py-2 text-right">
+                      {p.prices.length > 0 ? (
+                        <div className="space-y-0.5">
+                          {p.prices.map((pr) => (
+                            <p key={pr.id} className="text-sm font-mono text-gray-700">
+                              {formatPrice(pr.amount, pr.currency)}
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">No price</span>
+                      )}
+                    </td>
+                    <td className="py-2">
+                      {p.metadata?.formula ? (
+                        <span className="inline-flex rounded bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                          {p.metadata.formula}
+                        </span>
+                      ) : p.metadata?.type === 'custom_simulation' ? (
+                        <span className="inline-flex rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+                          custom
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="py-2 text-right">
+                      <button
+                        onClick={() => handleArchiveProduct(p.id, p.name)}
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                        title="Archive product"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {archivedProducts.length > 0 && (
+          <details className="mt-3">
+            <summary className="cursor-pointer text-xs text-gray-400 hover:text-gray-600">
+              {archivedProducts.length} archived product(s)
+            </summary>
+            <div className="mt-2 space-y-1">
+              {archivedProducts.map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded bg-gray-50 px-3 py-1.5 text-xs text-gray-400">
+                  <span>{p.name}</span>
+                  <span className="font-mono">{p.id.slice(0, 8)}…</span>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -414,6 +659,20 @@ function SubscriptionModelPage() {
                     {Math.round(quote.cycleTtc).toLocaleString()} DH
                   </span>
                 </div>
+
+                {/* Create in Polar button */}
+                <button
+                  onClick={handleCreateInPolar}
+                  disabled={creatingProduct}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {creatingProduct ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CloudUpload className="h-4 w-4" />
+                  )}
+                  Create in Polar
+                </button>
               </div>
             </div>
           </div>
