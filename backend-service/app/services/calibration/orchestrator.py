@@ -302,7 +302,6 @@ def run_calibration_pipeline(
     step8 = calculate_health_score(
         step1=step1,
         step3=step3,
-        step5=step5,
         step7=step7,
     )
 

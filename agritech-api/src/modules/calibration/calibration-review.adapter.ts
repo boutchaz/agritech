@@ -95,7 +95,7 @@ const COMPONENT_TARGET_BLOCK: Record<string, string> = {
   hydric: "B",
   nutritional: "B",
   temporal_stability: "B",
-  stability: "C",
+  spatial_homogeneity: "C",
 };
 
 // Spec F4 — alternance index thresholds
@@ -282,7 +282,7 @@ export class CalibrationReviewAdapter {
         strengthPhrase: "Comportement régulier dans le temps.",
         concernPhrase: "Variations temporelles importantes.",
       },
-      stability: {
+      spatial_homogeneity: {
         name: "Homogénéité spatiale",
         strengthPhrase: "Parcelle homogène.",
         concernPhrase: "Hétérogénéité spatiale significative.",

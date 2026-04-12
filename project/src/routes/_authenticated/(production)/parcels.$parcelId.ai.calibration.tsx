@@ -200,10 +200,8 @@ const DATA_QUALITY_FLAG_LABELS: Record<string, string> = {
 
 const HEALTH_COMPONENT_LABELS: Record<string, string> = {
   vigor: 'Vigor',
+  spatial_homogeneity: 'Spatial Homogeneity',
   temporal_stability: 'Temporal Stability',
-  spatial_heterogeneity: 'Spatial Uniformity',
-  homogeneity: 'Temporal Stability',
-  stability: 'Stability',
   hydric: 'Hydric Status',
   nutritional: 'Nutritional Status',
 };

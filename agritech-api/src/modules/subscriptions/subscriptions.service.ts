@@ -184,7 +184,7 @@ export class SubscriptionsService {
   ): Promise<ModularQuoteBreakdown> {
     const selectedModules = this.normalizeSelectedModuleIds(dto.selectedModules);
 
-    return this.pricingService.createModularQuote({
+    return this.pricingService.createModularQuoteAsync({
       selectedModules,
       contractedHectares: dto.contractedHectares,
       billingCycle: dto.billingCycle,
@@ -206,7 +206,7 @@ export class SubscriptionsService {
     if (selectedModules.length > 0) {
       const billingCycle = normalizeBillingCycle(checkoutDto.billingInterval);
       const contractedHectares = Math.max(checkoutDto.contractedHectares || 1, 1);
-      const quote = this.pricingService.createModularQuote({
+      const quote = await this.pricingService.createModularQuoteAsync({
         selectedModules,
         contractedHectares,
         billingCycle,

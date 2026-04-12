@@ -134,17 +134,18 @@ class HealthScore(BaseModel):
 
     @model_validator(mode="after")
     def validate_components(self) -> "HealthScore":
-        required = {"vigor", "stability", "hydric", "nutritional"}
+        # Spec §3.8: 5 components
+        required = {
+            "vigor",
+            "spatial_homogeneity",
+            "temporal_stability",
+            "hydric",
+            "nutritional",
+        }
         missing = required.difference(set(self.components.keys()))
         if missing:
             joined_missing = ", ".join(sorted(missing))
             raise ValueError(f"missing health components: {joined_missing}")
-
-        has_temporal_component = (
-            "temporal_stability" in self.components or "homogeneity" in self.components
-        )
-        if not has_temporal_component:
-            raise ValueError("missing health components: temporal_stability")
 
         for key, value in self.components.items():
             if value < 0 or value > 100:
