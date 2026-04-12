@@ -34,8 +34,8 @@ export interface PolarProductSummary {
 @Injectable()
 export class PolarProductsService {
   private readonly logger = new Logger(PolarProductsService.name);
-  private readonly polar: Polar;
-  private readonly organizationId: string;
+  private readonly polar: Polar | null = null;
+  private readonly organizationId: string | null = null;
 
   constructor(
     private readonly configService: ConfigService,
@@ -45,7 +45,8 @@ export class PolarProductsService {
     const orgId = this.configService.get<string>('POLAR_ORGANIZATION_ID');
 
     if (!accessToken || !orgId) {
-      throw new Error('Missing POLAR_ACCESS_TOKEN or POLAR_ORGANIZATION_ID');
+      this.logger.warn('POLAR_ACCESS_TOKEN or POLAR_ORGANIZATION_ID not set — Polar product management disabled');
+      return;
     }
 
     this.organizationId = orgId;
@@ -57,9 +58,17 @@ export class PolarProductsService {
     });
   }
 
+  private ensureConfigured(): { polar: Polar; organizationId: string } {
+    if (!this.polar || !this.organizationId) {
+      throw new Error('Polar is not configured. Set POLAR_ACCESS_TOKEN and POLAR_ORGANIZATION_ID.');
+    }
+    return { polar: this.polar, organizationId: this.organizationId };
+  }
+
   async listProducts(): Promise<PolarProductSummary[]> {
-    const response = await this.polar.products.list({
-      organizationId: this.organizationId,
+    const { polar, organizationId } = this.ensureConfigured();
+    const response = await polar.products.list({
+      organizationId,
     });
 
     const items = response.result?.items || [];
@@ -109,8 +118,9 @@ export class PolarProductsService {
       });
     }
 
-    const product = await this.polar.products.create({
-      organizationId: this.organizationId,
+    const { polar, organizationId } = this.ensureConfigured();
+    const product = await polar.products.create({
+      organizationId,
       name: dto.name,
       description: dto.description || null,
       metadata,
@@ -204,7 +214,8 @@ export class PolarProductsService {
   }
 
   async archiveProduct(productId: string): Promise<{ archived: boolean }> {
-    await this.polar.products.update({
+    const { polar } = this.ensureConfigured();
+    await polar.products.update({
       id: productId,
       productUpdate: {
         isArchived: true,
