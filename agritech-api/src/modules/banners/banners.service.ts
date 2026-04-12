@@ -9,11 +9,10 @@ export class BannersService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll(organizationId: string, page = 1, pageSize = 50): Promise<PaginatedResponse<any>> {
+  async findAll(page = 1, pageSize = 50): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     return paginate(client, 'banners', {
-      filters: (q) => q.eq('organization_id', organizationId),
       page,
       pageSize,
       orderBy: 'created_at',
@@ -21,19 +20,25 @@ export class BannersService {
     });
   }
 
-  async findActive(organizationId: string, userId?: string, userRole?: string): Promise<any[]> {
+  async findActive(organizationId?: string, userId?: string, userRole?: string): Promise<any[]> {
     const client = this.databaseService.getAdminClient();
     const now = new Date().toISOString();
 
     let query = client
       .from('banners')
       .select('*')
-      .eq('organization_id', organizationId)
       .eq('enabled', true)
       .lte('start_at', now)
       .or(`end_at.is.null,end_at.gte.${now}`)
       .order('priority', { ascending: false })
       .limit(5);
+
+    // Show global banners (null org) + org-specific banners
+    if (organizationId) {
+      query = query.or(`organization_id.is.null,organization_id.eq.${organizationId}`);
+    } else {
+      query = query.is('organization_id', null);
+    }
 
     const { data, error } = await query;
 
@@ -67,13 +72,12 @@ export class BannersService {
     return data;
   }
 
-  async findOne(id: string, organizationId: string): Promise<any> {
+  async findOne(id: string): Promise<any> {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('banners')
       .select('*')
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .maybeSingle();
 
     if (error) {
@@ -85,13 +89,13 @@ export class BannersService {
     return data;
   }
 
-  async create(dto: CreateBannerDto, organizationId: string, createdBy: string): Promise<any> {
+  async create(dto: CreateBannerDto, createdBy: string): Promise<any> {
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('banners')
       .insert({
-        organization_id: organizationId,
+        organization_id: dto.organization_id ?? null,
         title: dto.title,
         message: dto.message,
         severity: dto.severity ?? 'info',
@@ -116,15 +120,14 @@ export class BannersService {
     return data;
   }
 
-  async update(id: string, organizationId: string, dto: UpdateBannerDto): Promise<any> {
-    await this.findOne(id, organizationId);
+  async update(id: string, dto: UpdateBannerDto): Promise<any> {
+    await this.findOne(id);
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('banners')
       .update(dto)
       .eq('id', id)
-      .eq('organization_id', organizationId)
       .select()
       .single();
 
@@ -136,15 +139,14 @@ export class BannersService {
     return data;
   }
 
-  async delete(id: string, organizationId: string): Promise<void> {
-    await this.findOne(id, organizationId);
+  async delete(id: string): Promise<void> {
+    await this.findOne(id);
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client
       .from('banners')
       .delete()
-      .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('id', id);
 
     if (error) {
       this.logger.error(`Failed to delete banner: ${error.message}`);
@@ -163,11 +165,6 @@ export class BannersService {
       this.logger.error(`Failed to dismiss banner: ${error.message}`);
       throw new BadRequestException(`Failed to dismiss banner: ${error.message}`);
     }
-
-    await client
-      .from('banners')
-      .update({ dismissals: 0 })
-      .eq('id', bannerId);
 
     const { data: banner } = await client
       .from('banners')

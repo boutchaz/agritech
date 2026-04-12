@@ -21,30 +21,28 @@ import {
 import { BannersService } from './banners.service';
 import { CreateBannerDto, UpdateBannerDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('banners')
 @ApiBearerAuth()
 @Controller('admin/banners')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard)
 export class BannersController {
   constructor(private readonly bannersService: BannersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all banners for organization (admin)' })
+  @ApiOperation({ summary: 'Get all banners (admin, cross-org)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Banners retrieved successfully' })
-  async findAll(@Req() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.bannersService.findAll(organizationId, page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
+  async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.bannersService.findAll(page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
   }
 
   @Get('active')
   @ApiOperation({ summary: 'Get active banners for display' })
   @ApiResponse({ status: 200, description: 'Active banners' })
   async findActive(@Req() req) {
-    const organizationId = req.headers['x-organization-id'];
+    const organizationId = req.headers['x-organization-id'] as string | undefined;
     const userId = req.user?.sub;
     const userRole = req.user?.role;
     return this.bannersService.findActive(organizationId, userId, userRole);
@@ -55,9 +53,8 @@ export class BannersController {
   @ApiParam({ name: 'id', description: 'Banner ID' })
   @ApiResponse({ status: 200, description: 'Banner retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Banner not found' })
-  async findOne(@Req() req, @Param('id') id: string) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.bannersService.findOne(id, organizationId);
+  async findOne(@Param('id') id: string) {
+    return this.bannersService.findOne(id);
   }
 
   @Post()
@@ -65,9 +62,8 @@ export class BannersController {
   @ApiResponse({ status: 201, description: 'Banner created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   async create(@Req() req, @Body() dto: CreateBannerDto) {
-    const organizationId = req.headers['x-organization-id'];
     const userId = req.user.sub;
-    return this.bannersService.create(dto, organizationId, userId);
+    return this.bannersService.create(dto, userId);
   }
 
   @Patch(':id')
@@ -75,9 +71,8 @@ export class BannersController {
   @ApiParam({ name: 'id', description: 'Banner ID' })
   @ApiResponse({ status: 200, description: 'Banner updated successfully' })
   @ApiResponse({ status: 404, description: 'Banner not found' })
-  async update(@Req() req, @Param('id') id: string, @Body() dto: UpdateBannerDto) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.bannersService.update(id, organizationId, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
+    return this.bannersService.update(id, dto);
   }
 
   @Delete(':id')
@@ -85,9 +80,8 @@ export class BannersController {
   @ApiParam({ name: 'id', description: 'Banner ID' })
   @ApiResponse({ status: 200, description: 'Banner deleted successfully' })
   @ApiResponse({ status: 404, description: 'Banner not found' })
-  async delete(@Req() req, @Param('id') id: string) {
-    const organizationId = req.headers['x-organization-id'];
-    return this.bannersService.delete(id, organizationId);
+  async delete(@Param('id') id: string) {
+    return this.bannersService.delete(id);
   }
 
   @Post(':id/dismiss')

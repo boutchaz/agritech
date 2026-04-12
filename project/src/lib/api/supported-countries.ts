@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const ADMIN_URL = '/api/v1/admin/supported-countries';
 const PUBLIC_URL = '/api/v1/supported-countries';
 
@@ -30,9 +31,11 @@ export interface UpdateSupportedCountryInput {
 }
 
 export const supportedCountriesApi = {
-  /** Public endpoint — no auth needed, returns only enabled countries */
-  async getEnabled() {
-    return apiClient.get<SupportedCountry[]>(PUBLIC_URL);
+  /** Public endpoint — no auth needed, uses raw fetch to skip auth headers */
+  async getEnabled(): Promise<SupportedCountry[]> {
+    const res = await fetch(`${API_URL}${PUBLIC_URL}`);
+    if (!res.ok) throw new Error('Failed to fetch supported countries');
+    return res.json();
   },
 
   /** Admin endpoint — returns all countries (enabled + disabled) */

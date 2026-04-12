@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsDateString,
   IsUrl,
+  IsUUID,
   Min,
   Max,
 } from 'class-validator';
@@ -13,6 +14,11 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BannerSeverity, BannerAudience } from './banner-severity.enum';
 
 export class CreateBannerDto {
+  @ApiPropertyOptional({ description: 'Target organization ID (null = global banner for all orgs)' })
+  @IsOptional()
+  @IsUUID()
+  organization_id?: string;
+
   @ApiProperty()
   @IsString()
   title: string;

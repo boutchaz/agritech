@@ -23784,7 +23784,7 @@ CREATE TRIGGER set_email_templates_updated_at
 
 CREATE TABLE IF NOT EXISTS banners (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   message TEXT NOT NULL,
   severity TEXT NOT NULL DEFAULT 'info' CHECK (severity IN ('info', 'success', 'warning', 'critical')),
@@ -23806,7 +23806,7 @@ CREATE TABLE IF NOT EXISTS banners (
 ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "org_access" ON banners
-  FOR ALL USING (public.is_organization_member(organization_id));
+  FOR ALL USING (organization_id IS NULL OR public.is_organization_member(organization_id));
 
 CREATE INDEX IF NOT EXISTS idx_banners_org ON banners (organization_id);
 CREATE INDEX IF NOT EXISTS idx_banners_active ON banners (organization_id, enabled, start_at, end_at);

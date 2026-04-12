@@ -94,7 +94,10 @@ function BannersPage() {
 
   const { data: banners, isLoading } = useQuery({
     queryKey: ['admin', 'banners'],
-    queryFn: () => apiRequest<Banner[]>('/api/v1/admin/banners'),
+    queryFn: async () => {
+      const res = await apiRequest<{ data: Banner[] }>('/api/v1/admin/banners');
+      return res.data;
+    },
   });
 
   const form = useForm<BannerFormData>({
