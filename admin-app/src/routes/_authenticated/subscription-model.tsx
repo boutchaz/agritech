@@ -94,10 +94,10 @@ const DEFAULT_SIZE_MULTIPLIERS: SizeMultiplier[] = [
 const DEFAULT_DISCOUNT = 10;
 const VAT_RATE = 20;
 
-function formatPrice(cents: number | null, currency = 'usd'): string {
+function formatPrice(cents: number | null, currency = 'mad'): string {
   if (cents === null) return 'Custom';
   const amount = cents / 100;
-  const sym = currency === 'usd' ? '$' : currency.toUpperCase() + ' ';
+  const sym = currency === 'mad' ? 'MAD ' : currency === 'usd' ? '$' : currency.toUpperCase() + ' ';
   return `${sym}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -265,7 +265,7 @@ function SubscriptionModelPage() {
           name: `AgroGina Custom - ${simHectares}ha - ${cycleName}`,
           description: `Custom quote: ${simHectares} ha, ${selectedModuleIds.length} modules, ${discount}% discount. ${cycleName} billing.`,
           priceAmount: priceInCents,
-          currency: 'usd',
+          currency: 'mad',
           recurringInterval: simCycle === 'annual' ? 'year' : 'month',
           metadata: {
             type: 'custom_simulation',
