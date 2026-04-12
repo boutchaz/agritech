@@ -265,7 +265,7 @@ function SubscriptionModelPage() {
           name: `AgroGina Custom - ${simHectares}ha - ${cycleName}`,
           description: `Custom quote: ${simHectares} ha, ${selectedModuleIds.length} modules, ${discount}% discount. ${cycleName} billing.`,
           priceAmount: priceInCents,
-          currency: 'mad',
+          currency: 'usd',
           recurringInterval: simCycle === 'annual' ? 'year' : 'month',
           metadata: {
             type: 'custom_simulation',

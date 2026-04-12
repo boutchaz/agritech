@@ -29,7 +29,7 @@ export class CreatePolarProductDto {
   @Min(0)
   priceAmount: number;
 
-  @ApiProperty({ description: 'Currency code', example: 'mad', default: 'mad' })
+  @ApiProperty({ description: 'Currency code (Polar-supported)', example: 'usd', default: 'usd' })
   @IsString()
   @IsOptional()
   currency?: string;

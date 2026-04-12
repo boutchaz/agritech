@@ -112,7 +112,7 @@ export class PolarProductsService {
       prices.push({
         amountType: 'fixed' as const,
         priceAmount: dto.priceAmount,
-        priceCurrency: dto.currency || 'mad',
+        priceCurrency: dto.currency || 'usd',
       });
     }
 
@@ -184,7 +184,7 @@ export class PolarProductsService {
           name: productName,
           description,
           priceAmount: priceInCents,
-          currency: 'mad',
+          currency: 'usd',
           recurringInterval: polarInterval,
           metadata: {
             formula,
