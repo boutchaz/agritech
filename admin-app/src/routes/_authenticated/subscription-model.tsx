@@ -102,10 +102,47 @@ function formatPrice(cents: number | null, currency = 'usd'): string {
 }
 
 function SubscriptionModelPage() {
-  const [modules, setModules] = useState<ErpModule[]>(DEFAULT_MODULES);
-  const [haTiers, setHaTiers] = useState<HaTier[]>(DEFAULT_HA_TIERS);
+  const [modules, setModules] = useState<ErpModule[]>(() => {
+    try {
+      const saved = localStorage.getItem('subscription-model-config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        if (config.modules) {
+          return DEFAULT_MODULES.map((m) => {
+            const override = config.modules.find((s: any) => s.id === m.id);
+            return override ? { ...m, pricePerMonth: override.pricePerMonth } : m;
+          });
+        }
+      }
+    } catch { /* use defaults */ }
+    return DEFAULT_MODULES;
+  });
+  const [haTiers, setHaTiers] = useState<HaTier[]>(() => {
+    try {
+      const saved = localStorage.getItem('subscription-model-config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        if (config.haTiers) {
+          return DEFAULT_HA_TIERS.map((t, i) => {
+            const override = config.haTiers[i];
+            return override ? { ...t, pricePerHaYear: override.pricePerHaYear } : t;
+          });
+        }
+      }
+    } catch { /* use defaults */ }
+    return DEFAULT_HA_TIERS;
+  });
   const [sizeMultipliers] = useState<SizeMultiplier[]>(DEFAULT_SIZE_MULTIPLIERS);
-  const [discount, setDiscount] = useState(DEFAULT_DISCOUNT);
+  const [discount, setDiscount] = useState(() => {
+    try {
+      const saved = localStorage.getItem('subscription-model-config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        if (config.discount !== undefined) return config.discount;
+      }
+    } catch { /* use default */ }
+    return DEFAULT_DISCOUNT;
+  });
 
   // Simulator state
   const [simHectares, setSimHectares] = useState(50);
@@ -194,7 +231,18 @@ function SubscriptionModelPage() {
   };
 
   const handleSave = () => {
-    toast.success('Subscription model saved (local only for now)');
+    try {
+      const config = {
+        modules: modules.map((m) => ({ id: m.id, pricePerMonth: m.pricePerMonth })),
+        haTiers: haTiers.map((t) => ({ label: t.label, minHa: t.minHa, maxHa: t.maxHa, pricePerHaYear: t.pricePerHaYear })),
+        discount,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('subscription-model-config', JSON.stringify(config));
+      toast.success('Subscription model saved');
+    } catch {
+      toast.error('Failed to save subscription model');
+    }
   };
 
   const handleCreateInPolar = async () => {
