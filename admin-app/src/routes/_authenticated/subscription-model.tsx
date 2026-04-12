@@ -102,47 +102,49 @@ function formatPrice(cents: number | null, currency = 'usd'): string {
 }
 
 function SubscriptionModelPage() {
-  const [modules, setModules] = useState<ErpModule[]>(() => {
-    try {
-      const saved = localStorage.getItem('subscription-model-config');
-      if (saved) {
-        const config = JSON.parse(saved);
-        if (config.modules) {
-          return DEFAULT_MODULES.map((m) => {
-            const override = config.modules.find((s: any) => s.id === m.id);
-            return override ? { ...m, pricePerMonth: override.pricePerMonth } : m;
-          });
-        }
-      }
-    } catch { /* use defaults */ }
-    return DEFAULT_MODULES;
-  });
-  const [haTiers, setHaTiers] = useState<HaTier[]>(() => {
-    try {
-      const saved = localStorage.getItem('subscription-model-config');
-      if (saved) {
-        const config = JSON.parse(saved);
-        if (config.haTiers) {
-          return DEFAULT_HA_TIERS.map((t, i) => {
-            const override = config.haTiers[i];
-            return override ? { ...t, pricePerHaYear: override.pricePerHaYear } : t;
-          });
-        }
-      }
-    } catch { /* use defaults */ }
-    return DEFAULT_HA_TIERS;
-  });
+  const [modules, setModules] = useState<ErpModule[]>(DEFAULT_MODULES);
+  const [haTiers, setHaTiers] = useState<HaTier[]>(DEFAULT_HA_TIERS);
   const [sizeMultipliers] = useState<SizeMultiplier[]>(DEFAULT_SIZE_MULTIPLIERS);
-  const [discount, setDiscount] = useState(() => {
-    try {
-      const saved = localStorage.getItem('subscription-model-config');
-      if (saved) {
-        const config = JSON.parse(saved);
-        if (config.discount !== undefined) return config.discount;
+  const [discount, setDiscount] = useState(DEFAULT_DISCOUNT);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Load pricing config from backend
+  useEffect(() => {
+    (async () => {
+      try {
+        const config = await apiRequest<{
+          modules: Array<{ id: string; pricePerMonth: number }>;
+          ha_tiers: Array<{ maxHa: number | null; label: string; pricePerHaYear: number }>;
+          default_discount_percent: number;
+        }>('/api/v1/admin/pricing-config');
+
+        if (config.modules?.length) {
+          setModules((prev) =>
+            prev.map((m) => {
+              const override = config.modules.find((s) => s.id === m.id);
+              return override ? { ...m, pricePerMonth: override.pricePerMonth } : m;
+            }),
+          );
+        }
+        if (config.ha_tiers?.length) {
+          setHaTiers((prev) =>
+            prev.map((t, i) => {
+              const override = config.ha_tiers[i];
+              return override ? { ...t, pricePerHaYear: override.pricePerHaYear } : t;
+            }),
+          );
+        }
+        if (config.default_discount_percent !== undefined) {
+          setDiscount(config.default_discount_percent);
+        }
+      } catch {
+        // Use defaults on error
+      } finally {
+        setConfigLoading(false);
       }
-    } catch { /* use default */ }
-    return DEFAULT_DISCOUNT;
-  });
+    })();
+  }, []);
 
   // Simulator state
   const [simHectares, setSimHectares] = useState(50);
@@ -230,18 +232,23 @@ function SubscriptionModelPage() {
     setHaTiers((prev) => prev.map((t, i) => (i === index ? { ...t, pricePerHaYear: price } : t)));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const config = {
-        modules: modules.map((m) => ({ id: m.id, pricePerMonth: m.pricePerMonth })),
-        haTiers: haTiers.map((t) => ({ label: t.label, minHa: t.minHa, maxHa: t.maxHa, pricePerHaYear: t.pricePerHaYear })),
-        discount,
-        savedAt: new Date().toISOString(),
-      };
-      localStorage.setItem('subscription-model-config', JSON.stringify(config));
+      await apiRequest('/api/v1/admin/pricing-config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          modules: modules.map((m) => ({ id: m.id, pricePerMonth: m.pricePerMonth })),
+          ha_tiers: haTiers.map((t) => ({ label: t.label, maxHa: t.maxHa, pricePerHaYear: t.pricePerHaYear })),
+          size_multipliers: sizeMultipliers.map((s) => ({ minHa: s.minHa, maxHa: s.maxHa, multiplier: s.multiplier })),
+          default_discount_percent: discount,
+        }),
+      });
       toast.success('Subscription model saved');
-    } catch {
-      toast.error('Failed to save subscription model');
+    } catch (err: any) {
+      toast.error(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -336,9 +343,10 @@ function SubscriptionModelPage() {
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
+            disabled={saving}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
-            <Save className="h-4 w-4" /> Save Model
+            <Save className="h-4 w-4" /> {saving ? 'Saving...' : 'Save Model'}
           </button>
         </div>
       </div>

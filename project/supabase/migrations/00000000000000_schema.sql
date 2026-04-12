@@ -23782,6 +23782,23 @@ CREATE TRIGGER set_email_templates_updated_at
 -- Admin-configurable in-app banners for temporary operational messaging:
 -- maintenance windows, degraded service warnings, feature rollout notices, etc.
 
+-- Single-row config table for subscription pricing model (admin-managed)
+CREATE TABLE IF NOT EXISTS subscription_pricing_config (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  modules JSONB NOT NULL DEFAULT '[]',
+  ha_tiers JSONB NOT NULL DEFAULT '[]',
+  size_multipliers JSONB NOT NULL DEFAULT '[]',
+  default_discount_percent NUMERIC NOT NULL DEFAULT 10,
+  updated_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- No RLS — admin-only access via service_role key
+ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_only" ON subscription_pricing_config
+  FOR ALL USING (auth.role() = 'service_role');
+
 CREATE TABLE IF NOT EXISTS banners (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
