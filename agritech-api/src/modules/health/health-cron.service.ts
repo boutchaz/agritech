@@ -60,6 +60,10 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
       { name: 'satellite', result: result.services.satellite },
       { name: 'cms', result: result.services.cms },
       { name: 'memory', result: result.services.memory },
+      { name: 'dbPool', result: result.services.dbPool },
+      { name: 'disk', result: result.services.disk },
+      { name: 'cpu', result: result.services.cpu },
+      { name: 'errorRate', result: result.services.errorRate },
     ];
 
     for (const { name, result: check } of checks) {

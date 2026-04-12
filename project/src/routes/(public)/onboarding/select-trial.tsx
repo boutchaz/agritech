@@ -489,7 +489,7 @@ function SelectTrialPage() {
                   <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">After trial (monthly)</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{modularQuote.cycleTtc.toLocaleString()} MAD TTC</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">${modularQuote.cycleTtc.toLocaleString()} TTC</span>
                     </div>
                   </div>
                 </div>
@@ -540,7 +540,7 @@ function SelectTrialPage() {
                     </h3>
                     <div className="flex items-baseline mb-2">
                       <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.pricePerHaYearHt} MAD
+                        ${plan.pricePerHaYearHt}
                       </span>
                       <span className="text-gray-600 dark:text-gray-400 ml-2">/ha/year HT</span>
                     </div>

@@ -14,6 +14,12 @@ import { AppModule } from './app.module';
 // Global exception filter to log all 403 exceptions with stack traces
 @Catch()
 class AllExceptionsFilter implements ExceptionFilter {
+  private errorRecorder: { recordError: () => void } | null = null;
+
+  setErrorRecorder(recorder: { recordError: () => void }) {
+    this.errorRecorder = recorder;
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
@@ -58,8 +64,9 @@ class AllExceptionsFilter implements ExceptionFilter {
       console.error(`==========================================================\n`);
     }
 
-    // Report server errors to Sentry
+    // Track error rate for health monitoring
     if (status >= 500) {
+      this.errorRecorder?.recordError();
       Sentry.captureException(exception);
     }
 
@@ -191,7 +198,15 @@ async function bootstrap() {
   );
 
   // Global exception filter to capture and log 403 errors with stack traces
-  app.useGlobalFilters(new AllExceptionsFilter());
+  const exceptionFilter = new AllExceptionsFilter();
+  try {
+    const { HealthService } = await import('./modules/health/health.service');
+    const healthService = app.get(HealthService);
+    exceptionFilter.setErrorRecorder(healthService);
+  } catch {
+    // HealthService not available — error rate tracking disabled
+  }
+  app.useGlobalFilters(exceptionFilter);
 
   // Enable CORS
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');

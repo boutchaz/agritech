@@ -103,7 +103,7 @@ export class SubscriptionPricingService {
       contractedHectares: input.contractedHectares,
       includedUsers: policy.includedUsers,
       billingCycle: input.billingCycle,
-      currency: 'MAD',
+      currency: 'USD',
       vatRate,
       priceHtPerHaYear,
       annualAmountHt,
@@ -166,7 +166,7 @@ export class SubscriptionPricingService {
       vatRate,
       cycleAmountTva,
       cycleAmountTtc,
-      currency: 'MAD',
+      currency: 'USD',
     };
   }
 
@@ -213,7 +213,7 @@ export class SubscriptionPricingService {
       vatRate,
       cycleAmountTva,
       cycleAmountTtc,
-      currency: 'MAD',
+      currency: 'USD',
     };
   }
 

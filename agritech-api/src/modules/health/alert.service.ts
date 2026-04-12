@@ -103,8 +103,6 @@ export class AlertService {
     state.lastAlertSentAt = new Date();
 
     await Promise.allSettled([
-      this.sendEmailAlert(alert),
-      this.sendWebhookAlert(alert),
       this.sendTelegramAlert(alert),
     ]);
   }

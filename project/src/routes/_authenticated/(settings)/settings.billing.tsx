@@ -120,7 +120,7 @@ function BillingPage() {
                 <>
                   {pricing.cycleTtc.toLocaleString('fr-MA', { minimumFractionDigits: 2 })}
                   <span className="text-sm font-normal text-slate-400 ml-1">
-                    MAD TTC
+                    USD TTC
                   </span>
                 </>
               ) : (
@@ -182,7 +182,7 @@ function BillingPage() {
                 {t('billing.currency', 'Currency')}
               </div>
               <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                {subscription?.currency?.toUpperCase() || 'MAD'}
+                {subscription?.currency?.toUpperCase() || 'USD'}
               </div>
             </div>
             <div>
@@ -228,7 +228,7 @@ function BillingPage() {
                     {t('billing.amountHT', 'Amount HT')}
                   </div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {pricing.cycleHt.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD
+                    {pricing.cycleHt.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
                   </div>
                 </div>
                 <div>
@@ -236,7 +236,7 @@ function BillingPage() {
                     {t('billing.vat', 'TVA (20%)')}
                   </div>
                   <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                    {pricing.cycleTva.toLocaleString('fr-MA', { minimumFractionDigits: 2 })} MAD
+                    {pricing.cycleTva.toLocaleString('en-US', { minimumFractionDigits: 2 })} USD
                   </div>
                 </div>
               </>
