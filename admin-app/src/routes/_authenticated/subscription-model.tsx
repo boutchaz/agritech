@@ -320,6 +320,31 @@ function SubscriptionModelPage() {
     }
   };
 
+  const [archivingAll, setArchivingAll] = useState(false);
+
+  const handleArchiveAll = async () => {
+    const active = polarProducts.filter((p) => !p.isArchived);
+    if (!active.length) {
+      toast.info('No active products to archive');
+      return;
+    }
+    if (!confirm(`Archive all ${active.length} active products? They will no longer be available for purchase.`)) return;
+    setArchivingAll(true);
+    try {
+      let archived = 0;
+      for (const p of active) {
+        await apiRequest(`/api/v1/admin/polar-products/${p.id}`, { method: 'DELETE' });
+        archived++;
+      }
+      toast.success(`Archived ${archived} products`);
+      fetchPolarProducts();
+    } catch (err: any) {
+      toast.error(`Failed to archive all: ${err.message}`);
+    } finally {
+      setArchivingAll(false);
+    }
+  };
+
   const activeProducts = polarProducts.filter((p) => !p.isArchived);
   const archivedProducts = polarProducts.filter((p) => p.isArchived);
 
@@ -331,6 +356,15 @@ function SubscriptionModelPage() {
           <p className="mt-1 text-sm text-gray-500 sm:text-base">Configure modular ERP pricing, hectare tiers & sync to Polar</p>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleArchiveAll}
+            disabled={archivingAll || activeProducts.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {archivingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+            Archive All
+          </button>
           <button
             type="button"
             onClick={handleSyncFormulas}
