@@ -24,11 +24,37 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 
+/** Public endpoints — no auth */
+@ApiTags('changelogs')
+@Controller('changelogs')
+export class ChangelogsPublicController {
+  constructor(private readonly changelogsService: ChangelogsService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all global changelogs (public)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Changelogs retrieved successfully' })
+  async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.changelogsService.findAllPublic(page ? Number(page) : 1, pageSize ? Number(pageSize) : 20);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single changelog by ID (public)' })
+  @ApiParam({ name: 'id', description: 'Changelog ID' })
+  @ApiResponse({ status: 200, description: 'Changelog retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Changelog not found' })
+  async findOne(@Param('id') id: string) {
+    return this.changelogsService.findOne(id);
+  }
+}
+
+/** Admin endpoints — auth + org required */
 @ApiTags('changelogs')
 @ApiBearerAuth()
-@Controller('changelogs')
+@Controller('admin/changelogs')
 @UseGuards(JwtAuthGuard, OrganizationGuard)
-export class ChangelogsController {
+export class ChangelogsAdminController {
   constructor(private readonly changelogsService: ChangelogsService) {}
 
   @Get()
@@ -39,15 +65,6 @@ export class ChangelogsController {
   async findAll(@Req() req, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
     const organizationId = req.headers['x-organization-id'];
     return this.changelogsService.findAll(organizationId, page ? Number(page) : 1, pageSize ? Number(pageSize) : 20);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single changelog by ID' })
-  @ApiParam({ name: 'id', description: 'Changelog ID' })
-  @ApiResponse({ status: 200, description: 'Changelog retrieved successfully' })
-  @ApiResponse({ status: 404, description: 'Changelog not found' })
-  async findOne(@Param('id') id: string) {
-    return this.changelogsService.findOne(id);
   }
 
   @Post()

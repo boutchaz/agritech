@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module';
-import { ChangelogsController } from './changelogs.controller';
+import { ChangelogsPublicController, ChangelogsAdminController } from './changelogs.controller';
 import { ChangelogsService } from './changelogs.service';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [ChangelogsController],
+  controllers: [ChangelogsPublicController, ChangelogsAdminController],
   providers: [ChangelogsService],
   exports: [ChangelogsService],
 })

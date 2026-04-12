@@ -9,6 +9,20 @@ export class ChangelogsService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  /** Public — global changelogs only */
+  async findAllPublic(page = 1, pageSize = 20): Promise<PaginatedResponse<any>> {
+    const client = this.databaseService.getAdminClient();
+
+    return paginate(client, 'changelogs', {
+      filters: (q) => q.eq('is_global', true),
+      page,
+      pageSize,
+      orderBy: 'published_at',
+      ascending: false,
+    });
+  }
+
+  /** Authenticated — global + org-specific */
   async findAll(organizationId: string, page = 1, pageSize = 20): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 

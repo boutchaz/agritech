@@ -22,21 +22,13 @@ import { BannersService } from './banners.service';
 import { CreateBannerDto, UpdateBannerDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
+/** Authenticated endpoints — active banners + dismiss (dashboard) */
 @ApiTags('banners')
 @ApiBearerAuth()
-@Controller('admin/banners')
+@Controller('banners')
 @UseGuards(JwtAuthGuard)
-export class BannersController {
+export class BannersUserController {
   constructor(private readonly bannersService: BannersService) {}
-
-  @Get()
-  @ApiOperation({ summary: 'Get all banners (admin, cross-org)' })
-  @ApiQuery({ name: 'page', required: false, type: Number })
-  @ApiQuery({ name: 'pageSize', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Banners retrieved successfully' })
-  async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
-    return this.bannersService.findAll(page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
-  }
 
   @Get('active')
   @ApiOperation({ summary: 'Get active banners for display' })
@@ -46,6 +38,33 @@ export class BannersController {
     const userId = req.user?.sub;
     const userRole = req.user?.role;
     return this.bannersService.findActive(organizationId, userId, userRole);
+  }
+
+  @Post(':id/dismiss')
+  @ApiOperation({ summary: 'Dismiss a banner for current user' })
+  @ApiParam({ name: 'id', description: 'Banner ID' })
+  @ApiResponse({ status: 200, description: 'Banner dismissed' })
+  async dismiss(@Req() req, @Param('id') id: string) {
+    const userId = req.user.sub;
+    return this.bannersService.dismiss(id, userId);
+  }
+}
+
+/** Admin endpoints — full CRUD (admin-app) */
+@ApiTags('banners')
+@ApiBearerAuth()
+@Controller('admin/banners')
+@UseGuards(JwtAuthGuard)
+export class BannersAdminController {
+  constructor(private readonly bannersService: BannersService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'Get all banners (admin, cross-org)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Banners retrieved successfully' })
+  async findAll(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.bannersService.findAll(page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
   }
 
   @Get(':id')
@@ -82,14 +101,5 @@ export class BannersController {
   @ApiResponse({ status: 404, description: 'Banner not found' })
   async delete(@Param('id') id: string) {
     return this.bannersService.delete(id);
-  }
-
-  @Post(':id/dismiss')
-  @ApiOperation({ summary: 'Dismiss a banner for current user' })
-  @ApiParam({ name: 'id', description: 'Banner ID' })
-  @ApiResponse({ status: 200, description: 'Banner dismissed' })
-  async dismiss(@Req() req, @Param('id') id: string) {
-    const userId = req.user.sub;
-    return this.bannersService.dismiss(id, userId);
   }
 }

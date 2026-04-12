@@ -232,8 +232,21 @@ const REF_TABLES: { value: ReferenceDataTable; label: string }[] = [
 
 function RefDataManagement() {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<ReferenceDataTable>('account_templates');
+  const [selectedTable, setSelectedTable] = useState<ReferenceDataTable>('modules');
   const [activePanel, setActivePanel] = useState<'import' | 'diff' | null>(null);
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
+
+  // Fetch table data
+  const { data: tableData, isLoading: tableLoading } = useQuery({
+    queryKey: ['ref-data', selectedTable, page],
+    queryFn: () =>
+      refDataApi.getData(selectedTable, {
+        limit: String(pageSize),
+        offset: String(page * pageSize),
+      }),
+    enabled: isOpen,
+  });
 
   // Import state
   const [importFile, setImportFile] = useState<Record<string, unknown>[] | null>(null);
@@ -318,6 +331,7 @@ function RefDataManagement() {
               value={selectedTable}
               onChange={(e) => {
                 setSelectedTable(e.target.value as ReferenceDataTable);
+                setPage(0);
                 setDiffResult(null);
                 setDryRunResult(null);
               }}
@@ -454,6 +468,88 @@ function RefDataManagement() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Data Table */}
+          {tableLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+            </div>
+          ) : tableData?.data?.length ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  {tableData.total} record{tableData.total !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {Object.keys(tableData.data[0])
+                        .filter((k) => !['id', 'created_at', 'updated_at'].includes(k))
+                        .slice(0, 8)
+                        .map((col) => (
+                          <th
+                            key={col}
+                            className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          >
+                            {col.replace(/_/g, ' ')}
+                          </th>
+                        ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {tableData.data.map((row: Record<string, unknown>, i: number) => {
+                      const cols = Object.keys(row)
+                        .filter((k) => !['id', 'created_at', 'updated_at'].includes(k))
+                        .slice(0, 8);
+                      return (
+                        <tr key={String(row.id ?? i)} className="hover:bg-gray-50">
+                          {cols.map((col) => (
+                            <td key={col} className="px-3 py-2 text-gray-700 whitespace-nowrap max-w-[200px] truncate">
+                              {row[col] == null
+                                ? <span className="text-gray-300">—</span>
+                                : typeof row[col] === 'boolean'
+                                  ? row[col] ? '✓' : '✗'
+                                  : typeof row[col] === 'object'
+                                    ? JSON.stringify(row[col]).slice(0, 60)
+                                    : String(row[col]).slice(0, 80)}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {/* Pagination */}
+              {tableData.total > pageSize && (
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(0, p - 1))}
+                    disabled={page === 0}
+                    className="text-xs text-gray-600 hover:text-gray-900 disabled:opacity-40"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    Page {page + 1} of {Math.ceil(tableData.total / pageSize)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => p + 1)}
+                    disabled={(page + 1) * pageSize >= tableData.total}
+                    className="text-xs text-gray-600 hover:text-gray-900 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : !tableLoading && (
+            <p className="text-sm text-gray-400 text-center py-6">No records in {REF_TABLES.find((t) => t.value === selectedTable)?.label ?? selectedTable}</p>
           )}
 
           {/* Diff Panel */}
