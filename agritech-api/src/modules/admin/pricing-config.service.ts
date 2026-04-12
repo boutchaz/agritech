@@ -56,11 +56,16 @@ export class PricingConfigService {
     const client = this.databaseService.getAdminClient();
 
     // Check if a row already exists
-    const { data: existing } = await client
+    const { data: existing, error: fetchError } = await client
       .from('subscription_pricing_config')
       .select('id')
       .limit(1)
       .maybeSingle();
+
+    if (fetchError) {
+      this.logger.error(`Failed to check existing pricing config: ${JSON.stringify(fetchError)}`);
+      throw new Error(`Failed to load pricing config: ${fetchError.message || fetchError.code || JSON.stringify(fetchError)}`);
+    }
 
     const payload = {
       modules: config.modules,
@@ -71,36 +76,38 @@ export class PricingConfigService {
       updated_at: new Date().toISOString(),
     };
 
-    let result;
+    let data: any;
+    let error: any;
+
     if (existing) {
-      result = await client
+      ({ data, error } = await client
         .from('subscription_pricing_config')
         .update(payload)
         .eq('id', existing.id)
         .select()
-        .single();
+        .single());
     } else {
-      result = await client
+      ({ data, error } = await client
         .from('subscription_pricing_config')
         .insert(payload)
         .select()
-        .single();
+        .single());
     }
 
-    if (result.error) {
-      this.logger.error(`Failed to save pricing config: ${result.error.message}`);
-      throw new Error(`Failed to save pricing config: ${result.error.message}`);
+    if (error) {
+      this.logger.error(`Failed to save pricing config: ${JSON.stringify(error)}`);
+      throw new Error(`Failed to save pricing config: ${error.message || error.code || JSON.stringify(error)}`);
     }
 
     this.logger.log('Subscription pricing config saved');
 
     return {
-      modules: result.data.modules,
-      ha_tiers: result.data.ha_tiers,
-      size_multipliers: result.data.size_multipliers,
-      default_discount_percent: result.data.default_discount_percent,
-      updated_at: result.data.updated_at,
-      updated_by: result.data.updated_by,
+      modules: data.modules,
+      ha_tiers: data.ha_tiers,
+      size_multipliers: data.size_multipliers,
+      default_discount_percent: data.default_discount_percent,
+      updated_at: data.updated_at,
+      updated_by: data.updated_by,
     };
   }
 
