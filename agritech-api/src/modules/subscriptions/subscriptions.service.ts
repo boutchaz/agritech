@@ -44,6 +44,7 @@ import {
   QuoteBreakdown,
   SubscriptionPricingService,
 } from './subscription-pricing.service';
+import { PolarCheckoutService } from './polar-checkout.service';
 
 export interface UsageCounts {
   farms_count: number;
@@ -112,6 +113,7 @@ export class SubscriptionsService {
   constructor(
     private readonly configService: ConfigService,
     private readonly pricingService: SubscriptionPricingService,
+    private readonly polarCheckout: PolarCheckoutService,
   ) {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
     const supabaseServiceKey = this.configService.get<string>(
@@ -210,34 +212,12 @@ export class SubscriptionsService {
         billingCycle,
         discountPercent: checkoutDto.discountPercent,
       });
-      const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
-      if (!checkoutBaseUrl) {
-        throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
-      }
 
-      const productId = this.getModularCheckoutProductId(billingCycle);
+      const productId = await this.polarCheckout.resolveModularProductId(billingCycle);
       if (!productId) {
         throw new BadRequestException(
-          `Polar product ID is not configured for modular pricing (${billingCycle})`,
+          `No Polar product found for modular pricing (${billingCycle}). Sync products from admin first, or set POLAR_MODULAR_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
         );
-      }
-
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
-      const successUrl = frontendUrl
-        ? `${frontendUrl}/checkout-success`
-        : undefined;
-      const cancelUrl = frontendUrl
-        ? `${frontendUrl}/settings/subscription`
-        : undefined;
-
-      const checkoutUrl = new URL(checkoutBaseUrl);
-      checkoutUrl.searchParams.set('product_id', productId);
-
-      if (successUrl) {
-        checkoutUrl.searchParams.set('success_url', successUrl);
-      }
-      if (cancelUrl) {
-        checkoutUrl.searchParams.set('cancel_url', cancelUrl);
       }
 
       const fallbackFormula = this.resolveFormulaForHectares(
@@ -245,32 +225,27 @@ export class SubscriptionsService {
         contractedHectares,
       );
 
-      checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
-      checkoutUrl.searchParams.set('metadata[formula]', fallbackFormula);
-      checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
-      checkoutUrl.searchParams.set(
-        'metadata[contracted_hectares]',
-        String(contractedHectares),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[selected_modules]',
-        JSON.stringify(selectedModules),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[quote_amount_ht]',
-        String(quote.cycleAmountHt),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[quote_amount_ttc]',
-        String(quote.cycleAmountTtc),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[discount_percent]',
-        String(quote.discountPercent),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[size_multiplier]',
-        String(quote.sizeMultiplier),
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+      const successUrl = frontendUrl
+        ? `${frontendUrl}/checkout-success`
+        : undefined;
+
+      const metadata: Record<string, string> = {
+        organization_id: organizationId,
+        formula: fallbackFormula,
+        billing_cycle: billingCycle,
+        contracted_hectares: String(contractedHectares),
+        selected_modules: JSON.stringify(selectedModules),
+        quote_amount_ht: String(quote.cycleAmountHt),
+        quote_amount_ttc: String(quote.cycleAmountTtc),
+        discount_percent: String(quote.discountPercent),
+        size_multiplier: String(quote.sizeMultiplier),
+      };
+
+      const checkoutResult = await this.createPolarCheckoutUrl(
+        productId,
+        successUrl,
+        metadata,
       );
 
       const { data: existingSubscription } = await this.supabaseAdmin
@@ -338,7 +313,7 @@ export class SubscriptionsService {
       }
 
       return {
-        checkoutUrl: checkoutUrl.toString(),
+        checkoutUrl: checkoutResult,
         formula: fallbackFormula,
         billingCycle,
         quoteSnapshot: quote,
@@ -370,15 +345,10 @@ export class SubscriptionsService {
       billingCycle,
     });
 
-    const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
-    if (!checkoutBaseUrl) {
-      throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
-    }
-
-    const productId = this.getCheckoutProductId(resolvedFormula, billingCycle);
+    const productId = await this.polarCheckout.resolveProductId(resolvedFormula, billingCycle);
     if (!productId) {
       throw new BadRequestException(
-        `Polar product ID is not configured for ${resolvedFormula} (${billingCycle})`,
+        `No Polar product found for ${resolvedFormula} (${billingCycle}). Sync products from admin first, or set POLAR_${resolvedFormula.toUpperCase()}_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
       );
     }
 
@@ -386,26 +356,18 @@ export class SubscriptionsService {
     const successUrl = frontendUrl
       ? `${frontendUrl}/checkout-success`
       : undefined;
-    const cancelUrl = frontendUrl
-      ? `${frontendUrl}/settings/subscription`
-      : undefined;
 
-    const checkoutUrl = new URL(checkoutBaseUrl);
-    checkoutUrl.searchParams.set('product_id', productId);
+    const metadata: Record<string, string> = {
+      organization_id: organizationId,
+      formula: resolvedFormula,
+      billing_cycle: billingCycle,
+      contracted_hectares: String(contractedHectares),
+    };
 
-    if (successUrl) {
-      checkoutUrl.searchParams.set('success_url', successUrl);
-    }
-    if (cancelUrl) {
-      checkoutUrl.searchParams.set('cancel_url', cancelUrl);
-    }
-
-    checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
-    checkoutUrl.searchParams.set('metadata[formula]', resolvedFormula);
-    checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
-    checkoutUrl.searchParams.set(
-      'metadata[contracted_hectares]',
-      String(contractedHectares),
+    const checkoutResult = await this.createPolarCheckoutUrl(
+      productId,
+      successUrl,
+      metadata,
     );
 
     const { data: existingSubscription } = await this.supabaseAdmin
@@ -469,7 +431,7 @@ export class SubscriptionsService {
     }
 
     return {
-      checkoutUrl: checkoutUrl.toString(),
+      checkoutUrl: checkoutResult,
       formula: resolvedFormula,
       billingCycle,
       quoteSnapshot: quote,
@@ -1100,15 +1062,44 @@ export class SubscriptionsService {
     );
   }
 
-  private getModularCheckoutProductId(
-    billingCycle: BillingCycle,
-  ): string | undefined {
-    const cycleKey = billingCycle.toUpperCase();
+  /**
+   * Create a Polar checkout URL using SDK (preferred) or manual URL fallback.
+   */
+  private async createPolarCheckoutUrl(
+    productId: string,
+    successUrl: string | undefined,
+    metadata: Record<string, string>,
+  ): Promise<string> {
+    // Try SDK checkout session first
+    const session = await this.polarCheckout.createCheckoutSession({
+      productId,
+      successUrl,
+      metadata,
+    });
 
-    return (
-      this.configService.get<string>(`POLAR_MODULAR_${cycleKey}_PRODUCT_ID`) ||
-      this.configService.get<string>(`POLAR_STANDARD_${cycleKey}_PRODUCT_ID`) ||
-      this.getCheckoutProductId(SubscriptionFormula.STANDARD, billingCycle)
+    if (session) {
+      return session.checkoutUrl;
+    }
+
+    // Fallback to manual URL construction
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const cancelUrl = frontendUrl
+      ? `${frontendUrl}/settings/subscription`
+      : undefined;
+
+    const manualUrl = this.polarCheckout.buildManualCheckoutUrl({
+      productId,
+      successUrl,
+      cancelUrl,
+      metadata,
+    });
+
+    if (manualUrl) {
+      return manualUrl;
+    }
+
+    throw new BadRequestException(
+      'Unable to create checkout URL. Configure POLAR_ACCESS_TOKEN or POLAR_CHECKOUT_URL.',
     );
   }
 
