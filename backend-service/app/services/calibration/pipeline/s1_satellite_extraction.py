@@ -219,12 +219,22 @@ def _extract_plausibility_config(
     plaus = cal.get("plausibilite_temporelle")
     if not isinstance(plaus, dict):
         return spike, window, tolerance
-    # Parse condition_artefact: "|V(t) - V(t-1)| / V(t-1) > 0.30"
+    # Parse condition_artefact — structured dict or legacy string
     cond = plaus.get("condition_artefact", "")
-    import re
-    m = re.search(r">\s*([\d.]+)", str(cond))
-    if m:
-        spike = float(m.group(1))
+    if isinstance(cond, dict):
+        # Structured format: {"var": "spike_ratio", "gt": 0.30}
+        gt_val = cond.get("gt")
+        if gt_val is not None:
+            try:
+                spike = float(gt_val)
+            except (TypeError, ValueError):
+                pass
+    else:
+        # Legacy string: "|V(t) - V(t-1)| / V(t-1) > 0.30"
+        import re
+        m = re.search(r">\s*([\d.]+)", str(cond))
+        if m:
+            spike = float(m.group(1))
     return spike, window, tolerance
 
 

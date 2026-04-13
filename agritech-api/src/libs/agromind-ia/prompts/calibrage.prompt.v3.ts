@@ -191,9 +191,9 @@ ${specificites.signal_satellite_mixte ? '• ⚠️ OASIS : percentiles parcella
   SOUS-ÉTAPE 4b — MACHINE À ÉTATS PHÉNOLOGIQUE
   Lire referentiel.protocole_phenologique.phases et calculs_preliminaires
   Exécuter les calculs préliminaires sur chaque date (dNDVI_dt, dNIRv_dt, Perte_NIRv, Ratio_decouplage...)
-  Appliquer la machine à états : PHASE_0 → PHASE_1 → PHASE_2 → PHASE_3 → PHASE_4 → PHASE_6
-  Vérifier conditions entrée/maintien/sortie de chaque phase définies dans le référentiel
-  FENÊTRE DE CALIBRAGE PRINCIPAL = PHASE_4 (STRESS_ESTIVAL) — indices absolus fiables
+  Appliquer la machine à états : DORMANCE → DEBOURREMENT → FLORAISON → NOUAISON → STRESS_ESTIVAL → REPRISE_AUTOMNALE
+  Vérifier les conditions structurées d'entrée/maintien/sortie de chaque phase définies dans referentiel.protocole_phenologique.phases
+  FENÊTRE DE CALIBRAGE PRINCIPAL = STRESS_ESTIVAL — indices absolus fiables
   Corréler avec referentiel.stades_bbch pour fenêtres d'intervention (codes 00 à 92)
   
   SOUS-ÉTAPE 4c — ALERTES CALIBRAGE (DISTINCTES DES ALERTES OLI-XX)

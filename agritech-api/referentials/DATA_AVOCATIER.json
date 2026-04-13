@@ -1573,6 +1573,173 @@
       "entree_production": null,
       "pleine_production": null,
       "senescence": null
+    },
+    "phases": {
+      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée et sortie structurées. GDD calculé depuis referentiel.gdd.",
+      "calculs_preliminaires": {
+        "GDD_jour": "max(0, (min(Tmax, Tplafond) + max(Tmin, Tbase)) / 2 - Tbase)",
+        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
+        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
+        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
+        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
+        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
+        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
+      },
+      "DORMANCE": {
+        "nom": "Dormance hivernale",
+        "skip_when": {
+          "var": "Tmoy_Q25",
+          "gte": 15
+        },
+        "entry": {
+          "when": {
+            "and": [
+              {
+                "var": "Tmoy",
+                "lt_var": "Tmoy_Q25"
+              },
+              {
+                "var": "NIRv_norm",
+                "lte": 0.15
+              }
+            ]
+          }
+        },
+        "exit": [
+          {
+            "target": "DEBOURREMENT",
+            "when": {
+              "and": [
+                {
+                  "var": "chill_satisfied",
+                  "eq": true
+                },
+                {
+                  "var": "warm_streak",
+                  "gte": 10
+                }
+              ]
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "DEBOURREMENT": {
+        "nom": "Débourrement",
+        "entry": {},
+        "exit": [
+          {
+            "target": "FLORAISON",
+            "when": {
+              "and": [
+                {
+                  "var": "GDD_cumul",
+                  "gte": 350
+                },
+                {
+                  "var": "Tmoy",
+                  "gte": 18
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "FLORAISON": {
+        "nom": "Floraison",
+        "entry": {},
+        "exit": [
+          {
+            "target": "NOUAISON",
+            "when": {
+              "or": [
+                {
+                  "var": "GDD_cumul",
+                  "gt": 700
+                },
+                {
+                  "var": "hot_streak",
+                  "gte": 5
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "NOUAISON": {
+        "nom": "Nouaison / Clarification",
+        "entry": {},
+        "exit": [
+          {
+            "target": "STRESS_ESTIVAL",
+            "when": {
+              "var": "hot_dry_streak",
+              "gte": 3
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "STRESS_ESTIVAL": {
+        "nom": "Stress estival + Maturation",
+        "entry": {},
+        "exit": [
+          {
+            "target": "REPRISE_AUTOMNALE",
+            "when": {
+              "and": [
+                {
+                  "var": "precip_30j",
+                  "gt": 20
+                },
+                {
+                  "var": "Tmoy",
+                  "lt": 25
+                },
+                {
+                  "var": "d_nirv_dt",
+                  "gt": 0
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          },
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "REPRISE_AUTOMNALE": {
+        "nom": "Reprise automnale",
+        "entry": {},
+        "exit": [
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      }
     }
   },
   "stades_bbch": [
@@ -1756,5 +1923,33 @@
       "coef_nirvp": 0.4,
       "phase_kc": "post_recolte"
     }
-  ]
+  ],
+  "signaux": {
+    "streaks": {
+      "warm_streak": {
+        "var": "Tmoy",
+        "gt_var": "Tmoy_Q25"
+      },
+      "cold_streak": {
+        "var": "Tmoy",
+        "lt_var": "Tmoy_Q25"
+      },
+      "hot_streak": {
+        "var": "Tmoy",
+        "gt": 25
+      },
+      "hot_dry_streak": {
+        "and": [
+          {
+            "var": "Tmax",
+            "gt": 30
+          },
+          {
+            "var": "precip_30j",
+            "lt": 5
+          }
+        ]
+      }
+    }
+  }
 }

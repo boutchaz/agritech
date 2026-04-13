@@ -3509,9 +3509,9 @@
       }
     },
     "phases": {
-      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée, maintien et sortie. GDD calculé depuis referentiel.gdd (tbase 7.5°C, plafond 30°C).",
+      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée et sortie structurées. GDD calculé depuis referentiel.gdd.",
       "calculs_preliminaires": {
-        "GDD_jour": "max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
+        "GDD_jour": "max(0, (min(Tmax, Tplafond) + max(Tmin, Tbase)) / 2 - Tbase)",
         "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
         "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
         "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
@@ -3519,118 +3519,160 @@
         "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
         "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
       },
-      "PHASE_0": {
-        "identifiant": "DORMANCE",
+      "DORMANCE": {
         "nom": "Dormance hivernale",
-        "verification_prealable": "SI Tmoy_Q25 >= 15 → PAS_DE_DORMANCE_MARQUEE — passer directement à Phase 1",
-        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.15",
-        "condition_sortie": {
-          "vers": "PHASE_1",
-          "condition": "Tmoy > Tmoy_Q25 durablement (≥ 10 jours consécutifs)",
-          "action": "GDD_cumul = 0"
+        "skip_when": {
+          "var": "Tmoy_Q25",
+          "gte": 15
         },
-        "confiance": "ELEVEE",
-        "surveillance": "Chill Units (CU) — lire referentiel.gdd.seuils_chill_units_par_variete"
+        "entry": {
+          "when": {
+            "and": [
+              {
+                "var": "Tmoy",
+                "lt_var": "Tmoy_Q25"
+              },
+              {
+                "var": "NIRv_norm",
+                "lte": 0.15
+              }
+            ]
+          }
+        },
+        "exit": [
+          {
+            "target": "DEBOURREMENT",
+            "when": {
+              "and": [
+                {
+                  "var": "chill_satisfied",
+                  "eq": true
+                },
+                {
+                  "var": "warm_streak",
+                  "gte": 10
+                }
+              ]
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
       },
-      "PHASE_1": {
-        "identifiant": "DEBOURREMENT",
+      "DEBOURREMENT": {
         "nom": "Débourrement",
-        "condition_maintien": "Tmoy > 15 pendant ≥ 15 jours sur les 20 derniers ET GDD_cumul > 50 ET Precip_30j > 20 OU irrigation ET dNIRv_dt > 0 soutenu",
-        "condition_sortie": {
-          "vers": "PHASE_2",
-          "condition": "GDD_cumul >= 350 ET Tmoy >= 18",
-          "action": "Phase = FLORAISON"
-        },
-        "discrimination_adventices": "ratio_derivees = dNDVI_dt / max(dNIRv_dt, 0.001) → si > 2.0 : adventices dominent",
-        "confiance": "MODEREE"
+        "entry": {},
+        "exit": [
+          {
+            "target": "FLORAISON",
+            "when": {
+              "and": [
+                {
+                  "var": "GDD_cumul",
+                  "gte": 350
+                },
+                {
+                  "var": "Tmoy",
+                  "gte": 18
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
       },
-      "PHASE_2": {
-        "identifiant": "FLORAISON",
+      "FLORAISON": {
         "nom": "Floraison",
-        "condition_maintien": "GDD_cumul ∈ [350, 700] ET Tmoy ∈ [18, 25]",
-        "diagnostic_intensite": {
-          "priorite_1": "Input terrain si disponible (parcelle.terrain_disponible = oui)",
-          "priorite_2": "Alternance (floraison_N-1 forte → FAIBLE | faible → FORTE)",
-          "priorite_3": "Ratio GCI/NIRvP en quartiles (Q4 → floraison FAIBLE | Q1 → FORTE)"
-        },
-        "taille_rajeunissement": "Si annees_post_taille < 2 → intensite = ABSENTE",
-        "condition_sortie": {
-          "vers": "PHASE_3",
-          "condition": "GDD_cumul > 700 OU Tmoy > 25 durablement"
-        },
-        "confiance": "FAIBLE (spectral) / MODEREE (thermique + alternance)"
+        "entry": {},
+        "exit": [
+          {
+            "target": "NOUAISON",
+            "when": {
+              "or": [
+                {
+                  "var": "GDD_cumul",
+                  "gt": 700
+                },
+                {
+                  "var": "hot_streak",
+                  "gte": 5
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
       },
-      "PHASE_3": {
-        "identifiant": "NOUAISON",
+      "NOUAISON": {
         "nom": "Nouaison / Clarification",
-        "condition_maintien": "GDD_cumul > seuil_floraison + 150 ET Clarification != ATTEINTE",
-        "clarification": "dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5 → etat_signal = SIGNAL_PUR",
-        "condition_sortie": {
-          "vers": "PHASE_4",
-          "condition": "etat_signal = SIGNAL_PUR ET Tmax > 30 récurrent"
-        },
-        "confiance": "MODEREE"
+        "entry": {},
+        "exit": [
+          {
+            "target": "STRESS_ESTIVAL",
+            "when": {
+              "var": "hot_dry_streak",
+              "gte": 3
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
       },
-      "PHASE_4": {
-        "identifiant": "STRESS_ESTIVAL",
+      "STRESS_ESTIVAL": {
         "nom": "Stress estival + Maturation",
-        "note": "FENÊTRE DE CALIBRAGE PRINCIPAL — indices absolus fiables ici",
-        "condition_maintien": "etat_signal = SIGNAL_PUR",
-        "diagnostic_severite": [
+        "entry": {},
+        "exit": [
           {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 0.5 × NIRv_ete_sigma",
-            "severite": "PAS_DE_STRESS"
+            "target": "REPRISE_AUTOMNALE",
+            "when": {
+              "and": [
+                {
+                  "var": "precip_30j",
+                  "gt": 20
+                },
+                {
+                  "var": "Tmoy",
+                  "lt": 25
+                },
+                {
+                  "var": "d_nirv_dt",
+                  "gt": 0
+                }
+              ]
+            },
+            "confidence": "MODEREE"
           },
           {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 1.5 × NIRv_ete_sigma",
-            "severite": "STRESS_MODERE"
-          },
-          {
-            "condition": "defaut",
-            "severite": "STRESS_SEVERE"
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "confidence": "ELEVEE"
           }
-        ],
-        "diagnostic_type": [
-          {
-            "condition": "Ratio_decouplage > 1.3",
-            "type": "FONCTIONNEL"
-          },
-          {
-            "condition": "Ratio_decouplage > 0.9",
-            "type": "MIXTE"
-          },
-          {
-            "condition": "defaut",
-            "type": "STRUCTUREL"
-          }
-        ],
-        "diagnostic_tendance": {
-          "declin": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2 → DÉCLIN 2 cycles consécutifs",
-          "recuperation": "NIRv_ete_actuel > NIRv_ete_N-1 → récupération en cours"
-        },
-        "condition_sortie_reprise": {
-          "vers": "PHASE_6",
-          "condition": "Precip_episode > 20 ET Tmoy < 25 ET dNIRv_dt > 0"
-        },
-        "condition_sortie_dormance": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15 ET aucune_reprise",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "ELEVEE (stress) / MODEREE (maturation)"
+        ]
       },
-      "PHASE_6": {
-        "identifiant": "REPRISE_AUTOMNALE",
+      "REPRISE_AUTOMNALE": {
         "nom": "Reprise automnale",
-        "pre_condition": "Phase 4 doit avoir été détectée dans ce cycle — sinon passer directement à Phase 0",
-        "condition_maintien": "Precip_recentes > 20 ET Tmoy < 25 ET dNIRv_dt > 0",
-        "diagnostic_intensite": "Hausse_NIRv_pct = (NIRv_actuel - NIRv_plancher_ete) / NIRv_plancher_ete × 100 → < 10% = ABSENTE | < 25% = FAIBLE | < 50% = MODEREE | ≥ 50% = FORTE",
-        "condition_sortie": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "MODEREE à ELEVEE"
+        "entry": {},
+        "exit": [
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
       }
     },
     "alertes_calibrage": {
@@ -3701,6 +3743,34 @@
       "pleine_production": null,
       "maturite_avancee": null,
       "senescence": null
+    }
+  },
+  "signaux": {
+    "streaks": {
+      "warm_streak": {
+        "var": "Tmoy",
+        "gt_var": "Tmoy_Q25"
+      },
+      "cold_streak": {
+        "var": "Tmoy",
+        "lt_var": "Tmoy_Q25"
+      },
+      "hot_streak": {
+        "var": "Tmoy",
+        "gt": 25
+      },
+      "hot_dry_streak": {
+        "and": [
+          {
+            "var": "Tmax",
+            "gt": 30
+          },
+          {
+            "var": "precip_30j",
+            "lt": 5
+          }
+        ]
+      }
     }
   }
 }

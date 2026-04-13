@@ -458,88 +458,160 @@ extract_phase_config = getattr(sm, "extract_phase_config")
 PhaseConfig = getattr(sm, "PhaseConfig")
 
 
+load_phase_definitions = getattr(sm, "load_phase_definitions")
+PhaseDefinition = getattr(sm, "PhaseDefinition")
+
+
 def test_extract_phase_config_from_olive_referential() -> None:
-    """Config extracted from real olive referential matches protocole values."""
+    """Config extracted from real olive referential has chill months from stades_bbch."""
     ref = _load_olive_referential()
     cfg = extract_phase_config(ref)
-    assert cfg.warm_skip_tmoy_q25 == 15.0
-    assert cfg.warm_streak_days == 10
-    assert cfg.gdd_debourrement_exit == 350.0
-    assert cfg.gdd_floraison_exit == 700.0
-    assert cfg.tmoy_floraison_min == 18.0
-    assert cfg.tmoy_heat_sustained == 25.0
-    assert cfg.tmax_stress_threshold == 30.0
-    assert cfg.precip_dry_threshold == 5.0
-    assert cfg.precip_reprise_threshold == 20.0
-    assert cfg.tmoy_reprise_max == 25.0
-    assert cfg.dormancy_nirvp_norm_max == 0.15
+    # Chill months should be populated from stades_bbch repos entries
+    assert len(cfg.chill_months) > 0
+    assert cfg.chill_threshold == 150  # default
 
 
 def test_extract_phase_config_without_referential() -> None:
     """Defaults used when no referential is provided."""
     cfg = extract_phase_config(None)
-    assert cfg.warm_streak_days == 10
-    assert cfg.gdd_debourrement_exit == 350.0
-    assert cfg.gdd_floraison_exit == 700.0
+    assert cfg.chill_threshold == 150
+    assert cfg.chill_months == frozenset({11, 12, 1, 2})
+    assert cfg.active_phases is None
 
 
-def test_extract_phase_config_parses_custom_protocol_strings() -> None:
-    cfg = extract_phase_config(
-        {
-            "protocole_phenologique": {
-                "phases": {
-                    "PHASE_0": {
-                        "verification_prealable": "SI Tmoy_Q25 >= 13.5",
-                        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.12",
-                        "condition_sortie": {
-                            "condition": "Tmoy > Tmoy_Q25 durablement (≥ 7 jours consécutifs)"
-                        },
+def test_load_phase_definitions_from_olive_referential() -> None:
+    """Phase definitions loaded from real olive referential contain exit conditions."""
+    ref = _load_olive_referential()
+    defs = load_phase_definitions(ref)
+    assert len(defs) >= 6
+    names = [d.name for d in defs]
+    assert "DORMANCE" in names
+    assert "DEBOURREMENT" in names
+    assert "FLORAISON" in names
+    assert "NOUAISON" in names
+    assert "STRESS_ESTIVAL" in names
+    assert "REPRISE_AUTOMNALE" in names
+
+    # DORMANCE should have skip_when and exit conditions
+    dormance = next(d for d in defs if d.name == "DORMANCE")
+    assert dormance.skip_when is not None
+    assert len(dormance.exits) >= 1
+    assert dormance.exits[0]["target"] == "DEBOURREMENT"
+
+    # DEBOURREMENT exit → FLORAISON with GDD condition
+    debourrement = next(d for d in defs if d.name == "DEBOURREMENT")
+    assert len(debourrement.exits) >= 1
+    assert debourrement.exits[0]["target"] == "FLORAISON"
+
+
+def test_load_phase_definitions_legacy_format_returns_empty() -> None:
+    """Legacy PHASE_N format returns empty list (triggers default fallback)."""
+    defs = load_phase_definitions({
+        "protocole_phenologique": {
+            "phases": {
+                "PHASE_0": {
+                    "verification_prealable": "SI Tmoy_Q25 >= 13.5",
+                    "condition_sortie": {
+                        "condition": "Tmoy > Tmoy_Q25 durablement (≥ 7 jours)"
                     },
-                    "PHASE_1": {
-                        "condition_sortie": {
-                            "condition": "GDD_cumul >= 280 ET Tmoy >= 17"
-                        }
-                    },
-                    "PHASE_2": {
-                        "condition_sortie": {
-                            "condition": "GDD_cumul > 620 OU Tmoy > 24 pendant ≥ 4 jours"
-                        }
-                    },
-                    "PHASE_3": {
-                        "clarification": "Tmax_30j_pct > 65 ET Precip_30j < 8",
-                        "condition_sortie": {
-                            "condition": "etat_signal = SIGNAL_PUR ET Tmax > 33 pendant ≥ 2 jours"
-                        },
-                    },
-                    "PHASE_4": {
-                        "condition_sortie_reprise": {
-                            "condition": "Precip_episode > 18 ET Tmoy < 22 ET dNIRv_dt > 0"
-                        },
-                        "condition_sortie_dormance": {
-                            "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 13.5 ET NIRvP_norm < 0.12"
-                        },
-                    },
-                    "PHASE_6": {
-                        "condition_maintien": "Precip_recentes > 18 ET Tmoy < 22 ET dNIRv_dt > 0"
-                    },
-                }
+                },
+                "PHASE_1": {
+                    "condition_sortie": {
+                        "condition": "GDD_cumul >= 280 ET Tmoy >= 17"
+                    }
+                },
             }
         }
-    )
+    })
+    assert defs == []
 
-    assert cfg.warm_skip_tmoy_q25 == 13.5
-    assert cfg.warm_streak_days == 7
-    assert cfg.gdd_debourrement_exit == 280.0
-    assert cfg.tmoy_floraison_min == 17.0
-    assert cfg.gdd_floraison_exit == 620.0
-    assert cfg.tmoy_heat_sustained == 24.0
-    assert cfg.heat_sustained_days == 4
-    assert cfg.precip_dry_threshold == 8.0
-    assert cfg.tmax_stress_threshold == 33.0
-    assert cfg.hot_dry_streak_days == 2
-    assert cfg.precip_reprise_threshold == 18.0
-    assert cfg.tmoy_reprise_max == 22.0
-    assert cfg.dormancy_nirvp_norm_max == 0.12
+
+def test_load_phase_definitions_custom_structured_conditions() -> None:
+    """Structured conditions in new format are loaded correctly."""
+    defs = load_phase_definitions({
+        "protocole_phenologique": {
+            "phases": {
+                "DORMANCE": {
+                    "skip_when": {"var": "Tmoy_Q25", "gte": 13.5},
+                    "entry": {"when": {"and": [
+                        {"var": "Tmoy", "lt_var": "Tmoy_Q25"},
+                        {"var": "NIRv_norm", "lte": 0.12},
+                    ]}},
+                    "exit": [{
+                        "target": "DEBOURREMENT",
+                        "when": {"and": [
+                            {"var": "chill_satisfied", "eq": True},
+                            {"var": "warm_streak", "gte": 7},
+                        ]},
+                        "confidence": "MODEREE",
+                    }],
+                },
+                "DEBOURREMENT": {
+                    "exit": [{
+                        "target": "FLORAISON",
+                        "when": {"and": [
+                            {"var": "GDD_cumul", "gte": 280},
+                            {"var": "Tmoy", "gte": 17},
+                        ]},
+                        "confidence": "MODEREE",
+                    }],
+                },
+                "FLORAISON": {
+                    "exit": [{
+                        "target": "NOUAISON",
+                        "when": {"or": [
+                            {"var": "GDD_cumul", "gt": 620},
+                            {"var": "hot_streak", "gte": 4},
+                        ]},
+                        "confidence": "MODEREE",
+                    }],
+                },
+                "NOUAISON": {
+                    "exit": [{
+                        "target": "STRESS_ESTIVAL",
+                        "when": {"var": "hot_dry_streak", "gte": 2},
+                        "confidence": "ELEVEE",
+                    }],
+                },
+                "STRESS_ESTIVAL": {
+                    "exit": [{
+                        "target": "REPRISE_AUTOMNALE",
+                        "when": {"and": [
+                            {"var": "precip_30j", "gt": 18},
+                            {"var": "Tmoy", "lt": 22},
+                            {"var": "d_nirv_dt", "gt": 0},
+                        ]},
+                        "confidence": "MODEREE",
+                    }],
+                },
+                "REPRISE_AUTOMNALE": {
+                    "exit": [{
+                        "target": "DORMANCE",
+                        "when": {"var": "cold_streak", "gte": 10},
+                        "confidence": "ELEVEE",
+                    }],
+                },
+            }
+        }
+    })
+    assert len(defs) == 6
+
+    dormance = next(d for d in defs if d.name == "DORMANCE")
+    assert dormance.skip_when == {"var": "Tmoy_Q25", "gte": 13.5}
+    assert dormance.exits[0]["when"]["and"][1]["gte"] == 7
+
+    debourrement = next(d for d in defs if d.name == "DEBOURREMENT")
+    assert debourrement.exits[0]["when"]["and"][0]["gte"] == 280
+
+    floraison = next(d for d in defs if d.name == "FLORAISON")
+    assert floraison.exits[0]["when"]["or"][0]["gt"] == 620
+    assert floraison.exits[0]["when"]["or"][1]["gte"] == 4
+
+    nouaison = next(d for d in defs if d.name == "NOUAISON")
+    assert nouaison.exits[0]["when"]["gte"] == 2
+
+    stress = next(d for d in defs if d.name == "STRESS_ESTIVAL")
+    assert stress.exits[0]["when"]["and"][0]["gt"] == 18
 
 
 # ---------------------------------------------------------------------------

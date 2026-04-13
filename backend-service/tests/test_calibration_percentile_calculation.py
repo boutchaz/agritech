@@ -3,7 +3,7 @@ from importlib import import_module
 
 
 types_module = import_module("app.services.calibration.types")
-step3_module = import_module("app.services.calibration.step3_percentile_calculation")
+step3_module = import_module("app.services.calibration.pipeline.s3_percentile_calculation")
 
 Step1Output = getattr(types_module, "Step1Output")
 calculate_percentiles = getattr(step3_module, "calculate_percentiles")
