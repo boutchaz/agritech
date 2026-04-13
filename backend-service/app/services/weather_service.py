@@ -1,6 +1,6 @@
 import httpx
-from datetime import date, timedelta
 import logging
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -74,14 +74,18 @@ class WeatherService:
         Returns a list of parsed daily weather records (same shape as parse_open_meteo_response).
         Never calls the API for dates already cached.
         """
-        from app.services.supabase_service import supabase_service as _supa
+        from app.services.supabase_service import supabase_service
 
-        cached = await _supa.get_cached_weather(latitude, longitude, start_date, end_date)
-        cached_dates: set = {str(row["date"]) for row in cached}
+        cached = await supabase_service.get_cached_weather(
+            latitude, longitude, start_date, end_date
+        )
 
+        cached_dates: set[str] = {str(row["date"]) for row in cached}
+
+        # Build list of all expected dates in range
         d_start = date.fromisoformat(start_date)
         d_end = date.fromisoformat(end_date)
-        all_dates: set = set()
+        all_dates: set[str] = set()
         cur = d_start
         while cur <= d_end:
             all_dates.add(cur.isoformat())
@@ -91,25 +95,30 @@ class WeatherService:
 
         fetched_records: List[Dict] = []
         if missing_dates:
-            for gap_start, gap_end in self._contiguous_ranges(missing_dates):
+            # Group contiguous missing date ranges to minimize API calls
+            ranges = self._contiguous_ranges(missing_dates)
+            for gap_start, gap_end in ranges:
                 try:
                     raw = await self.fetch_historical(latitude, longitude, gap_start, gap_end)
                     gap_records = self.parse_open_meteo_response(raw)
                     fetched_records.extend(gap_records)
-                    await _supa.upsert_weather_daily(latitude, longitude, gap_records)
+                    # Persist asynchronously — do not block on failure
+                    await supabase_service.upsert_weather_daily(latitude, longitude, gap_records)
                 except Exception as e:
                     logger.warning(f"Could not fetch gap {gap_start}..{gap_end}: {e}")
 
+        # Merge: convert cached rows to the shared record format, then append fetched
         def _from_db_row(row: Dict) -> Dict:
             return {
                 "date": str(row["date"]),
+                "temp_min": row.get("temperature_min"),
+                "temp_max": row.get("temperature_max"),
+                "precip": row.get("precipitation_sum"),
+                "et0": row.get("et0_fao_evapotranspiration"),
+                "wind_speed_max": row.get("wind_speed_max"),
                 "temperature_min": row.get("temperature_min"),
                 "temperature_max": row.get("temperature_max"),
-                "temperature_mean": row.get("temperature_mean"),
-                "relative_humidity_mean": row.get("relative_humidity_mean"),
                 "precipitation_sum": row.get("precipitation_sum"),
-                "wind_speed_max": row.get("wind_speed_max"),
-                "shortwave_radiation_sum": row.get("shortwave_radiation_sum"),
                 "et0_fao_evapotranspiration": row.get("et0_fao_evapotranspiration"),
             }
 

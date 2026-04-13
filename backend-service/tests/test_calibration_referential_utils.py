@@ -51,6 +51,13 @@ def test_french_month_to_num() -> None:
     assert french_month_to_num("Nov") == 11
     assert french_month_to_num("dec") == 12
     assert french_month_to_num("  Mai  ") == 5
+    assert french_month_to_num("Feb") == 2
+    assert french_month_to_num("Apr") == 4
+    assert french_month_to_num("May") == 5
+    assert french_month_to_num("Jun") == 6
+    assert french_month_to_num("Jul") == 7
+    assert french_month_to_num("Aug") == 8
+    assert french_month_to_num("Sep") == 9
     assert french_month_to_num("unknown") == 1
 
 
@@ -144,6 +151,55 @@ def test_get_phenology_periods_from_stades_bbch() -> None:
     assert 2 in result["growth"] and 3 in result["growth"]
     assert 5 in result["flowering"]
     assert 7 in result["maturation"] and 11 in result["maturation"] and 12 in result["maturation"]
+
+
+def test_get_phenology_periods_from_stades_bbch_handles_english_month_codes() -> None:
+    reference_data = {
+        "stades_bbch": [
+            {"code": "00", "mois": ["Dec", "Jan"]},
+            {"code": "09", "mois": ["Feb", "Mar"]},
+            {"code": "15", "mois": ["Mar", "Apr"]},
+            {"code": "60", "mois": ["May"]},
+            {"code": "69", "mois": ["Jun"]},
+            {"code": "75", "mois": ["Jul"]},
+            {"code": "79", "mois": ["Aug", "Sep"]},
+            {"code": "89", "mois": ["Oct", "Nov"]},
+            {"code": "92", "mois": ["Nov", "Dec"]},
+        ]
+    }
+
+    result = get_phenology_periods_from_stades_bbch(reference_data)
+    assert result is not None
+    assert result["dormancy"] == {1, 12}
+    assert result["growth"] == {2, 3, 4}
+    assert result["flowering"] == {5, 6}
+    assert result["maturation"] == {7, 8, 9, 10, 11, 12}
+
+
+def test_get_phenology_periods_from_stades_bbch_uses_phase_kc_when_present() -> None:
+    reference_data = {
+        "stades_bbch": [
+            {"code": "00", "mois": ["Dec", "Jan"], "phase_kc": "repos"},
+            {"code": "01", "mois": ["Feb"], "phase_kc": "debourrement"},
+            {"code": "15", "mois": ["Mar", "Apr"], "phase_kc": "croissance"},
+            {"code": "60", "mois": ["May"], "phase_kc": "floraison"},
+            {"code": "69", "mois": ["Jun"], "phase_kc": "nouaison"},
+            {"code": "75", "mois": ["Jul"], "phase_kc": "grossissement"},
+            {"code": "89", "mois": ["Oct", "Nov"], "phase_kc": "maturation"},
+            {"code": "92", "mois": ["Nov", "Dec"], "phase_kc": "post_recolte"},
+        ]
+    }
+
+    result = get_phenology_periods_from_stades_bbch(reference_data)
+    assert result is not None
+    assert result["repos"] == {1, 12}
+    assert result["debourrement"] == {2}
+    assert result["croissance"] == {3, 4}
+    assert result["floraison"] == {5}
+    assert result["nouaison"] == {6}
+    assert result["grossissement"] == {7}
+    assert result["maturation"] == {10, 11}
+    assert result["post_recolte"] == {11, 12}
 
 
 def test_cycle_year_for_date() -> None:

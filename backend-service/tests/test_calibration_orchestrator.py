@@ -7,6 +7,7 @@ fixtures_module = import_module("tests.fixtures.calibration_fixtures")
 
 CalibrationInput = getattr(types_module, "CalibrationInput")
 run_calibration_pipeline = getattr(orchestrator_module, "run_calibration_pipeline")
+resolve_weather_thresholds = getattr(orchestrator_module, "_resolve_weather_thresholds")
 
 build_satellite_fixture = getattr(fixtures_module, "build_satellite_fixture")
 build_weather_fixture = getattr(fixtures_module, "build_weather_fixture")
@@ -102,3 +103,84 @@ def test_orchestrator_runs_all_steps_and_returns_output() -> None:
     assert output.step7.zone_summary
     assert 0 <= output.step8.health_score.total <= 100
     assert 0 <= output.confidence.normalized_score <= 1
+
+
+def test_resolve_weather_thresholds_reads_referential_values() -> None:
+    tbase, frost = resolve_weather_thresholds(
+        {
+            "gdd": {"tbase_c": "12.5"},
+            "seuils_meteo": {"gel": {"threshold_c": "-1.5"}},
+        },
+    )
+
+    assert tbase == 12.5
+    assert frost == -1.5
+
+
+def test_resolve_weather_thresholds_falls_back_to_generic_defaults() -> None:
+    tbase, frost = resolve_weather_thresholds({})
+
+    assert tbase == 10.0
+    assert frost == 0.0
+
+
+def test_orchestrator_normalizes_mixed_case_index_keys() -> None:
+    parcel = build_parcel_context_fixture()
+    weather = build_weather_fixture()
+
+    calibration_input = CalibrationInput.model_validate(
+        {
+            "parcel_id": parcel["parcel_id"],
+            "organization_id": parcel["organization_id"],
+            "crop_type": parcel["crop_type"],
+            "variety": parcel["variety"],
+            "planting_year": parcel["planting_year"],
+            "planting_system": parcel["planting_system"],
+            "analyses": [],
+            "harvest_records": build_harvest_fixture(),
+            "reference_data": build_crop_reference_fixture(),
+        }
+    )
+
+    satellite_images = [
+        {
+            "date": "2024-01-01",
+            "cloud_coverage": 5.0,
+            "indices": {
+                "NDVI": 0.40,
+                "NIRV": 0.31,
+                "ndmi": 0.22,
+                "NdRe": 0.21,
+                "EVI": 0.18,
+                "msavi": 0.25,
+                "MSI": 0.90,
+                "gci": 1.15,
+            },
+        },
+        {
+            "date": "2024-01-20",
+            "cloud_coverage": 5.0,
+            "indices": {
+                "ndvi": 0.45,
+                "nirv": 0.35,
+                "NDMI": 0.24,
+                "NDRE": 0.23,
+                "evi": 0.20,
+                "MSAVI": 0.27,
+                "msi": 0.88,
+                "GCI": 1.20,
+            },
+        },
+    ]
+
+    output = run_calibration_pipeline(
+        calibration_input=calibration_input,
+        satellite_images=satellite_images,
+        weather_rows=weather,
+        storage=None,
+    )
+
+    for index in ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI", "MSI", "GCI"]:
+        assert index in output.step3.global_percentiles
+        assert output.step3.global_percentiles[index].p10 is not None
+        assert output.step3.global_percentiles[index].p25 is not None

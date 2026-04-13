@@ -3,7 +3,7 @@ from importlib import import_module
 
 
 types_module = import_module("app.services.calibration.types")
-step3_module = import_module("app.services.calibration.pipeline.s3_percentile_calculation")
+step3_module = import_module("app.services.calibration.step3_percentile_calculation")
 
 Step1Output = getattr(types_module, "Step1Output")
 calculate_percentiles = getattr(step3_module, "calculate_percentiles")
@@ -11,7 +11,7 @@ calculate_percentiles = getattr(step3_module, "calculate_percentiles")
 
 def _step1_fixture(months: int = 30):
     rows = {}
-    indices = ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI2", "MSI", "GCI"]
+    indices = ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI", "MSI", "GCI"]
     for index_idx, index in enumerate(indices):
         points = []
         for m in range(months):
@@ -60,8 +60,7 @@ def test_step3_builds_period_percentiles_when_history_exceeds_24_months() -> Non
 
 
 def test_step3_uses_referential_stades_bbch_for_periods_when_present() -> None:
-    # Need enough monthly samples so sparse BBCH months (e.g. Mai=flowering) meet MIN_PERIOD_SAMPLES
-    step1 = _step1_fixture(months=60)
+    step1 = _step1_fixture(months=30)
     reference_data = {
         "stades_bbch": [
             {"code": "00", "mois": ["Dec", "Jan"]},
@@ -78,43 +77,46 @@ def test_step3_uses_referential_stades_bbch_for_periods_when_present() -> None:
     assert output.phenology_period_percentiles
     assert "dormancy" in output.phenology_period_percentiles
     assert "growth" in output.phenology_period_percentiles
-    # "flowering" (May only) and "maturation" (Nov-Dec) may be excluded
-    # when the period has fewer than MIN_PERIOD_SAMPLES observations
+    assert "flowering" in output.phenology_period_percentiles
+    assert "maturation" in output.phenology_period_percentiles
     assert "NDVI" in output.phenology_period_percentiles["dormancy"]
 
 
-def test_step3_excludes_interpolated_points_from_percentiles() -> None:
-    points = []
-    for month in range(1, 11):
-        points.append(
-            {
-                "date": date(2025, month, 15).isoformat(),
-                "value": 0.4,
-                "outlier": False,
-                "interpolated": False,
-            }
-        )
-    for month in range(1, 11):
-        points.append(
-            {
-                "date": date(2026, month, 15).isoformat(),
-                "value": 0.95,
-                "outlier": False,
-                "interpolated": True,
-            }
-        )
+def test_step3_ignores_structural_zeros_when_enough_positive_values() -> None:
+    points = [
+        {
+            "date": date(2024, month, 15).isoformat(),
+            "value": value,
+            "outlier": False,
+            "interpolated": False,
+        }
+        for month, value in [
+            (1, 0.0),
+            (2, 0.0),
+            (3, 0.0),
+            (4, 0.11),
+            (5, 0.14),
+            (6, 0.18),
+            (7, 0.22),
+            (8, 0.27),
+            (9, 0.31),
+            (10, 0.35),
+        ]
+    ]
 
     step1 = Step1Output.model_validate(
         {
             "index_time_series": {"NDVI": points},
-            "cloud_coverage_mean": 12,
+            "cloud_coverage_mean": 10,
             "filtered_image_count": 0,
             "outlier_count": 0,
-            "interpolated_dates": [date(2026, month, 15).isoformat() for month in range(1, 11)],
+            "interpolated_dates": [],
             "raster_paths": {"NDVI": []},
         }
     )
 
     output = calculate_percentiles(step1)
+    ndvi = output.global_percentiles["NDVI"]
 
-    assert round(output.global_percentiles["NDVI"].mean, 4) == 0.4
+    assert ndvi.p10 > 0.0
+    assert ndvi.p25 > 0.0

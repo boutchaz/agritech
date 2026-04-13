@@ -199,14 +199,7 @@ class SupabaseService:
                     params=query_params,
                 )
                 response.raise_for_status()
-                payload = response.json()
-                if isinstance(payload, list):
-                    return payload
-                logger.warning(
-                    "satellite_indices_data returned non-list payload: %s",
-                    type(payload).__name__,
-                )
-                return []
+                return response.json()
         except Exception as e:
             logger.error(f"Error fetching satellite data: {e}")
             return []
@@ -565,7 +558,8 @@ class SupabaseService:
                         "select": "*",
                         "latitude": f"eq.{lat}",
                         "longitude": f"eq.{lon}",
-                        "and": f"(date.gte.{start_date},date.lte.{end_date})",
+                        "date": f"gte.{start_date}",
+                        "date": f"lte.{end_date}",
                         "order": "date.asc",
                     },
                 )
@@ -624,6 +618,7 @@ class SupabaseService:
 
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
+                # Batch in chunks of 500 to stay within PostgREST limits
                 for i in range(0, len(rows), 500):
                     chunk = rows[i : i + 500]
                     response = await client.post(
@@ -647,7 +642,7 @@ class SupabaseService:
         cycle_start_month: int = 12,
         gdd_column: str = "gdd_olivier",
     ) -> List[Dict[str, Any]]:
-        """Monthly GDD aggregates reset per agronomic cycle — pure SQL, no Python compute.
+        """Return monthly GDD aggregates reset per agronomic cycle — pure SQL, no Python compute.
 
         cycle_start_month=12 → cycle Dec(Y-1)..Nov(Y), year key = Y.
         Returns rows: {cycle_year, month_key, gdd_total, precip_total, gdd_cumulative}.
@@ -694,6 +689,7 @@ class SupabaseService:
                     json={"query": sql},
                 )
                 if response.status_code == 404:
+                    # execute_sql RPC not available — fall back to None so caller uses Python
                     return []
                 response.raise_for_status()
                 return response.json()
