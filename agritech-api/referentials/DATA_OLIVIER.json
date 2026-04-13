@@ -3688,6 +3688,19 @@
       "etat_signal": "SIGNAL_PUR | MIXTE_MODERE | DOMINE_ADVENTICES",
       "alertes_calibrage_detectees": "liste de ALERTE_CAL_X détectées cette saison",
       "mode": "NORMAL | AMORCAGE"
+    },
+    "phases_par_maturite": {
+      "juvenile": [
+        "repos",
+        "debourrement",
+        "croissance",
+        "floraison",
+        "post_recolte"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "maturite_avancee": null,
+      "senescence": null
     }
   }
 }

@@ -1560,5 +1560,19 @@
       "phyto": null,
       "irrigation_L_sem": 60
     }
+  },
+  "protocole_phenologique": {
+    "phases_par_maturite": {
+      "juvenile": [
+        "repos",
+        "debourrement",
+        "croissance",
+        "floraison",
+        "post_recolte"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "senescence": null
+    }
   }
 }

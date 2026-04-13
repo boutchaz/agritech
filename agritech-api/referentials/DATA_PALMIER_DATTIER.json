@@ -616,5 +616,19 @@
       "amendement": "Fumier 40kg",
       "travaux": "Entretien"
     }
+  },
+  "protocole_phenologique": {
+    "phases_par_maturite": {
+      "juvenile": [
+        "repos",
+        "debourrement",
+        "croissance",
+        "floraison",
+        "post_recolte"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "senescence": null
+    }
   }
 }

@@ -265,6 +265,21 @@ def _extract_days_threshold(text: str) -> int | None:
     return None
 
 
+# Mapping from BBCH phase_kc (8 fine-grained) → state machine OlivePhase (6 coarse).
+# This bridges the referential's dynamic BBCH stages to the state machine's internal
+# representation.  Adding a new crop only requires its stades_bbch in the referential.
+_BBCH_TO_STATE_PHASE: dict[str, OlivePhase] = {
+    "repos": OlivePhase.DORMANCE,
+    "debourrement": OlivePhase.DEBOURREMENT,
+    "croissance": OlivePhase.DEBOURREMENT,  # merged with debourrement
+    "floraison": OlivePhase.FLORAISON,
+    "nouaison": OlivePhase.NOUAISON,
+    "grossissement": OlivePhase.STRESS_ESTIVAL,  # merged: fruit fill → summer stress
+    "maturation": OlivePhase.STRESS_ESTIVAL,  # merged: ripening → summer stress
+    "post_recolte": OlivePhase.REPRISE_AUTOMNALE,
+}
+
+
 def extract_phase_config(
     reference_data: dict | None,
     maturity_phase: str | None = None,
@@ -421,20 +436,33 @@ def extract_phase_config(
     # Keep heat_count_threshold aligned with stress transition threshold
     cfg.heat_count_threshold = cfg.tmax_stress_threshold
 
-    # Active phases per maturity stage from referential.
-    # Example referential structure:
+    # Active phases per maturity stage, driven by BBCH phase_kc names.
+    #
+    # The referential defines phases_par_maturite using the dynamic phase_kc
+    # names from stades_bbch (repos, debourrement, croissance, floraison,
+    # nouaison, grossissement, maturation, post_recolte).
+    #
+    # Example referential:
     #   protocole_phenologique.phases_par_maturite:
-    #     juvenile: ["DORMANCE", "DEBOURREMENT", "FLORAISON", "REPRISE_AUTOMNALE"]
+    #     juvenile: ["repos", "debourrement", "croissance", "floraison", "post_recolte"]
     #     entree_production: null  (= all phases)
     #     pleine_production: null
-    #     senescence: ["DORMANCE", "DEBOURREMENT", "FLORAISON", "NOUAISON", "REPRISE_AUTOMNALE"]
+    #     senescence: ["repos", "debourrement", "croissance", "floraison", "nouaison", "maturation", "post_recolte"]
+    #
+    # These are mapped to the 6-phase state machine via _BBCH_TO_STATE_PHASE.
     if maturity_phase:
         maturite_map = proto.get("phases_par_maturite")
         if isinstance(maturite_map, dict):
             phase_key = maturity_phase.lower()
-            active_list = maturite_map.get(phase_key)
-            if isinstance(active_list, list) and active_list:
-                cfg.active_phases = frozenset(str(p).upper() for p in active_list)
+            active_bbch = maturite_map.get(phase_key)
+            if isinstance(active_bbch, list) and active_bbch:
+                active_state_phases: set[str] = set()
+                for bbch_name in active_bbch:
+                    mapped = _BBCH_TO_STATE_PHASE.get(str(bbch_name).lower())
+                    if mapped:
+                        active_state_phases.add(mapped.value)
+                if active_state_phases:
+                    cfg.active_phases = frozenset(active_state_phases)
 
     return cfg
 
