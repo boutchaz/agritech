@@ -622,7 +622,6 @@
       "juvenile": [
         "repos",
         "debourrement",
-        "croissance",
         "floraison",
         "post_recolte"
       ],
@@ -630,5 +629,175 @@
       "pleine_production": null,
       "senescence": null
     }
-  }
+  },
+  "stades_bbch": [
+    {
+      "code": "00",
+      "nom": "Repos hivernal",
+      "mois": [
+        "Dec",
+        "Jan",
+        "Feb"
+      ],
+      "gdd_cumul": [
+        0,
+        30
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "repos"
+    },
+    {
+      "code": "07",
+      "nom": "Spathe visible",
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "gdd_cumul": [
+        30,
+        80
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "51",
+      "nom": "Émission inflorescence",
+      "mois": [
+        "Mar"
+      ],
+      "gdd_cumul": [
+        80,
+        180
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "60",
+      "nom": "Début pollinisation",
+      "mois": [
+        "Mar",
+        "Apr"
+      ],
+      "gdd_cumul": [
+        180,
+        350
+      ],
+      "coef_nirvp": 0.5,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "65",
+      "nom": "Pleine pollinisation",
+      "mois": [
+        "Apr"
+      ],
+      "gdd_cumul": [
+        350,
+        500
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "69",
+      "nom": "Hababouk (nouaison)",
+      "mois": [
+        "Apr",
+        "May"
+      ],
+      "gdd_cumul": [
+        500,
+        800
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "nouaison"
+    },
+    {
+      "code": "71",
+      "nom": "Kimri (fruit vert)",
+      "mois": [
+        "May",
+        "Jun"
+      ],
+      "gdd_cumul": [
+        800,
+        1400
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "75",
+      "nom": "Khalal (fruit jaune)",
+      "mois": [
+        "Jun",
+        "Jul"
+      ],
+      "gdd_cumul": [
+        1400,
+        2200
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "79",
+      "nom": "Routab (ramollissement)",
+      "mois": [
+        "Jul",
+        "Aug"
+      ],
+      "gdd_cumul": [
+        2200,
+        3000
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "85",
+      "nom": "Tamar début",
+      "mois": [
+        "Aug",
+        "Sep"
+      ],
+      "gdd_cumul": [
+        3000,
+        3600
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "89",
+      "nom": "Tamar maturité récolte",
+      "mois": [
+        "Sep",
+        "Oct"
+      ],
+      "gdd_cumul": [
+        3600,
+        4200
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "92",
+      "nom": "Post-récolte",
+      "mois": [
+        "Oct",
+        "Nov",
+        "Dec"
+      ],
+      "gdd_cumul": [
+        4200,
+        4500
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "post_recolte"
+    }
+  ]
 }

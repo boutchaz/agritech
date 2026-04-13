@@ -2005,5 +2005,199 @@
       "pleine_production": null,
       "senescence": null
     }
-  }
+  },
+  "stades_bbch": [
+    {
+      "code": "00",
+      "nom": "Repos hivernal",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "gdd_cumul": [
+        0,
+        50
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "repos"
+    },
+    {
+      "code": "01",
+      "nom": "Gonflement bourgeons",
+      "mois": [
+        "Feb"
+      ],
+      "gdd_cumul": [
+        50,
+        150
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "09",
+      "nom": "Pointes vertes",
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "gdd_cumul": [
+        150,
+        300
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "15",
+      "nom": "Pousse printanière",
+      "mois": [
+        "Mar",
+        "Apr"
+      ],
+      "gdd_cumul": [
+        300,
+        500
+      ],
+      "coef_nirvp": 0.5,
+      "phase_kc": "croissance"
+    },
+    {
+      "code": "51",
+      "nom": "Boutons floraux",
+      "mois": [
+        "Apr"
+      ],
+      "gdd_cumul": [
+        500,
+        700
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "60",
+      "nom": "Début floraison",
+      "mois": [
+        "Apr",
+        "May"
+      ],
+      "gdd_cumul": [
+        700,
+        900
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "65",
+      "nom": "Pleine floraison",
+      "mois": [
+        "May"
+      ],
+      "gdd_cumul": [
+        900,
+        1100
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "69",
+      "nom": "Nouaison",
+      "mois": [
+        "May",
+        "Jun"
+      ],
+      "gdd_cumul": [
+        1100,
+        1400
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "nouaison"
+    },
+    {
+      "code": "71",
+      "nom": "Chute physiologique",
+      "mois": [
+        "Jun",
+        "Jul"
+      ],
+      "gdd_cumul": [
+        1400,
+        1800
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "75",
+      "nom": "Grossissement fruit",
+      "mois": [
+        "Jul",
+        "Aug"
+      ],
+      "gdd_cumul": [
+        1800,
+        2500
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "79",
+      "nom": "Fruit taille finale",
+      "mois": [
+        "Sep",
+        "Oct"
+      ],
+      "gdd_cumul": [
+        2500,
+        3200
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "85",
+      "nom": "Début coloration",
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "gdd_cumul": [
+        3200,
+        3800
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "89",
+      "nom": "Maturité récolte",
+      "mois": [
+        "Nov",
+        "Dec"
+      ],
+      "gdd_cumul": [
+        3800,
+        4200
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "92",
+      "nom": "Post-récolte",
+      "mois": [
+        "Dec"
+      ],
+      "gdd_cumul": [
+        4200,
+        4500
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "post_recolte"
+    }
+  ]
 }
