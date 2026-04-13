@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedReferentielsRouteImport } from './routes/_authenticated/referentiels'
 import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
 import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
 import { Route as publicRdvRouteImport } from './routes/(public)/rdv'
@@ -164,6 +165,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedReferentielsRoute =
+  AuthenticatedReferentielsRouteImport.update({
+    id: '/referentiels',
+    path: '/referentiels',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const publicTermsOfServiceRoute = publicTermsOfServiceRouteImport.update({
   id: '/(public)/terms-of-service',
   path: '/terms-of-service',
@@ -1019,6 +1026,7 @@ export interface FileRoutesByFullPath {
   '/rdv': typeof publicRdvRoute
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
+  '/referentiels': typeof AuthenticatedReferentielsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1164,6 +1172,7 @@ export interface FileRoutesByTo {
   '/rdv': typeof publicRdvRoute
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
+  '/referentiels': typeof AuthenticatedReferentielsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1304,6 +1313,7 @@ export interface FileRoutesById {
   '/(public)/rdv': typeof publicRdvRoute
   '/(public)/rdv-siam': typeof publicRdvSiamRoute
   '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
+  '/_authenticated/referentiels': typeof AuthenticatedReferentielsRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1452,6 +1462,7 @@ export interface FileRouteTypes {
     | '/rdv'
     | '/rdv-siam'
     | '/terms-of-service'
+    | '/referentiels'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1597,6 +1608,7 @@ export interface FileRouteTypes {
     | '/rdv'
     | '/rdv-siam'
     | '/terms-of-service'
+    | '/referentiels'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1736,6 +1748,7 @@ export interface FileRouteTypes {
     | '/(public)/rdv'
     | '/(public)/rdv-siam'
     | '/(public)/terms-of-service'
+    | '/_authenticated/referentiels'
     | '/(auth)/auth/callback'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
@@ -1902,6 +1915,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/referentiels': {
+      id: '/_authenticated/referentiels'
+      path: '/referentiels'
+      fullPath: '/referentiels'
+      preLoaderRoute: typeof AuthenticatedReferentielsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/(public)/terms-of-service': {
       id: '/(public)/terms-of-service'
@@ -3297,6 +3317,7 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedReferentielsRoute: typeof AuthenticatedReferentielsRoute
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
   AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
@@ -3344,6 +3365,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedReferentielsRoute: AuthenticatedReferentielsRoute,
   AuthenticatedaccountingAccountingRoute:
     AuthenticatedaccountingAccountingRouteWithChildren,
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
