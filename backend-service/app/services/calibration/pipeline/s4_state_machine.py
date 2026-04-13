@@ -474,10 +474,12 @@ class CropPhaseStateMachine:
         chill_threshold: int = 150,
         skip_dormancy: bool = False,
         config: PhaseConfig | None = None,
+        juvenile: bool = False,
     ) -> None:
         self.tmoy_q25 = tmoy_q25
         self.cfg = config or PhaseConfig(chill_threshold=chill_threshold)
         self.chill_threshold = self.cfg.chill_threshold
+        self.juvenile = juvenile
 
         self.gdd_cumul: float = 0.0
         self.chill_cumul: float = 0.0
@@ -566,7 +568,11 @@ def _handle_debourrement(machine: CropPhaseStateMachine, signals: DailySignals) 
 
 
 def _handle_floraison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
-    """PHASE_2: exit to NOUAISON at GDD threshold or sustained heat."""
+    """PHASE_2: exit to NOUAISON at GDD threshold or sustained heat.
+
+    Juvenile trees (age < entree_production) skip fruiting phases entirely:
+    FLORAISON → REPRISE_AUTOMNALE (no NOUAISON, no STRESS_ESTIVAL).
+    """
     machine.gdd_cumul += signals.gdd_jour
 
     if signals.tmoy > machine.cfg.tmoy_heat_sustained:
@@ -577,7 +583,11 @@ def _handle_floraison(machine: CropPhaseStateMachine, signals: DailySignals) -> 
     if (machine.gdd_cumul > machine.cfg.gdd_floraison_exit
             or machine.hot_streak >= machine.cfg.heat_sustained_days):
         machine.hot_streak = 0
-        machine._transition_to(OlivePhase.NOUAISON, signals, confidence="MODEREE")
+        if machine.juvenile:
+            # Juvenile trees don't fruit — skip NOUAISON + STRESS_ESTIVAL
+            machine._transition_to(OlivePhase.REPRISE_AUTOMNALE, signals, confidence="FAIBLE")
+        else:
+            machine._transition_to(OlivePhase.NOUAISON, signals, confidence="MODEREE")
 
 
 def _handle_nouaison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
@@ -699,6 +709,7 @@ def run_state_machine(
     crop_type: str = "olivier",
     variety: str | None = None,
     reference_data: dict | None = None,
+    maturity_phase: str | None = None,
 ) -> list[SeasonTimeline]:
     """Run the phenology state machine for any crop with a ``protocole_phenologique``.
 
@@ -727,6 +738,8 @@ def run_state_machine(
         variety: Variety name for variety-specific chill thresholds (olive only).
         reference_data: Parsed referential JSON dict.  All thresholds are sourced
                         from here; pass ``None`` to fall back to olive defaults.
+        maturity_phase: Tree maturity phase (``JUVENILE``, ``ENTREE_PRODUCTION``, etc.).
+                        Juvenile trees skip fruiting phases (NOUAISON, STRESS_ESTIVAL).
 
     Returns:
         List of ``SeasonTimeline`` objects, one per complete agronomic cycle year.
@@ -785,9 +798,11 @@ def run_state_machine(
         cycle_tmoy_q25 = _compute_tmoy_q25(year_weather)
 
         # Create state machine for this year
+        is_juvenile = maturity_phase in ("JUVENILE", "juvenile")
         machine = CropPhaseStateMachine(
             tmoy_q25=cycle_tmoy_q25,
             config=cfg,
+            juvenile=is_juvenile,
         )
 
         # Process each day

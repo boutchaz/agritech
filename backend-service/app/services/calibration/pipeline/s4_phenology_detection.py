@@ -23,6 +23,7 @@ def detect_phenology(
     variety: str | None = None,
     planting_system: str | None = None,
     reference_data: dict[str, Any] | None = None,
+    maturity_phase: str | None = None,
 ) -> Step4Output:
     """Detect phenological stages from satellite and weather data.
 
@@ -39,6 +40,8 @@ def detect_phenology(
         variety: Variety name for variety-specific chill thresholds.
         planting_system: Planting system key (unused — kept for API compat).
         reference_data: Parsed referential JSON; all thresholds read from here.
+        maturity_phase: Tree maturity phase from age_adjustment. Juvenile trees
+                        use a simplified phenology (no fruiting phases).
     """
     _ = index_key, planting_system  # not used by state machine; kept for call-site compat
     observed = _filter_observed(satellite_data)
@@ -48,6 +51,7 @@ def detect_phenology(
         crop_type=crop_type or "olivier",
         variety=variety,
         reference_data=reference_data,
+        maturity_phase=maturity_phase,
     )
 
 
@@ -66,6 +70,7 @@ def _run_state_machine(
     crop_type: str = "olivier",
     variety: str | None = None,
     reference_data: dict[str, Any] | None = None,
+    maturity_phase: str | None = None,
 ) -> Step4Output:
     """Run the state machine for a single crop and return Step4Output."""
     weather_days = [
@@ -93,5 +98,6 @@ def _run_state_machine(
         crop_type=crop_type,
         variety=variety,
         reference_data=reference_data,
+        maturity_phase=maturity_phase,
     )
     return map_timelines_to_step4output(timelines)

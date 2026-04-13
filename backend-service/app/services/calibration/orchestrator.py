@@ -243,6 +243,7 @@ async def run_calibration_pipeline(
             variety=calibration_input.variety,
             planting_system=calibration_input.planting_system,
             reference_data=calibration_input.reference_data,
+            maturity_phase=maturity_phase.value if isinstance(maturity_phase, MaturityPhase) else None,
         ),
         asyncio.to_thread(
             calculate_yield_potential,
