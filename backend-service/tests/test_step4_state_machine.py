@@ -676,7 +676,7 @@ def test_run_state_machine_uses_cycle_local_tmoy_q25() -> None:
             {"date": d, "temp_min": 14.0, "temp_max": 28.0, "precip": 0.5}
         )
 
-    with patch.object(sm, "OlivePhaseStateMachine", FakeMachine):
+    with patch.object(sm, "CropPhaseStateMachine", FakeMachine):
         timelines = run_olive_state_machine(
             weather_days=weather_days,
             nirv_series=[],
@@ -803,8 +803,8 @@ def test_detect_phenology_uses_state_machine_for_olive() -> None:
     assert output.referential_cycle_used is True
 
 
-def test_detect_phenology_uses_legacy_for_agrumes() -> None:
-    """Without protocole_phenologique, detect_phenology uses legacy → no phase_timeline."""
+def test_detect_phenology_uses_state_machine_for_all_crops() -> None:
+    """State machine is used for all crops, including those without protocole_phenologique."""
     weather = _make_morocco_weather_year()
     nirv = _make_nirv_series_year()
     step1, step2 = _make_step1_step2(weather, nirv)
@@ -812,9 +812,10 @@ def test_detect_phenology_uses_legacy_for_agrumes() -> None:
     output = detect_phenology(
         step1, step2,
         crop_type="agrumes",
-        reference_data={},  # no protocole_phenologique
+        reference_data={},  # no protocole_phenologique — state machine still runs
     )
-    assert output.phase_timeline is None  # legacy path doesn't set this
+    # State machine always populates phase_timeline (never None).
+    assert output.phase_timeline is not None
 
 
 def test_detect_phenology_filters_interpolated_and_outlier_points_for_state_machine() -> None:
@@ -918,7 +919,7 @@ def test_detect_phenology_filters_interpolated_and_outlier_points_for_state_mach
     )
 
     with (
-        patch.object(detect_phenology_mod, "run_olive_state_machine", side_effect=_fake_state_machine),
+        patch.object(detect_phenology_mod, "run_state_machine", side_effect=_fake_state_machine),
         patch.object(detect_phenology_mod, "map_timelines_to_step4output", return_value=stub_output),
     ):
         detect_phenology(
@@ -938,92 +939,6 @@ def test_detect_phenology_filters_interpolated_and_outlier_points_for_state_mach
     ]
 
 
-def test_detect_phenology_filters_interpolated_and_outlier_points_for_legacy() -> None:
-    from app.services.calibration.types import PhenologyDates, Step1Output, Step2Output
-
-    captured: dict[str, object] = {}
-    step1 = Step1Output.model_validate(
-        {
-            "index_time_series": {
-                "NIRv": [
-                    {
-                        "date": "2024-01-15",
-                        "value": 0.10,
-                        "outlier": False,
-                        "interpolated": False,
-                    },
-                    {
-                        "date": "2024-02-15",
-                        "value": 0.95,
-                        "outlier": False,
-                        "interpolated": True,
-                    },
-                    {
-                        "date": "2024-03-15",
-                        "value": 0.01,
-                        "outlier": True,
-                        "interpolated": False,
-                    },
-                    {
-                        "date": "2024-04-15",
-                        "value": 0.20,
-                        "outlier": False,
-                        "interpolated": False,
-                    },
-                ]
-            },
-            "cloud_coverage_mean": 5.0,
-            "filtered_image_count": 4,
-            "outlier_count": 1,
-            "interpolated_dates": ["2024-02-15"],
-            "raster_paths": {"NIRv": []},
-        }
-    )
-    step2 = Step2Output.model_validate(
-        {
-            "daily_weather": [],
-            "monthly_aggregates": [],
-            "cumulative_gdd": {},
-            "chill_hours": 0.0,
-            "extreme_events": [],
-        }
-    )
-
-    stub_output = getattr(
-        import_module("app.services.calibration.types"),
-        "Step4Output",
-    )(
-        mean_dates=PhenologyDates(
-            dormancy_exit=date(2024, 1, 1),
-            peak=date(2024, 2, 1),
-            plateau_start=date(2024, 1, 15),
-            decline_start=date(2024, 3, 1),
-            dormancy_entry=date(2024, 4, 1),
-        ),
-        yearly_stages={},
-        inter_annual_variability_days={},
-        gdd_correlation={},
-        referential_cycle_used=False,
-    )
-
-    def _fake_legacy(*args, **kwargs):
-        captured["satellite_data"] = args[0]
-        return stub_output
-
-    with patch.object(detect_phenology_mod, "detect_phenology_legacy", side_effect=_fake_legacy):
-        detect_phenology(
-            step1,
-            step2,
-            crop_type="agrumes",
-            reference_data={},
-        )
-
-    filtered_series = captured["satellite_data"].index_time_series["NIRv"]
-    assert [point.date.isoformat() for point in filtered_series] == [
-        "2024-01-15",
-        "2024-04-15",
-    ]
-    assert [point.value for point in filtered_series] == [0.1, 0.2]
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import threading
 from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
@@ -226,6 +228,24 @@ def run_calibration_pipeline(
         step2.cumulative_gdd = crop_aware_cumulative
         for agg in step2.monthly_aggregates:
             agg.gdd_total = round(monthly_gdd_totals.get(agg.month, 0.0), 3)
+
+    # Fire-and-forget: persist computed GDD to weather_gdd_daily so the DB cache
+    # stays up-to-date for all crops, including olive (two-phase model, only available
+    # here after NIRv-gated computation).  Location is read from the first weather row
+    # if present; silently skipped when weather rows lack coordinates (fresh API input).
+    _w0 = weather_rows[0] if weather_rows else {}
+    _cache_lat = _w0.get("latitude")
+    _cache_lon = _w0.get("longitude")
+    if _cache_lat is not None and _cache_lon is not None and gdd_rows:
+        from ..supabase_service import supabase_service as _ss
+        _rows_copy = list(gdd_rows)
+        _crop = calibration_input.crop_type
+        threading.Thread(
+            target=lambda: asyncio.run(
+                _ss.upsert_gdd_rows(_cache_lat, _cache_lon, _crop, _rows_copy)
+            ),
+            daemon=True,
+        ).start()
 
     from .pipeline.s2a_signal_classification import classify_signal
 

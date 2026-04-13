@@ -5484,6 +5484,26 @@ CREATE INDEX IF NOT EXISTS idx_weather_daily_data_lat_lon_date
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_date ON weather_daily_data(date DESC);
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data(latitude, longitude);
 
+-- Generic per-crop daily GDD cache — replaces the per-column approach (gdd_olivier, gdd_agrumes, …)
+-- in weather_daily_data. Scaling to new crops requires no schema change: add a row with a new crop_type.
+-- No RLS — shared location cache like weather_daily_data (not org-scoped).
+CREATE TABLE IF NOT EXISTS public.weather_gdd_daily (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude      NUMERIC(7,2) NOT NULL,
+  longitude     NUMERIC(7,2) NOT NULL,
+  date          DATE NOT NULL,
+  crop_type     TEXT NOT NULL,          -- e.g. 'olivier', 'agrumes', 'avocatier', 'palmier_dattier'
+  gdd_daily     NUMERIC(7,4) NOT NULL DEFAULT 0,
+  chill_hours   NUMERIC(6,4),           -- daily chill-hour contribution (relevant for chill-tracking crops)
+  model_version TEXT NOT NULL DEFAULT 'v1',  -- bump when formula changes to allow targeted cache invalidation
+  computed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, date, crop_type)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_location_crop
+  ON public.weather_gdd_daily(latitude, longitude, crop_type, date);
+CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_date
+  ON public.weather_gdd_daily(date DESC);
+
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

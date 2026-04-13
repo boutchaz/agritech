@@ -1,8 +1,54 @@
-"""Olive phenology state machine driven by referential protocole_phenologique.
+"""Generic crop phenology state machine driven by ``protocole_phenologique``.
 
 Processes daily weather + satellite data chronologically and transitions
-between phases based on GDD, temperature, precipitation and vegetation
-index conditions defined in the olive referential.
+between phenological phases based on GDD, temperature, precipitation, and
+vegetation index conditions — all sourced from the crop referential JSON.
+
+Architecture
+------------
+The state machine is designed to be **data-driven and crop-agnostic**:
+
+- ``extract_phase_config`` parses transition conditions from
+  ``protocole_phenologique.phases`` in the referential JSON, so adding a
+  new crop only requires updating its referential (no code changes).
+- GDD formula parameters (tbase, tupper) come from ``referential_utils.get_gdd_tbase_tupper``.
+- Cycle start/end months come from ``stades_bbch`` cycle months in the referential.
+- Chill thresholds are variety-specific, read from ``gdd.seuils_chill_units_par_variete``.
+
+Public API
+----------
+- ``run_state_machine`` — generic entry point for any crop with
+  ``protocole_phenologique``.  Accepts ``crop_type`` explicitly.
+- ``run_olive_state_machine`` — backward-compatible alias for ``run_state_machine``.
+- ``map_timelines_to_step4output`` — convert ``SeasonTimeline`` list to
+  ``Step4Output``, using per-season ``PhaseTransition.gdd_at_entry`` for
+  GDD correlation (not the cross-year cumulative from Step2).
+
+GDD correlation note
+--------------------
+``gdd_correlation`` in ``Step4Output`` uses per-season GDD values read directly
+from ``PhaseTransition.gdd_at_entry`` (accumulated and reset each agronomic cycle
+by the state machine).  This produces a meaningful metric: "in years where GDD
+accumulated faster, did this stage occur earlier?"
+
+The older approach of looking up ``Step2Output.cumulative_gdd`` (a running total
+across all dataset years) inflated values for later years and produced spurious
+correlations.  ``_nearest_cumulative_gdd`` is retained for legacy callers only.
+
+Phase resolution: 6-state output vs. 8-stage referential
+---------------------------------------------------------
+The state machine emits 6 ``OlivePhase`` values:
+  DORMANCE → DEBOURREMENT → FLORAISON → NOUAISON → STRESS_ESTIVAL → REPRISE_AUTOMNALE
+
+The referential ``stades_bbch`` defines 8 finer ``phase_kc`` stages:
+  repos · debourrement · croissance · floraison · nouaison ·
+  grossissement · maturation · post_recolte
+
+The coarser 6-phase model is intentional for calibration: it captures the main
+agronomic transitions without requiring sub-stage satellite discrimination.
+Bridging to ``phase_kc`` granularity (e.g. separating grossissement/maturation
+within STRESS_ESTIVAL) would require GDD sub-range thresholds from ``stades_bbch``
+and is left as future work.
 """
 from __future__ import annotations
 
@@ -75,11 +121,17 @@ def compute_daily_signals(
     days_since_prev_satellite: int,
     tbase: float = 7.5,
     tupper: float = 30.0,
+    heat_count_threshold: float = 30.0,
 ) -> DailySignals:
     """Compute all daily signals needed by the state machine.
 
     GDD uses the shared ``compute_daily_gdd`` from gdd_service with
     ``tbase`` and ``tupper`` read from the crop's referential.
+
+    ``heat_count_threshold`` sets the Tmax threshold used to count hot days
+    for ``tmax_30j_pct``.  Defaults to 30 °C (olive referential PHASE_3
+    stress condition); pass ``PhaseConfig.tmax_stress_threshold`` to keep
+    this threshold consistent with the NOUAISON→STRESS_ESTIVAL transition.
     """
     tmax = float(weather_day.get("temp_max") or weather_day.get("temperature_max") or 0.0)
     tmin = float(weather_day.get("temp_min") or weather_day.get("temperature_min") or 0.0)
@@ -95,7 +147,7 @@ def compute_daily_signals(
 
     hot_days = sum(
         1 for w in weather_history_30d
-        if float(w.get("temp_max") or w.get("temperature_max") or 0.0) > 30.0
+        if float(w.get("temp_max") or w.get("temperature_max") or 0.0) > heat_count_threshold
     )
     tmax_30j_pct = (hot_days / len(weather_history_30d) * 100.0) if weather_history_30d else 0.0
 
@@ -125,9 +177,6 @@ def compute_daily_signals(
 # ---------------------------------------------------------------------------
 # State machine config — extracted from referential
 # ---------------------------------------------------------------------------
-
-# Chill months for olive dormancy (Nov-Feb)
-_CHILL_MONTHS = {11, 12, 1, 2}
 
 _DEFAULT_CHILL_THRESHOLD = 150
 
@@ -168,6 +217,14 @@ class PhaseConfig:
 
     # Chill
     chill_threshold: int = 150
+    # Months during which chill units are accumulated.  Derived from
+    # stades_bbch entries with phase_kc == "repos" + one neighbouring month
+    # each side.  Empty frozenset = crop has no dormancy/chill requirement.
+    chill_months: frozenset = frozenset({11, 12, 1, 2})
+    # Tmax threshold (°C) for counting hot days in the 30-day window
+    # (tmax_30j_pct signal).  Tied to tmax_stress_threshold so both signals
+    # stay consistent with the PHASE_3 → PHASE_4 transition condition.
+    heat_count_threshold: float = 30.0
 
 
 def _as_condition_text(value: object) -> str:
@@ -322,6 +379,34 @@ def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
     if cfg.cold_streak_days == PhaseConfig().cold_streak_days:
         cfg.cold_streak_days = cfg.warm_streak_days
 
+    # Chill months: derived from stades_bbch entries with phase_kc == "repos".
+    # Expanded by one neighbouring month each side for transitional accumulation.
+    # If the crop has no PHASE_0 (dormancy), chill months = empty → never accumulate.
+    if phases.get("PHASE_0") is not None:
+        from ..referential_utils import french_month_to_num as _fmtn
+        repos_months: set[int] = set()
+        for stade in (reference_data.get("stades_bbch") or []):
+            if str(stade.get("phase_kc", "")).lower() == "repos":
+                mois = stade.get("mois")
+                if isinstance(mois, list):
+                    for m in mois:
+                        repos_months.add(_fmtn(str(m)))
+                elif isinstance(mois, str):
+                    repos_months.add(_fmtn(mois))
+        if repos_months:
+            expanded: set[int] = set()
+            for m in repos_months:
+                expanded.add(m)
+                expanded.add((m - 2) % 12 + 1)  # month before
+                expanded.add(m % 12 + 1)         # month after
+            cfg.chill_months = frozenset(expanded)
+        # else: keep default {11, 12, 1, 2} (olive without stades_bbch repos data)
+    else:
+        cfg.chill_months = frozenset()  # no dormancy phase → chill never applies
+
+    # Keep heat_count_threshold aligned with stress transition threshold
+    cfg.heat_count_threshold = cfg.tmax_stress_threshold
+
     return cfg
 
 
@@ -368,12 +453,19 @@ def resolve_chill_threshold(
 # ---------------------------------------------------------------------------
 
 
-class OlivePhaseStateMachine:
-    """Process daily signals and track phenological phase transitions.
+class CropPhaseStateMachine:
+    """Generic crop phenology state machine driven by ``PhaseConfig``.
 
-    Implements the olive ``protocole_phenologique`` as a chronological
-    state machine with GDD-driven transitions.  All thresholds come from
-    ``PhaseConfig`` which is extracted from the crop referential.
+    Processes daily signals chronologically and transitions between
+    phenological phases based on GDD, temperature, precipitation, and
+    vegetation index conditions.  All thresholds come from ``PhaseConfig``
+    which is extracted from the crop referential JSON — no crop-specific
+    hardcoding inside this class.
+
+    Currently supports the 6-phase olive protocol (DORMANCE → DEBOURREMENT
+    → FLORAISON → NOUAISON → STRESS_ESTIVAL → REPRISE_AUTOMNALE).  Other
+    crops with a ``protocole_phenologique`` block in their referential use
+    the same class; only the ``PhaseConfig`` values differ.
     """
 
     def __init__(
@@ -423,8 +515,9 @@ class OlivePhaseStateMachine:
             self.transitions[-1].start_date = signals.current_date
             self._phase_start_set = True
 
-        # Accumulate chill in winter months
-        if signals.current_date.month in _CHILL_MONTHS:
+        # Accumulate chill only during crop-specific chill months (from referential).
+        # Empty chill_months = crop has no chill requirement → skip entirely.
+        if signals.current_date.month in self.cfg.chill_months:
             ch = estimate_chill_hours(signals.tmax, signals.tmin)
             self.chill_cumul += ch
             if not self.chill_satisfied and self.chill_cumul >= self.chill_threshold:
@@ -451,7 +544,7 @@ class OlivePhaseStateMachine:
         self.current_phase = new_phase
 
 
-def _handle_dormance(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_dormance(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_0: exit when Tmoy > Tmoy_Q25 for ≥ N consecutive days and chill satisfied."""
     if signals.tmoy > machine.tmoy_q25:
         machine.warm_streak += 1
@@ -464,7 +557,7 @@ def _handle_dormance(machine: OlivePhaseStateMachine, signals: DailySignals) -> 
         machine._transition_to(OlivePhase.DEBOURREMENT, signals, confidence="MODEREE")
 
 
-def _handle_debourrement(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_debourrement(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_1: accumulate GDD, exit to FLORAISON at GDD threshold and Tmoy threshold."""
     machine.gdd_cumul += signals.gdd_jour
     if (machine.gdd_cumul >= machine.cfg.gdd_debourrement_exit
@@ -472,7 +565,7 @@ def _handle_debourrement(machine: OlivePhaseStateMachine, signals: DailySignals)
         machine._transition_to(OlivePhase.FLORAISON, signals, confidence="MODEREE")
 
 
-def _handle_floraison(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_floraison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_2: exit to NOUAISON at GDD threshold or sustained heat."""
     machine.gdd_cumul += signals.gdd_jour
 
@@ -487,7 +580,7 @@ def _handle_floraison(machine: OlivePhaseStateMachine, signals: DailySignals) ->
         machine._transition_to(OlivePhase.NOUAISON, signals, confidence="MODEREE")
 
 
-def _handle_nouaison(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_nouaison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_3: exit to STRESS_ESTIVAL on hot + dry conditions."""
     machine.gdd_cumul += signals.gdd_jour
 
@@ -502,7 +595,7 @@ def _handle_nouaison(machine: OlivePhaseStateMachine, signals: DailySignals) -> 
         machine._transition_to(OlivePhase.STRESS_ESTIVAL, signals, confidence="ELEVEE")
 
 
-def _handle_stress_estival(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_stress_estival(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_4: exit to REPRISE_AUTOMNALE on rain+cooling, or to DORMANCE on winter.
 
     Referential:
@@ -531,7 +624,7 @@ def _handle_stress_estival(machine: OlivePhaseStateMachine, signals: DailySignal
         machine._transition_to(OlivePhase.DORMANCE, signals, confidence="ELEVEE")
 
 
-def _handle_reprise_automnale(machine: OlivePhaseStateMachine, signals: DailySignals) -> None:
+def _handle_reprise_automnale(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_6: exit back to DORMANCE when Tmoy < Tmoy_Q25 sustained.
 
     Referential: Tmoy < Tmoy_Q25 AND NIRvP_norm < 0.15 (temp-only when NIRvP unavailable).
@@ -598,33 +691,55 @@ def _build_satellite_lookup(series: list[dict]) -> dict[str, float]:
     return lookup
 
 
-def run_olive_state_machine(
+def run_state_machine(
     *,
     weather_days: list[dict],
     nirv_series: list[dict],
     ndvi_series: list[dict],
+    crop_type: str = "olivier",
     variety: str | None = None,
     reference_data: dict | None = None,
 ) -> list[SeasonTimeline]:
-    """Run the olive phenology state machine on historical data.
+    """Run the phenology state machine for any crop with a ``protocole_phenologique``.
 
-    Groups data by olive cycle year (Dec-Nov), runs the state machine
-    per year, and returns a list of SeasonTimeline objects.
+    Generic entry point for GDD-driven phenology detection.  All thresholds —
+    GDD formula parameters (tbase, tupper), phase transition conditions, chill
+    requirements — are sourced from ``reference_data`` (the crop referential JSON).
+    The function does **not** contain any crop-specific hardcoding; adding a new
+    crop requires only its referential JSON to define ``protocole_phenologique``.
 
-    All transition thresholds are read from ``reference_data`` via
-    ``extract_phase_config``.  Chill threshold is variety-specific via
-    ``resolve_chill_threshold``.
+    Process
+    -------
+    1. Read GDD formula params from referential (``get_gdd_tbase_tupper``).
+    2. Extract phase transition thresholds from ``protocole_phenologique.phases``
+       (``extract_phase_config``).
+    3. Determine agronomic cycle start/end from ``stades_bbch`` cycle months.
+    4. Group daily weather by cycle year.
+    5. For each cycle year with ≥ 120 days of data, run ``OlivePhaseStateMachine``
+       and collect a ``SeasonTimeline``.
+
+    Args:
+        weather_days: Daily weather records (temp_max, temp_min, precip required).
+        nirv_series: NIRv satellite series as ``[{"date": "YYYY-MM-DD", "value": float}]``.
+        ndvi_series: NDVI satellite series (same format as nirv_series).
+        crop_type: Canonical crop type key matching ``CROP_TYPE_TO_REFERENTIAL_JSON``.
+                   Defaults to "olivier" for backward compatibility.
+        variety: Variety name for variety-specific chill thresholds (olive only).
+        reference_data: Parsed referential JSON dict.  All thresholds are sourced
+                        from here; pass ``None`` to fall back to olive defaults.
+
+    Returns:
+        List of ``SeasonTimeline`` objects, one per complete agronomic cycle year.
     """
     if not weather_days:
         return []
 
-    # Extract config from referential
+    # All thresholds from referential — no crop-specific hardcoding below this line.
     cfg = extract_phase_config(reference_data)
     gdd_ref = reference_data.get("gdd") if reference_data else None
     cfg.chill_threshold = resolve_chill_threshold(variety, gdd_ref)
 
-    # Read GDD formula parameters from referential
-    crop_type = "olivier"  # TODO: make generic when other crops get protocole_phenologique
+    # GDD formula: tbase and tupper read from referential, with per-crop fallbacks.
     ref_tbase, ref_tupper = get_gdd_tbase_tupper(crop_type, reference_data)
     gdd_tbase = ref_tbase if ref_tbase is not None else 7.5
     gdd_tupper = ref_tupper if ref_tupper is not None else 30.0
@@ -670,7 +785,7 @@ def run_olive_state_machine(
         cycle_tmoy_q25 = _compute_tmoy_q25(year_weather)
 
         # Create state machine for this year
-        machine = OlivePhaseStateMachine(
+        machine = CropPhaseStateMachine(
             tmoy_q25=cycle_tmoy_q25,
             config=cfg,
         )
@@ -709,6 +824,7 @@ def run_olive_state_machine(
                 days_since_prev_satellite=days_since,
                 tbase=gdd_tbase,
                 tupper=gdd_tupper,
+                heat_count_threshold=cfg.heat_count_threshold,
             )
             machine.process_day(signals)
 
@@ -736,6 +852,12 @@ def run_olive_state_machine(
         ))
 
     return timelines
+
+
+# Backward-compatible aliases — kept so existing callers and tests are unaffected.
+# All new code should use ``run_state_machine`` / ``CropPhaseStateMachine`` directly.
+run_olive_state_machine = run_state_machine
+OlivePhaseStateMachine = CropPhaseStateMachine
 
 
 # ---------------------------------------------------------------------------
@@ -820,6 +942,13 @@ def _extract_phenology_dates(
 
 
 def _nearest_cumulative_gdd(stage_date: date, cumulative_gdd: dict[str, float]) -> float:
+    """Look up cumulative GDD for the month closest to *stage_date*.
+
+    Note: kept for legacy callers.  When using the state machine pipeline,
+    prefer ``_gdd_at_stage_from_transitions`` which reads per-season GDD
+    directly from ``PhaseTransition.gdd_at_entry`` and avoids inflated
+    cross-year totals.
+    """
     if not cumulative_gdd:
         return 0.0
     month_key = stage_date.strftime("%Y-%m")
@@ -832,12 +961,69 @@ def _nearest_cumulative_gdd(stage_date: date, cumulative_gdd: dict[str, float]) 
     return float(cumulative_gdd[candidate_keys[0]]) if candidate_keys else 0.0
 
 
+def _gdd_at_stage_from_transitions(
+    transitions: list[PhaseTransition],
+    stage: str,
+) -> float | None:
+    """Return per-season cumulative GDD at the transition matching a legacy stage name.
+
+    Reads ``PhaseTransition.gdd_at_entry`` which is the within-season GDD
+    accumulated by the state machine when it entered that phase.  This resets
+    every agronomic cycle, so values are comparable across years (unlike the
+    cross-year running total in ``Step2Output.cumulative_gdd``).
+
+    Mapping — legacy stage → olive phase:
+    - dormancy_exit  → DEBOURREMENT entry
+    - plateau_start  → FLORAISON entry
+    - peak           → FLORAISON entry (midpoint approximated as entry GDD)
+    - decline_start  → NOUAISON entry
+    - dormancy_entry → second DORMANCE entry (after the active season)
+    """
+    if stage in ("dormancy_exit", "plateau_start", "peak", "decline_start"):
+        phase_map = {
+            "dormancy_exit": OlivePhase.DEBOURREMENT,
+            "plateau_start": OlivePhase.FLORAISON,
+            "peak": OlivePhase.FLORAISON,
+            "decline_start": OlivePhase.NOUAISON,
+        }
+        t = _find_transition(transitions, phase_map[stage])
+        return t.gdd_at_entry if t else None
+
+    if stage == "dormancy_entry":
+        debourrement = _find_transition(transitions, OlivePhase.DEBOURREMENT)
+        if debourrement:
+            dormance_return = _find_transition_after(
+                transitions, OlivePhase.DORMANCE, debourrement.start_date
+            )
+            return dormance_return.gdd_at_entry if dormance_return else None
+    return None
+
+
 def map_timelines_to_step4output(
     timelines: list[SeasonTimeline],
-    cumulative_gdd: dict[str, float],
+    cumulative_gdd: dict[str, float] | None = None,
 ) -> Step4Output:
-    """Convert state machine timelines to backward-compatible Step4Output."""
+    """Convert state machine timelines to backward-compatible ``Step4Output``.
+
+    Builds mean phenological dates, inter-annual variability, and GDD
+    correlation from the list of per-season ``SeasonTimeline`` objects
+    produced by ``run_state_machine``.
+
+    GDD correlation uses per-season ``PhaseTransition.gdd_at_entry`` values
+    (from the state machine's own accumulator, reset each cycle) rather than
+    the cross-year global cumulative in ``Step2Output.cumulative_gdd``.  This
+    produces meaningful correlations: in years where GDD accumulated faster,
+    did the stage occur earlier?
+
+    The ``cumulative_gdd`` parameter is accepted for backward compatibility
+    but is no longer used for computation.
+    """
     stage_names = ["dormancy_exit", "peak", "plateau_start", "decline_start", "dormancy_entry"]
+
+    # Per-season GDD lookup: year → transitions (for gdd_at_entry per stage).
+    year_to_transitions: dict[int, list[PhaseTransition]] = {
+        tl.year: tl.transitions for tl in timelines
+    }
 
     yearly_stages: dict[int, dict[str, date | None]] = {}
     for tl in timelines:
@@ -880,11 +1066,13 @@ def map_timelines_to_step4output(
     missing_stages: list[str] = []
 
     for stage in stage_names:
-        available_dates = [
-            yearly_stages[year][stage]
+        # Keep (year, date) pairs so we can look up per-season GDD by year.
+        available_year_dates = [
+            (year, yearly_stages[year][stage])
             for year in sorted(yearly_stages.keys())
             if yearly_stages[year][stage] is not None
         ]
+        available_dates = [d for _, d in available_year_dates]
 
         if not available_dates:
             mean_dates_dict[stage] = None
@@ -925,9 +1113,13 @@ def map_timelines_to_step4output(
                     float(round(pstdev(offsets), 3)) if len(offsets) > 1 else 0.0
                 )
 
+        # Per-season GDD at this stage — reads gdd_at_entry from the state
+        # machine transition, not the cross-year global cumulative.
         gdd_values = [
-            _nearest_cumulative_gdd(stage_date, cumulative_gdd)
-            for stage_date in available_dates
+            _gdd_at_stage_from_transitions(
+                year_to_transitions.get(year, []), stage
+            ) or 0.0
+            for year, _ in available_year_dates
         ]
         doy_values = [d.timetuple().tm_yday for d in available_dates]
         if len(doy_values) > 1 and len(set(gdd_values)) > 1:

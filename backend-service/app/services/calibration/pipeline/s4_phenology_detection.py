@@ -1,44 +1,18 @@
-"""Step 4 — Phenology detection.
+"""Step 4 — Phenology detection via GDD-driven state machine.
 
-Dispatches to the referential-driven state machine for crops that have a
-``protocole_phenologique`` in their referential, or to the legacy
-signal-based curve-fitting approach for other crops.
+All crops use the referential state machine (``run_state_machine``).
+The referential JSON drives everything: GDD formula parameters, phase
+transition thresholds, cycle months, and chill requirements.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from ..archived.step4_legacy import (
-    DEFAULT_PERIODS,
-    _day_of_year_to_date,
-    _fallback_stages,
-    _find_constrained_stages_for_year,
-    _find_decline_start,
-    _find_dormancy_entry,
-    _find_dormancy_exit,
-    _find_plateau_start,
-    _nearest_cumulative_gdd,
-    _safe_smooth,
-    _temporal_order_valid,
-    _values_at_indices,
-    detect_phenology_legacy,
-)
 from .s4_state_machine import (
-    run_olive_state_machine,
+    run_state_machine,
     map_timelines_to_step4output,
 )
 from ..types import Step1Output, Step2Output, Step4Output
-
-
-def _has_protocole_phenologique(reference_data: dict | None) -> bool:
-    """Check if the referential has a protocole_phenologique with phases."""
-    if not reference_data:
-        return False
-    proto = reference_data.get("protocole_phenologique")
-    if not isinstance(proto, dict):
-        return False
-    phases = proto.get("phases")
-    return isinstance(phases, dict) and len(phases) > 0
 
 
 def detect_phenology(
@@ -52,52 +26,48 @@ def detect_phenology(
 ) -> Step4Output:
     """Detect phenological stages from satellite and weather data.
 
-    For crops with a ``protocole_phenologique`` in their referential
-    (currently olive), uses a GDD-driven state machine.  Otherwise
-    falls back to the legacy signal-based approach.
+    Uses the GDD-driven state machine for all crops.  All thresholds are
+    sourced from ``reference_data`` (the crop referential JSON).  When
+    ``reference_data`` is absent, the state machine falls back to built-in
+    olive defaults.
+
+    Args:
+        satellite_data: Step 1 output with index time series.
+        weather_data: Step 2 output with daily weather and GDD.
+        index_key: Preferred vegetation index (unused — kept for API compat).
+        crop_type: Canonical crop type key (e.g. "olivier", "agrumes").
+        variety: Variety name for variety-specific chill thresholds.
+        planting_system: Planting system key (unused — kept for API compat).
+        reference_data: Parsed referential JSON; all thresholds read from here.
     """
-    observed_satellite_data = _observed_satellite_data(satellite_data)
-
-    if _has_protocole_phenologique(reference_data):
-        return _detect_with_state_machine(
-            observed_satellite_data, weather_data,
-            variety=variety,
-            reference_data=reference_data,
-        )
-
-    return detect_phenology_legacy(
-        observed_satellite_data,
+    _ = index_key, planting_system  # not used by state machine; kept for call-site compat
+    observed = _filter_observed(satellite_data)
+    return _run_state_machine(
+        observed,
         weather_data,
-        index_key=index_key,
-        crop_type=crop_type,
+        crop_type=crop_type or "olivier",
         variety=variety,
-        planting_system=planting_system,
         reference_data=reference_data,
     )
 
 
-def _observed_satellite_data(satellite_data: Step1Output) -> Step1Output:
-    filtered_series = {
-        index_name: [
-            point
-            for point in points
-            if not point.interpolated and not point.outlier
-        ]
-        for index_name, points in satellite_data.index_time_series.items()
+def _filter_observed(satellite_data: Step1Output) -> Step1Output:
+    """Return a copy of satellite_data with outlier/interpolated points removed."""
+    filtered = {
+        name: [p for p in points if not p.interpolated and not p.outlier]
+        for name, points in satellite_data.index_time_series.items()
     }
-    return satellite_data.model_copy(
-        update={"index_time_series": filtered_series},
-    )
+    return satellite_data.model_copy(update={"index_time_series": filtered})
 
 
-def _detect_with_state_machine(
+def _run_state_machine(
     satellite_data: Step1Output,
     weather_data: Step2Output,
+    crop_type: str = "olivier",
     variety: str | None = None,
     reference_data: dict[str, Any] | None = None,
 ) -> Step4Output:
-    """Run the referential-driven state machine and map to Step4Output."""
-    # Build weather dicts from Step2Output
+    """Run the state machine for a single crop and return Step4Output."""
     weather_days = [
         {
             "date": w.date,
@@ -107,8 +77,6 @@ def _detect_with_state_machine(
         }
         for w in weather_data.daily_weather
     ]
-
-    # Build satellite series from Step1Output
     nirv_series = [
         {"date": p.date.isoformat(), "value": p.value}
         for p in satellite_data.index_time_series.get("NIRv", [])
@@ -118,15 +86,12 @@ def _detect_with_state_machine(
         for p in satellite_data.index_time_series.get("NDVI", [])
     ]
 
-    timelines = run_olive_state_machine(
+    timelines = run_state_machine(
         weather_days=weather_days,
         nirv_series=nirv_series,
         ndvi_series=ndvi_series,
+        crop_type=crop_type,
         variety=variety,
         reference_data=reference_data,
     )
-
-    return map_timelines_to_step4output(
-        timelines,
-        cumulative_gdd=weather_data.cumulative_gdd,
-    )
+    return map_timelines_to_step4output(timelines)

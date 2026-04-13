@@ -576,22 +576,24 @@ class SupabaseService:
         records: List[Dict[str, Any]],
         source: str = "open-meteo-archive",
     ) -> bool:
-        """Upsert daily weather rows (raw + pre-computed GDD columns)."""
+        """Upsert daily weather rows (raw meteorological data only).
+
+        GDD values are no longer stored as per-crop columns here. Instead they
+        are written to ``weather_gdd_daily`` via :meth:`upsert_gdd_rows` — one
+        row per (lat, lon, date, crop_type).  Simple crops (agrumes, avocatier,
+        palmier_dattier) are computed and persisted automatically after the
+        weather upsert.  Olive (two-phase model) is written by the calibration
+        orchestrator after ``precompute_gdd_rows`` runs with NIRv data.
+        """
         if not self.supabase_url or not self.supabase_key or not records:
             return False
         lat = self._round_weather_coordinate(latitude)
         lon = self._round_weather_coordinate(longitude)
 
-        TBASE_OLIVIER = 10.0
-        TBASE_AGRUMES = 13.0
-        TBASE_AVOCATIER = 10.0
-        TBASE_PALMIER = 18.0
-        CHILL_THRESH = 7.2
-
         rows = []
         for r in records:
-            tmin = r.get("temp_min") or r.get("temperature_min") or 0.0
-            tmax = r.get("temp_max") or r.get("temperature_max") or 0.0
+            tmin = float(r.get("temp_min") or r.get("temperature_min") or 0.0)
+            tmax = float(r.get("temp_max") or r.get("temperature_max") or 0.0)
             tavg = (tmin + tmax) / 2.0
             rows.append(
                 {
@@ -605,11 +607,7 @@ class SupabaseService:
                     "wind_speed_max": r.get("wind_speed_max"),
                     "et0_fao_evapotranspiration": r.get("et0") or r.get("et0_fao_evapotranspiration"),
                     "source": source,
-                    "gdd_olivier": round(max(0.0, tavg - TBASE_OLIVIER), 4),
-                    "gdd_agrumes": round(max(0.0, tavg - TBASE_AGRUMES), 4),
-                    "gdd_avocatier": round(max(0.0, tavg - TBASE_AVOCATIER), 4),
-                    "gdd_palmier_dattier": round(max(0.0, tavg - TBASE_PALMIER), 4),
-                    "chill_hours": 1.0 if tmin < CHILL_THRESH else 0.0,
+                    "chill_hours": 1.0 if tmin < 7.2 else 0.0,
                 }
             )
 
@@ -628,9 +626,95 @@ class SupabaseService:
                         json=chunk,
                     )
                     response.raise_for_status()
-            return True
         except Exception as e:
             logger.error(f"Error upserting weather daily data: {e}")
+            return False
+
+        # Compute and persist simple-crop GDD using referential formula (Tupper-capped).
+        # Thresholds match FALLBACK_GDD_TBASE / FALLBACK_GDD_TUPPER in referential_utils.py.
+        # Olive is excluded here — its two-phase model requires NIRv data (orchestrator handles it).
+        _SIMPLE_CROPS: list[tuple[str, float, float]] = [
+            ("agrumes",         13.0, 36.0),
+            ("avocatier",       10.0, 33.0),
+            ("palmier_dattier", 18.0, 45.0),
+        ]
+        for crop_type, tbase, tupper in _SIMPLE_CROPS:
+            gdd_records: List[Dict[str, Any]] = []
+            for r in records:
+                tmin_r = float(r.get("temp_min") or r.get("temperature_min") or 0.0)
+                tmax_r = float(r.get("temp_max") or r.get("temperature_max") or 0.0)
+                capped_max = min(tmax_r, tupper)
+                floored_min = max(tmin_r, tbase)
+                gdd_val = max(0.0, (capped_max + floored_min) / 2.0 - tbase)
+                gdd_records.append(
+                    {
+                        "date": str(r.get("date")),
+                        f"gdd_{crop_type}": round(gdd_val, 4),
+                        "chill_hours": 1.0 if tmin_r < 7.2 else 0.0,
+                    }
+                )
+            await self.upsert_gdd_rows(lat, lon, crop_type, gdd_records)
+
+        return True
+
+    async def upsert_gdd_rows(
+        self,
+        latitude: float,
+        longitude: float,
+        crop_type: str,
+        gdd_rows: List[Dict[str, Any]],
+        model_version: str = "v1",
+    ) -> bool:
+        """Persist pre-computed daily GDD to ``weather_gdd_daily`` for any crop type.
+
+        ``gdd_rows`` must contain a ``date`` key and a ``gdd_{crop_type}`` key.
+        Rows that lack a computed value for the given crop are silently skipped.
+        Supports any crop — adding a new crop type requires no schema change.
+
+        Args:
+            latitude: Location latitude (rounded to 2dp internally).
+            longitude: Location longitude (rounded to 2dp internally).
+            crop_type: Crop key matching the referential (e.g. ``"olivier"``).
+            gdd_rows: Output of ``precompute_gdd_rows`` or equivalent.
+            model_version: Bumped when the GDD formula changes to invalidate stale cache.
+        """
+        if not self.supabase_url or not self.supabase_key or not gdd_rows:
+            return False
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+        gdd_col = f"gdd_{crop_type}"
+        rows: List[Dict[str, Any]] = []
+        for r in gdd_rows:
+            gdd_val = r.get(gdd_col)
+            if gdd_val is None:
+                continue
+            rows.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "date": str(r.get("date")),
+                    "crop_type": crop_type,
+                    "gdd_daily": round(float(gdd_val), 4),
+                    "chill_hours": r.get("chill_hours"),
+                    "model_version": model_version,
+                }
+            )
+        if not rows:
+            return False
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for i in range(0, len(rows), 500):
+                    chunk = rows[i : i + 500]
+                    response = await client.post(
+                        f"{self.supabase_url}/rest/v1/weather_gdd_daily",
+                        headers={**self.headers, "Prefer": "resolution=merge-duplicates"},
+                        params={"on_conflict": "latitude,longitude,date,crop_type"},
+                        json=chunk,
+                    )
+                    response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Error upserting GDD rows for {crop_type}: {e}")
             return False
 
     async def get_monthly_gdd_by_cycle(
@@ -640,14 +724,23 @@ class SupabaseService:
         start_date: str,
         end_date: str,
         cycle_start_month: int = 12,
-        gdd_column: str = "gdd_olivier",
+        crop_type: str = "olivier",
     ) -> List[Dict[str, Any]]:
         """Return monthly GDD aggregates reset per agronomic cycle — pure SQL, no Python compute.
+
+        Reads from ``weather_gdd_daily`` (generic crop table) joined with
+        ``weather_daily_data`` for precipitation.
 
         cycle_start_month=12 → cycle Dec(Y-1)..Nov(Y), year key = Y.
         Returns rows: {cycle_year, month_key, gdd_total, precip_total, gdd_cumulative}.
         """
+        import re
+
         if not self.supabase_url or not self.supabase_key:
+            return []
+        # Validate crop_type to a safe identifier before interpolating into SQL
+        if not re.fullmatch(r"[a-z][a-z0-9_]*", crop_type):
+            logger.error(f"Invalid crop_type for SQL query: {crop_type!r}")
             return []
         lat = self._round_weather_coordinate(latitude)
         lon = self._round_weather_coordinate(longitude)
@@ -656,17 +749,20 @@ class SupabaseService:
         WITH monthly AS (
             SELECT
                 CASE
-                    WHEN EXTRACT(MONTH FROM date) >= {cycle_start_month}
-                    THEN EXTRACT(YEAR FROM date)::int + 1
-                    ELSE EXTRACT(YEAR FROM date)::int
+                    WHEN EXTRACT(MONTH FROM g.date) >= {cycle_start_month}
+                    THEN EXTRACT(YEAR FROM g.date)::int + 1
+                    ELSE EXTRACT(YEAR FROM g.date)::int
                 END AS cycle_year,
-                TO_CHAR(date, 'YYYY-MM') AS month_key,
-                SUM({gdd_column}) AS gdd_total,
-                SUM(precipitation_sum) AS precip_total
-            FROM weather_daily_data
-            WHERE latitude = {lat}
-              AND longitude = {lon}
-              AND date BETWEEN '{start_date}' AND '{end_date}'
+                TO_CHAR(g.date, 'YYYY-MM') AS month_key,
+                SUM(g.gdd_daily) AS gdd_total,
+                SUM(w.precipitation_sum) AS precip_total
+            FROM weather_gdd_daily g
+            LEFT JOIN weather_daily_data w
+                ON w.latitude = g.latitude AND w.longitude = g.longitude AND w.date = g.date
+            WHERE g.latitude = {lat}
+              AND g.longitude = {lon}
+              AND g.crop_type = '{crop_type}'
+              AND g.date BETWEEN '{start_date}' AND '{end_date}'
             GROUP BY cycle_year, month_key
         )
         SELECT
@@ -689,7 +785,7 @@ class SupabaseService:
                     json={"query": sql},
                 )
                 if response.status_code == 404:
-                    # execute_sql RPC not available — fall back to None so caller uses Python
+                    # execute_sql RPC not available — caller falls back to Python
                     return []
                 response.raise_for_status()
                 return response.json()
