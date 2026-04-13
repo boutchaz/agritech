@@ -226,6 +226,12 @@ class PhaseConfig:
     # stay consistent with the PHASE_3 → PHASE_4 transition condition.
     heat_count_threshold: float = 30.0
 
+    # Active phases for the current maturity stage.  When a transition targets
+    # a phase NOT in this set, the machine skips forward to the next allowed
+    # phase in cycle order.  None = all phases active (default / full cycle).
+    # Populated from referential ``protocole_phenologique.phases_par_maturite``.
+    active_phases: frozenset[str] | None = None
+
 
 def _as_condition_text(value: object) -> str:
     if isinstance(value, dict):
@@ -259,12 +265,20 @@ def _extract_days_threshold(text: str) -> int | None:
     return None
 
 
-def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
+def extract_phase_config(
+    reference_data: dict | None,
+    maturity_phase: str | None = None,
+) -> PhaseConfig:
     """Build PhaseConfig from a crop referential JSON.
 
     Reads ``protocole_phenologique.phases`` for transition rules and
     ``stades_bbch`` for GDD ranges.  Falls back to olive defaults when
     keys are missing.
+
+    When ``maturity_phase`` is provided, reads
+    ``protocole_phenologique.phases_par_maturite[phase]`` to determine
+    which phenological phases are active for that maturity stage.  Phases
+    not in the active set are auto-skipped by the state machine.
     """
     cfg = PhaseConfig()
     if not reference_data:
@@ -407,6 +421,21 @@ def extract_phase_config(reference_data: dict | None) -> PhaseConfig:
     # Keep heat_count_threshold aligned with stress transition threshold
     cfg.heat_count_threshold = cfg.tmax_stress_threshold
 
+    # Active phases per maturity stage from referential.
+    # Example referential structure:
+    #   protocole_phenologique.phases_par_maturite:
+    #     juvenile: ["DORMANCE", "DEBOURREMENT", "FLORAISON", "REPRISE_AUTOMNALE"]
+    #     entree_production: null  (= all phases)
+    #     pleine_production: null
+    #     senescence: ["DORMANCE", "DEBOURREMENT", "FLORAISON", "NOUAISON", "REPRISE_AUTOMNALE"]
+    if maturity_phase:
+        maturite_map = proto.get("phases_par_maturite")
+        if isinstance(maturite_map, dict):
+            phase_key = maturity_phase.lower()
+            active_list = maturite_map.get(phase_key)
+            if isinstance(active_list, list) and active_list:
+                cfg.active_phases = frozenset(str(p).upper() for p in active_list)
+
     return cfg
 
 
@@ -453,6 +482,16 @@ def resolve_chill_threshold(
 # ---------------------------------------------------------------------------
 
 
+_PHASE_CYCLE_ORDER: list[OlivePhase] = [
+    OlivePhase.DORMANCE,
+    OlivePhase.DEBOURREMENT,
+    OlivePhase.FLORAISON,
+    OlivePhase.NOUAISON,
+    OlivePhase.STRESS_ESTIVAL,
+    OlivePhase.REPRISE_AUTOMNALE,
+]
+
+
 class CropPhaseStateMachine:
     """Generic crop phenology state machine driven by ``PhaseConfig``.
 
@@ -474,12 +513,10 @@ class CropPhaseStateMachine:
         chill_threshold: int = 150,
         skip_dormancy: bool = False,
         config: PhaseConfig | None = None,
-        juvenile: bool = False,
     ) -> None:
         self.tmoy_q25 = tmoy_q25
         self.cfg = config or PhaseConfig(chill_threshold=chill_threshold)
         self.chill_threshold = self.cfg.chill_threshold
-        self.juvenile = juvenile
 
         self.gdd_cumul: float = 0.0
         self.chill_cumul: float = 0.0
@@ -530,20 +567,47 @@ class CropPhaseStateMachine:
         if handler:
             handler(self, signals)
 
+    def _resolve_target_phase(self, requested: OlivePhase) -> tuple[OlivePhase, str]:
+        """Resolve the actual target phase, skipping inactive phases.
+
+        When ``active_phases`` is set in the config, any phase not in the set
+        is skipped — the machine advances to the next allowed phase in cycle
+        order.  Returns (resolved_phase, confidence_adjustment).
+        """
+        active = self.cfg.active_phases
+        if active is None or requested.value in active:
+            return requested, ""
+
+        # Find the next active phase after the requested one in cycle order
+        try:
+            idx = _PHASE_CYCLE_ORDER.index(requested)
+        except ValueError:
+            return requested, ""
+
+        for i in range(1, len(_PHASE_CYCLE_ORDER)):
+            candidate = _PHASE_CYCLE_ORDER[(idx + i) % len(_PHASE_CYCLE_ORDER)]
+            if candidate.value in active:
+                return candidate, "FAIBLE"
+        return requested, ""
+
     def _transition_to(self, new_phase: OlivePhase, signals: DailySignals,
                        confidence: str = "MODEREE") -> None:
-        """Record a phase transition."""
+        """Record a phase transition, skipping phases not in active_phases."""
+        resolved, conf_override = self._resolve_target_phase(new_phase)
+        if conf_override:
+            confidence = conf_override
+
         # Close current phase
         if self.transitions:
             self.transitions[-1].end_date = signals.current_date
 
         self.transitions.append(PhaseTransition(
-            phase=new_phase,
+            phase=resolved,
             start_date=signals.current_date,
             gdd_at_entry=self.gdd_cumul,
             confidence=confidence,
         ))
-        self.current_phase = new_phase
+        self.current_phase = resolved
 
 
 def _handle_dormance(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
@@ -570,8 +634,8 @@ def _handle_debourrement(machine: CropPhaseStateMachine, signals: DailySignals) 
 def _handle_floraison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
     """PHASE_2: exit to NOUAISON at GDD threshold or sustained heat.
 
-    Juvenile trees (age < entree_production) skip fruiting phases entirely:
-    FLORAISON → REPRISE_AUTOMNALE (no NOUAISON, no STRESS_ESTIVAL).
+    If NOUAISON is not in active_phases (e.g. juvenile trees), _transition_to
+    auto-skips to the next allowed phase in cycle order.
     """
     machine.gdd_cumul += signals.gdd_jour
 
@@ -583,11 +647,7 @@ def _handle_floraison(machine: CropPhaseStateMachine, signals: DailySignals) -> 
     if (machine.gdd_cumul > machine.cfg.gdd_floraison_exit
             or machine.hot_streak >= machine.cfg.heat_sustained_days):
         machine.hot_streak = 0
-        if machine.juvenile:
-            # Juvenile trees don't fruit — skip NOUAISON + STRESS_ESTIVAL
-            machine._transition_to(OlivePhase.REPRISE_AUTOMNALE, signals, confidence="FAIBLE")
-        else:
-            machine._transition_to(OlivePhase.NOUAISON, signals, confidence="MODEREE")
+        machine._transition_to(OlivePhase.NOUAISON, signals, confidence="MODEREE")
 
 
 def _handle_nouaison(machine: CropPhaseStateMachine, signals: DailySignals) -> None:
@@ -748,7 +808,7 @@ def run_state_machine(
         return []
 
     # All thresholds from referential — no crop-specific hardcoding below this line.
-    cfg = extract_phase_config(reference_data)
+    cfg = extract_phase_config(reference_data, maturity_phase=maturity_phase)
     gdd_ref = reference_data.get("gdd") if reference_data else None
     cfg.chill_threshold = resolve_chill_threshold(variety, gdd_ref)
 
@@ -798,11 +858,9 @@ def run_state_machine(
         cycle_tmoy_q25 = _compute_tmoy_q25(year_weather)
 
         # Create state machine for this year
-        is_juvenile = maturity_phase in ("JUVENILE", "juvenile")
         machine = CropPhaseStateMachine(
             tmoy_q25=cycle_tmoy_q25,
             config=cfg,
-            juvenile=is_juvenile,
         )
 
         # Process each day
