@@ -403,6 +403,7 @@ export class ParcelsService {
     userId: string,
     organizationId: string,
     farmId?: string,
+    includeArchived: boolean = false,
   ): Promise<PaginatedResponse<any>> {
     this.logger.log(
       `Listing parcels for organization ${organizationId}${farmId ? `, farm ${farmId}` : ""}`,
@@ -466,8 +467,11 @@ export class ParcelsService {
         )
       `,
       )
-      .eq("farms.organization_id", organizationId)
-      .eq("is_active", true);
+      .eq("farms.organization_id", organizationId);
+
+    if (!includeArchived) {
+      query = query.eq("is_active", true);
+    }
 
     if (farmId) {
       query = query.eq("farm_id", farmId);

@@ -485,6 +485,25 @@ export class FarmsService {
       }
     }
 
+    // Check farm name uniqueness within organization
+    const trimmedName = (dto.name || '').trim();
+    if (trimmedName) {
+      const { data: existing } = await this.databaseService.getAdminClient()
+        .from('farms')
+        .select('id, name, is_active')
+        .eq('organization_id', organizationId)
+        .ilike('name', trimmedName)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const suffix = existing.is_active ? '' : ' (archived)';
+        throw new BadRequestException(
+          `A farm named "${existing.name}"${suffix} already exists in this organization`,
+        );
+      }
+    }
+
     // Prepare farm data
     // Note: farms table schema has: size_unit (not area_unit), status, manager_name (not manager_id)
     // Does NOT have: farm_type, parent_farm_id, hierarchy_level, manager_id

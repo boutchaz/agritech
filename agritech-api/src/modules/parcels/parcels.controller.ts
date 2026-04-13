@@ -43,6 +43,11 @@ export class ParcelsController {
     required: false,
     description: 'Optional farm ID to filter parcels',
   })
+  @ApiQuery({
+    name: 'include_archived',
+    required: false,
+    description: 'Include archived (is_active=false) parcels in the response',
+  })
   @ApiResponse({
     status: 200,
     description: 'Parcels retrieved successfully',
@@ -54,9 +59,15 @@ export class ParcelsController {
   async listParcels(
     @Request() req,
     @Query('farm_id') farmId?: string,
+    @Query('include_archived') includeArchived?: string,
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
-    return this.parcelsService.listParcels(req.user.id, organizationId, farmId);
+    return this.parcelsService.listParcels(
+      req.user.id,
+      organizationId,
+      farmId,
+      includeArchived === 'true',
+    );
   }
 
   @Post()

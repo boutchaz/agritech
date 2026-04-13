@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { createFileRoute, useNavigate, Outlet, useLocation } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -11,8 +11,8 @@ import { useAutoStartTour } from '@/contexts/TourContext'
 import ParcelsMap from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader, SectionLoader } from '@/components/ui/loader'
-import { useFarms, useParcelsByFarm, useParcelsByOrganization, useUpdateParcel, useDeleteParcel, type Parcel } from '@/hooks/useParcelsQuery';
-import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree } from 'lucide-react'
+import { useFarms, useParcelsByFarm, useParcelsByOrganization, useUpdateParcel, useDeleteParcel, useRestoreParcel, type Parcel } from '@/hooks/useParcelsQuery';
+import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree, Archive, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -37,6 +37,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingBoundaryParcelId, setEditingBoundaryParcelId] = useState<string | null>(null);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const { search: searchTerm, setSearch: setSearchTerm } = useServerTableState();
 
   /** Farm filter: URL is the only source of truth (avoids navigate ↔ state sync loops). */
@@ -56,14 +57,15 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const { data: farms = [], isLoading: farmsLoading, error: farmsError } = useFarms(currentOrganization?.id);
   const updateParcelMutation = useUpdateParcel();
   const archiveParcelMutation = useDeleteParcel();
+  const restoreParcelMutation = useRestoreParcel();
 
   // Determine farm view context - use stable values to prevent re-render loops
   const isAllFarmsView = !selectedFarmId && !currentFarm?.id;
   const targetFarmId = selectedFarmId || currentFarm?.id || undefined;
 
   // Use organization-wide parcels query for stable query key
-  const { data: parcelsByOrg = [], isLoading: parcelsByOrgLoading, error: parcelsByOrgError } = useParcelsByOrganization(currentOrganization?.id);
-  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading, error: parcelsByFarmError } = useParcelsByFarm(targetFarmId, currentOrganization?.id);
+  const { data: parcelsByOrg = [], isLoading: parcelsByOrgLoading, error: parcelsByOrgError } = useParcelsByOrganization(currentOrganization?.id, showArchived);
+  const { data: parcelsByFarm = [], isLoading: parcelsByFarmLoading, error: parcelsByFarmError } = useParcelsByFarm(targetFarmId, currentOrganization?.id, showArchived);
 
   // Get the appropriate parcels data
   const parcels = targetFarmId ? parcelsByFarm : parcelsByOrg;
@@ -72,26 +74,15 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
   const activeFarmId = isAllFarmsView ? undefined : (selectedFarmId || currentFarm?.id);
   const activeFarm = activeFarmId ? farms.find((farm) => farm.id === activeFarmId) : null;
 
-  const filteredParcels = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    if (!normalizedSearch) return parcels;
-
-    return parcels.filter((parcel) => {
-      const farmName = farms.find((farm) => farm.id === parcel.farm_id)?.name ?? '';
-      return [
-        parcel.name,
-        parcel.description,
-        parcel.irrigation_type,
-        parcel.tree_type,
-        parcel.variety,
-        parcel.rootstock,
-        farmName,
-      ]
-        .filter(Boolean)
-        .some((value) => value?.toString().toLowerCase().includes(normalizedSearch));
-    });
-  }, [farms, parcels, searchTerm]);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredParcels = normalizedSearch
+    ? parcels.filter((parcel) => {
+        const farmName = farms.find((farm) => farm.id === parcel.farm_id)?.name ?? '';
+        return [parcel.name, parcel.description, parcel.irrigation_type, parcel.tree_type, parcel.variety, parcel.rootstock, farmName]
+          .filter(Boolean)
+          .some((value) => value?.toString().toLowerCase().includes(normalizedSearch));
+      })
+    : parcels;
 
           // Farms and parcels are loaded automatically via React Query hooks
           // No manual fetching needed
@@ -103,6 +94,16 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
     } catch (error) {
       console.error('Error archiving parcel:', error);
       toast.error(t('parcels.archiveError', "Erreur lors de l'archivage"));
+    }
+  };
+
+  const handleRestoreParcel = async (parcelId: string) => {
+    try {
+      await restoreParcelMutation.mutateAsync(parcelId);
+      toast.success(t('parcels.restoreSuccess', 'Parcelle restaurée avec succès'));
+    } catch (error) {
+      console.error('Error restoring parcel:', error);
+      toast.error(t('parcels.restoreError', 'Erreur lors de la restauration'));
     }
   };
 
@@ -144,22 +145,33 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
           })()}
         />
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-          <div data-tour="parcel-filters">
-            <FilterBar
-              searchValue={searchTerm}
-              onSearchChange={setSearchTerm}
-              searchPlaceholder={t('parcels.searchPlaceholder', 'Search parcels...')}
-              filters={farms.length > 1 ? [{
-                key: 'farm',
-                value: selectedFarmId,
-                onChange: setFarmFilter,
-                options: [
-                  { value: '', label: t('parcels.allFarms') },
-                  ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
-                ],
-                placeholder: t('parcels.allFarms'),
-              }] : []}
-            />
+          <div data-tour="parcel-filters" className="flex items-center gap-3">
+            <div className="flex-1">
+              <FilterBar
+                searchValue={searchTerm}
+                onSearchChange={setSearchTerm}
+                searchPlaceholder={t('parcels.searchPlaceholder', 'Search parcels...')}
+                filters={farms.length > 1 ? [{
+                  key: 'farm',
+                  value: selectedFarmId,
+                  onChange: setFarmFilter,
+                  options: [
+                    { value: '', label: t('parcels.allFarms') },
+                    ...farms.map((farm) => ({ value: farm.id, label: farm.name })),
+                  ],
+                  placeholder: t('parcels.allFarms'),
+                }] : []}
+              />
+            </div>
+            <Button
+              variant={showArchived ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowArchived(!showArchived)}
+              className="flex items-center gap-1.5 whitespace-nowrap"
+            >
+              <Archive className="h-4 w-4" />
+              {t('parcels.showArchived', 'Archivées')}
+            </Button>
           </div>
 
           {loading ? (
@@ -254,7 +266,11 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                       <div
                         key={parcel.id}
                         data-testid={`parcel-card-${parcel.id}`}
-                        className={`bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow p-4 cursor-pointer text-left ${
+                        className={`rounded-lg shadow hover:shadow-md transition-shadow p-4 cursor-pointer text-left ${
+                          parcel.is_active === false
+                            ? 'bg-gray-50 dark:bg-gray-800/50 opacity-75 border border-dashed border-gray-300 dark:border-gray-600'
+                            : 'bg-white dark:bg-gray-800'
+                        } ${
                           selectedParcelId === parcel.id
                             ? 'ring-2 ring-green-500 ring-offset-2 dark:ring-offset-gray-900'
                             : ''
@@ -266,37 +282,57 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
                             onClick={() => handleParcelSelect(parcel.id)}
                             className="font-semibold text-gray-900 dark:text-white flex items-center space-x-2 text-left"
                           >
-                            <MapPin className="h-4 w-4 text-green-600" />
+                            <MapPin className={`h-4 w-4 ${parcel.is_active === false ? 'text-gray-400' : 'text-green-600'}`} />
                             <span>{parcel.name}</span>
+                            {parcel.is_active === false && (
+                              <span className="ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">
+                                {t('parcels.archivedBadge', 'Archivée')}
+                              </span>
+                            )}
                           </button>
                           <div className="flex space-x-1">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingParcel(parcel);
-                                setShowEditDialog(true);
-                              }}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                              title={t('app.edit')}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                  setConfirmAction({
-                                    title: t('parcels.archiveConfirmTitle', 'Archive parcel'),
-                                    description: t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'),
-                                    variant: 'destructive',
-                                    onConfirm: () => handleArchiveParcel(parcel.id),
-                                  });
-                                  setConfirmOpen(true);
+                            {parcel.is_active !== false ? (
+                              <>
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingParcel(parcel);
+                                    setShowEditDialog(true);
+                                  }}
+                                  className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                  title={t('app.edit')}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmAction({
+                                      title: t('parcels.archiveConfirmTitle', 'Archive parcel'),
+                                      description: t('parcels.archiveConfirmMsg', 'Archiver cette parcelle ? Les données historiques seront conservées.'),
+                                      variant: 'destructive',
+                                      onConfirm: () => handleArchiveParcel(parcel.id),
+                                    });
+                                    setConfirmOpen(true);
+                                  }}
+                                  className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                                  title={t('parcels.archive', 'Archiver')}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRestoreParcel(parcel.id);
                                 }}
-                                className="p-1 text-amber-600 hover:bg-amber-50 rounded"
-                                title={t('parcels.archive', 'Archiver')}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                className="p-1 text-green-600 hover:bg-green-50 rounded"
+                                title={t('parcels.restore', 'Restaurer')}
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
 

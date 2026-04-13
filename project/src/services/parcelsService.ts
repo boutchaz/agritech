@@ -77,7 +77,7 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class ParcelsService {
-  async listParcels(farmId?: string, organizationId?: string | null): Promise<Parcel[]> {
+  async listParcels(farmId?: string, organizationId?: string | null, includeArchived?: boolean): Promise<Parcel[]> {
     const orgId = organizationId || getCurrentOrganizationId();
 
     if (!orgId) {
@@ -89,6 +89,9 @@ class ParcelsService {
 
     if (farmId) {
       url.searchParams.append('farm_id', farmId);
+    }
+    if (includeArchived) {
+      url.searchParams.append('include_archived', 'true');
     }
 
     // Pass organizationId in header as well
