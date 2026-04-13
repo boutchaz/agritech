@@ -590,6 +590,7 @@ export class CalibrationDataService {
       .select("date, index_name, mean_value, cloud_coverage_percentage")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
+      .in("index_name", [...CALIBRATION_SATELLITE_INDICES])
       .gte("date", effectiveSince)
       .order("date", { ascending: true })
       .order("index_name", { ascending: true });
