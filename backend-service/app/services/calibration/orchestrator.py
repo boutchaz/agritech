@@ -292,13 +292,22 @@ async def run_calibration_pipeline(
     ndvi_values = [p.value for p in observed_ndvi_points] if observed_ndvi_points else [0.0]
     median_ndvi = float(np.median(ndvi_values))
 
+    pixel_coords: list[dict[str, float]] | None = None
     if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
-        pixel_values = [
-            float(p["value"]) for p in ndvi_raster_pixels if p.get("value") is not None
+        valid_pixels = [
+            p for p in ndvi_raster_pixels
+            if p.get("value") is not None
         ]
+        pixel_values = [float(p["value"]) for p in valid_pixels]
         if len(pixel_values) > 1:
             raster = np.array(pixel_values, dtype=np.float64).reshape(-1, 1)
             has_real_zones = True
+            # Preserve geographic coordinates for smooth heatmap rendering
+            if all(p.get("lon") is not None and p.get("lat") is not None for p in valid_pixels):
+                pixel_coords = [
+                    {"lon": float(p["lon"]), "lat": float(p["lat"])}
+                    for p in valid_pixels
+                ]
         else:
             raster = np.array([[median_ndvi]], dtype=np.float64)
             has_real_zones = False
@@ -321,7 +330,10 @@ async def run_calibration_pipeline(
             planting_system=calibration_input.planting_system,
             crop_type=calibration_input.crop_type,
         ),
-        asyncio.to_thread(classify_zones, raster, ndvi_percentiles),
+        asyncio.to_thread(
+            classify_zones, raster, ndvi_percentiles,
+            pixel_coords=pixel_coords,
+        ),
     )
 
     # --- Phase 4: S8 needs step1 + step3 + step7 ---

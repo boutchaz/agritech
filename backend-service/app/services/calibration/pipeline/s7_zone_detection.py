@@ -39,6 +39,7 @@ def classify_zones(
     median_raster: NDArray[np.float64],
     percentiles: PercentileSet,
     pixel_size_m2: float = 100.0,
+    pixel_coords: list[dict[str, float]] | None = None,
 ) -> Step7Output:
     rows, cols = median_raster.shape
     class_counts: Counter[str] = Counter()
@@ -54,12 +55,13 @@ def classify_zones(
             spatial_pattern_type="unknown",
         )
 
-    for row in range(rows):
-        for col in range(cols):
-            value = float(median_raster[row, col])
+    if pixel_coords and len(pixel_coords) == total_pixels:
+        # Use real geographic coordinates from raster extraction
+        for i in range(total_pixels):
+            value = float(median_raster.flat[i])
             zone_class = _class_for_value(value, percentiles)
             class_counts[zone_class] += 1
-
+            coord = pixel_coords[i]
             features.append(
                 {
                     "type": "Feature",
@@ -70,10 +72,31 @@ def classify_zones(
                     },
                     "geometry": {
                         "type": "Point",
-                        "coordinates": [float(col), float(row)],
+                        "coordinates": [coord["lon"], coord["lat"]],
                     },
                 }
             )
+    else:
+        # Fallback: pixel index coordinates
+        for row in range(rows):
+            for col in range(cols):
+                value = float(median_raster[row, col])
+                zone_class = _class_for_value(value, percentiles)
+                class_counts[zone_class] += 1
+                features.append(
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "zone": zone_class,
+                            "value": value,
+                            "pixel_area_m2": pixel_size_m2,
+                        },
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [float(col), float(row)],
+                        },
+                    }
+                )
 
     summary: list[ZoneSummary] = []
     for zone in ["A", "B", "C", "D", "E"]:
