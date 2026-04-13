@@ -6,7 +6,7 @@ import numpy as np
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..services.calibration.gdd_service import precompute_gdd
+from ..services.calibration.support.gdd_service import precompute_gdd
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
 
