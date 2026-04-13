@@ -1,3 +1,4 @@
+import asyncio
 from importlib import import_module
 
 
@@ -7,7 +8,6 @@ fixtures_module = import_module("tests.fixtures.calibration_fixtures")
 
 CalibrationInput = getattr(types_module, "CalibrationInput")
 run_calibration_pipeline = getattr(orchestrator_module, "run_calibration_pipeline")
-resolve_weather_thresholds = getattr(orchestrator_module, "_resolve_weather_thresholds")
 
 build_satellite_fixture = getattr(fixtures_module, "build_satellite_fixture")
 build_weather_fixture = getattr(fixtures_module, "build_weather_fixture")
@@ -86,11 +86,13 @@ def test_orchestrator_runs_all_steps_and_returns_output() -> None:
         }
     )
 
-    output = run_calibration_pipeline(
-        calibration_input=calibration_input,
-        satellite_images=_build_satellite_images(),
-        weather_rows=build_weather_fixture(),
-        storage=None,
+    output = asyncio.run(
+        run_calibration_pipeline(
+            calibration_input=calibration_input,
+            satellite_images=_build_satellite_images(),
+            weather_rows=build_weather_fixture(),
+            storage=None,
+        )
     )
 
     assert output.parcel_id == parcel["parcel_id"]
@@ -103,25 +105,6 @@ def test_orchestrator_runs_all_steps_and_returns_output() -> None:
     assert output.step7.zone_summary
     assert 0 <= output.step8.health_score.total <= 100
     assert 0 <= output.confidence.normalized_score <= 1
-
-
-def test_resolve_weather_thresholds_reads_referential_values() -> None:
-    tbase, frost = resolve_weather_thresholds(
-        {
-            "gdd": {"tbase_c": "12.5"},
-            "seuils_meteo": {"gel": {"threshold_c": "-1.5"}},
-        },
-    )
-
-    assert tbase == 12.5
-    assert frost == -1.5
-
-
-def test_resolve_weather_thresholds_falls_back_to_generic_defaults() -> None:
-    tbase, frost = resolve_weather_thresholds({})
-
-    assert tbase == 10.0
-    assert frost == 0.0
 
 
 def test_orchestrator_normalizes_mixed_case_index_keys() -> None:
@@ -173,11 +156,13 @@ def test_orchestrator_normalizes_mixed_case_index_keys() -> None:
         },
     ]
 
-    output = run_calibration_pipeline(
-        calibration_input=calibration_input,
-        satellite_images=satellite_images,
-        weather_rows=weather,
-        storage=None,
+    output = asyncio.run(
+        run_calibration_pipeline(
+            calibration_input=calibration_input,
+            satellite_images=satellite_images,
+            weather_rows=weather,
+            storage=None,
+        )
     )
 
     for index in ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI", "MSI", "GCI"]:

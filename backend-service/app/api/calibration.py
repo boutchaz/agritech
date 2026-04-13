@@ -337,11 +337,11 @@ def _validate_v2_request(request: CalibrationRunV2Request) -> None:
         )
 
 
-def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
+async def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
     _validate_v2_request(request)
 
     try:
-        return run_calibration_pipeline(
+        return await run_calibration_pipeline(
             calibration_input=request.calibration_input,
             satellite_images=request.satellite_images,
             weather_rows=request.weather_rows,
@@ -477,12 +477,12 @@ def _extract_month(date_value: str) -> int:
 
 @router.post("/v2/run", response_model=CalibrationOutput)
 async def run_calibration_v2(request: CalibrationRunV2Request):
-    return _run_v2(request)
+    return await _run_v2(request)
 
 
 @router.post("/run-v2", response_model=CalibrationOutput)
 async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
-    return _run_v2(request)
+    return await _run_v2(request)
 
 
 @router.post("/v2/precompute-gdd", response_model=PrecomputeGddResponse)
