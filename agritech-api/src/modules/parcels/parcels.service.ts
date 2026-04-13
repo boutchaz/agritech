@@ -9,13 +9,12 @@ import {
   Logger,
   forwardRef,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { DeleteParcelDto } from "./dto/delete-parcel.dto";
 import { CreateParcelDto } from "./dto/create-parcel.dto";
 import { UpdateParcelDto } from "./dto/update-parcel.dto";
 import { GetParcelResponseDto } from "./dto/list-parcels.dto";
 import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
+import { DatabaseService } from "../database/database.service";
 import { SubscriptionsService } from "../subscriptions/subscriptions.service";
 import { CalibrationService } from "../calibration/calibration.service";
 import {
@@ -37,33 +36,15 @@ const MAJOR_PARCEL_PROFILE_FIELDS = [
 
 @Injectable()
 export class ParcelsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(ParcelsService.name);
 
   constructor(
-    private configService: ConfigService,
-    private subscriptionsService: SubscriptionsService,
-    private satelliteCacheService: SatelliteCacheService,
-    private notificationsService: NotificationsService,
-    @Inject(forwardRef(() => CalibrationService))
-    private readonly calibrationService: CalibrationService,
-  ) {
-    const supabaseUrl = this.configService.get<string>("SUPABASE_URL");
-    const supabaseServiceKey = this.configService.get<string>(
-      "SUPABASE_SERVICE_ROLE_KEY",
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Missing Supabase configuration");
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+    private readonly databaseService: DatabaseService,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly satelliteCacheService: SatelliteCacheService,
+    private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => CalibrationService)) private readonly calibrationService: CalibrationService,
+  ) {}
 
   /**
    * Archive a parcel (soft delete). Sets is_active=false instead of hard deleting.
@@ -75,7 +56,7 @@ export class ParcelsService {
     this.logger.log(`Archiving parcel ${parcel_id} for user ${userId}`);
 
     // Verify the parcel exists and get farm info
-    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select("id, name, farm_id, is_active")
       .eq("id", parcel_id)
@@ -101,7 +82,7 @@ export class ParcelsService {
     }
 
     // Get farm info to find organization_id
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from("farms")
       .select("organization_id")
       .eq("id", existingParcel.farm_id)
@@ -123,7 +104,7 @@ export class ParcelsService {
     }
 
     // Check user's role in the organization
-    const { data: orgUser, error: roleError } = await this.supabaseAdmin
+    const { data: orgUser, error: roleError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("role_id, roles!inner(name)")
       .eq("organization_id", organizationId)
@@ -156,7 +137,7 @@ export class ParcelsService {
 
     // Archive the parcel (soft delete)
     const { data: archivedParcel, error: archiveError } =
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from("parcels")
         .update({ is_active: false, updated_at: new Date().toISOString() })
         .eq("id", parcel_id)
@@ -184,7 +165,7 @@ export class ParcelsService {
   async restoreParcel(userId: string, parcelId: string) {
     this.logger.log(`Restoring parcel ${parcelId} for user ${userId}`);
 
-    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select("id, name, farm_id, is_active")
       .eq("id", parcelId)
@@ -202,7 +183,7 @@ export class ParcelsService {
       throw new BadRequestException("Parcel is not associated with any farm");
     }
 
-    const { data: farm } = await this.supabaseAdmin
+    const { data: farm } = await this.databaseService.getAdminClient()
       .from("farms")
       .select("organization_id")
       .eq("id", existingParcel.farm_id)
@@ -215,7 +196,7 @@ export class ParcelsService {
     const organizationId = farm.organization_id;
 
     // Verify user access
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("role_id")
       .eq("organization_id", organizationId)
@@ -228,14 +209,14 @@ export class ParcelsService {
     }
 
     // Check subscription limit before restoring
-    const { data: sub } = await this.supabaseAdmin
+    const { data: sub } = await this.databaseService.getAdminClient()
       .from("subscriptions")
       .select("max_parcels")
       .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (sub?.max_parcels != null) {
-      const { count: activeParcelCount } = await this.supabaseAdmin
+      const { count: activeParcelCount } = await this.databaseService.getAdminClient()
         .from("parcels")
         .select("id, farms!inner(organization_id)", { count: "exact", head: true })
         .eq("farms.organization_id", organizationId)
@@ -248,7 +229,7 @@ export class ParcelsService {
       }
     }
 
-    const { data: restoredParcel, error: restoreError } = await this.supabaseAdmin
+    const { data: restoredParcel, error: restoreError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .update({ is_active: true, updated_at: new Date().toISOString() })
       .eq("id", parcelId)
@@ -279,7 +260,7 @@ export class ParcelsService {
     );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("role_id")
       .eq("organization_id", organizationId)
@@ -294,7 +275,7 @@ export class ParcelsService {
     }
 
     // Build query for harvest records joined with parcels and farms
-    let query = this.supabaseAdmin
+    let query = this.databaseService.getAdminClient()
       .from("harvest_records")
       .select(
         `
@@ -428,7 +409,7 @@ export class ParcelsService {
     );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("organization_id")
       .eq("organization_id", organizationId)
@@ -444,7 +425,7 @@ export class ParcelsService {
     }
 
     // Build query
-    let query = this.supabaseAdmin
+    let query = this.databaseService.getAdminClient()
       .from("parcels")
       .select(
         `
@@ -514,7 +495,7 @@ export class ParcelsService {
       `Getting parcel ${parcelId} for organization ${organizationId}`,
     );
 
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("organization_id")
       .eq("organization_id", organizationId)
@@ -529,7 +510,7 @@ export class ParcelsService {
       );
     }
 
-    const { data: parcel, error: parcelError } = await this.supabaseAdmin
+    const { data: parcel, error: parcelError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select(
         `
@@ -602,7 +583,7 @@ export class ParcelsService {
     );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("organization_id")
       .eq("organization_id", organizationId)
@@ -625,14 +606,14 @@ export class ParcelsService {
     }
 
     // Enforce subscription parcel limit
-    const { data: sub } = await this.supabaseAdmin
+    const { data: sub } = await this.databaseService.getAdminClient()
       .from("subscriptions")
       .select("max_parcels")
       .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (sub?.max_parcels != null) {
-      const { count: parcelCount } = await this.supabaseAdmin
+      const { count: parcelCount } = await this.databaseService.getAdminClient()
         .from("parcels")
         .select("id, farms!inner(organization_id)", {
           count: "exact",
@@ -649,7 +630,7 @@ export class ParcelsService {
     }
 
     // Verify farm belongs to organization
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from("farms")
       .select("id, organization_id")
       .eq("id", dto.farm_id)
@@ -702,7 +683,7 @@ export class ParcelsService {
     };
 
     // Insert parcel
-    const { data: newParcel, error: createError } = await this.supabaseAdmin
+    const { data: newParcel, error: createError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .insert(parcelData)
       .select()
@@ -771,7 +752,7 @@ export class ParcelsService {
 
         // V2 lifecycle: transition awaiting_data → ready_calibration
         try {
-          const { data: parcelRow } = await this.supabaseAdmin
+          const { data: parcelRow } = await this.databaseService.getAdminClient()
             .from("parcels")
             .select("ai_phase")
             .eq("id", parcelId)
@@ -779,7 +760,7 @@ export class ParcelsService {
             .maybeSingle();
 
           if (parcelRow?.ai_phase === "awaiting_data") {
-            const { error: transitionError } = await this.supabaseAdmin
+            const { error: transitionError } = await this.databaseService.getAdminClient()
               .from("parcels")
               .update({ ai_phase: "ready_calibration" })
               .eq("id", parcelId)
@@ -826,7 +807,7 @@ export class ParcelsService {
     parcelId: string,
     organizationId: string,
   ): Promise<{ status: string; message: string }> {
-    const { data: parcel } = await this.supabaseAdmin
+    const { data: parcel } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select("boundary, planting_year")
       .eq("id", parcelId)
@@ -842,7 +823,7 @@ export class ParcelsService {
     }
 
     // Reset to awaiting_data so the full flow runs
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from("parcels")
       .update({ ai_phase: "awaiting_data" })
       .eq("id", parcelId)
@@ -863,7 +844,7 @@ export class ParcelsService {
           `Full sync completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
         );
 
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from("parcels")
           .update({ ai_phase: "ready_calibration" })
           .eq("id", parcelId)
@@ -914,7 +895,7 @@ export class ParcelsService {
     message: string,
     data: Record<string, unknown>,
   ): Promise<void> {
-    const { data: orgUsers } = await this.supabaseAdmin
+    const { data: orgUsers } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("user_id")
       .eq("organization_id", organizationId)
@@ -950,7 +931,7 @@ export class ParcelsService {
     this.logger.log(`Updating parcel ${parcelId} for user ${userId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("organization_id")
       .eq("organization_id", organizationId)
@@ -965,7 +946,7 @@ export class ParcelsService {
     }
 
     // Verify parcel exists and belongs to organization
-    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select(
         `
@@ -988,7 +969,7 @@ export class ParcelsService {
       );
     }
 
-    const { data: profileBefore } = await this.supabaseAdmin
+    const { data: profileBefore } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select(
         "crop_type, variety, planting_system, irrigation_type, water_source, density_per_hectare, plant_count, ai_phase, ai_enabled, ai_observation_only, ai_calibration_id, boundary, planting_year",
@@ -1036,7 +1017,7 @@ export class ParcelsService {
     if (dto.perimeter !== undefined) updateData.perimeter = dto.perimeter;
 
     // Update parcel
-    const { data: updatedParcel, error: updateError } = await this.supabaseAdmin
+    const { data: updatedParcel, error: updateError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .update(updateData)
       .eq("id", parcelId)
@@ -1117,7 +1098,7 @@ export class ParcelsService {
     );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from("organization_users")
       .select("organization_id")
       .eq("organization_id", organizationId)
@@ -1133,7 +1114,7 @@ export class ParcelsService {
     }
 
     // Verify parcel exists and belongs to organization
-    const { data: parcel, error: parcelError } = await this.supabaseAdmin
+    const { data: parcel, error: parcelError } = await this.databaseService.getAdminClient()
       .from("parcels")
       .select(
         `
@@ -1156,7 +1137,7 @@ export class ParcelsService {
     }
 
     // Get applications for this parcel
-    const { data: applications, error: appsError } = await this.supabaseAdmin
+    const { data: applications, error: appsError } = await this.databaseService.getAdminClient()
       .from("product_applications")
       .select(
         `

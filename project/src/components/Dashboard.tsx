@@ -13,6 +13,7 @@ import AnalysisWidget from './Dashboard/AnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
+import CostPerParcelWidget from './Dashboard/CostPerParcelWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -210,6 +211,10 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
             <AccountingWidget />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <CostPerParcelWidget />
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">

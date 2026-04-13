@@ -28,6 +28,7 @@ import { YieldHistoryForm } from './YieldHistoryForm';
 import { BenchmarkForm } from './BenchmarkForm';
 import { HarvestForecastForm } from './HarvestForecastForm';
 import { SectionLoader } from '@/components/ui/loader';
+import { SeasonComparison } from './SeasonComparison';
 
 interface ProductionDashboardProps {
   parcelId?: string;
@@ -231,6 +232,7 @@ export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
           <TabsTrigger value="performance">Performance Benchmarks</TabsTrigger>
           <TabsTrigger value="alerts">Alerts ({alerts.length})</TabsTrigger>
           <TabsTrigger value="forecasts">Harvest Forecasts</TabsTrigger>
+          <TabsTrigger value="season-comparison">Season Comparison</TabsTrigger>
         </TabsList>
 
         {/* Performance Benchmarks Tab */}
@@ -550,6 +552,10 @@ export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
               </Card>
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="season-comparison">
+          <SeasonComparison parcelId={parcelId} />
         </TabsContent>
       </Tabs>
 

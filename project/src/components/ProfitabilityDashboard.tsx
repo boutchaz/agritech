@@ -23,6 +23,7 @@ import {
 import { useExperienceLevel, useFeatureFlag } from '../contexts/ExperienceLevelContext';
 import { AdaptiveSection as _AdaptiveSection } from './adaptive/AdaptiveSection';
 import { Badge } from './ui/badge';
+import { ParcelComparisonTable } from './Profitability/ParcelComparisonTable';
 
 const ProfitabilityDashboard = () => {
   const { currentOrganization } = useAuth();
@@ -416,7 +417,8 @@ const ProfitabilityDashboard = () => {
             </Card>
           )}
 
-          {/* By Parcel Table */}
+          <ParcelComparisonTable />
+
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">

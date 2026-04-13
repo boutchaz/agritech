@@ -106,7 +106,8 @@ export class HealthService {
   }
 
   async checkSatellite(): Promise<ServiceCheckResult> {
-    const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
+    const url =
+      this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
     const healthUrl = `${url.replace(/\/+$/, '')}/health`;
     return this.checkHttpEndpoint('satellite', healthUrl);
   }

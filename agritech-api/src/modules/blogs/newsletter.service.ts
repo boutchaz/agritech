@@ -1,21 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ConfigService } from '@nestjs/config';
+import { DatabaseService } from '../database/database.service';
 
 @Injectable()
 export class NewsletterService {
   private readonly logger = new Logger(NewsletterService.name);
-  private readonly supabase: SupabaseClient;
 
-  constructor(private readonly configService: ConfigService) {
-    const supabaseUrl = this.configService.get('SUPABASE_URL');
-    const supabaseKey = this.configService.get('SUPABASE_SERVICE_ROLE_KEY');
-    this.supabase = createClient(supabaseUrl, supabaseKey);
-  }
+  constructor(private readonly databaseService: DatabaseService) {}
 
   async subscribe(email: string, locale: string = 'fr', sourceSlug?: string): Promise<{ success: boolean; already_subscribed?: boolean }> {
     // Check if already subscribed
-    const { data: existing } = await this.supabase
+    const { data: existing } = await this.databaseService.getAdminClient()
       .from('newsletter_subscribers')
       .select('id')
       .eq('email', email.toLowerCase().trim())
@@ -26,7 +20,7 @@ export class NewsletterService {
     }
 
     // Insert new subscriber
-    const { error } = await this.supabase
+    const { error } = await this.databaseService.getAdminClient()
       .from('newsletter_subscribers')
       .insert({
         email: email.toLowerCase().trim(),

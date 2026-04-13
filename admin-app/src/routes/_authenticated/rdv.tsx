@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
   RefreshCw,
@@ -17,8 +17,14 @@ import {
   Download,
   Users,
   Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Send,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { apiRequest } from '@/lib/api-client';
+import { toast } from 'sonner';
 
 const PAGE_SIZE = 20;
 
@@ -35,14 +41,23 @@ interface RdvLead {
   source: string | null;
   email_sent: boolean;
   created_at: string;
+  status: 'pending' | 'confirmed' | 'rejected';
+  confirmed_at: string | null;
+  confirmed_slot: string | null;
+  rejection_reason: string | null;
 }
 
 function RdvPage() {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [overrideSlot, setOverrideSlot] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['rdv-leads', page, search, regionFilter, dateFilter],
@@ -115,6 +130,44 @@ function RdvPage() {
           [...dates.entries()].sort((a, b) => a[0].localeCompare(b[0])),
         ),
       };
+    },
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: async ({ id, slot }: { id: string; slot?: string }) => {
+      const body: Record<string, string> = {};
+      if (slot) body.override_slot = slot;
+      return apiRequest<{ success: boolean; emailSent: boolean }>(
+        `/api/v1/public/rdv/siam/${id}/confirm`,
+        { method: 'POST', body: JSON.stringify(body) },
+      );
+    },
+    onSuccess: () => {
+      toast.success('RDV confirmé — email envoyé');
+      setConfirmingId(null);
+      setOverrideSlot('');
+      queryClient.invalidateQueries({ queryKey: ['rdv-leads'] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Erreur: ${err.message}`);
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      return apiRequest<{ success: boolean; emailSent: boolean }>(
+        `/api/v1/public/rdv/siam/${id}/reject`,
+        { method: 'POST', body: JSON.stringify({ reason }) },
+      );
+    },
+    onSuccess: () => {
+      toast.success('RDV refusé — email envoyé');
+      setRejectingId(null);
+      setRejectReason('');
+      queryClient.invalidateQueries({ queryKey: ['rdv-leads'] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Erreur: ${err.message}`);
     },
   });
 
@@ -337,6 +390,12 @@ function RdvPage() {
                 <th className="px-3 py-2.5 text-center text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Email
                 </th>
+                <th className="px-3 py-2.5 text-center text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
+                  Statut
+                </th>
+                <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
+                  Actions
+                </th>
                 <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">
                   Date
                 </th>
@@ -345,13 +404,13 @@ function RdvPage() {
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={10} className="px-4 py-12 text-center">
                     <RefreshCw className="h-6 w-6 animate-spin text-gray-400 mx-auto" />
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                     Aucun lead trouvé
                   </td>
                 </tr>
@@ -435,6 +494,122 @@ function RdvPage() {
                       ) : (
                         <X className="h-4 w-4 text-gray-300 mx-auto" />
                       )}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                          row.status === 'confirmed'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : row.status === 'rejected'
+                              ? 'bg-red-50 text-red-700'
+                              : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        {row.status === 'confirmed' && <CheckCircle className="h-3 w-3" />}
+                        {row.status === 'rejected' && <XCircle className="h-3 w-3" />}
+                        {row.status === 'pending' && <Clock className="h-3 w-3" />}
+                        {row.status === 'confirmed' ? 'Confirmé' : row.status === 'rejected' ? 'Refusé' : 'En attente'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()} onKeyDown={() => {}}>
+                      <div className="flex flex-col gap-1.5">
+                        {!row.email && row.status === 'pending' && (
+                          <span className="flex items-center gap-1 text-xs text-amber-600" title="Aucun email — confirmation impossible">
+                            <AlertTriangle className="h-3 w-3" />
+                            <span>Pas d'email</span>
+                          </span>
+                        )}
+                        {row.status === 'pending' && (
+                          <div className="flex items-center gap-1">
+                            {confirmingId === row.id ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={overrideSlot}
+                                  onChange={(e) => setOverrideSlot(e.target.value)}
+                                  placeholder="Nouveau créneau..."
+                                  className="w-28 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => confirmMutation.mutate({ id: row.id, slot: overrideSlot || undefined })}
+                                  disabled={confirmMutation.isPending}
+                                  className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                  <Send className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setConfirmingId(null); setOverrideSlot(''); }}
+                                  className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-300"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { setConfirmingId(row.id); setRejectingId(null); setOverrideSlot(''); }}
+                                disabled={!row.email}
+                                className="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                Confirmer
+                              </button>
+                            )}
+                            {rejectingId === row.id ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  value={rejectReason}
+                                  onChange={(e) => setRejectReason(e.target.value)}
+                                  placeholder="Motif du refus..."
+                                  className="w-28 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-red-500"
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!rejectReason.trim()) return;
+                                    rejectMutation.mutate({ id: row.id, reason: rejectReason.trim() });
+                                  }}
+                                  disabled={rejectMutation.isPending || !rejectReason.trim()}
+                                  className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                                >
+                                  <Send className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setRejectingId(null); setRejectReason(''); }}
+                                  className="rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-300"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { setRejectingId(row.id); setConfirmingId(null); setRejectReason(''); }}
+                                className="rounded bg-red-50 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                              >
+                                Refuser
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {row.status === 'confirmed' && (
+                          <span className="flex items-center gap-1 text-xs text-emerald-700">
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {row.confirmed_slot || row.creneau}
+                          </span>
+                        )}
+                        {row.status === 'rejected' && (
+                          <span className="flex items-center gap-1 text-xs text-red-600" title={row.rejection_reason ?? ''}>
+                            <XCircle className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate max-w-[120px]">{row.rejection_reason ?? '—'}</span>
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {new Date(row.created_at).toLocaleDateString('fr-FR', {

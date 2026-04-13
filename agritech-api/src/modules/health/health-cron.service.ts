@@ -30,7 +30,8 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
 
     this.serviceUrls = {
       supabase: this.configService.get<string>('SUPABASE_URL') || 'supabase',
-      satellite: this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000',
+      satellite:
+        this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001',
       cms: this.configService.get<string>('STRAPI_API_URL') || 'http://localhost:1337/api',
     };
   }

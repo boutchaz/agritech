@@ -540,6 +540,167 @@ class SupabaseService:
             logger.error(f"Error deleting satellite file: {e}")
             return False
 
+    # ------------------------------------------------------------------ #
+    # Weather DB cache (weather_daily_data)                              #
+    # ------------------------------------------------------------------ #
+
+    async def get_cached_weather(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str,
+        end_date: str,
+    ) -> List[Dict[str, Any]]:
+        """Return daily weather rows already stored for a rounded location."""
+        if not self.supabase_url or not self.supabase_key:
+            return []
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(
+                    f"{self.supabase_url}/rest/v1/weather_daily_data",
+                    headers=self.headers,
+                    params={
+                        "select": "*",
+                        "latitude": f"eq.{lat}",
+                        "longitude": f"eq.{lon}",
+                        "and": f"(date.gte.{start_date},date.lte.{end_date})",
+                        "order": "date.asc",
+                    },
+                )
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching cached weather: {e}")
+            return []
+
+    async def upsert_weather_daily(
+        self,
+        latitude: float,
+        longitude: float,
+        records: List[Dict[str, Any]],
+        source: str = "open-meteo-archive",
+    ) -> bool:
+        """Upsert daily weather rows (raw + pre-computed GDD columns)."""
+        if not self.supabase_url or not self.supabase_key or not records:
+            return False
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+
+        TBASE_OLIVIER = 10.0
+        TBASE_AGRUMES = 13.0
+        TBASE_AVOCATIER = 10.0
+        TBASE_PALMIER = 18.0
+        CHILL_THRESH = 7.2
+
+        rows = []
+        for r in records:
+            tmin = r.get("temp_min") or r.get("temperature_min") or 0.0
+            tmax = r.get("temp_max") or r.get("temperature_max") or 0.0
+            tavg = (tmin + tmax) / 2.0
+            rows.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "date": str(r.get("date")),
+                    "temperature_min": tmin,
+                    "temperature_max": tmax,
+                    "temperature_mean": round(tavg, 2),
+                    "precipitation_sum": r.get("precip") or r.get("precipitation_sum") or 0.0,
+                    "wind_speed_max": r.get("wind_speed_max"),
+                    "et0_fao_evapotranspiration": r.get("et0") or r.get("et0_fao_evapotranspiration"),
+                    "source": source,
+                    "gdd_olivier": round(max(0.0, tavg - TBASE_OLIVIER), 4),
+                    "gdd_agrumes": round(max(0.0, tavg - TBASE_AGRUMES), 4),
+                    "gdd_avocatier": round(max(0.0, tavg - TBASE_AVOCATIER), 4),
+                    "gdd_palmier_dattier": round(max(0.0, tavg - TBASE_PALMIER), 4),
+                    "chill_hours": 1.0 if tmin < CHILL_THRESH else 0.0,
+                }
+            )
+
+        if not rows:
+            return False
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                for i in range(0, len(rows), 500):
+                    chunk = rows[i : i + 500]
+                    response = await client.post(
+                        f"{self.supabase_url}/rest/v1/weather_daily_data",
+                        headers={**self.headers, "Prefer": "resolution=merge-duplicates"},
+                        params={"on_conflict": "latitude,longitude,date"},
+                        json=chunk,
+                    )
+                    response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Error upserting weather daily data: {e}")
+            return False
+
+    async def get_monthly_gdd_by_cycle(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str,
+        end_date: str,
+        cycle_start_month: int = 12,
+        gdd_column: str = "gdd_olivier",
+    ) -> List[Dict[str, Any]]:
+        """Monthly GDD aggregates reset per agronomic cycle — pure SQL, no Python compute.
+
+        cycle_start_month=12 → cycle Dec(Y-1)..Nov(Y), year key = Y.
+        Returns rows: {cycle_year, month_key, gdd_total, precip_total, gdd_cumulative}.
+        """
+        if not self.supabase_url or not self.supabase_key:
+            return []
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+
+        sql = f"""
+        WITH monthly AS (
+            SELECT
+                CASE
+                    WHEN EXTRACT(MONTH FROM date) >= {cycle_start_month}
+                    THEN EXTRACT(YEAR FROM date)::int + 1
+                    ELSE EXTRACT(YEAR FROM date)::int
+                END AS cycle_year,
+                TO_CHAR(date, 'YYYY-MM') AS month_key,
+                SUM({gdd_column}) AS gdd_total,
+                SUM(precipitation_sum) AS precip_total
+            FROM weather_daily_data
+            WHERE latitude = {lat}
+              AND longitude = {lon}
+              AND date BETWEEN '{start_date}' AND '{end_date}'
+            GROUP BY cycle_year, month_key
+        )
+        SELECT
+            cycle_year,
+            month_key,
+            ROUND(gdd_total::numeric, 3) AS gdd_total,
+            ROUND(precip_total::numeric, 2) AS precip_total,
+            ROUND(SUM(gdd_total) OVER (
+                PARTITION BY cycle_year ORDER BY month_key
+            )::numeric, 3) AS gdd_cumulative
+        FROM monthly
+        ORDER BY cycle_year, month_key
+        """
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{self.supabase_url}/rest/v1/rpc/execute_sql",
+                    headers=self.headers,
+                    json={"query": sql},
+                )
+                if response.status_code == 404:
+                    return []
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching monthly GDD by cycle: {e}")
+            return []
+
     async def get_organizations_with_active_subscriptions(
         self,
     ) -> List[Dict[str, Any]]:

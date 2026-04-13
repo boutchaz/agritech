@@ -15,6 +15,7 @@ interface TimeSeriesPoint {
   max_value?: number | null;
   std_value?: number | null;
   median_value?: number | null;
+  percentile_10?: number | null;
   percentile_25?: number | null;
   percentile_75?: number | null;
   percentile_90?: number | null;
@@ -498,6 +499,7 @@ export class SatelliteCacheService {
       if (point.max_value != null) row.max_value = point.max_value;
       if (point.std_value != null) row.std_value = point.std_value;
       if (point.median_value != null) row.median_value = point.median_value;
+      if (point.percentile_10 != null) row.percentile_10 = point.percentile_10;
       if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
       if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
       if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
@@ -692,6 +694,7 @@ export class SatelliteCacheService {
           if (point.max_value != null) row.max_value = point.max_value;
           if (point.std_value != null) row.std_value = point.std_value;
           if (point.median_value != null) row.median_value = point.median_value;
+          if (point.percentile_10 != null) row.percentile_10 = point.percentile_10;
           if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
           if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
           if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
@@ -949,6 +952,7 @@ export class SatelliteCacheService {
           data: derived,
           expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
         });
+        this.evictExpiredAvailDatesEntries();
         return derived;
       }
     }
@@ -973,6 +977,7 @@ export class SatelliteCacheService {
       data: fresh,
       expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
     });
+    this.evictExpiredAvailDatesEntries();
 
     return fresh;
   }
@@ -1064,6 +1069,15 @@ export class SatelliteCacheService {
     for (const [key, entry] of this.heatmapCache) {
       if (entry.expiresAt <= now) {
         this.heatmapCache.delete(key);
+      }
+    }
+  }
+
+  private evictExpiredAvailDatesEntries() {
+    const now = Date.now();
+    for (const [key, entry] of this.availDatesCache) {
+      if (entry.expiresAt <= now) {
+        this.availDatesCache.delete(key);
       }
     }
   }

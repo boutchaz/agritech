@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, TrendingUp, TrendingDown, Activity } from 'lucide-react';
-import type { PhenologyDashboardData, PhenologyMeanStage, SeasonTimelineEntry } from '@/types/calibration-review';
+import { Info } from 'lucide-react';
+import type { PhenologyDashboardData, SeasonTimelineEntry } from '@/types/calibration-review';
 
 interface PhenologyDashboardProps {
   data: PhenologyDashboardData;
@@ -21,26 +21,9 @@ const PHASE_LABELS: Record<string, string> = {
   DEBOURREMENT: 'Débourrement',
   FLORAISON: 'Floraison',
   NOUAISON: 'Nouaison',
-  STRESS_ESTIVAL: 'Stress Estival',
-  REPRISE_AUTOMNALE: 'Reprise Automnale',
+  STRESS_ESTIVAL: 'Stress estival',
+  REPRISE_AUTOMNALE: 'Reprise automnale',
 };
-
-const STAGE_LABELS: Record<string, string> = {
-  dormancy_exit: 'Dormancy Exit',
-  plateau_start: 'Plateau Start',
-  peak: 'Peak',
-  decline_start: 'Decline Start',
-  dormancy_entry: 'Dormancy Entry',
-};
-
-function formatDateLong(dateStr: string): string {
-  if (!dateStr) return '—';
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
-  } catch {
-    return dateStr;
-  }
-}
 
 /** Month labels for the timeline header */
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -55,21 +38,72 @@ function dateToMonthPosition(dateStr: string): number {
   }
 }
 
-// ── Stage Cards Row ──
+function formatPhaseLabel(phase: string): string {
+  if (PHASE_LABELS[phase]) return PHASE_LABELS[phase];
+  return phase
+    .toLowerCase()
+    .split('_')
+    .map((w) => (w ? `${w[0].toUpperCase()}${w.slice(1)}` : w))
+    .join(' ');
+}
 
-function StageCard({ stage }: { stage: PhenologyMeanStage }) {
+function getPhaseColor(phase: string): string {
+  if (PHASE_COLORS[phase]) return PHASE_COLORS[phase];
+  const fallback = ['#14B8A6', '#8B5CF6', '#EC4899', '#F97316', '#10B981'];
+  const hash = [...phase].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return fallback[hash % fallback.length];
+}
+
+// ── Phase Summary Cards ──
+
+function PhaseSummaryCards({ timelines }: { timelines: SeasonTimelineEntry[] }) {
+  const summaries = useMemo(() => {
+    const acc = new Map<string, { phase: string; gddSum: number; count: number }>();
+
+    for (const timeline of timelines) {
+      for (const transition of timeline.transitions) {
+        if (!transition.phase || !transition.start_date) continue;
+
+        const current = acc.get(transition.phase) ?? {
+          phase: transition.phase,
+          gddSum: 0,
+          count: 0,
+        };
+        current.gddSum += transition.gdd_at_entry;
+        current.count += 1;
+        acc.set(transition.phase, current);
+      }
+    }
+
+    return Array.from(acc.values())
+      .map((item) => ({
+        ...item,
+        gddAvg: item.count > 0 ? item.gddSum / item.count : 0,
+      }))
+      .sort((a, b) => a.gddAvg - b.gddAvg);
+  }, [timelines]);
+
+  if (summaries.length === 0) return null;
+
   return (
-    <div className="flex flex-col items-center p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-w-[120px]">
-      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-        {STAGE_LABELS[stage.key] ?? stage.label}
-      </span>
-      <span className="text-lg font-bold text-gray-900 dark:text-white">
-        {formatDateLong(stage.date)}
-      </span>
-      <div className="flex gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-        <span>Var: {stage.variability_days > 0 ? `\u00B1${Math.round(stage.variability_days)} days` : '0 days'}</span>
-        <span>GDD: {stage.gdd_correlation !== 0 ? stage.gdd_correlation.toFixed(2) : '0'}</span>
-      </div>
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {summaries.map((summary) => (
+        <div
+          key={summary.phase}
+          className="flex flex-col items-center p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-w-[150px]"
+        >
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 text-center">
+            {formatPhaseLabel(summary.phase)}
+          </span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            {summary.gddAvg.toFixed(1)}
+          </span>
+          <div className="flex gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
+            <span>GDD moyen entrée</span>
+            <span>{summary.count} cycles</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -88,8 +122,8 @@ function TimelineBar({ timeline }: { timeline: SeasonTimelineEntry }) {
           phase: t.phase,
           left: (start / 12) * 100,
           width: (width / 12) * 100,
-          color: PHASE_COLORS[t.phase] ?? '#9CA3AF',
-          label: PHASE_LABELS[t.phase] ?? t.phase,
+          color: getPhaseColor(t.phase),
+          label: formatPhaseLabel(t.phase),
         };
       });
   }, [timeline.transitions]);
@@ -122,28 +156,46 @@ function TimelineBar({ timeline }: { timeline: SeasonTimelineEntry }) {
 function PhaseMetricsTable({ timelines }: { timelines: SeasonTimelineEntry[] }) {
   const rows = useMemo(() => {
     const result: Array<{
-      year: number;
       phase: string;
       gdd: number;
+      samples: number;
       confidence: string;
-      variability: string;
     }> = [];
 
+    const byPhase = new Map<
+      string,
+      { phase: string; gddSum: number; count: number; confidenceCount: Record<string, number> }
+    >();
+
     for (const tl of timelines) {
-      // Pick the most representative transition per year (skip DORMANCE)
-      const main = tl.transitions.find(
-        (t) => t.phase !== 'DORMANCE' && t.phase !== 'DEBOURREMENT',
-      ) ?? tl.transitions[tl.transitions.length - 1];
-      if (!main) continue;
+      for (const transition of tl.transitions) {
+        if (!transition.phase || !transition.start_date) continue;
+
+        const current = byPhase.get(transition.phase) ?? {
+          phase: transition.phase,
+          gddSum: 0,
+          count: 0,
+          confidenceCount: {},
+        };
+        current.gddSum += transition.gdd_at_entry;
+        current.count += 1;
+        current.confidenceCount[transition.confidence] =
+          (current.confidenceCount[transition.confidence] ?? 0) + 1;
+        byPhase.set(transition.phase, current);
+      }
+    }
+
+    for (const item of byPhase.values()) {
+      const dominantConfidence = Object.entries(item.confidenceCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'MODEREE';
       result.push({
-        year: tl.year,
-        phase: PHASE_LABELS[main.phase] ?? main.phase,
-        gdd: Math.round(main.gdd_at_entry * 10) / 10,
-        confidence: main.confidence,
-        variability: '—',
+        phase: formatPhaseLabel(item.phase),
+        gdd: Math.round((item.gddSum / item.count) * 10) / 10,
+        samples: item.count,
+        confidence: dominantConfidence,
       });
     }
-    return result;
+
+    return result.sort((a, b) => a.gdd - b.gdd);
   }, [timelines]);
 
   if (rows.length === 0) return null;
@@ -153,18 +205,18 @@ function PhaseMetricsTable({ timelines }: { timelines: SeasonTimelineEntry[] }) 
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
-            <th className="pb-2 pr-4 font-medium">Year</th>
             <th className="pb-2 pr-4 font-medium">Phase</th>
-            <th className="pb-2 pr-4 font-medium">GDD at Entry</th>
+            <th className="pb-2 pr-4 font-medium">GDD moyen entrée</th>
+            <th className="pb-2 pr-4 font-medium">Cycles</th>
             <th className="pb-2 font-medium">Confidence</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
             <tr key={i} className="border-b border-gray-100 dark:border-gray-800">
-              <td className="py-2 pr-4 font-medium text-gray-900 dark:text-white">{row.year}</td>
               <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{row.phase}</td>
               <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{row.gdd}</td>
+              <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{row.samples}</td>
               <td className="py-2">
                 <ConfidenceBadge level={row.confidence} />
               </td>
@@ -191,83 +243,22 @@ function ConfidenceBadge({ level }: { level: string }) {
   );
 }
 
-// ── Summary Insight Cards ──
-
-function InsightCards({ meanStages }: { meanStages: PhenologyMeanStage[] }) {
-  const insights = useMemo(() => {
-    if (meanStages.length === 0) return null;
-
-    const withVariability = meanStages.filter((s) => s.variability_days > 0);
-    const mostVariable = withVariability.length > 0
-      ? withVariability.reduce((a, b) => (a.variability_days > b.variability_days ? a : b))
-      : null;
-
-    const mostStable = meanStages.reduce((a, b) => (a.variability_days < b.variability_days ? a : b));
-
-    const withCorrelation = meanStages.filter((s) => s.gdd_correlation !== 0);
-    const strongestCorr = withCorrelation.length > 0
-      ? withCorrelation.reduce((a, b) => (Math.abs(a.gdd_correlation) > Math.abs(b.gdd_correlation) ? a : b))
-      : null;
-
-    return { mostVariable, mostStable, strongestCorr };
-  }, [meanStages]);
-
-  if (!insights) return null;
-
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      {insights.mostVariable && (
-        <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-          <Activity className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs font-medium text-amber-800 dark:text-amber-300">Most Variable Stage</p>
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              {STAGE_LABELS[insights.mostVariable.key] ?? insights.mostVariable.label}
-            </p>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
-              {'\u00B1'} {Math.round(insights.mostVariable.variability_days)} days
-            </p>
-          </div>
-        </div>
-      )}
-
-      {insights.strongestCorr && (
-        <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <TrendingDown className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Strongest GDD Correlation</p>
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-              {STAGE_LABELS[insights.strongestCorr.key] ?? insights.strongestCorr.label}
-            </p>
-            <p className="text-xs text-blue-700 dark:text-blue-400">
-              {insights.strongestCorr.gdd_correlation.toFixed(2)}
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-        <TrendingUp className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-        <div>
-          <p className="text-xs font-medium text-green-800 dark:text-green-300">Most Stable Stage</p>
-          <p className="text-sm font-semibold text-green-900 dark:text-green-200">
-            {STAGE_LABELS[insights.mostStable.key] ?? insights.mostStable.label}
-          </p>
-          <p className="text-xs text-green-700 dark:text-green-400">
-            {insights.mostStable.variability_days > 0
-              ? `${Math.round(insights.mostStable.variability_days)} days`
-              : '0 days'}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Component ──
 
 export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
   const { t } = useTranslation('ai');
+  const phasesInTimeline = useMemo(() => {
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    for (const tl of data.timelines) {
+      for (const transition of tl.transitions) {
+        if (!transition.phase || seen.has(transition.phase)) continue;
+        seen.add(transition.phase);
+        ordered.push(transition.phase);
+      }
+    }
+    return ordered;
+  }, [data.timelines]);
 
   if (!data.available) {
     return null;
@@ -302,14 +293,10 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
         </div>
       </div>
 
-      {/* Mean Stage Cards */}
-      {data.mean_stages.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto pb-2 mb-6">
-          {data.mean_stages
-            .filter((s) => s.date)
-            .map((stage) => (
-              <StageCard key={stage.key} stage={stage} />
-            ))}
+      {/* Phase Summary Cards */}
+      {data.timelines.length > 0 && (
+        <div className="mb-6">
+          <PhaseSummaryCards timelines={data.timelines} />
         </div>
       )}
 
@@ -344,32 +331,24 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
 
           {/* Legend */}
           <div className="flex flex-wrap gap-3 mt-3">
-            {Object.entries(PHASE_COLORS)
-              .filter(([phase]) => phase !== 'DORMANCE')
-              .map(([phase, color]) => (
+            {phasesInTimeline.map((phase) => (
                 <div key={phase} className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPhaseColor(phase) }} />
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                    {PHASE_LABELS[phase] ?? phase}
+                    {formatPhaseLabel(phase)}
                   </span>
                 </div>
-              ))}
+            ))}
           </div>
         </div>
       )}
 
-      {/* Phase Metrics Table + Insight Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-            {t('calibrationReview.phenology.metrics', 'Phase Metrics')}
-          </h3>
-          <PhaseMetricsTable timelines={data.timelines} />
-        </div>
-
-        <div className="space-y-3">
-          <InsightCards meanStages={data.mean_stages} />
-        </div>
+      {/* Phase Metrics Table */}
+      <div>
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+          {t('calibrationReview.phenology.metrics', 'Phase Metrics')}
+        </h3>
+        <PhaseMetricsTable timelines={data.timelines} />
       </div>
 
       {/* Mode note */}

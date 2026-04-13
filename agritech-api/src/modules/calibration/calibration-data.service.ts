@@ -701,33 +701,14 @@ export class CalibrationDataService {
       data: Array<Record<string, unknown>>;
     };
 
+    // FastAPI /weather/historical now uses cache-aside (fetch_with_db_cache) and
+    // persists weather to weather_daily_data with pre-computed GDD columns.
+    // No secondary upsert needed here — that would overwrite GDD columns with NULL.
     if (!body.data?.length) {
-      return;
-    }
-
-    const supabase = this.databaseService.getAdminClient();
-    const rows = body.data.map((entry) => ({
-      latitude: roundedLatitude,
-      longitude: roundedLongitude,
-      date: entry.date as string,
-      temperature_min: entry.temperature_min ?? null,
-      temperature_max: entry.temperature_max ?? null,
-      temperature_mean: entry.temperature_mean ?? null,
-      relative_humidity_mean: entry.relative_humidity_mean ?? null,
-      precipitation_sum: entry.precipitation_sum ?? null,
-      wind_speed_max: entry.wind_speed_max ?? null,
-      shortwave_radiation_sum: entry.shortwave_radiation_sum ?? null,
-      et0_fao_evapotranspiration: entry.et0_fao_evapotranspiration ?? null,
-      source: body.source ?? "open-meteo-archive",
-    }));
-
-    const { error } = await supabase
-      .from("weather_daily_data")
-      .upsert(rows, { onConflict: "latitude,longitude,date" });
-
-    if (error) {
-      this.logger.warn(
-        `Weather auto-sync persist failed for parcel ${parcel.id}: ${error.message}`,
+      this.logger.warn(`Weather sync returned no data for parcel ${parcel.id}`);
+    } else {
+      this.logger.log(
+        `Weather sync triggered for parcel ${parcel.id}: ${body.data.length} rows cached via FastAPI`,
       );
     }
   }

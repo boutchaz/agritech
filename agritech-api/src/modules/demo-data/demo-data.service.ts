@@ -6902,6 +6902,901 @@ export class DemoDataService {
     }
   }
 
+  async seedSiamDemoData(organizationId: string, userId: string): Promise<void> {
+    this.logger.log(
+      `Starting SIAM demo data seeding for organization ${organizationId}`,
+    );
+
+    try {
+      this.logger.log("Clearing existing data before SIAM seeding...");
+      await this.clearDemoData(organizationId);
+      this.logger.log("✅ Existing data cleared");
+
+      const { farms, parcels } = await this.createSiamFarmsAndParcels(
+        organizationId,
+      );
+      this.logger.log(
+        `✅ Created ${farms.length} SIAM farms and ${parcels.length} SIAM parcels`,
+      );
+
+      const calibrations = await this.createSiamCalibrations(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${calibrations.length} SIAM calibrations`);
+
+      const recommendations = await this.createSiamRecommendations(
+        organizationId,
+        parcels,
+      );
+      this.logger.log(
+        `✅ Created ${recommendations.length} SIAM AI recommendations`,
+      );
+
+      const harvestRecords = await this.createSiamHarvestRecords(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(
+        `✅ Created ${harvestRecords.length} SIAM harvest records`,
+      );
+
+      const analyses = await this.createSiamAnalyses(organizationId, parcels);
+      this.logger.log(`✅ Created ${analyses.length} SIAM analyses`);
+
+      this.logger.log(
+        `SIAM demo data seeding completed successfully for organization ${organizationId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to seed SIAM demo data: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  private createSiamBoundary(
+    centerLat: number,
+    centerLon: number,
+    latOffset = 0.0012,
+    lonOffset = 0.0012,
+  ) {
+    return [
+      [centerLon - lonOffset, centerLat - latOffset],
+      [centerLon + lonOffset, centerLat - latOffset],
+      [centerLon + lonOffset, centerLat + latOffset],
+      [centerLon - lonOffset, centerLat + latOffset],
+      [centerLon - lonOffset, centerLat - latOffset],
+    ];
+  }
+
+  private async createSiamFarmsAndParcels(
+    organizationId: string,
+  ): Promise<{ farms: any[]; parcels: any[] }> {
+    const client = this.databaseService.getAdminClient();
+
+    const farms = [
+      {
+        organization_id: organizationId,
+        name: "Ferme Atlas",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 180,
+        size_unit: "hectare",
+        soil_type: "Argilo-calcaire",
+        climate_zone: "Méditerranéen continental",
+        irrigation_type: "Irrigué",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-atlas@example.com",
+        established_date: "1990-02-01",
+        description:
+          "Exploitation oléicole de démonstration près de Meknès avec vergers matures et blocs récemment renouvelés.",
+        coordinates: { lat: 33.899, lon: -5.535 },
+        status: "active",
+        is_active: true,
+      },
+      {
+        organization_id: organizationId,
+        name: "Ferme Ziz",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 90,
+        size_unit: "hectare",
+        soil_type: "Limono-sableux",
+        climate_zone: "Méditerranéen irrigué",
+        irrigation_type: "Goutte à goutte",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-ziz@example.com",
+        established_date: "2014-03-15",
+        description:
+          "Bloc agrumicole équipé en goutte-à-goutte, orienté rendement et qualité export.",
+        coordinates: { lat: 33.886, lon: -5.521 },
+        status: "active",
+        is_active: true,
+      },
+      {
+        organization_id: organizationId,
+        name: "Ferme Rif",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 50,
+        size_unit: "hectare",
+        soil_type: "Argilo-limoneux",
+        climate_zone: "Méditerranéen semi-aride",
+        irrigation_type: "Pluvial",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-rif@example.com",
+        established_date: "1990-01-10",
+        description:
+          "Ferme mixte céréales-olivier conduite majoritairement en pluvial pour démontrer les arbitrages eau/rendement.",
+        coordinates: { lat: 33.914, lon: -5.548 },
+        status: "active",
+        is_active: true,
+      },
+    ];
+
+    const { data: createdFarms, error: farmError } = await client
+      .from("farms")
+      .insert(farms)
+      .select();
+
+    if (farmError) {
+      this.logger.warn(`Failed to create SIAM farms: ${farmError.message}`);
+      return { farms: [], parcels: [] };
+    }
+
+    const farmMap = new Map(createdFarms.map((farm) => [farm.name, farm]));
+
+    const parcelBlueprints = [
+      {
+        farmName: "Ferme Atlas",
+        name: "A1 - Atlas Nord",
+        description: "Bloc olivier mature irrigué à haute régularité.",
+        area: 24,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.903,
+        centerLon: -5.539,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A2 - Atlas Est",
+        description: "Olivier en pleine production avec bonne homogénéité végétative.",
+        area: 18,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Micro-aspersion",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.901,
+        centerLon: -5.531,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A3 - Atlas Ouest",
+        description: "Bloc ancien avec alternance marquée entre zones nord et sud.",
+        area: 22,
+        crop_type: "olivier",
+        variety: "Nocellara",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.898,
+        centerLon: -5.544,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A4 - Atlas Sud",
+        description: "Jeune verger avec besoin de montée en vigueur avant floraison.",
+        area: 14,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2023,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.894,
+        centerLon: -5.534,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A5 - Atlas Central",
+        description: "Bloc olivier à rendement stable avec micro-variabilité hydrique.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.899,
+        centerLon: -5.537,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A6 - Atlas Replanté",
+        description: "Jeune bloc replanté pour démontrer l'entrée en production.",
+        area: 16,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2023,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-argileux",
+        centerLat: 33.906,
+        centerLon: -5.528,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A7 - Atlas Plateau",
+        description: "Bloc mature exposé au vent avec besoin de suivi nutritionnel.",
+        area: 26,
+        crop_type: "olivier",
+        variety: "Nocellara",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Aspersion localisée",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.908,
+        centerLon: -5.541,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A8 - Atlas Vallon",
+        description: "Bloc intermédiaire avec variabilité intra-parcellaire au centre.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.896,
+        centerLon: -5.529,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B1 - Ziz Navel",
+        description: "Agrumes goutte à goutte avec créneau de récolte précoce.",
+        area: 28,
+        crop_type: "agrumes",
+        variety: "Navel",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-sableux",
+        centerLat: 33.888,
+        centerLon: -5.522,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B2 - Ziz Valencia",
+        description: "Bloc Valencia Late à fort potentiel de charge fruitière.",
+        area: 24,
+        crop_type: "agrumes",
+        variety: "Valencia Late",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-sableux",
+        centerLat: 33.884,
+        centerLon: -5.517,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B3 - Ziz Jeune",
+        description: "Jeune agrumes avec sensibilité hydrique en début de journée.",
+        area: 18,
+        crop_type: "agrumes",
+        variety: "Navel",
+        planting_year: 2023,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Sablo-limoneux",
+        centerLat: 33.881,
+        centerLon: -5.513,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B4 - Ziz Oliviers",
+        description: "Bloc olivier de diversification proche du bassin d'irrigation.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-argileux",
+        centerLat: 33.89,
+        centerLon: -5.526,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "C1 - Rif Blé",
+        description: "Blé dur pluvial sur plateau avec potentiel correct si pluie tardive.",
+        area: 16,
+        crop_type: "blé_dur",
+        variety: "Karim",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.917,
+        centerLon: -5.551,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "C2 - Rif Blé",
+        description: "Blé dur destiné aux démonstrations rendement/coût en sec.",
+        area: 12,
+        crop_type: "blé_dur",
+        variety: "Amal",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.912,
+        centerLon: -5.545,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "D1 - Rif Orge",
+        description: "Orge pluviale sensible à la baisse de vigueur sur bordure est.",
+        area: 10,
+        crop_type: "orge",
+        variety: "Taffa",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.919,
+        centerLon: -5.542,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "R1 - Rif Oliviers",
+        description: "Oliviers traditionnels conduits en sec sur pente douce.",
+        area: 12,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 1990,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.915,
+        centerLon: -5.549,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "R2 - Rif Oliviers",
+        description: "Bloc mixte olivier/pluvial pour démontrer l'écart de vigueur.",
+        area: 10,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.91,
+        centerLon: -5.553,
+      },
+    ];
+
+    const parcels = parcelBlueprints
+      .map((parcel) => {
+        const farm = farmMap.get(parcel.farmName);
+        if (!farm?.id) return null;
+
+        return {
+          organization_id: organizationId,
+          farm_id: farm.id,
+          name: parcel.name,
+          description: parcel.description,
+          area: parcel.area,
+          area_unit: "hectares",
+          calculated_area: parcel.area,
+          crop_type: parcel.crop_type,
+          crop_category:
+            parcel.crop_type === "agrumes" || parcel.crop_type === "olivier"
+              ? "fruit_trees"
+              : "field_crops",
+          variety: parcel.variety,
+          planting_year: parcel.planting_year,
+          planting_date: `${parcel.planting_year}-03-15`,
+          planting_system: parcel.planting_system,
+          irrigation_type: parcel.irrigation_type,
+          soil_type: parcel.soil_type,
+          boundary: this.createSiamBoundary(parcel.centerLat, parcel.centerLon),
+          water_source:
+            parcel.planting_system === "pluvial" ? "rainfed" : "well",
+          langue: "fr",
+          ai_enabled: true,
+          ai_phase: "ready_calibration",
+          is_active: true,
+        };
+      })
+      .filter(Boolean);
+
+    const { data: createdParcels, error: parcelError } = await client
+      .from("parcels")
+      .insert(parcels)
+      .select();
+
+    if (parcelError) {
+      this.logger.warn(`Failed to create SIAM parcels: ${parcelError.message}`);
+      return { farms: createdFarms || [], parcels: [] };
+    }
+
+    return { farms: createdFarms || [], parcels: createdParcels || [] };
+  }
+
+  private async createSiamCalibrations(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const targetParcels = parcels.slice(0, 6);
+    const now = new Date();
+
+    const calibrations = targetParcels.map((parcel, index) => {
+      const startedAt = new Date(now.getTime() - (index + 10) * 86400000);
+      const completedAt = new Date(startedAt.getTime() + 5400000);
+      const isYoungParcel = Number(parcel.planting_year) >= 2020;
+      const healthScore = 84 - index * 4;
+      const confidenceScore = 89 - index * 3;
+      const zoneLabel = index % 2 === 0 ? "nord" : "sud";
+
+      return {
+        parcel_id: parcel.id,
+        organization_id: organizationId,
+        type: "initial",
+        status: "validated",
+        started_at: startedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        mode_calibrage: "calibrage_complet",
+        phase_age: isYoungParcel ? "entree_production" : "pleine_production",
+        p50_ndvi: 0.61 + index * 0.018,
+        p50_nirv: 0.37 + index * 0.015,
+        p50_ndmi: 0.24 + index * 0.018,
+        p50_ndre: 0.21 + index * 0.012,
+        p10_ndvi: 0.45 + index * 0.015,
+        p10_ndmi: 0.16 + index * 0.014,
+        confidence_score: confidenceScore,
+        health_score: healthScore,
+        yield_potential_min:
+          parcel.crop_type === "agrumes"
+            ? 18 + index
+            : parcel.crop_type === "olivier"
+              ? 2.6 + index * 0.2
+              : 1.8 + index * 0.15,
+        yield_potential_max:
+          parcel.crop_type === "agrumes"
+            ? 27 + index
+            : parcel.crop_type === "olivier"
+              ? 4.8 + index * 0.2
+              : 3.0 + index * 0.15,
+        coefficient_etat_parcelle: 0.79 + index * 0.02,
+        anomaly_count: index % 3 === 0 ? 1 : 0,
+        baseline_data: JSON.stringify({
+          percentiles: {
+            ndvi: {
+              p10: 0.45 + index * 0.015,
+              p25: 0.53 + index * 0.015,
+              p50: 0.61 + index * 0.018,
+              p75: 0.7 + index * 0.015,
+              p90: 0.78 + index * 0.012,
+            },
+            ndmi: {
+              p10: 0.16 + index * 0.014,
+              p25: 0.2 + index * 0.014,
+              p50: 0.24 + index * 0.018,
+              p75: 0.3 + index * 0.014,
+              p90: 0.35 + index * 0.012,
+            },
+          },
+          phenology: {
+            saison_courante: "printemps",
+            stade_phenologique:
+              parcel.crop_type === "agrumes"
+                ? "grossissement_fruits"
+                : parcel.crop_type === "olivier"
+                  ? "nouaison"
+                  : "montaison",
+          },
+          zones_intra_parcellaires: [
+            {
+              zone: zoneLabel,
+              ndvi_moyen: 0.69 - index * 0.01,
+              statut: healthScore >= 75 ? "bon" : "attention",
+            },
+            {
+              zone: "centre",
+              ndvi_moyen: 0.63 - index * 0.01,
+              statut: index % 2 === 0 ? "bon" : "surveiller",
+            },
+          ],
+        }),
+        diagnostic_data: JSON.stringify({
+          resume_pourquoi:
+            parcel.crop_type === "agrumes"
+              ? "Calibration validée avec légère tension hydrique en milieu de journée sur le bloc central."
+              : "Calibration validée avec un niveau de vigueur globalement correct et une variabilité localisée sur la bordure sud.",
+          ecarts: [
+            {
+              indice: "NDMI",
+              zone: zoneLabel,
+              ecart: -0.05 + index * 0.003,
+              cause_probable:
+                index % 2 === 0
+                  ? "Hétérogénéité de l'irrigation"
+                  : "Vigueur hétérogène liée à la réserve utile",
+            },
+          ],
+        }),
+        scores_detail: JSON.stringify({
+          sante: {
+            vigueur: 82 - index * 3,
+            homogeneite: 79 - index * 2,
+            stabilite: 81 - index * 2,
+            hydrique: 76 - index * 3,
+            nutritionnel: 78 - index * 2,
+          },
+          confiance: {
+            bloc_a: Math.min(confidenceScore + 2, 90),
+            bloc_b: Math.max(confidenceScore - 4, 70),
+          },
+        }),
+        validated_by_user: true,
+        validated_at: new Date(completedAt.getTime() + 3600000).toISOString(),
+        calibration_version: "v3",
+        rapport_fr: `Calibrage SIAM validé pour ${parcel.name}. Santé estimée à ${healthScore}/100 avec confiance ${confidenceScore}/100.`,
+      };
+    });
+
+    const { data, error } = await client
+      .from("calibrations")
+      .insert(calibrations)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM calibrations: ${error.message}`);
+      return [];
+    }
+
+    if (data?.length) {
+      for (const calibration of data) {
+        await client
+          .from("parcels")
+          .update({ ai_calibration_id: calibration.id, ai_phase: "active" })
+          .eq("id", calibration.parcel_id)
+          .eq("organization_id", organizationId);
+      }
+    }
+
+    return data || [];
+  }
+
+  private async createSiamRecommendations(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const parcelByName = new Map(parcels.map((parcel) => [parcel.name, parcel]));
+    const fallbackParcels = parcels;
+
+    const recommendationBlueprints = [
+      {
+        parcel: parcelByName.get("B3 - Ziz Jeune") || fallbackParcels[0],
+        type: "irrigation",
+        priority: "priority",
+        theme: "irrigation",
+        message: "Arrosez la parcelle B3 demain avant 8h — stress hydrique détecté",
+      },
+      {
+        parcel: parcelByName.get("A1 - Atlas Nord") || fallbackParcels[1],
+        type: "irrigation",
+        priority: "vigilance",
+        theme: "irrigation",
+        message:
+          "Risque de stress hydrique sur parcelle A1 — vérifiez le système d'irrigation",
+      },
+      {
+        parcel: parcelByName.get("C2 - Rif Blé") || fallbackParcels[2],
+        type: "harvest",
+        priority: "priority",
+        theme: "harvest",
+        message:
+          "Récolte optimale pour parcelle C2 entre le 15 et le 20 octobre",
+      },
+      {
+        parcel: parcelByName.get("A4 - Atlas Sud") || fallbackParcels[3],
+        type: "fertilisation",
+        priority: "priority",
+        theme: "soil_amendment",
+        message:
+          "Application de fertilisant recommandée sur parcelle A4 avant le 15 mars",
+      },
+      {
+        parcel: parcelByName.get("D1 - Rif Orge") || fallbackParcels[4],
+        type: "information",
+        priority: "vigilance",
+        theme: "monitoring",
+        message:
+          "Surveillance renforcée recommandée pour la parcelle D1 — baisse de vigueur détectée",
+      },
+    ];
+
+    const recommendations = recommendationBlueprints
+      .filter((recommendation) => recommendation.parcel?.id)
+      .map((recommendation, index) => ({
+        parcel_id: recommendation.parcel.id,
+        organization_id: organizationId,
+        crop_type: recommendation.parcel.crop_type || "olivier",
+        type: recommendation.type,
+        recommendation_type: "reactive",
+        theme: recommendation.theme,
+        priority: recommendation.priority,
+        status: "validated",
+        alert_code: `SIAM-${index + 1}`,
+        bloc_1_constat: {
+          language: "fr",
+          message: recommendation.message,
+          parcelle: recommendation.parcel.name,
+        },
+        bloc_2_diagnostic: {
+          language: "fr",
+          diagnostic:
+            recommendation.type === "irrigation"
+              ? "Le signal satellite montre une baisse de réserve utile sur la zone active."
+              : recommendation.type === "harvest"
+                ? "La fenêtre de maturité optimale se rapproche avec une bonne homogénéité."
+                : recommendation.type === "fertilisation"
+                  ? "La vigueur reste inférieure au bloc de référence, signe d'un besoin nutritionnel."
+                  : "Une baisse de vigueur localisée justifie une observation terrain renforcée.",
+        },
+        bloc_3_action: {
+          language: "fr",
+          description: recommendation.message,
+        },
+        bloc_4_fenetre: {
+          language: "fr",
+          urgence:
+            recommendation.priority === "priority" ? "agir cette semaine" : "surveiller sous 72h",
+        },
+        bloc_5_conditions: {
+          language: "fr",
+          conditions:
+            recommendation.type === "irrigation"
+              ? "Intervenir tôt le matin et vérifier la pression réseau."
+              : "Confirmer la condition terrain avant exécution.",
+        },
+        bloc_6_suivi: {
+          language: "fr",
+          suivi: "Recontrôler l'état de la parcelle lors du prochain passage terrain.",
+        },
+      }));
+
+    const { data, error } = await client
+      .from("ai_recommendations")
+      .insert(recommendations)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM recommendations: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  private async createSiamHarvestRecords(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const harvestRecords = parcels.flatMap((parcel, parcelIndex) => {
+      const years =
+        parcel.crop_type === "olivier"
+          ? [2023, 2024, 2025]
+          : parcel.crop_type === "agrumes"
+            ? [2024, 2025]
+            : [2023, 2025];
+
+      return years.map((year, yearIndex) => {
+        const yieldPerHectare =
+          parcel.crop_type === "olivier"
+            ? 2.6 + ((parcelIndex + yearIndex) % 4) * 0.6
+            : parcel.crop_type === "agrumes"
+              ? 17 + ((parcelIndex + yearIndex) % 4) * 3.5
+              : 1.8 + ((parcelIndex + yearIndex) % 3) * 0.4;
+
+        const quantity = Number(parcel.area || parcel.calculated_area || 0) * yieldPerHectare * 1000;
+
+        return {
+          organization_id: organizationId,
+          farm_id: parcel.farm_id,
+          parcel_id: parcel.id,
+          harvest_date: `${year}-${parcel.crop_type === "agrumes" ? "11-10" : parcel.crop_type === "olivier" ? "10-18" : "06-25"}`,
+          quantity: Number(quantity.toFixed(0)),
+          unit: "kg",
+          quality_grade:
+            parcel.crop_type === "olivier"
+              ? "Extra"
+              : parcel.crop_type === "agrumes"
+                ? "A"
+                : "First",
+          quality_notes: `Récolte SIAM ${parcel.name} - campagne ${year}`,
+          quality_score: parcel.crop_type === "olivier" ? 9 : 8,
+          status: "stored",
+          intended_for:
+            parcel.crop_type === "olivier" ? "processing" : "market",
+          expected_price_per_unit:
+            parcel.crop_type === "olivier"
+              ? 14
+              : parcel.crop_type === "agrumes"
+                ? 5.5
+                : 3.2,
+          notes: `Rendement estimé à ${yieldPerHectare.toFixed(1)} t/ha pour ${parcel.crop_type}.`,
+          created_by: userId,
+        };
+      });
+    });
+
+    const { data, error } = await client
+      .from("harvest_records")
+      .insert(harvestRecords)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM harvest records: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  private async createSiamAnalyses(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const today = new Date();
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const twoMonthsAgo = new Date(today);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const analyses = [
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[0].id,
+        analysis_type: "soil",
+        analysis_date: threeMonthsAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.4,
+          ec: 0.48,
+          nitrogen: 0.16,
+          phosphorus: 28,
+          potassium: 220,
+          organic_matter: 2.6,
+          recommendations: [
+            "Maintenir les apports organiques avant l'été",
+            "Surveiller le potassium sur les zones sud",
+          ],
+        },
+        notes: "Analyse sol SIAM - bloc olivier mature A1",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[3].id,
+        analysis_type: "soil",
+        analysis_date: twoMonthsAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.1,
+          ec: 0.39,
+          nitrogen: 0.19,
+          phosphorus: 24,
+          potassium: 185,
+          organic_matter: 2.1,
+          recommendations: [
+            "Renforcer l'azote sur jeune verger",
+            "Fractionner la fertilisation de printemps",
+          ],
+        },
+        notes: "Analyse sol SIAM - jeune olivier A4",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[12].id,
+        analysis_type: "soil",
+        analysis_date: oneMonthAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.8,
+          ec: 0.52,
+          nitrogen: 0.11,
+          phosphorus: 18,
+          potassium: 160,
+          organic_matter: 1.7,
+          recommendations: [
+            "Augmenter la matière organique sur céréales pluviales",
+            "Positionner un apport de fond avant les premières pluies",
+          ],
+        },
+        notes: "Analyse sol SIAM - blé dur C2",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[8].id,
+        analysis_type: "water",
+        analysis_date: oneMonthAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Qualité des Eaux Meknès",
+        data: {
+          ph: 7.2,
+          ec: 1.1,
+          tds: 702,
+          suitability: "Bonne pour irrigation goutte à goutte",
+        },
+        notes: "Analyse eau SIAM - réseau goutte à goutte Ziz",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[0].id,
+        analysis_type: "water",
+        analysis_date: today.toISOString().split("T")[0],
+        laboratory: "Laboratoire Qualité des Eaux Meknès",
+        data: {
+          ph: 7.0,
+          ec: 0.9,
+          tds: 590,
+          suitability: "Très bonne pour irrigation localisée",
+        },
+        notes: "Analyse eau SIAM - forage Atlas",
+      },
+    ];
+
+    const { data, error } = await client
+      .from("analyses")
+      .insert(analyses)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM analyses: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
   async clearDemoDataOnly(
     organizationId: string,
   ): Promise<{ deletedCounts: Record<string, number> }> {

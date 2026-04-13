@@ -57,6 +57,7 @@ export enum NotificationType {
   SOIL_ANALYSIS_COMPLETED = "soil_analysis_completed",
   HARVEST_EVENT_RECORDED = "harvest_event_recorded",
   WORK_UNIT_COMPLETED = "work_unit_completed",
+  WEATHER_ALERT = "weather_alert",
   GENERAL = "general",
 }
 

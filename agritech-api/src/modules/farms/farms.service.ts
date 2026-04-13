@@ -6,18 +6,16 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { DatabaseService } from '../database/database.service';
 import { DeleteFarmDto } from './dto/delete-farm.dto';
 import { ImportFarmDto } from './dto/import-farm.dto';
-import { ListFarmsResponseDto, FarmDto } from './dto/list-farms.dto';
+import { FarmDto } from './dto/list-farms.dto';
 import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 
 @Injectable()
 export class FarmsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(FarmsService.name);
   private readonly farmRoleDefinitions = [
     {
@@ -79,26 +77,10 @@ export class FarmsService {
   ];
 
   constructor(
-    private configService: ConfigService,
-    private subscriptionsService: SubscriptionsService,
-    private adoptionService: AdoptionService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+    private readonly databaseService: DatabaseService,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly adoptionService: AdoptionService,
+  ) {}
 
   async listFarms(
     userId: string,
@@ -110,14 +92,14 @@ export class FarmsService {
 
     this.logger.debug(`[listFarms] Checking membership - userId: "${userId}", orgId: "${organizationId}", types: userId=${typeof userId}, orgId=${typeof organizationId}`);
     
-    const { data: allUserOrgs } = await this.supabaseAdmin
+    const { data: allUserOrgs } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id, role_id, is_active')
       .eq('user_id', userId);
     
     this.logger.debug(`[listFarms] All user orgs: ${JSON.stringify(allUserOrgs)}`);
     
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id, role_id, is_active')
       .eq('user_id', userId)
@@ -135,7 +117,7 @@ export class FarmsService {
     }
 
     // Fetch all farms for the organization with parcel counts
-    const { data: farms, error: farmsError } = await this.supabaseAdmin
+    const { data: farms, error: farmsError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, name, location, size, manager_name, is_active, created_at')
       .eq('organization_id', organizationId)
@@ -153,7 +135,7 @@ export class FarmsService {
     if (farmIds.length > 0) {
       this.logger.log(`Fetching parcels for ${farmIds.length} farms`);
 
-      const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+      const { data: parcels, error: parcelsError } = await this.databaseService.getAdminClient()
         .from('parcels')
         .select('farm_id')
         .in('farm_id', farmIds)
@@ -222,7 +204,7 @@ export class FarmsService {
   }
 
   async getFarmRoles(userId: string, organizationId: string, farmId: string) {
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, organization_id')
       .eq('id', farmId)
@@ -233,7 +215,7 @@ export class FarmsService {
       throw new NotFoundException('Farm not found');
     }
 
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('user_id')
       .eq('organization_id', organizationId)
@@ -245,7 +227,7 @@ export class FarmsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    const { data: roles, error } = await this.supabaseAdmin
+    const { data: roles, error } = await this.databaseService.getAdminClient()
       .from('farm_management_roles')
       .select('id, farm_id, user_id, role, is_active, created_at')
       .eq('farm_id', farmId)
@@ -260,7 +242,7 @@ export class FarmsService {
     let profiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
 
     if (userIds.length > 0) {
-      const { data: profilesData, error: profilesError } = await this.supabaseAdmin
+      const { data: profilesData, error: profilesError } = await this.databaseService.getAdminClient()
         .from('user_profiles')
         .select('id, first_name, last_name, email')
         .in('id', userIds);
@@ -281,7 +263,7 @@ export class FarmsService {
   }
 
   async getOrganizationUsersForFarm(userId: string, organizationId: string, farmId: string) {
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, organization_id')
       .eq('id', farmId)
@@ -292,7 +274,7 @@ export class FarmsService {
       throw new NotFoundException('Farm not found');
     }
 
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('user_id')
       .eq('organization_id', organizationId)
@@ -304,7 +286,7 @@ export class FarmsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    const { data: orgUsers, error } = await this.supabaseAdmin
+    const { data: orgUsers, error } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('user_id, role_id')
       .eq('organization_id', organizationId)
@@ -318,7 +300,7 @@ export class FarmsService {
     let profiles: Array<{ id: string; first_name: string | null; last_name: string | null; email: string | null }> = [];
 
     if (userIds.length > 0) {
-      const { data: profilesData, error: profilesError } = await this.supabaseAdmin
+      const { data: profilesData, error: profilesError } = await this.databaseService.getAdminClient()
         .from('user_profiles')
         .select('id, first_name, last_name, email')
         .in('id', userIds);
@@ -342,7 +324,7 @@ export class FarmsService {
     farmId: string,
     input: { user_id: string; role: string },
   ) {
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id')
       .eq('id', farmId)
@@ -353,7 +335,7 @@ export class FarmsService {
       throw new NotFoundException('Farm not found');
     }
 
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('user_id')
       .eq('organization_id', organizationId)
@@ -365,7 +347,7 @@ export class FarmsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.databaseService.getAdminClient()
       .from('farm_management_roles')
       .insert({
         farm_id: farmId,
@@ -394,7 +376,7 @@ export class FarmsService {
     farmId: string,
     roleId: string,
   ) {
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id')
       .eq('id', farmId)
@@ -405,7 +387,7 @@ export class FarmsService {
       throw new NotFoundException('Farm not found');
     }
 
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('user_id')
       .eq('organization_id', organizationId)
@@ -417,7 +399,7 @@ export class FarmsService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    const { error } = await this.supabaseAdmin
+    const { error } = await this.databaseService.getAdminClient()
       .from('farm_management_roles')
       .update({ is_active: false })
       .eq('id', roleId)
@@ -432,7 +414,7 @@ export class FarmsService {
   }
 
   async getUserFarmRoles(organizationId: string, userId: string) {
-    const { data: roles, error } = await this.supabaseAdmin
+    const { data: roles, error } = await this.databaseService.getAdminClient()
       .from('farm_management_roles')
       .select('id, farm_id, role, is_active, created_at, farms!inner(name, organization_id)')
       .eq('user_id', userId)
@@ -458,7 +440,7 @@ export class FarmsService {
     this.logger.log(`Creating farm for user ${userId} in org ${organizationId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('role_id, roles!inner(name)')
       .eq('organization_id', organizationId)
@@ -484,14 +466,14 @@ export class FarmsService {
     }
 
     // Enforce subscription farm limit
-    const { data: sub } = await this.supabaseAdmin
+    const { data: sub } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('max_farms')
       .eq('organization_id', organizationId)
       .maybeSingle();
 
     if (sub?.max_farms != null) {
-      const { count: farmCount } = await this.supabaseAdmin
+      const { count: farmCount } = await this.databaseService.getAdminClient()
         .from('farms')
         .select('*', { count: 'exact', head: true })
         .eq('organization_id', organizationId);
@@ -534,7 +516,7 @@ export class FarmsService {
     if (dto.coordinates) farmData.coordinates = dto.coordinates;
 
     // Insert farm
-    const { data: newFarm, error: createError } = await this.supabaseAdmin
+    const { data: newFarm, error: createError } = await this.databaseService.getAdminClient()
       .from('farms')
       .insert(farmData)
       .select()
@@ -565,7 +547,7 @@ export class FarmsService {
     this.logger.log(`Updating farm ${farmId} for user ${userId} in org ${organizationId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('role_id, roles!inner(name)')
       .eq('organization_id', organizationId)
@@ -585,7 +567,7 @@ export class FarmsService {
     }
 
     // Verify farm exists and belongs to organization
-    const { data: existingFarm, error: farmError } = await this.supabaseAdmin
+    const { data: existingFarm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, organization_id')
       .eq('id', farmId)
@@ -621,7 +603,7 @@ export class FarmsService {
     if (dto.coordinates !== undefined) updateData.coordinates = dto.coordinates;
 
     // Update farm
-    const { data: updatedFarm, error: updateError } = await this.supabaseAdmin
+    const { data: updatedFarm, error: updateError } = await this.databaseService.getAdminClient()
       .from('farms')
       .update(updateData)
       .eq('id', farmId)
@@ -646,7 +628,7 @@ export class FarmsService {
     this.logger.log(`Getting farm ${farmId} for user ${userId} in org ${organizationId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('organization_id', organizationId)
@@ -660,7 +642,7 @@ export class FarmsService {
     }
 
     // Fetch farm
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('*')
       .eq('id', farmId)
@@ -679,7 +661,7 @@ export class FarmsService {
     this.logger.log(`Getting related data counts for farm ${farmId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('organization_id', organizationId)
@@ -692,7 +674,7 @@ export class FarmsService {
     }
 
     // Verify farm belongs to organization
-    const { data: farm, error: farmError } = await this.supabaseAdmin
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, organization_id')
       .eq('id', farmId)
@@ -713,13 +695,13 @@ export class FarmsService {
       inventoryRes,
       structuresRes
     ] = await Promise.all([
-      this.supabaseAdmin.from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
-      this.supabaseAdmin.from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-      this.supabaseAdmin.from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-      this.supabaseAdmin.from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-      this.supabaseAdmin.from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
-      this.supabaseAdmin.from('items').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
-      this.supabaseAdmin.from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
+      this.databaseService.getAdminClient().from('parcels').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
+      this.databaseService.getAdminClient().from('workers').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.databaseService.getAdminClient().from('tasks').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.databaseService.getAdminClient().from('satellite_data').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.databaseService.getAdminClient().from('warehouses').select('id', { count: 'exact', head: true }).eq('farm_id', farmId),
+      this.databaseService.getAdminClient().from('items').select('id', { count: 'exact', head: true }).eq('organization_id', organizationId),
+      this.databaseService.getAdminClient().from('structures').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('is_active', true),
     ]);
 
     return {
@@ -741,7 +723,7 @@ export class FarmsService {
     this.logger.log(`Deleting farm ${farm_id} for user ${userId}`);
 
     // First verify the farm exists and get organization info
-    const { data: existingFarm, error: checkError } = await this.supabaseAdmin
+    const { data: existingFarm, error: checkError } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('id, name, organization_id')
       .eq('id', farm_id)
@@ -764,7 +746,7 @@ export class FarmsService {
 
     // Check user's role in the organization
     // Note: Using role_id instead of role
-    const { data: orgUser, error: roleError } = await this.supabaseAdmin
+    const { data: orgUser, error: roleError } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('role_id, roles!inner(name)')
       .eq('organization_id', organizationId)
@@ -818,7 +800,7 @@ export class FarmsService {
 
     // Check if farm has sub-farms (if parent_farm_id column exists)
     try {
-      const { data: subFarms, error: subFarmsError } = await this.supabaseAdmin
+      const { data: subFarms, error: subFarmsError } = await this.databaseService.getAdminClient()
         .from('farms')
         .select('id, name')
         .eq('parent_farm_id', farm_id)
@@ -858,7 +840,7 @@ export class FarmsService {
 
     this.logger.log(`Deleting farm: ${farm_id}`);
 
-    const { data: deletedFarms, error: deleteError } = await this.supabaseAdmin
+    const { data: deletedFarms, error: deleteError } = await this.databaseService.getAdminClient()
       .from('farms')
       .delete()
       .eq('id', farm_id)
@@ -883,7 +865,7 @@ export class FarmsService {
       );
 
       // Verify if farm still exists
-      const { data: verifyFarm, error: verifyError } = await this.supabaseAdmin
+      const { data: verifyFarm, error: verifyError } = await this.databaseService.getAdminClient()
         .from('farms')
         .select('id')
         .eq('id', farm_id)
@@ -927,7 +909,7 @@ export class FarmsService {
     }
 
     // Verify user has access to this organization
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -965,7 +947,7 @@ export class FarmsService {
       try {
         // Check for duplicates if skip_duplicates is enabled
         if (skip_duplicates) {
-          const { data: existing } = await this.supabaseAdmin
+          const { data: existing } = await this.databaseService.getAdminClient()
             .from('farms')
             .select('id')
             .eq('organization_id', organization_id)
@@ -979,7 +961,7 @@ export class FarmsService {
           }
         }
 
-        const { data: newFarm, error: farmError } = await this.supabaseAdmin
+        const { data: newFarm, error: farmError } = await this.databaseService.getAdminClient()
           .from('farms')
           .insert({
             organization_id,
@@ -1043,7 +1025,7 @@ export class FarmsService {
         }
 
         if (skip_duplicates) {
-          const { data: existing } = await this.supabaseAdmin
+          const { data: existing } = await this.databaseService.getAdminClient()
             .from('parcels')
             .select('id')
             .eq('farm_id', newFarmId)
@@ -1058,7 +1040,7 @@ export class FarmsService {
         }
 
         const { data: newParcel, error: parcelError } =
-          await this.supabaseAdmin
+          await this.databaseService.getAdminClient()
             .from('parcels')
             .insert({
               farm_id: newFarmId,
@@ -1118,7 +1100,7 @@ export class FarmsService {
         }
 
         if (skip_duplicates) {
-          const { data: existing } = await this.supabaseAdmin
+          const { data: existing } = await this.databaseService.getAdminClient()
             .from('satellite_aois')
             .select('id')
             .eq('organization_id', organization_id)
@@ -1133,7 +1115,7 @@ export class FarmsService {
           }
         }
 
-        const { data: newAoi, error: aoiError } = await this.supabaseAdmin
+        const { data: newAoi, error: aoiError } = await this.databaseService.getAdminClient()
           .from('satellite_aois')
           .insert({
             organization_id,
@@ -1198,7 +1180,7 @@ export class FarmsService {
       try {
         // Verify the farm exists and get organization info
         const { data: existingFarm, error: checkError } =
-          await this.supabaseAdmin
+          await this.databaseService.getAdminClient()
             .from('farms')
             .select('id, name, organization_id')
             .eq('id', farmId)
@@ -1225,7 +1207,7 @@ export class FarmsService {
         }
 
         // Check user's role in the organization (only check once per org)
-        const { data: orgUser, error: roleError } = await this.supabaseAdmin
+        const { data: orgUser, error: roleError } = await this.databaseService.getAdminClient()
           .from('organization_users')
           .select('role_id, roles!inner(name)')
           .eq('organization_id', organizationId)
@@ -1269,7 +1251,7 @@ export class FarmsService {
         }
 
         // Delete the farm (CASCADE will handle related data)
-        const { error: deleteError } = await this.supabaseAdmin
+        const { error: deleteError } = await this.databaseService.getAdminClient()
           .from('farms')
           .delete()
           .eq('id', farmId);
@@ -1335,7 +1317,7 @@ export class FarmsService {
 
     if (farm_id) {
       // Export specific farm (and optionally sub-farms)
-      const { data: farm, error: farmError } = await this.supabaseAdmin
+      const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
         .from('farms')
         .select('*')
         .eq('id', farm_id)
@@ -1349,7 +1331,7 @@ export class FarmsService {
       }
 
       // Verify user has access to this farm's organization
-      const { data: orgUser } = await this.supabaseAdmin
+      const { data: orgUser } = await this.databaseService.getAdminClient()
         .from('organization_users')
         .select('organization_id')
         .eq('user_id', userId)
@@ -1371,7 +1353,7 @@ export class FarmsService {
         ): Promise<any[]> => {
           try {
             const { data: subFarms, error: subError } =
-              await this.supabaseAdmin
+              await this.databaseService.getAdminClient()
                 .from('farms')
                 .select('*')
                 .eq('parent_farm_id', parentFarmId)
@@ -1409,7 +1391,7 @@ export class FarmsService {
       }
     } else if (organization_id) {
       // Export all farms for organization
-      const { data: orgUser } = await this.supabaseAdmin
+      const { data: orgUser } = await this.databaseService.getAdminClient()
         .from('organization_users')
         .select('organization_id')
         .eq('user_id', userId)
@@ -1424,7 +1406,7 @@ export class FarmsService {
       }
 
       const { data: orgFarms, error: orgFarmsError } =
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('farms')
           .select('*')
           .eq('organization_id', organization_id)
@@ -1448,7 +1430,7 @@ export class FarmsService {
     const farmIds = farmsToExport.map((f) => f.id);
 
     // Fetch all parcels for these farms
-    const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+    const { data: parcels, error: parcelsError } = await this.databaseService.getAdminClient()
       .from('parcels')
       .select('*')
       .in('farm_id', farmIds)
@@ -1473,7 +1455,7 @@ export class FarmsService {
             ? `farm_id.in.(${farmIds.join(',')}),parcel_id.in.(${parcelIds.join(',')})`
             : `farm_id.in.(${farmIds.join(',')})`;
 
-        const { data: aois, error: aoisError } = await this.supabaseAdmin
+        const { data: aois, error: aoisError } = await this.databaseService.getAdminClient()
           .from('satellite_aois')
           .select('*')
           .or(orCondition)

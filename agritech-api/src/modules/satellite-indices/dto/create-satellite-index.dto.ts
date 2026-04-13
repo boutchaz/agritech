@@ -44,6 +44,10 @@ export class CreateSatelliteIndexDto {
 
   @IsOptional()
   @IsNumber()
+  percentile_10?: number;
+
+  @IsOptional()
+  @IsNumber()
   percentile_25?: number;
 
   @IsOptional()

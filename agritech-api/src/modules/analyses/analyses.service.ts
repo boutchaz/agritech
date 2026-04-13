@@ -5,8 +5,7 @@ import {
   Logger,
   BadRequestException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { DatabaseService } from '../database/database.service';
 import {
   CreateAnalysisDto,
   UpdateAnalysisDto,
@@ -17,26 +16,9 @@ import {
 
 @Injectable()
 export class AnalysesService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(AnalysesService.name);
 
-  constructor(private configService: ConfigService) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+  constructor(private readonly databaseService: DatabaseService) {}
 
   /**
    * Get all analyses with optional filters
@@ -49,7 +31,7 @@ export class AnalysesService {
 
       // If farm_id is provided, get all parcels for that farm
       if (filters.farm_id) {
-        const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+        const { data: parcels, error: parcelsError } = await this.databaseService.getAdminClient()
           .from('parcels')
           .select('id')
           .eq('farm_id', filters.farm_id);
@@ -73,7 +55,7 @@ export class AnalysesService {
         parcelIds = [filters.parcel_id];
       } else {
         // Get all parcels for the organization
-        const { data: farms, error: farmsError } = await this.supabaseAdmin
+        const { data: farms, error: farmsError } = await this.databaseService.getAdminClient()
           .from('farms')
           .select('id')
           .eq('organization_id', organizationId);
@@ -89,7 +71,7 @@ export class AnalysesService {
           return { data: [], count: 0 };
         }
 
-        const { data: parcels, error: parcelsError } = await this.supabaseAdmin
+        const { data: parcels, error: parcelsError } = await this.databaseService.getAdminClient()
           .from('parcels')
           .select('id')
           .in('farm_id', farmIds);
@@ -107,7 +89,7 @@ export class AnalysesService {
       }
 
       // Build the query for analyses
-      let query = this.supabaseAdmin
+      let query = this.databaseService.getAdminClient()
         .from('analyses')
         .select('*', { count: 'exact' })
         .in('parcel_id', parcelIds)
@@ -157,7 +139,7 @@ export class AnalysesService {
     this.logger.log(`Finding analysis ${id} for org ${organizationId}`);
 
     // Verify the analysis belongs to the organization
-    const { data: analysis, error } = await this.supabaseAdmin
+    const { data: analysis, error } = await this.databaseService.getAdminClient()
       .from('analyses')
       .select(`
         *,
@@ -193,7 +175,7 @@ export class AnalysesService {
     this.logger.log(`Creating analysis for org ${organizationId}`, dto);
 
     // Verify the parcel belongs to the organization
-    const { data: parcel, error: parcelError } = await this.supabaseAdmin
+    const { data: parcel, error: parcelError } = await this.databaseService.getAdminClient()
       .from('parcels')
       .select(`
         id,
@@ -215,7 +197,7 @@ export class AnalysesService {
     }
 
     // Create the analysis
-    const { data: newAnalysis, error: createError } = await this.supabaseAdmin
+    const { data: newAnalysis, error: createError } = await this.databaseService.getAdminClient()
       .from('analyses')
       .insert([dto])
       .select()
@@ -239,7 +221,7 @@ export class AnalysesService {
     await this.findOne(id, organizationId);
 
     // Update the analysis
-    const { data: updatedAnalysis, error: updateError } = await this.supabaseAdmin
+    const { data: updatedAnalysis, error: updateError } = await this.databaseService.getAdminClient()
       .from('analyses')
       .update(dto)
       .eq('id', id)
@@ -264,7 +246,7 @@ export class AnalysesService {
     await this.findOne(id, organizationId);
 
     // Delete the analysis (will cascade to recommendations)
-    const { error: deleteError } = await this.supabaseAdmin
+    const { error: deleteError } = await this.databaseService.getAdminClient()
       .from('analyses')
       .delete()
       .eq('id', id);
@@ -282,7 +264,7 @@ export class AnalysesService {
 
     await this.findOne(analysisId, organizationId);
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .select('*')
       .eq('analysis_id', analysisId)
@@ -301,7 +283,7 @@ export class AnalysesService {
 
     await this.findOne(dto.analysis_id, organizationId);
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .insert([dto])
       .select()
@@ -322,7 +304,7 @@ export class AnalysesService {
   ) {
     this.logger.log(`Updating recommendation ${recommendationId}`);
 
-    const { data: rec, error: recError } = await this.supabaseAdmin
+    const { data: rec, error: recError } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .select('analysis_id')
       .eq('id', recommendationId)
@@ -334,7 +316,7 @@ export class AnalysesService {
 
     await this.findOne(rec.analysis_id, organizationId);
 
-    const { data, error } = await this.supabaseAdmin
+    const { data, error } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .update(dto)
       .eq('id', recommendationId)
@@ -352,7 +334,7 @@ export class AnalysesService {
   async deleteRecommendation(recommendationId: string, organizationId: string) {
     this.logger.log(`Deleting recommendation ${recommendationId}`);
 
-    const { data: rec, error: recError } = await this.supabaseAdmin
+    const { data: rec, error: recError } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .select('analysis_id')
       .eq('id', recommendationId)
@@ -364,7 +346,7 @@ export class AnalysesService {
 
     await this.findOne(rec.analysis_id, organizationId);
 
-    const { error } = await this.supabaseAdmin
+    const { error } = await this.databaseService.getAdminClient()
       .from('analysis_recommendations')
       .delete()
       .eq('id', recommendationId);

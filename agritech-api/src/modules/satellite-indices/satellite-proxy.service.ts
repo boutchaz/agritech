@@ -12,7 +12,8 @@ export class SatelliteProxyService {
     private readonly configService: ConfigService,
     private readonly alertService: AlertService,
   ) {
-    const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
+    const url =
+      this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
     this.satelliteBaseUrl = url.replace(/\/+$/, '');
     this.internalServiceToken = (
       this.configService.get<string>('INTERNAL_SERVICE_TOKEN') ?? ''

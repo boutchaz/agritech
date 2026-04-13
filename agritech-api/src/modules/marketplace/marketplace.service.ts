@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { GetProductsQueryDto } from './dto/get-products-query.dto';
@@ -8,8 +10,24 @@ export class MarketplaceService {
     private readonly logger = new Logger(MarketplaceService.name);
 
     constructor(
-        private readonly databaseService: DatabaseService
-    ) { }
+        private readonly databaseService: DatabaseService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
+    ) {}
+
+    private async resolveUserOrg(token: string): Promise<{ userId: string; organizationId: string | null }> {
+        const secret = this.configService.get<string>('SUPABASE_JWT_SECRET') || this.configService.get<string>('JWT_SECRET');
+        const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, { secret });
+        const userId = payload.sub;
+
+        const { data: userData } = await this.databaseService.getAdminClient()
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', userId)
+            .single();
+
+        return { userId, organizationId: userData?.organization_id ?? null };
+    }
 
     /**
      * Helper to check if a string looks like a UUID.
@@ -329,8 +347,10 @@ export class MarketplaceService {
      * Uses the user's Auth Token to create an RLS-scoped client.
      * This ensures they can only see their own data.
      */
-    async getDashboardStats(token: string, organizationId?: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+    async getDashboardStats(token: string, _organizationId?: string) {
+        void _organizationId;
+        const { organizationId: myOrgId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         // Get listings count from marketplace_listings
         const { count: listingsCount, error: listError } = await supabase
@@ -351,16 +371,6 @@ export class MarketplaceService {
         if (itemsError) {
             this.logger.error(`Error fetching sales items stats: ${itemsError.message}`);
         }
-
-        const { data: { user } } = await supabase.auth.getUser();
-
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user?.id)
-            .single();
-
-        const myOrgId = userData?.organization_id;
 
         let ordersCount = 0;
         if (myOrgId) {
@@ -388,22 +398,10 @@ export class MarketplaceService {
      * Get seller's own listings
      */
     async getMyListings(token: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new Error('Unauthorized');
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!userData?.organization_id) {
+        if (!organizationId) {
             return [];
         }
 
@@ -411,7 +409,7 @@ export class MarketplaceService {
         const { data: listings, error } = await supabase
             .from('marketplace_listings')
             .select('*')
-            .eq('organization_id', userData.organization_id)
+            .eq('organization_id', organizationId)
             .order('created_at', { ascending: false });
 
         if (error) {
@@ -436,22 +434,10 @@ export class MarketplaceService {
         quantity_available?: number;
         sku?: string;
     }) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new Error('Unauthorized');
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!userData?.organization_id) {
+        if (!organizationId) {
             throw new Error('User must belong to an organization');
         }
 
@@ -459,7 +445,7 @@ export class MarketplaceService {
         const { data: listing, error } = await supabase
             .from('marketplace_listings')
             .insert({
-                organization_id: userData.organization_id,
+                organization_id: organizationId,
                 title: data.title,
                 description: data.description,
                 short_description: data.short_description || data.description.substring(0, 150),
@@ -500,20 +486,8 @@ export class MarketplaceService {
         status: string;
         is_public: boolean;
     }>) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new Error('Unauthorized');
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         // Verify ownership
         const { data: existing } = await supabase
@@ -522,7 +496,7 @@ export class MarketplaceService {
             .eq('id', listingId)
             .single();
 
-        if (!existing || existing.organization_id !== userData?.organization_id) {
+        if (!existing || existing.organization_id !== organizationId) {
             throw new Error('Forbidden: You can only update your own listings');
         }
 
@@ -549,20 +523,8 @@ export class MarketplaceService {
      * Delete a marketplace listing
      */
     async deleteListing(token: string, listingId: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new Error('Unauthorized');
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         // Verify ownership
         const { data: existing } = await supabase
@@ -571,7 +533,7 @@ export class MarketplaceService {
             .eq('id', listingId)
             .single();
 
-        if (!existing || existing.organization_id !== userData?.organization_id) {
+        if (!existing || existing.organization_id !== organizationId) {
             throw new Error('Forbidden: You can only delete your own listings');
         }
 

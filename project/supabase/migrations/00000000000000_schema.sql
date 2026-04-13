@@ -3660,6 +3660,7 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   max_value NUMERIC,
   std_value NUMERIC,
   median_value NUMERIC,
+  percentile_10 NUMERIC,
   percentile_25 NUMERIC,
   percentile_75 NUMERIC,
   percentile_90 NUMERIC,
@@ -23609,6 +23610,10 @@ CREATE TABLE IF NOT EXISTS siam_rdv_leads (
   source VARCHAR(80),
   source_ip VARCHAR(45),
   email_sent BOOLEAN DEFAULT false,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  confirmed_at TIMESTAMPTZ,
+  confirmed_slot VARCHAR(40),
+  rejection_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -23657,6 +23662,78 @@ CREATE TRIGGER set_siam_rdv_leads_updated_at
   BEFORE UPDATE ON siam_rdv_leads
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- SIAM RDV email templates (system-level, no org)
+-- =====================================================
+INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
+VALUES (
+  NULL,
+  'Confirmation RDV SIAM',
+  'Email sent to lead when their SIAM rendez-vous is confirmed by admin',
+  'siam_rdv_confirmation',
+  'general',
+  'Votre rendez-vous AgroGina au SIAM est confirmé — {{confirmed_slot}}',
+  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
+    || '<div style="background:#1d6b3a;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
+    || '<h1 style="margin:0;font-size:22px">Rendez-vous confirmé ✅</h1>'
+    || '</div>'
+    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
+    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
+    || '<p style="font-size:15px">Votre demande de rendez-vous au Salon International de l''Agriculture (SIAM) à Meknès a été <strong>confirmée</strong>.</p>'
+    || '<div style="background:#e8f5ec;border:1px solid #1d6b3a;border-radius:8px;padding:16px;margin:16px 0;text-align:center">'
+    || '<p style="margin:0;font-size:13px;color:#666">Créneau confirmé</p>'
+    || '<p style="margin:4px 0 0;font-size:20px;font-weight:600;color:#1d6b3a">{{confirmed_slot}}</p>'
+    || '</div>'
+    || '<p style="font-size:14px;color:#555">Nous vous attendons sur le stand AgroGina. Notre équipe vous présentera la plateforme ERP + IA décisionnelle conçue pour les fermes marocaines.</p>'
+    || '<p style="font-size:14px;color:#555">En cas d''empêchement, contactez-nous à <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a> ou au <strong>{{contact_phone}}</strong>.</p>'
+    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
+    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
+    || '</div>'
+    || '</div>',
+  'Bonjour {{nom}}, votre rendez-vous au SIAM est confirmé pour le créneau {{confirmed_slot}}.'
+    || '\nNous vous attendons sur le stand AgroGina.'
+    || '\nEn cas d''empêchement, contactez-nous à contact@agrogina.com ou au {{contact_phone}}.',
+  '["nom","confirmed_slot","contact_phone"]'::jsonb,
+  true,
+  true
+) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
+
+INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
+VALUES (
+  NULL,
+  'Refus RDV SIAM',
+  'Email sent to lead when their SIAM rendez-vous slot is no longer available',
+  'siam_rdv_rejection',
+  'general',
+  'Mise à jour concernant votre demande de rendez-vous SIAM',
+  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
+    || '<div style="background:#555;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
+    || '<h1 style="margin:0;font-size:22px">Mise à jour de votre demande</h1>'
+    || '</div>'
+    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
+    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
+    || '<p style="font-size:15px">Nous avons bien reçu votre demande de rendez-vous au SIAM, malheureusement le créneau demandé n''est plus disponible.</p>'
+    || '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:16px;margin:16px 0">'
+    || '<p style="margin:0;font-size:14px;color:#92400e">{{rejection_reason}}</p>'
+    || '</div>'
+    || '<p style="font-size:14px;color:#555">Nous serions ravis de vous rencontrer ! Merci de nous contacter pour convenir d''un autre créneau :</p>'
+    || '<ul style="font-size:14px;color:#555">'
+    || '<li>📧 <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a></li>'
+    || '<li>📞 <strong>{{contact_phone}}</strong></li>'
+    || '<li>🌐 <a href="https://rdv.agrogina.ma/rdv-siam" style="color:#1d6b3a">rdv.agrogina.ma/rdv-siam</a></li>'
+    || '</ul>'
+    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
+    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
+    || '</div>'
+    || '</div>',
+  'Bonjour {{nom}}, votre demande de rendez-vous au SIAM n''a pas pu être confirmée.'
+    || '\nMotif : {{rejection_reason}}'
+    || '\nContactez-nous pour reprogrammer : contact@agrogina.com ou {{contact_phone}}.',
+  '["nom","rejection_reason","contact_phone"]'::jsonb,
+  true,
+  true
+) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
 
 -- ============================================================================
 -- PEST & DISEASE LIBRARY

@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
@@ -45,6 +44,7 @@ import {
   SubscriptionPricingService,
 } from './subscription-pricing.service';
 import { PolarCheckoutService } from './polar-checkout.service';
+import { DatabaseService } from '../database/database.service';
 
 export interface UsageCounts {
   farms_count: number;
@@ -102,7 +102,6 @@ export interface SubscriptionRecord {
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(SubscriptionsService.name);
 
   /**
@@ -112,25 +111,10 @@ export class SubscriptionsService {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly databaseService: DatabaseService,
     private readonly pricingService: SubscriptionPricingService,
     private readonly polarCheckout: PolarCheckoutService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+  ) {}
 
   async getSubscriptionCatalog() {
     const formulas = Object.values(SubscriptionFormula).map((formula) => {
@@ -250,7 +234,7 @@ export class SubscriptionsService {
         dynamicPriceCents,
       );
 
-      const { data: existingSubscription } = await this.supabaseAdmin
+      const { data: existingSubscription } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .select('id, current_period_end')
         .eq('organization_id', organizationId)
@@ -286,13 +270,13 @@ export class SubscriptionsService {
       };
 
       if (existingSubscription?.id) {
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('subscriptions')
           .update(pendingPayload)
           .eq('id', existingSubscription.id);
       } else {
         const legacyPlan = mapFormulaToLegacyPlanType(fallbackFormula);
-        await this.supabaseAdmin.from('subscriptions').insert({
+        await this.databaseService.getAdminClient().from('subscriptions').insert({
           organization_id: organizationId,
           status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
           formula: fallbackFormula,
@@ -374,7 +358,7 @@ export class SubscriptionsService {
       dynamicPriceCents,
     );
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, current_period_end')
       .eq('organization_id', organizationId)
@@ -405,14 +389,14 @@ export class SubscriptionsService {
     };
 
     if (existingSubscription?.id) {
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(pendingPayload)
         .eq('id', existingSubscription.id);
     } else {
       const legacyPlan = mapFormulaToLegacyPlanType(resolvedFormula);
       const legacyLimits = this.getLegacyResourceLimits(resolvedFormula);
-      await this.supabaseAdmin.from('subscriptions').insert({
+      await this.databaseService.getAdminClient().from('subscriptions').insert({
         organization_id: organizationId,
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
         formula: resolvedFormula,
@@ -457,7 +441,7 @@ export class SubscriptionsService {
     const formula = parsedFormula;
 
     const { data: existingSubscription, error: existingError } =
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .select('*')
         .eq('organization_id', organization_id)
@@ -533,13 +517,13 @@ export class SubscriptionsService {
     };
 
     const upsertResult = existingSubscription?.id
-      ? await this.supabaseAdmin
+      ? await this.databaseService.getAdminClient()
           .from('subscriptions')
           .update(payload)
           .eq('id', existingSubscription.id)
           .select()
           .single()
-      : await this.supabaseAdmin
+      : await this.databaseService.getAdminClient()
           .from('subscriptions')
           .insert(payload)
           .select()
@@ -576,7 +560,7 @@ export class SubscriptionsService {
       return null;
     }
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
         'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, selected_modules, ha_pricing_mode, discount_pct, size_multiplier, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
@@ -701,7 +685,7 @@ export class SubscriptionsService {
   }
 
   async hasValidSubscription(organizationId: string): Promise<boolean> {
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('status, current_period_end, grace_period_ends_at')
       .eq('organization_id', organizationId)
@@ -739,7 +723,7 @@ export class SubscriptionsService {
   async registerRenewalNotice(userId: string, dto: RenewalNoticeDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, status')
       .eq('organization_id', dto.organizationId)
@@ -749,7 +733,7 @@ export class SubscriptionsService {
       throw new NotFoundException('Subscription not found');
     }
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -772,7 +756,7 @@ export class SubscriptionsService {
   async terminateSubscription(userId: string, dto: TerminateSubscriptionDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, export_window_days')
       .eq('organization_id', dto.organizationId)
@@ -787,7 +771,7 @@ export class SubscriptionsService {
     const exportDeadline = new Date(terminatedAt);
     exportDeadline.setDate(exportDeadline.getDate() + exportWindowDays);
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.TERMINATED,
@@ -854,7 +838,7 @@ export class SubscriptionsService {
       );
     }
 
-    const existingWebhook = await this.supabaseAdmin
+    const existingWebhook = await this.databaseService.getAdminClient()
       .from('polar_webhooks')
       .select('id')
       .eq('event_id', eventId)
@@ -870,7 +854,7 @@ export class SubscriptionsService {
       subscriptionData,
     );
 
-    await this.supabaseAdmin.from('polar_webhooks').insert({
+    await this.databaseService.getAdminClient().from('polar_webhooks').insert({
       event_id: eventId,
       event_type: eventType,
       payload: webhookPayload,
@@ -914,7 +898,7 @@ export class SubscriptionsService {
   }
 
   private async ensureOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser, error } = await this.supabaseAdmin
+    const { data: orgUser, error } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -928,7 +912,7 @@ export class SubscriptionsService {
   }
 
   private async hasOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -1337,7 +1321,7 @@ export class SubscriptionsService {
           : null,
     };
 
-    const { data: polarSub, error: polarError } = await this.supabaseAdmin
+    const { data: polarSub, error: polarError } = await this.databaseService.getAdminClient()
       .from('polar_subscriptions')
       .upsert(polarUpdateData, {
         onConflict: 'polar_subscription_id',
@@ -1352,7 +1336,7 @@ export class SubscriptionsService {
       );
     }
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('*')
       .eq('organization_id', organizationId)
@@ -1429,7 +1413,7 @@ export class SubscriptionsService {
 
     let mainSubscriptionResult: Record<string, unknown>;
     if (existingSubscription?.id) {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(updatePayload)
         .eq('id', existingSubscription.id)
@@ -1442,7 +1426,7 @@ export class SubscriptionsService {
         mainSubscriptionResult = data as Record<string, unknown>;
       }
     } else {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .insert({
           ...updatePayload,
@@ -1480,12 +1464,12 @@ export class SubscriptionsService {
   }
 
   private async getUsageCountsInternal(organizationId: string): Promise<UsageCounts> {
-    const { count: farmsCount } = await this.supabaseAdmin
+    const { count: farmsCount } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId);
 
-    const { data: parcels, count: parcelsCount } = await this.supabaseAdmin
+    const { data: parcels, count: parcelsCount } = await this.databaseService.getAdminClient()
       .from('parcels')
       .select('area', { count: 'exact' })
       .eq('organization_id', organizationId);
@@ -1495,7 +1479,7 @@ export class SubscriptionsService {
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
 
-    const { count: usersCount } = await this.supabaseAdmin
+    const { count: usersCount } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
@@ -1517,7 +1501,7 @@ export class SubscriptionsService {
   ) {
     const normalizedFeature = featureName.trim().toLowerCase();
 
-    const { data: module, error: moduleError } = await this.supabaseAdmin
+    const { data: module, error: moduleError } = await this.databaseService.getAdminClient()
       .from('modules')
       .select('id, required_plan, is_active, is_available, is_required, slug, name')
       .or(`slug.eq.${normalizedFeature.replace(/[,.()'"]/g, '')},name.eq.${normalizedFeature.replace(/[,.()'"]/g, '')}`)
@@ -1527,7 +1511,7 @@ export class SubscriptionsService {
       return false;
     }
 
-    const { data: subscription } = await this.supabaseAdmin
+    const { data: subscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('selected_modules, formula')
       .eq('organization_id', organizationId)
@@ -1573,7 +1557,7 @@ export class SubscriptionsService {
       return true;
     }
 
-    const { data: orgModule } = await this.supabaseAdmin
+    const { data: orgModule } = await this.databaseService.getAdminClient()
       .from('organization_modules')
       .select('is_active')
       .eq('organization_id', organizationId)
@@ -1591,7 +1575,7 @@ export class SubscriptionsService {
     actorId: string;
     payload: Record<string, unknown>;
   }) {
-    await this.supabaseAdmin.from('subscription_events').insert({
+    await this.databaseService.getAdminClient().from('subscription_events').insert({
       organization_id: params.organizationId,
       subscription_id: params.subscriptionId,
       event_type: params.eventType,
@@ -1602,7 +1586,7 @@ export class SubscriptionsService {
   }
 
   private async processRenewalNotices() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, status, contract_end_at, renewal_notice_days')
       .in('status', [
@@ -1621,7 +1605,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -1646,7 +1630,7 @@ export class SubscriptionsService {
   private async processPendingMigrations() {
     const nowIso = new Date().toISOString();
 
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
         'id, organization_id, pending_formula, pending_billing_cycle, migration_effective_at, pending_pricing_snapshot',
@@ -1666,7 +1650,7 @@ export class SubscriptionsService {
       const legacyPlan = mapFormulaToLegacyPlanType(targetFormula);
       const legacyLimits = this.getLegacyResourceLimits(targetFormula);
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           formula: targetFormula,
@@ -1705,7 +1689,7 @@ export class SubscriptionsService {
     const overdueThreshold = new Date();
     overdueThreshold.setDate(overdueThreshold.getDate() - 30);
 
-    const { data: documents } = await this.supabaseAdmin
+    const { data: documents } = await this.databaseService.getAdminClient()
       .from('billing_documents')
       .select('id, organization_id, subscription_id, due_at, status')
       .in('status', ['issued', 'overdue'])
@@ -1714,7 +1698,7 @@ export class SubscriptionsService {
 
     for (const doc of documents || []) {
       if (doc.status !== 'overdue') {
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('billing_documents')
           .update({ status: 'overdue', updated_at: new Date().toISOString() })
           .eq('id', doc.id);
@@ -1724,7 +1708,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PAST_DUE,
@@ -1748,7 +1732,7 @@ export class SubscriptionsService {
   }
 
   private async processSuspensions() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, last_payment_notice_at, suspension_notice_days')
       .eq('status', SubscriptionLifecycleStatus.PAST_DUE)
@@ -1764,7 +1748,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.SUSPENDED,
@@ -1787,7 +1771,7 @@ export class SubscriptionsService {
   }
 
   private async processTerminationWindows() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, terminated_at, export_window_days')
       .eq('status', SubscriptionLifecycleStatus.TERMINATED)
