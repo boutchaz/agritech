@@ -394,4 +394,117 @@ export class StockAccountingService {
       return { journal_entry_id: null, success: false, error: error.message };
     }
   }
+
+  /**
+   * Create a reversal journal entry — swaps debit/credit from the original.
+   * If the original debited Inventory and credited AP, the reversal debits AP and credits Inventory.
+   */
+  async createReversalJournalEntry(
+    client: PoolClient,
+    reversalStockEntry: StockEntry & { entry_number: string; id: string },
+    items: StockEntryItem[],
+  ): Promise<{ journal_entry_id: string | null; success: boolean; error?: string }> {
+    try {
+      if (reversalStockEntry.entry_type === StockEntryType.STOCK_TRANSFER) {
+        this.logger.log(
+          `Stock Transfer reversal ${reversalStockEntry.entry_number} has no accounting impact`,
+        );
+        return { journal_entry_id: null, success: true };
+      }
+
+      const mappings = await this.getAccountMappings(
+        client,
+        reversalStockEntry.organization_id,
+        reversalStockEntry.entry_type,
+      );
+
+      if (mappings.length === 0) {
+        this.logger.warn(
+          `No stock account mappings for reversal ${reversalStockEntry.entry_number}. Skipping journal entry.`,
+        );
+        return { journal_entry_id: null, success: true };
+      }
+
+      const totalValue = this.calculateTotalValue(items);
+
+      if (totalValue === 0) {
+        return { journal_entry_id: null, success: true };
+      }
+
+      const itemCategories = await this.getItemCategories(client, items);
+      const mapping = this.findBestMapping(mappings, itemCategories);
+
+      if (!mapping) {
+        this.logger.warn(
+          `No matching account mapping for reversal ${reversalStockEntry.entry_number}. Skipping.`,
+        );
+        return { journal_entry_id: null, success: true };
+      }
+
+      const entryNumber = await this.sequencesService.generateJournalEntryNumber(
+        reversalStockEntry.organization_id,
+      );
+
+      // For reversal: SWAP debit and credit accounts
+      const debitAccountId = mapping.credit_account_id;
+      const creditAccountId = mapping.debit_account_id;
+
+      const journalResult = await client.query(
+        `INSERT INTO journal_entries (
+          organization_id, entry_number, entry_date, remarks,
+          reference_type, reference_id, reference_number,
+          total_debit, total_credit, status, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING id`,
+        [
+          reversalStockEntry.organization_id,
+          entryNumber,
+          reversalStockEntry.entry_date,
+          `Reversal: ${reversalStockEntry.entry_number}`,
+          'Stock Entry',
+          reversalStockEntry.id,
+          reversalStockEntry.entry_number,
+          totalValue,
+          totalValue,
+          'posted',
+          null,
+        ],
+      );
+
+      const journalEntryId = journalResult.rows[0]?.id;
+
+      if (!journalEntryId) {
+        throw new Error('Failed to create reversal journal entry');
+      }
+
+      await client.query(
+        `INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [journalEntryId, debitAccountId, totalValue, 0, `Reversal: ${reversalStockEntry.entry_number} - Debit`],
+      );
+
+      await client.query(
+        `INSERT INTO journal_items (journal_entry_id, account_id, debit, credit, description)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [journalEntryId, creditAccountId, 0, totalValue, `Reversal: ${reversalStockEntry.entry_number} - Credit`],
+      );
+
+      await client.query(
+        `UPDATE stock_entries SET journal_entry_id = $1 WHERE id = $2`,
+        [journalEntryId, reversalStockEntry.id],
+      );
+
+      this.logger.log(
+        `Created reversal journal entry ${entryNumber} for ${reversalStockEntry.entry_number} (swapped debit/credit, total: ${totalValue})`,
+      );
+
+      return { journal_entry_id: journalEntryId, success: true };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create reversal journal entry: ${error.message}`,
+        error.stack,
+      );
+      return { journal_entry_id: null, success: false, error: error.message };
+    }
+  }
 }

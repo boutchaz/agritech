@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { getLocalCropReference } from "./crop-reference-loader";
 import type {
   CalibrationSnapshotInput,
   CalibrationReviewView,
@@ -344,7 +345,7 @@ export class CalibrationReviewAdapter {
       heterogeneity_flag: this.checkHeterogeneity(step7),
       temporal_stability: this.buildTemporalStability(step4),
       history_depth: this.buildHistoryDepth(step1),
-      phenology_dashboard: this.buildPhenologyDashboard(step4),
+      phenology_dashboard: this.buildPhenologyDashboard(step4, input.crop_type),
     };
   }
 
@@ -627,7 +628,32 @@ export class CalibrationReviewAdapter {
     return { label, variance_percent: variancePercent, phrase };
   }
 
-  private buildPhenologyDashboard(step4: JsonRecord): BlockBAnalyse["phenology_dashboard"] {
+  /**
+   * Extract GDD entry thresholds per phase_kc from referentiel stades_bbch.
+   * Returns the first gdd_cumul[0] for each phase_kc (entry threshold).
+   */
+  private extractReferentielGdd(cropType: string | null | undefined): Record<string, number> | null {
+    if (!cropType) return null;
+    const ref = getLocalCropReference(cropType);
+    if (!ref) return null;
+    const stades = ref.stades_bbch;
+    if (!Array.isArray(stades)) return null;
+
+    const gddByPhase: Record<string, number> = {};
+    for (const stade of stades) {
+      const s = stade as Record<string, unknown>;
+      const phaseKc = s.phase_kc as string | undefined;
+      const gddCumul = s.gdd_cumul as number[] | undefined;
+      if (!phaseKc || !Array.isArray(gddCumul) || gddCumul.length === 0) continue;
+      // Keep first occurrence (lowest GDD entry for this phase)
+      if (!(phaseKc in gddByPhase)) {
+        gddByPhase[phaseKc] = gddCumul[0];
+      }
+    }
+    return Object.keys(gddByPhase).length > 0 ? gddByPhase : null;
+  }
+
+  private buildPhenologyDashboard(step4: JsonRecord, cropType?: string | null): BlockBAnalyse["phenology_dashboard"] {
     const phaseTimeline = this.asArray(step4.phase_timeline);
     const meanDates = this.asRecord(step4.mean_dates);
     const variability = this.asRecord(step4.inter_annual_variability_days ?? step4.inter_annual_variability);
@@ -703,6 +729,7 @@ export class CalibrationReviewAdapter {
       mean_stages: meanStages,
       timelines,
       yearly_stages: yearlyStagesOut,
+      referentiel_gdd: this.extractReferentielGdd(cropType),
     };
   }
 

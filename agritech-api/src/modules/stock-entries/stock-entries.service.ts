@@ -322,18 +322,18 @@ export class StockEntriesService {
            '[]'::json
          ) as stock_entry_items
          FROM stock_entries se
-         LEFT JOIN stock_entry_items sei ON sei.stock_entry_id = se.id
-         WHERE se.id = $1 AND se.organization_id = $2
-         GROUP BY se.id`,
-        [stockEntryId, organizationId],
-      );
+          LEFT JOIN stock_entry_items sei ON sei.stock_entry_id = se.id
+          WHERE se.id = $1 AND se.organization_id = $2
+          GROUP BY se.id
+          FOR UPDATE OF se`,
+         [stockEntryId, organizationId],
+       );
 
       if (entryResult.rows.length === 0) {
         throw new NotFoundException('Stock entry not found');
       }
 
       const stockEntry = entryResult.rows[0];
-      // Parse JSON array if it's a string, otherwise use as-is
       let entryItems = stockEntry.stock_entry_items || [];
       if (typeof entryItems === 'string') {
         entryItems = JSON.parse(entryItems);
@@ -345,6 +345,10 @@ export class StockEntriesService {
 
       if (stockEntry.status === StockEntryStatus.CANCELLED) {
         throw new BadRequestException('Cannot post a cancelled stock entry');
+      }
+
+      if (stockEntry.status === StockEntryStatus.REVERSED) {
+        throw new BadRequestException('Cannot post a reversed stock entry');
       }
 
       // 2. Re-validate before posting (TECHNICAL_DEBT.md Issue #6)
@@ -428,7 +432,33 @@ export class StockEntriesService {
    */
   async cancelStockEntry(id: string, organizationId: string, userId: string): Promise<any> {
     return this.executeInPgTransaction(async (client) => {
-      // Update status to Cancelled
+      const checkResult = await client.query(
+        `SELECT id, status FROM stock_entries
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [id, organizationId],
+      );
+
+      if (checkResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found');
+      }
+
+      const entry = checkResult.rows[0];
+
+      if (entry.status === StockEntryStatus.POSTED) {
+        throw new BadRequestException(
+          'Posted entries cannot be cancelled. Use reversal instead.',
+        );
+      }
+
+      if (entry.status === StockEntryStatus.CANCELLED) {
+        throw new BadRequestException('Stock entry is already cancelled');
+      }
+
+      if (entry.status === StockEntryStatus.REVERSED) {
+        throw new BadRequestException('Cannot cancel a reversed stock entry');
+      }
+
       const result = await client.query(
         `UPDATE stock_entries
          SET status = $1, updated_at = $2, updated_by = $3
@@ -437,17 +467,488 @@ export class StockEntriesService {
         ['Cancelled', new Date(), userId, id, organizationId],
       );
 
-      if (result.rows.length === 0) {
-        throw new NotFoundException('Stock entry not found or cannot be cancelled');
-      }
-
       return result.rows[0];
     });
   }
 
   /**
-   * Delete a draft stock entry
+   * Reverse a posted stock entry by creating opposite movements.
+   * Material Receipt → creates OUT movements (remove stock)
+   * Material Issue → creates IN movements (restore stock)
+   * Stock Transfer → reverse transfer (move stock back)
+   * Stock Reconciliation → reverse the reconciliation adjustment
    */
+  async reverseStockEntry(
+    stockEntryId: string,
+    organizationId: string,
+    userId: string,
+    reason: string,
+  ): Promise<any> {
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestException('Reversal reason is required');
+    }
+
+    return this.executeInPgTransaction(async (client) => {
+      // 1. Fetch the original entry with items (lock the row)
+      const entryResult = await client.query(
+        `SELECT se.*,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'id', sei.id,
+               'stock_entry_id', sei.stock_entry_id,
+               'line_number', sei.line_number,
+               'item_id', sei.item_id,
+               'variant_id', sei.variant_id,
+               'item_name', sei.item_name,
+               'quantity', sei.quantity,
+               'unit', sei.unit,
+               'source_warehouse_id', sei.source_warehouse_id,
+               'target_warehouse_id', sei.target_warehouse_id,
+               'batch_number', sei.batch_number,
+               'serial_number', sei.serial_number,
+               'expiry_date', sei.expiry_date,
+               'cost_per_unit', sei.cost_per_unit,
+               'system_quantity', sei.system_quantity,
+               'physical_quantity', sei.physical_quantity,
+               'notes', sei.notes
+             )
+           ) FILTER (WHERE sei.id IS NOT NULL),
+           '[]'::json
+         ) as stock_entry_items
+         FROM stock_entries se
+         LEFT JOIN stock_entry_items sei ON sei.stock_entry_id = se.id
+         WHERE se.id = $1 AND se.organization_id = $2
+         GROUP BY se.id
+         FOR UPDATE OF se`,
+        [stockEntryId, organizationId],
+      );
+
+      if (entryResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found');
+      }
+
+      const originalEntry = entryResult.rows[0];
+      let originalItems = originalEntry.stock_entry_items || [];
+      if (typeof originalItems === 'string') {
+        originalItems = JSON.parse(originalItems);
+      }
+
+      // 2. Validate: only Posted entries can be reversed
+      if (originalEntry.status !== StockEntryStatus.POSTED) {
+        throw new BadRequestException(
+          `Only posted entries can be reversed. Current status: ${originalEntry.status}`,
+        );
+      }
+
+      // 3. Check it hasn't already been reversed
+      const reversalCheck = await client.query(
+        `SELECT id, entry_number FROM stock_entries
+         WHERE reference_type = 'reversal' AND reference_id = $1
+         AND organization_id = $2 AND status != 'Cancelled'
+         LIMIT 1`,
+        [stockEntryId, organizationId],
+      );
+      if (reversalCheck.rows.length > 0) {
+        throw new BadRequestException(
+          `Stock entry already reversed by ${reversalCheck.rows[0].entry_number}`,
+        );
+      }
+
+      // 4. Generate reversal entry number
+      const reversalNumber = await this.sequencesService.generateStockEntryNumber(organizationId);
+
+      // 5. Create the reversal stock entry header
+      const reversalResult = await client.query(
+        `INSERT INTO stock_entries (
+          organization_id, entry_type, entry_number, entry_date,
+          from_warehouse_id, to_warehouse_id, reference_type, reference_id,
+          reference_number, purpose, notes, status, created_by, posted_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *`,
+        [
+          organizationId,
+          originalEntry.entry_type,
+          reversalNumber,
+          new Date(),
+          originalEntry.from_warehouse_id,
+          originalEntry.to_warehouse_id,
+          'reversal',
+          stockEntryId,
+          originalEntry.entry_number,
+          `Reversal: ${reason}`,
+          `Reversal of ${originalEntry.entry_number}. Reason: ${reason}`,
+          StockEntryStatus.POSTED,
+          userId,
+          new Date(),
+        ],
+      );
+
+      const reversalEntry = reversalResult.rows[0];
+
+      // 6. Create reversal items and movements for each original item
+      for (const item of originalItems) {
+        // Create reversal stock entry item
+        await client.query(
+          `INSERT INTO stock_entry_items (
+            stock_entry_id, line_number, item_id, item_name, quantity, unit,
+            source_warehouse_id, target_warehouse_id, batch_number, serial_number,
+            expiry_date, cost_per_unit, system_quantity, physical_quantity, notes
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            reversalEntry.id,
+            item.line_number,
+            item.item_id,
+            item.item_name || null,
+            item.quantity,
+            item.unit,
+            item.source_warehouse_id || null,
+            item.target_warehouse_id || null,
+            item.batch_number || null,
+            item.serial_number || null,
+            item.expiry_date || null,
+            item.cost_per_unit || null,
+            item.system_quantity || null,
+            item.physical_quantity || null,
+            `Reversal of line ${item.line_number}`,
+          ],
+        );
+
+        // Process reverse movements based on entry type
+        await this.processReversalMovements(
+          client,
+          originalEntry,
+          reversalEntry,
+          item,
+        );
+      }
+
+      // 7. Create reversal journal entry (swap debit/credit)
+      const accountingResult = await this.stockAccountingService.createReversalJournalEntry(
+        client,
+        { ...originalEntry, entry_number: reversalNumber, id: reversalEntry.id },
+        originalItems,
+      );
+
+      if (!accountingResult.success && accountingResult.error) {
+        this.logger.error(`Reversal accounting failed: ${accountingResult.error}`);
+        throw new BadRequestException(
+          `Failed to create reversal accounting entry: ${accountingResult.error}`,
+        );
+      }
+
+      // 8. Mark original entry as Reversed
+      await client.query(
+        `UPDATE stock_entries SET status = $1, updated_at = $2, updated_by = $3
+         WHERE id = $4`,
+        [StockEntryStatus.REVERSED, new Date(), userId, stockEntryId],
+      );
+
+      this.logger.log(
+        `Stock entry ${originalEntry.entry_number} reversed by ${reversalNumber}. Reason: ${reason}`,
+      );
+
+      return {
+        original_entry_id: stockEntryId,
+        reversal_entry_id: reversalEntry.id,
+        reversal_number: reversalNumber,
+        message: `Stock entry ${originalEntry.entry_number} reversed successfully`,
+      };
+    });
+  }
+
+  /**
+   * Process reverse stock movements for a reversal entry.
+   * Creates opposite movements to undo the original entry's effects.
+   */
+  private async processReversalMovements(
+    client: PoolClient,
+    originalEntry: any,
+    reversalEntry: any,
+    item: any,
+  ): Promise<void> {
+    const entryType = originalEntry.entry_type as StockEntryType;
+
+    switch (entryType) {
+      case StockEntryType.MATERIAL_RECEIPT: {
+        // Original: IN to to_warehouse → Reverse: OUT from to_warehouse
+        const warehouseId = originalEntry.to_warehouse_id;
+
+        // Restore valuation by consuming in reverse (or restore batches)
+        // For reversal: we need to remove the valuation that was added
+        const valuationResult = await client.query(
+          `SELECT id, remaining_quantity, cost_per_unit
+           FROM stock_valuation
+           WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+           AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
+           AND stock_entry_id = $5
+           AND remaining_quantity > 0
+           FOR UPDATE`,
+          [originalEntry.organization_id, item.item_id, warehouseId, item.variant_id || null, originalEntry.id],
+        );
+
+        let valuationToRemove = item.quantity;
+        for (const valBatch of valuationResult.rows) {
+          if (valuationToRemove <= 0) break;
+          const available = parseFloat(valBatch.remaining_quantity);
+          const reduce = Math.min(valuationToRemove, available);
+          await client.query(
+            `UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`,
+            [reduce, valBatch.id],
+          );
+          valuationToRemove -= reduce;
+        }
+
+        // Create OUT movement
+        await client.query(
+          `INSERT INTO stock_movements (
+            organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+            quantity, unit, balance_quantity, cost_per_unit, total_cost,
+            stock_entry_id, stock_entry_item_id, batch_number, serial_number
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            originalEntry.organization_id,
+            item.item_id,
+            item.variant_id || null,
+            warehouseId,
+            'OUT',
+            reversalEntry.entry_date || new Date(),
+            -item.quantity,
+            item.unit,
+            -item.quantity,
+            item.cost_per_unit || 0,
+            -(item.quantity * (item.cost_per_unit || 0)),
+            reversalEntry.id,
+            item.id,
+            item.batch_number || null,
+            item.serial_number || null,
+          ],
+        );
+        break;
+      }
+
+      case StockEntryType.MATERIAL_ISSUE: {
+        // Original: OUT from from_warehouse → Reverse: IN back to from_warehouse
+        const warehouseId = originalEntry.from_warehouse_id;
+
+        // Restore valuation (add back the consumed batches at their original cost)
+        await client.query(
+          `INSERT INTO stock_valuation (
+            organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
+            stock_entry_id, batch_number, serial_number, remaining_quantity
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            originalEntry.organization_id,
+            item.item_id,
+            item.variant_id || null,
+            warehouseId,
+            item.quantity,
+            item.cost_per_unit || 0,
+            reversalEntry.id,
+            item.batch_number || null,
+            item.serial_number || null,
+            item.quantity,
+          ],
+        );
+
+        // Create IN movement
+        await client.query(
+          `INSERT INTO stock_movements (
+            organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+            quantity, unit, balance_quantity, cost_per_unit, total_cost,
+            stock_entry_id, stock_entry_item_id, batch_number, serial_number
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            originalEntry.organization_id,
+            item.item_id,
+            item.variant_id || null,
+            warehouseId,
+            'IN',
+            reversalEntry.entry_date || new Date(),
+            item.quantity,
+            item.unit,
+            item.quantity,
+            item.cost_per_unit || 0,
+            item.quantity * (item.cost_per_unit || 0),
+            reversalEntry.id,
+            item.id,
+            item.batch_number || null,
+            item.serial_number || null,
+          ],
+        );
+        break;
+      }
+
+      case StockEntryType.STOCK_TRANSFER: {
+        // Original: OUT from source, IN to target → Reverse: OUT from target, IN back to source
+        const sourceWarehouse = originalEntry.from_warehouse_id;
+        const targetWarehouse = originalEntry.to_warehouse_id;
+
+        // Remove valuation from target warehouse (that was added by the transfer)
+        const targetValResult = await client.query(
+          `SELECT id, remaining_quantity, cost_per_unit
+           FROM stock_valuation
+           WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+           AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
+           AND stock_entry_id = $5 AND remaining_quantity > 0
+           FOR UPDATE`,
+          [originalEntry.organization_id, item.item_id, targetWarehouse, item.variant_id || null, originalEntry.id],
+        );
+
+        let targetValToRemove = item.quantity;
+        for (const valBatch of targetValResult.rows) {
+          if (targetValToRemove <= 0) break;
+          const reduce = Math.min(targetValToRemove, parseFloat(valBatch.remaining_quantity));
+          await client.query(
+            `UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`,
+            [reduce, valBatch.id],
+          );
+          targetValToRemove -= reduce;
+        }
+
+        // Restore valuation to source warehouse
+        await client.query(
+          `INSERT INTO stock_valuation (
+            organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
+            stock_entry_id, batch_number, serial_number, remaining_quantity
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          [
+            originalEntry.organization_id,
+            item.item_id,
+            item.variant_id || null,
+            sourceWarehouse,
+            item.quantity,
+            item.cost_per_unit || 0,
+            reversalEntry.id,
+            item.batch_number || null,
+            item.serial_number || null,
+            item.quantity,
+          ],
+        );
+
+        // OUT from target (reverse the IN that happened)
+        await client.query(
+          `INSERT INTO stock_movements (
+            organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+            quantity, unit, balance_quantity, cost_per_unit, total_cost,
+            stock_entry_id, stock_entry_item_id, batch_number, serial_number
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            originalEntry.organization_id, item.item_id, item.variant_id || null,
+            targetWarehouse, 'TRANSFER', reversalEntry.entry_date || new Date(),
+            -item.quantity, item.unit, -item.quantity,
+            item.cost_per_unit || 0, -(item.quantity * (item.cost_per_unit || 0)),
+            reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+          ],
+        );
+
+        // IN back to source (reverse the OUT that happened)
+        await client.query(
+          `INSERT INTO stock_movements (
+            organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+            quantity, unit, balance_quantity, cost_per_unit, total_cost,
+            stock_entry_id, stock_entry_item_id, batch_number, serial_number
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+          [
+            originalEntry.organization_id, item.item_id, item.variant_id || null,
+            sourceWarehouse, 'TRANSFER', reversalEntry.entry_date || new Date(),
+            item.quantity, item.unit, item.quantity,
+            item.cost_per_unit || 0, item.quantity * (item.cost_per_unit || 0),
+            reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+          ],
+        );
+        break;
+      }
+
+      case StockEntryType.STOCK_RECONCILIATION: {
+        // Reversal of reconciliation is complex — undo the variance adjustment
+        const warehouseId = originalEntry.to_warehouse_id || originalEntry.from_warehouse_id;
+        const variance = (item.physical_quantity || 0) - (item.system_quantity || 0);
+
+        if (variance > 0) {
+          // Original: added stock (positive variance) → Reverse: remove it
+          const valResult = await client.query(
+            `SELECT id, remaining_quantity FROM stock_valuation
+             WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+             AND stock_entry_id = $4 AND remaining_quantity > 0
+             FOR UPDATE`,
+            [originalEntry.organization_id, item.item_id, warehouseId, originalEntry.id],
+          );
+          let toRemove = Math.abs(variance);
+          for (const vb of valResult.rows) {
+            if (toRemove <= 0) break;
+            const reduce = Math.min(toRemove, parseFloat(vb.remaining_quantity));
+            await client.query(`UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`, [reduce, vb.id]);
+            toRemove -= reduce;
+          }
+
+          await client.query(
+            `INSERT INTO stock_movements (
+              organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+              quantity, unit, balance_quantity, cost_per_unit, total_cost,
+              stock_entry_id, stock_entry_item_id, batch_number, serial_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [
+              originalEntry.organization_id, item.item_id, item.variant_id || null,
+              warehouseId, 'OUT', reversalEntry.entry_date || new Date(),
+              -Math.abs(variance), item.unit, -Math.abs(variance),
+              item.cost_per_unit || 0, -(Math.abs(variance) * (item.cost_per_unit || 0)),
+              reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+            ],
+          );
+        } else if (variance < 0) {
+          // Original: removed stock (negative variance) → Reverse: restore it
+          await client.query(
+            `INSERT INTO stock_valuation (
+              organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
+              stock_entry_id, batch_number, serial_number, remaining_quantity
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [
+              originalEntry.organization_id, item.item_id, item.variant_id || null,
+              warehouseId, Math.abs(variance), item.cost_per_unit || 0,
+              reversalEntry.id, item.batch_number || null, item.serial_number || null,
+              Math.abs(variance),
+            ],
+          );
+
+          await client.query(
+            `INSERT INTO stock_movements (
+              organization_id, item_id, variant_id, warehouse_id, movement_type, movement_date,
+              quantity, unit, balance_quantity, cost_per_unit, total_cost,
+              stock_entry_id, stock_entry_item_id, batch_number, serial_number
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [
+              originalEntry.organization_id, item.item_id, item.variant_id || null,
+              warehouseId, 'IN', reversalEntry.entry_date || new Date(),
+              Math.abs(variance), item.unit, Math.abs(variance),
+              item.cost_per_unit || 0, Math.abs(variance) * (item.cost_per_unit || 0),
+              reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+            ],
+          );
+        }
+        break;
+      }
+
+      default:
+        this.logger.warn(`Unknown entry type for reversal: ${entryType}`);
+    }
+
+    // Update variant quantity after reversal movements
+    if (item.variant_id) {
+      await client.query(
+        `UPDATE product_variants
+         SET quantity = (
+           SELECT COALESCE(SUM(quantity), 0)
+           FROM stock_movements
+           WHERE stock_movements.variant_id = $1
+             AND stock_movements.item_id = $2
+         ),
+         updated_at = NOW()
+         WHERE id = $1 AND item_id = $2`,
+        [item.variant_id, item.item_id],
+      );
+    }
+  }
   async deleteStockEntry(id: string, organizationId: string): Promise<any> {
     return this.executeInPgTransaction(async (client) => {
       // Verify entry exists and is in Draft status before deleting
@@ -1336,6 +1837,10 @@ export class StockEntriesService {
    * Consume stock valuation using FIFO/LIFO method
    * Returns total cost and consumed batches
    */
+  /**
+   * Consume stock valuation using the specified method.
+   * Dispatches to the appropriate implementation based on valuation method.
+   */
   private async consumeValuation(
     client: PoolClient,
     organizationId: string,
@@ -1345,20 +1850,39 @@ export class StockEntriesService {
     quantity: number,
     method: ValuationMethod = ValuationMethod.FIFO,
   ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
-    // Lock valuation rows ordered by created_at (FIFO) or DESC (LIFO)
-    // TODO: Implement Moving Average method (currently uses FIFO)
-    const orderBy =
-      method === ValuationMethod.FIFO || method === ValuationMethod.MOVING_AVERAGE
-        ? 'created_at ASC'
-        : 'created_at DESC';
+    switch (method) {
+      case ValuationMethod.MOVING_AVERAGE:
+        return this.consumeValuationMovingAverage(client, organizationId, itemId, variantId, warehouseId, quantity);
+      case ValuationMethod.LIFO:
+        return this.consumeValuationBatchOrdered(client, organizationId, itemId, variantId, warehouseId, quantity, 'DESC');
+      case ValuationMethod.FIFO:
+      default:
+        return this.consumeValuationBatchOrdered(client, organizationId, itemId, variantId, warehouseId, quantity, 'ASC');
+    }
+  }
+
+  /**
+   * FIFO/LIFO: Consume valuation by picking batches in creation order (ASC) or reverse (DESC).
+   * Each batch is consumed fully before moving to the next.
+   */
+  private async consumeValuationBatchOrdered(
+    client: PoolClient,
+    organizationId: string,
+    itemId: string,
+    variantId: string | null,
+    warehouseId: string,
+    quantity: number,
+    sortOrder: 'ASC' | 'DESC',
+  ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
     const result = await client.query(
       `SELECT id, remaining_quantity, cost_per_unit
        FROM stock_valuation
        WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
        AND remaining_quantity > 0
-       ORDER BY ${orderBy}
+       ORDER BY created_at ${sortOrder}
        FOR UPDATE`,
-      [organizationId, itemId, warehouseId],
+      [organizationId, itemId, warehouseId, variantId],
     );
 
     let remainingQty = quantity;
@@ -1371,7 +1895,6 @@ export class StockEntriesService {
       const consumeQty = Math.min(remainingQty, parseFloat(batch.remaining_quantity));
       const cost = parseFloat(batch.cost_per_unit) * consumeQty;
 
-      // Update remaining quantity
       await client.query(
         `UPDATE stock_valuation
          SET remaining_quantity = remaining_quantity - $1
@@ -1394,6 +1917,101 @@ export class StockEntriesService {
         `Insufficient valuation for ${quantity} units (short ${remainingQty})`,
       );
     }
+
+    return { totalCost, consumedBatches: consumed };
+  }
+
+  /**
+   * Moving Average: Compute weighted average cost across ALL remaining batches,
+   * then reduce all batches proportionally. The issue cost is the weighted average,
+   * not the cost of any specific batch.
+   *
+   * Formula: weightedAvgCost = SUM(remaining_qty * cost_per_unit) / SUM(remaining_qty)
+   * Issue cost = weightedAvgCost * quantity_issued
+   * Each batch reduced proportionally: batch.remaining -= (batch.remaining / totalRemaining) * quantity_issued
+   */
+  private async consumeValuationMovingAverage(
+    client: PoolClient,
+    organizationId: string,
+    itemId: string,
+    variantId: string | null,
+    warehouseId: string,
+    quantity: number,
+  ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
+    // Lock and fetch all remaining valuation batches
+    const result = await client.query(
+      `SELECT id, remaining_quantity, cost_per_unit
+       FROM stock_valuation
+       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
+       AND remaining_quantity > 0
+       ORDER BY created_at ASC
+       FOR UPDATE`,
+      [organizationId, itemId, warehouseId, variantId],
+    );
+
+    if (result.rows.length === 0) {
+      throw new BadRequestException(
+        `Insufficient valuation for ${quantity} units (no batches available)`,
+      );
+    }
+
+    // Calculate total remaining and weighted average cost
+    let totalRemaining = 0;
+    let weightedCostSum = 0;
+    for (const batch of result.rows) {
+      const remaining = parseFloat(batch.remaining_quantity);
+      const costPerUnit = parseFloat(batch.cost_per_unit);
+      totalRemaining += remaining;
+      weightedCostSum += remaining * costPerUnit;
+    }
+
+    if (totalRemaining < quantity) {
+      throw new BadRequestException(
+        `Insufficient valuation for ${quantity} units (available ${totalRemaining}, short ${quantity - totalRemaining})`,
+      );
+    }
+
+    const weightedAvgCost = weightedCostSum / totalRemaining;
+    const totalCost = weightedAvgCost * quantity;
+
+    // Reduce each batch proportionally to its share of total remaining
+    const consumed: Array<{ batchId: string; quantity: number; cost: number }> = [];
+    let qtyToDistribute = quantity;
+
+    for (let i = 0; i < result.rows.length; i++) {
+      const batch = result.rows[i];
+      const batchRemaining = parseFloat(batch.remaining_quantity);
+
+      // For the last batch, consume whatever is left to avoid rounding issues
+      const consumeFromBatch = i === result.rows.length - 1
+        ? qtyToDistribute
+        : (batchRemaining / totalRemaining) * quantity;
+
+      const clampedConsume = Math.min(consumeFromBatch, batchRemaining, qtyToDistribute);
+
+      if (clampedConsume > 0) {
+        await client.query(
+          `UPDATE stock_valuation
+           SET remaining_quantity = remaining_quantity - $1
+           WHERE id = $2`,
+          [clampedConsume, batch.id],
+        );
+
+        consumed.push({
+          batchId: batch.id,
+          quantity: clampedConsume,
+          cost: weightedAvgCost * clampedConsume,
+        });
+
+        qtyToDistribute -= clampedConsume;
+      }
+    }
+
+    this.logger.debug(
+      `Moving Average valuation: issued ${quantity} units at weighted avg cost ${weightedAvgCost.toFixed(4)}, ` +
+      `total cost ${totalCost.toFixed(2)} (${consumed.length} batches reduced)`,
+    );
 
     return { totalCost, consumedBatches: consumed };
   }

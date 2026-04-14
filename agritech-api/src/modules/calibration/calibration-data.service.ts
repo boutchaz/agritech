@@ -54,7 +54,7 @@ export { CALIBRATION_SATELLITE_INDICES };
  * | pleine_production  | 36 months                 |
  * | senescence         | 36 months                 |
  * | entree_production  | 24 months                 |
- * | juvenile           | Jan 1 of planting year    |
+ * | juvenile           | 12 months                 |
  * | No planting year   | 24 months (default)       |
  *
  * Phase thresholds come from the crop referentiel (e.g. olive: juvenile < 5y,
@@ -91,8 +91,9 @@ export function getCalibrationLookbackDate(
       start = new Date();
       start.setMonth(start.getMonth() - 36);
     } else if (phase === 'juvenile') {
-      // Young trees: from planting year
-      start = new Date(`${plantingYear}-01-01`);
+      // Young trees: recent season only (rolling 12 months)
+      start = new Date();
+      start.setMonth(start.getMonth() - 12);
     } else {
       // entree_production or unknown: 24 months
       start = new Date();
@@ -218,11 +219,9 @@ export interface WeatherDailyRow {
   shortwave_radiation_sum?: number | string | null;
   precipitation_sum: number | string | null;
   et0_fao_evapotranspiration: number | string | null;
-  gdd_olivier?: number | string | null;
-  gdd_agrumes?: number | string | null;
-  gdd_avocatier?: number | string | null;
-  gdd_palmier_dattier?: number | string | null;
   chill_hours?: number | string | null;
+  /** Generic GDD access — use gddColumn() to get the right key */
+  [key: `gdd_${string}`]: number | string | null | undefined;
 }
 
 export interface AnalysisRow {
@@ -578,6 +577,44 @@ export class CalibrationDataService {
     return required.filter((name) => !present.has(name));
   }
 
+  /**
+   * Fetch all July-August NDVI mean values for vegetation pre-check.
+   * Returns raw numeric array — caller applies thresholds.
+   */
+  async fetchSummerNdvi(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<number[]> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("satellite_indices_data")
+      .select("date, mean_value")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId)
+      .eq("index_name", "NDVI");
+
+    if (error) {
+      this.logger.warn(
+        `[fetchSummerNdvi] Failed to fetch NDVI for parcel ${parcelId}: ${error.message}`,
+      );
+      return [];
+    }
+
+    const summerValues: number[] = [];
+    for (const row of data ?? []) {
+      const dateStr = row.date as string;
+      if (!dateStr) continue;
+      const month = new Date(dateStr).getMonth() + 1; // 1-indexed
+      if (month !== 7 && month !== 8) continue;
+      const value = this.toNumber(row.mean_value);
+      if (value !== null) {
+        summerValues.push(value);
+      }
+    }
+
+    return summerValues;
+  }
+
   async fetchSatelliteImages(
     parcelId: string,
     organizationId: string,
@@ -652,9 +689,7 @@ export class CalibrationDataService {
 
     const { data, error } = await supabase
       .from("weather_daily_data")
-      .select(
-        "date, latitude, longitude, temperature_min, temperature_max, temperature_mean, relative_humidity_mean, wind_speed_max, shortwave_radiation_sum, precipitation_sum, et0_fao_evapotranspiration, gdd_olivier, gdd_agrumes, gdd_avocatier, gdd_palmier_dattier, chill_hours",
-      )
+      .select("*")
       .eq("latitude", roundedLatitude)
       .eq("longitude", roundedLongitude)
       .gte("date", sinceDate)
@@ -994,18 +1029,7 @@ export class CalibrationDataService {
   }
 
   hasMissingGdd(rows: WeatherDailyRow[], cropType: string): boolean {
-    const gddColumnByCrop: Record<string, keyof WeatherDailyRow> = {
-      olivier: "gdd_olivier",
-      agrumes: "gdd_agrumes",
-      avocatier: "gdd_avocatier",
-      palmier_dattier: "gdd_palmier_dattier",
-    };
-
-    const column = gddColumnByCrop[cropType];
-    if (!column) {
-      return false;
-    }
-
+    const column = `gdd_${cropType}` as keyof WeatherDailyRow;
     return rows.some((row) => this.toNumber(row[column]) === null);
   }
 
@@ -1097,6 +1121,99 @@ export class CalibrationDataService {
   extractCoefficientEtat(output: CalibrationResponse): number | null {
     const raw = (output as unknown as Record<string, unknown>).coefficient_etat_parcelle;
     return this.toNumber(raw);
+  }
+
+  /**
+   * Recalculate gdd_at_entry for phase transitions using pre-computed GDD
+   * stored in weather_gdd_daily. Just SUMs between date ranges — no formula.
+   * Persists corrected values back to calibrations.baseline_data.
+   */
+  async recalculatePhaseGdd(
+    phenology: Record<string, unknown>,
+    latitude: number,
+    longitude: number,
+    cropType: string,
+    calibrationId?: string,
+    organizationId?: string,
+  ): Promise<Record<string, unknown>> {
+    const phaseTimeline = phenology.phase_timeline as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(phaseTimeline) || phaseTimeline.length === 0) {
+      return phenology;
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const roundedLat = this.roundCoordinate(latitude, 2);
+    const roundedLon = this.roundCoordinate(longitude, 2);
+    const resetPhases = new Set(['repos', 'DORMANCE']);
+
+    const updatedTimeline = await Promise.all(
+      phaseTimeline.map(async (tl) => {
+        const transitions = tl.transitions as Array<Record<string, unknown>> | undefined;
+        if (!Array.isArray(transitions)) return tl;
+
+        // Find cycle start = first non-repos transition
+        let cycleStartDate: string | null = null;
+        for (const t of transitions) {
+          if (!resetPhases.has(t.phase as string)) {
+            cycleStartDate = t.start_date as string;
+            break;
+          }
+        }
+
+        const updatedTransitions = await Promise.all(
+          transitions.map(async (t) => {
+            const phase = t.phase as string;
+            const startDate = t.start_date as string;
+
+            if (resetPhases.has(phase)) {
+              return { ...t, gdd_at_entry: 0 };
+            }
+            if (!cycleStartDate || !startDate) return t;
+
+            // SUM(gdd_daily) from cycle start to this transition
+            const { data } = await supabase.rpc('sum_gdd_between', {
+              p_lat: roundedLat,
+              p_lon: roundedLon,
+              p_crop: cropType.toLowerCase(),
+              p_start: cycleStartDate,
+              p_end: startDate,
+            });
+
+            const gddSum = typeof data === 'number' ? data : 0;
+            return { ...t, gdd_at_entry: Math.round(gddSum * 100) / 100 };
+          }),
+        );
+
+        return { ...tl, transitions: updatedTransitions };
+      }),
+    );
+
+    const updatedPhenology = { ...phenology, phase_timeline: updatedTimeline };
+
+    // Persist corrected values back to DB
+    if (calibrationId && organizationId) {
+      const { data: cal } = await supabase
+        .from('calibrations')
+        .select('baseline_data')
+        .eq('id', calibrationId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (cal?.baseline_data) {
+        const baseline = typeof cal.baseline_data === 'object'
+          ? { ...cal.baseline_data as Record<string, unknown> }
+          : {};
+        baseline.phenology = updatedPhenology;
+        await supabase
+          .from('calibrations')
+          .update({ baseline_data: baseline })
+          .eq('id', calibrationId)
+          .eq('organization_id', organizationId);
+        this.logger.log(`Persisted recalculated GDD for calibration ${calibrationId}`);
+      }
+    }
+
+    return updatedPhenology;
   }
 
   extractBaselineData(output: CalibrationResponse): Record<string, unknown> {

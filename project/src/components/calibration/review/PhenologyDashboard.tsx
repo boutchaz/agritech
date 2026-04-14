@@ -14,6 +14,15 @@ const PHASE_COLORS: Record<string, string> = {
   NOUAISON: '#EF4444',
   STRESS_ESTIVAL: '#DC2626',
   REPRISE_AUTOMNALE: '#3B82F6',
+  // phase_kc (8-stage) colors
+  repos: '#9CA3AF',
+  debourrement: '#22C55E',
+  croissance: '#10B981',
+  floraison: '#F59E0B',
+  nouaison: '#EF4444',
+  grossissement: '#F97316',
+  maturation: '#8B5CF6',
+  post_recolte: '#3B82F6',
 };
 
 const PHASE_LABELS: Record<string, string> = {
@@ -23,7 +32,44 @@ const PHASE_LABELS: Record<string, string> = {
   NOUAISON: 'Nouaison',
   STRESS_ESTIVAL: 'Stress estival',
   REPRISE_AUTOMNALE: 'Reprise automnale',
+  // phase_kc (8-stage) labels
+  repos: 'Repos',
+  debourrement: 'Débourrement',
+  croissance: 'Croissance',
+  floraison: 'Floraison',
+  nouaison: 'Nouaison',
+  grossissement: 'Grossissement',
+  maturation: 'Maturation',
+  post_recolte: 'Post Récolte',
 };
+
+/**
+ * Canonical 8-stage phase_kc order (olive agronomic cycle from stades_bbch).
+ * This is the ONLY display order — all dashboard components use this.
+ */
+const CANONICAL_PHASES: string[] = [
+  'repos', 'debourrement', 'croissance', 'floraison',
+  'nouaison', 'grossissement', 'maturation', 'post_recolte',
+];
+
+/**
+ * Map 6-phase state machine names → canonical phase_kc names.
+ * Allows dashboard to normalize any format to the 8-stage display.
+ */
+const PHASE_TO_CANONICAL: Record<string, string> = {
+  // 6-phase → 8-phase mapping
+  DORMANCE: 'repos',
+  DEBOURREMENT: 'debourrement',
+  FLORAISON: 'floraison',
+  NOUAISON: 'nouaison',
+  STRESS_ESTIVAL: 'grossissement', // summer stress ≈ fruit growth period
+  REPRISE_AUTOMNALE: 'post_recolte', // autumn recovery ≈ post-harvest
+};
+
+function toCanonicalPhase(phase: string): string {
+  return PHASE_TO_CANONICAL[phase] ?? phase;
+}
+
 
 /** Month labels for the timeline header */
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -54,33 +100,50 @@ function getPhaseColor(phase: string): string {
   return fallback[hash % fallback.length];
 }
 
+/**
+ * Filter out incomplete cycles (all transitions crammed within ~15 days = bad data).
+ */
+function isCompleteCycle(timeline: SeasonTimelineEntry): boolean {
+  const dates = timeline.transitions
+    .map((t) => t.start_date)
+    .filter(Boolean)
+    .sort();
+  if (dates.length < 3) return false;
+  const first = new Date(dates[0]).getTime();
+  const last = new Date(dates[dates.length - 1]).getTime();
+  const spanDays = (last - first) / (1000 * 60 * 60 * 24);
+  return spanDays > 30; // cycle must span at least 30 days
+}
+
 // ── Phase Summary Cards ──
 
 function PhaseSummaryCards({ timelines }: { timelines: SeasonTimelineEntry[] }) {
   const summaries = useMemo(() => {
-    const acc = new Map<string, { phase: string; gddSum: number; count: number }>();
+    const validTimelines = timelines.filter(isCompleteCycle);
+    const source = validTimelines.length > 0 ? validTimelines : timelines;
 
-    for (const timeline of timelines) {
+    // Accumulate GDD per canonical phase
+    const acc = new Map<string, { gddSum: number; count: number }>();
+    for (const timeline of source) {
       for (const transition of timeline.transitions) {
         if (!transition.phase || !transition.start_date) continue;
-
-        const current = acc.get(transition.phase) ?? {
-          phase: transition.phase,
-          gddSum: 0,
-          count: 0,
-        };
+        const canonical = toCanonicalPhase(transition.phase);
+        const current = acc.get(canonical) ?? { gddSum: 0, count: 0 };
         current.gddSum += transition.gdd_at_entry;
         current.count += 1;
-        acc.set(transition.phase, current);
+        acc.set(canonical, current);
       }
     }
 
-    return Array.from(acc.values())
-      .map((item) => ({
-        ...item,
-        gddAvg: item.count > 0 ? item.gddSum / item.count : 0,
-      }))
-      .sort((a, b) => a.gddAvg - b.gddAvg);
+    // Always show all 8 canonical phases
+    return CANONICAL_PHASES.map((phase) => {
+      const data = acc.get(phase);
+      return {
+        phase,
+        gddAvg: data && data.count > 0 ? data.gddSum / data.count : 0,
+        validCycles: data?.count ?? 0,
+      };
+    });
   }, [timelines]);
 
   if (summaries.length === 0) return null;
@@ -96,11 +159,11 @@ function PhaseSummaryCards({ timelines }: { timelines: SeasonTimelineEntry[] }) 
             {formatPhaseLabel(summary.phase)}
           </span>
           <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {summary.gddAvg.toFixed(1)}
+            {summary.validCycles > 0 ? summary.gddAvg.toFixed(1) : '—'}
           </span>
           <div className="flex gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
             <span>GDD moyen entrée</span>
-            <span>{summary.count} cycles</span>
+            <span>{summary.validCycles} cycle{summary.validCycles !== 1 ? 's' : ''}</span>
           </div>
         </div>
       ))}
@@ -118,12 +181,13 @@ function TimelineBar({ timeline }: { timeline: SeasonTimelineEntry }) {
         const start = dateToMonthPosition(t.start_date);
         const end = t.end_date ? dateToMonthPosition(t.end_date) : start + 1;
         const width = Math.max(end - start, 0.3);
+        const canonical = toCanonicalPhase(t.phase);
         return {
-          phase: t.phase,
+          phase: canonical,
           left: (start / 12) * 100,
           width: (width / 12) * 100,
-          color: getPhaseColor(t.phase),
-          label: formatPhaseLabel(t.phase),
+          color: getPhaseColor(canonical),
+          label: formatPhaseLabel(canonical),
         };
       });
   }, [timeline.transitions]);
@@ -155,47 +219,42 @@ function TimelineBar({ timeline }: { timeline: SeasonTimelineEntry }) {
 
 function PhaseMetricsTable({ timelines }: { timelines: SeasonTimelineEntry[] }) {
   const rows = useMemo(() => {
-    const result: Array<{
-      phase: string;
-      gdd: number;
-      samples: number;
-      confidence: string;
-    }> = [];
+    const validTimelines = timelines.filter(isCompleteCycle);
+    const source = validTimelines.length > 0 ? validTimelines : timelines;
 
+    // Accumulate per canonical phase
     const byPhase = new Map<
       string,
-      { phase: string; gddSum: number; count: number; confidenceCount: Record<string, number> }
+      { gddSum: number; count: number; confidenceCount: Record<string, number> }
     >();
 
-    for (const tl of timelines) {
+    for (const tl of source) {
       for (const transition of tl.transitions) {
         if (!transition.phase || !transition.start_date) continue;
-
-        const current = byPhase.get(transition.phase) ?? {
-          phase: transition.phase,
-          gddSum: 0,
-          count: 0,
-          confidenceCount: {},
-        };
+        const canonical = toCanonicalPhase(transition.phase);
+        const current = byPhase.get(canonical) ?? { gddSum: 0, count: 0, confidenceCount: {} };
         current.gddSum += transition.gdd_at_entry;
         current.count += 1;
         current.confidenceCount[transition.confidence] =
           (current.confidenceCount[transition.confidence] ?? 0) + 1;
-        byPhase.set(transition.phase, current);
+        byPhase.set(canonical, current);
       }
     }
 
-    for (const item of byPhase.values()) {
-      const dominantConfidence = Object.entries(item.confidenceCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'MODEREE';
-      result.push({
-        phase: formatPhaseLabel(item.phase),
-        gdd: Math.round((item.gddSum / item.count) * 10) / 10,
-        samples: item.count,
+    // Always show all 8 canonical phases
+    return CANONICAL_PHASES.map((phase) => {
+      const item = byPhase.get(phase);
+      const dominantConfidence = item
+        ? Object.entries(item.confidenceCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'MODEREE'
+        : '—';
+      return {
+        phaseKey: phase,
+        phase: formatPhaseLabel(phase),
+        gdd: item && item.count > 0 ? Math.round((item.gddSum / item.count) * 10) / 10 : 0,
+        samples: item?.count ?? 0,
         confidence: dominantConfidence,
-      });
-    }
-
-    return result.sort((a, b) => a.gdd - b.gdd);
+      };
+    });
   }, [timelines]);
 
   if (rows.length === 0) return null;
@@ -247,18 +306,6 @@ function ConfidenceBadge({ level }: { level: string }) {
 
 export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
   const { t } = useTranslation('ai');
-  const phasesInTimeline = useMemo(() => {
-    const seen = new Set<string>();
-    const ordered: string[] = [];
-    for (const tl of data.timelines) {
-      for (const transition of tl.transitions) {
-        if (!transition.phase || seen.has(transition.phase)) continue;
-        seen.add(transition.phase);
-        ordered.push(transition.phase);
-      }
-    }
-    return ordered;
-  }, [data.timelines]);
 
   if (!data.available) {
     return null;
@@ -329,9 +376,9 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
             ))}
           </div>
 
-          {/* Legend */}
+          {/* Legend — always shows all 8 canonical phases */}
           <div className="flex flex-wrap gap-3 mt-3">
-            {phasesInTimeline.map((phase) => (
+            {CANONICAL_PHASES.map((phase) => (
                 <div key={phase} className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPhaseColor(phase) }} />
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">

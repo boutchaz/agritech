@@ -63,9 +63,18 @@ export const stockEntriesApi = {
   /**
    * Cancel a stock entry
    */
-  async cancel(id: string, organizationId?: string): Promise<StockEntry> {
-    return apiClient.patch<StockEntry>(`${BASE_URL}/${id}/cancel`, {}, {}, organizationId);
-  },
+    async cancel(id: string, organizationId?: string): Promise<StockEntry> {
+     return apiClient.patch<StockEntry>(`${BASE_URL}/${id}/cancel`, {}, {}, organizationId);
+   },
+
+   async reverse(id: string, reason: string, organizationId?: string): Promise<{
+     original_entry_id: string;
+     reversal_entry_id: string;
+     reversal_number: string;
+     message: string;
+   }> {
+     return apiClient.post(`${BASE_URL}/${id}/reverse`, { reason }, {}, organizationId);
+   },
 
   /**
    * Delete a draft stock entry

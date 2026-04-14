@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check } from 'lucide-react';
+import { AlertTriangle, Check } from 'lucide-react';
 import { useForm, type FieldPath, type Resolver } from 'react-hook-form';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { analysesApi } from '@/lib/api/analyses';
 import { useStartCalibration } from '@/hooks/useCalibrationReport';
 import { useAuth } from '@/hooks/useAuth';
@@ -71,6 +79,10 @@ export function CalibrationWizard({ parcelId, parcelData, onStarted }: Calibrati
   const { t } = useTranslation('ai');
   const { currentOrganization } = useAuth();
   const startCalibration = useStartCalibration(parcelId);
+  const [vegetationError, setVegetationError] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
 
   const STEPS: WizardStepDefinition[] = useMemo(
     () => [
@@ -416,36 +428,52 @@ export function CalibrationWizard({ parcelId, parcelData, onStarted }: Calibrati
 
     await createAnalysesFromWizard(wizardValues);
 
-    await startCalibration.mutateAsync({
-      // Only send fields accepted by StartCalibrationDto
-      real_tree_count: wizardValues.real_tree_count,
-      real_spacing: wizardValues.real_spacing,
-      water_source: wizardValues.water_source,
-      water_source_changed: wizardValues.water_source_changed,
-      water_source_change_date: toMonthDate(wizardValues.water_source_change_date),
-      previous_water_source: wizardValues.previous_water_source,
-      irrigation_frequency: wizardValues.irrigation_frequency,
-      volume_per_tree_liters: wizardValues.volume_per_tree_liters,
-      irrigation_regime_changed: wizardValues.irrigation_regime_changed,
-      irrigation_change_date: toMonthDate(wizardValues.irrigation_change_date),
-      previous_irrigation_frequency: wizardValues.previous_irrigation_frequency,
-      previous_volume_per_tree_liters: wizardValues.previous_volume_per_tree_liters,
-      harvest_regularity: wizardValues.harvest_regularity,
-      pruning_type: wizardValues.pruning_type,
-      last_pruning_date: toMonthDate(wizardValues.last_pruning_date),
-      pruning_intensity: wizardValues.pruning_intensity,
-      past_fertilization: wizardValues.past_fertilization,
-      fertilization_type: wizardValues.fertilization_type,
-      biostimulants_used: wizardValues.biostimulants_used,
-      stress_events: wizardValues.stress_events,
-      observations: wizardValues.observations,
-    });
+    try {
+      const result = await startCalibration.mutateAsync({
+        // Only send fields accepted by StartCalibrationDto
+        real_tree_count: wizardValues.real_tree_count,
+        real_spacing: wizardValues.real_spacing,
+        water_source: wizardValues.water_source,
+        water_source_changed: wizardValues.water_source_changed,
+        water_source_change_date: toMonthDate(wizardValues.water_source_change_date),
+        previous_water_source: wizardValues.previous_water_source,
+        irrigation_frequency: wizardValues.irrigation_frequency,
+        volume_per_tree_liters: wizardValues.volume_per_tree_liters,
+        irrigation_regime_changed: wizardValues.irrigation_regime_changed,
+        irrigation_change_date: toMonthDate(wizardValues.irrigation_change_date),
+        previous_irrigation_frequency: wizardValues.previous_irrigation_frequency,
+        previous_volume_per_tree_liters: wizardValues.previous_volume_per_tree_liters,
+        harvest_regularity: wizardValues.harvest_regularity,
+        pruning_type: wizardValues.pruning_type,
+        last_pruning_date: toMonthDate(wizardValues.last_pruning_date),
+        pruning_intensity: wizardValues.pruning_intensity,
+        past_fertilization: wizardValues.past_fertilization,
+        fertilization_type: wizardValues.fertilization_type,
+        biostimulants_used: wizardValues.biostimulants_used,
+        stress_events: wizardValues.stress_events,
+        observations: wizardValues.observations,
+      });
 
-    // Keep draft until calibration completes successfully.
-    // If processing fails, the user can retry without re-entering data.
-    resetStore();
-    onStarted?.();
-    toast.success('Calibrage lance.');
+      // Check for ZONE_GRISE warning in successful response
+      if ((result as unknown as Record<string, unknown>)?.vegetation_check_status === 'ZONE_GRISE') {
+        toast.warning(t('calibration.vegetationCheck.titleZoneGrise'));
+      }
+
+      resetStore();
+      onStarted?.();
+      toast.success('Calibrage lance.');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { vegetation_status?: string; user_message?: { title?: string; body?: string } } } };
+      if (err?.response?.data?.vegetation_status === 'PARCELLE_VIDE') {
+        const msg = err.response.data.user_message;
+        setVegetationError({
+          title: msg?.title ?? t('calibration.vegetationCheck.titleParcelleVide'),
+          body: msg?.body ?? t('calibration.vegetationCheck.bodyParcelleVide'),
+        });
+        return;
+      }
+      throw error;
+    }
   };
 
   const renderStepContent = () => {
@@ -644,6 +672,25 @@ export function CalibrationWizard({ parcelId, parcelData, onStarted }: Calibrati
           </div>
         </div>
       </form>
+
+      <Dialog open={!!vegetationError} onOpenChange={() => setVegetationError(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              {vegetationError?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">
+              {vegetationError?.body}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVegetationError(null)}>
+              {t('calibration.vegetationCheck.correctParcel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

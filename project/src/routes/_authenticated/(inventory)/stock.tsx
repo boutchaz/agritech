@@ -77,13 +77,14 @@ const AppContent = () => {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
           <div
             className={cn(
-              'flex w-full min-w-0',
+              'relative flex w-full min-w-0',
               isRTL ? 'justify-end' : 'justify-start',
             )}
           >
+            <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l from-white to-transparent dark:from-gray-900 sm:hidden" aria-hidden="true" />
             <TabsList
               dir={isRTL ? 'rtl' : 'ltr'}
-              className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+              className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:overflow-visible"
             >
               {tabs.map((tab) => (
                 <TabsTrigger

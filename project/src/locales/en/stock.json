@@ -323,6 +323,51 @@
       "goToSettings": "Go to Work Units Settings",
       "noUnitsFound": "No work units found. Create units in settings first.",
       "loadingUnits": "Loading units..."
+    },
+    "timeline": {
+      "title": "Stock movement history",
+      "description": "Full movement timeline for {{itemName}}",
+      "open": "History",
+      "quantity": "Quantity",
+      "warehouse": "Warehouse",
+      "runningBalance": "Running balance",
+      "postedBy": "Posted by",
+      "fromWarehouse": "From",
+      "toWarehouse": "To",
+      "unknownUser": "Unknown user",
+      "noReference": "No reference",
+      "refreshing": "Refreshing...",
+      "retry": "Retry",
+      "count_one": "{{count}} movement",
+      "count_other": "{{count}} movements",
+      "emptyTitle": "No stock movements found",
+      "emptyDescription": "This item has no stock movement history for the selected filters.",
+      "errorTitle": "Unable to load movement history",
+      "errorDescription": "Please try again.",
+      "types": {
+        "IN": "IN",
+        "OUT": "OUT",
+        "TRANSFER": "TRANSFER"
+      },
+      "filters": {
+        "fromDate": "From date",
+        "toDate": "To date",
+        "movementType": "Movement type",
+        "all": "All movements"
+      },
+      "summary": {
+        "totalIn": "Total in",
+        "totalOut": "Total out",
+        "currentBalance": "Current balance"
+      },
+      "table": {
+        "date": "Date / time",
+        "type": "Type",
+        "quantity": "Quantity",
+        "warehouse": "Warehouse",
+        "runningBalance": "Running balance",
+        "postedBy": "Posted by"
+      }
     }
   },
   "stockEntries": {

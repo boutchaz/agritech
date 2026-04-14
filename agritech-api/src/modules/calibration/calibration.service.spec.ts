@@ -20,6 +20,15 @@ import { NotificationsGateway } from '../notifications/notifications.gateway';
 import { AnnualPlanService } from '../annual-plan/annual-plan.service';
 import { SatelliteProxyService } from '../satellite-indices/satellite-proxy.service';
 import { CalibrationReviewAdapter } from './calibration-review.adapter';
+import { CalibrationDraftService } from './calibration-draft.service';
+import { CalibrationDataService } from './calibration-data.service';
+import { UnprocessableEntityException } from '@nestjs/common';
+
+const mockDraftService = {
+  getDraft: jest.fn(),
+  saveDraft: jest.fn(),
+  deleteDraft: jest.fn(),
+};
 
 const mockAIReportsService = {
   generateReport: jest.fn().mockResolvedValue({ sections: {}, report: {} }),
@@ -90,6 +99,8 @@ describe('CalibrationService', () => {
         { provide: NotificationsGateway, useValue: mockNotificationsGateway },
         { provide: AnnualPlanService, useValue: mockAnnualPlanService },
         { provide: CalibrationReviewAdapter, useValue: mockCalibrationReviewAdapter },
+        { provide: CalibrationDraftService, useValue: mockDraftService },
+        { provide: CalibrationDataService, useClass: CalibrationDataService },
       ],
     }).compile();
 
@@ -549,5 +560,103 @@ describe('CalibrationService', () => {
       organizationId,
     );
     expect(mockStateMachine.transitionPhase).toHaveBeenCalledTimes(1);
+  });
+
+  it('startCalibration throws 422 when vegetation check detects PARCELLE_VIDE', async () => {
+    const parcelQuery = createMockQueryBuilder();
+    parcelQuery.select.mockReturnValue(parcelQuery);
+    parcelQuery.eq.mockReturnValue(parcelQuery);
+    parcelQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: parcelId,
+        crop_type: agromindCalibrationFixture.parcel.crop_type,
+        planting_system: agromindCalibrationFixture.parcel.system,
+        planting_year: 2010, // age > 4
+        variety: 'picholine_marocaine',
+        ai_phase: 'ready_calibration',
+        boundary: parcelBoundary,
+        organization_id: organizationId,
+        farms: { organization_id: organizationId },
+      }),
+    );
+
+    // Summer NDVI values that trigger PARCELLE_VIDE (mean < 0.15, min < 0.10)
+    const summerNdviQuery = createMockQueryBuilder();
+    summerNdviQuery.select.mockReturnValue(summerNdviQuery);
+    summerNdviQuery.eq.mockReturnValue(summerNdviQuery);
+    setupThenableMock(summerNdviQuery, [
+      { date: '2025-07-15', mean_value: 0.05 },
+      { date: '2025-08-10', mean_value: 0.08 },
+      { date: '2024-07-20', mean_value: 0.06 },
+    ]);
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelQuery;
+      if (table === 'satellite_indices_data') return summerNdviQuery;
+      return createMockQueryBuilder();
+    });
+
+    await expect(
+      service.startCalibration(parcelId, organizationId, {}, { skipReadinessCheck: true }),
+    ).rejects.toThrow(UnprocessableEntityException);
+
+    // Parcel state should NOT have been transitioned
+    expect(mockStateMachine.transitionPhase).not.toHaveBeenCalled();
+  });
+
+  it('startCalibration stores ZONE_GRISE in profile_snapshot when vegetation is mixed', async () => {
+    const parcelQuery = createMockQueryBuilder();
+    parcelQuery.select.mockReturnValue(parcelQuery);
+    parcelQuery.eq.mockReturnValue(parcelQuery);
+    parcelQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: parcelId,
+        crop_type: agromindCalibrationFixture.parcel.crop_type,
+        planting_system: agromindCalibrationFixture.parcel.system,
+        planting_year: 2010,
+        variety: 'picholine_marocaine',
+        ai_phase: 'ready_calibration',
+        boundary: parcelBoundary,
+        organization_id: organizationId,
+        farms: { organization_id: organizationId },
+      }),
+    );
+
+    // Summer NDVI in grey zone (mean=0.22, min=0.15 — neither confirmed nor empty)
+    const summerNdviQuery = createMockQueryBuilder();
+    summerNdviQuery.select.mockReturnValue(summerNdviQuery);
+    summerNdviQuery.eq.mockReturnValue(summerNdviQuery);
+    setupThenableMock(summerNdviQuery, [
+      { date: '2025-07-15', mean_value: 0.22 },
+      { date: '2025-08-10', mean_value: 0.15 },
+      { date: '2024-07-20', mean_value: 0.29 },
+    ]);
+
+    const insertQuery = createMockQueryBuilder();
+    insertQuery.insert.mockReturnValue(insertQuery);
+    insertQuery.select.mockReturnValue(insertQuery);
+    insertQuery.single.mockResolvedValue(
+      mockQueryResult({
+        id: 'calibration-zone-grise',
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        status: 'in_progress',
+        type: 'initial',
+        calibration_version: 'v3',
+        profile_snapshot: {},
+      }),
+    );
+
+    mockClient.from.mockImplementation((table: string) => {
+      if (table === 'parcels') return parcelQuery;
+      if (table === 'satellite_indices_data') return summerNdviQuery;
+      if (table === 'calibrations') return insertQuery;
+      return createMockQueryBuilder();
+    });
+
+    await service.startCalibration(parcelId, organizationId, {}, { skipReadinessCheck: true });
+
+    const insertCall = insertQuery.insert.mock.calls[0][0];
+    expect(insertCall.profile_snapshot.vegetation_check_status).toBe('ZONE_GRISE');
   });
 });

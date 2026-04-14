@@ -108,12 +108,19 @@ export function useCalibrationProgress(parcelId: string): CalibrationProgressEve
       }
     };
 
+    const handleFailed = (data: CalibrationFailedEvent) => {
+      if (data.parcel_id !== parcelId) return;
+      setProgress(null);
+    };
+
     const unsubProgress = socketManager.on('calibration:progress', handleProgress);
     const unsubPhase = socketManager.on('calibration:phase-changed', handlePhaseChanged);
+    const unsubFailed = socketManager.on('calibration:failed', handleFailed);
 
     return () => {
       unsubProgress();
       unsubPhase();
+      unsubFailed();
     };
   }, [parcelId]);
 

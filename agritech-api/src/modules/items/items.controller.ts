@@ -176,6 +176,14 @@ export class ItemsController {
     });
   }
 
+  @Get('deleted')
+  @ApiOperation({ summary: 'Get soft-deleted items with optional filters' })
+  @ApiResponse({ status: 200, description: 'Deleted items retrieved successfully' })
+  async findDeletedItems(@Req() req: any, @Query() filters: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.findDeletedItems(organizationId, filters);
+  }
+
   // =====================================================
   // STOCK LEVELS & FARM INTEGRATION ENDPOINTS
   // =====================================================
@@ -327,6 +335,15 @@ export class ItemsController {
     createItemDto.organization_id = organizationId;
     createItemDto.created_by = req.user.sub;
     return this.itemsService.createItem(createItemDto);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item restored successfully' })
+  async restoreItem(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.restoreItem(id, organizationId);
   }
 
   @Patch(':id')

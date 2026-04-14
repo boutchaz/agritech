@@ -362,3 +362,51 @@ def test_olive_bbch_baseline_months_from_phase_00_only() -> None:
         reference_data=ref,
     )
     assert result[-1]["gdd_olivier"] == 9.5
+
+
+# ---------------------------------------------------------------------------
+# Generic gdd_column parameter
+# ---------------------------------------------------------------------------
+
+
+def test_two_phase_custom_gdd_column() -> None:
+    """compute_olive_gdd_two_phase writes to the specified gdd_column, not hardcoded gdd_olivier."""
+    # Input rows without gdd_olivier — only raw temperatures
+    rows = [
+        {"date": "2024-12-01", "temperature_max": 5.0, "temperature_min": -2.0},
+        {"date": "2024-12-15", "temperature_max": 4.0, "temperature_min": -1.0},
+        {"date": "2025-03-15", "temperature_max": 22.0, "temperature_min": 12.0},
+    ]
+    result = compute_olive_gdd_two_phase(
+        rows, chill_threshold=10, nirv_series=[], gdd_column="gdd_my_crop",
+    )
+    # Should write to custom column
+    assert "gdd_my_crop" in result[-1]
+    assert result[-1]["gdd_my_crop"] == 9.5
+    # Should NOT have gdd_olivier since input didn't have it
+    assert "gdd_olivier" not in result[-1]
+
+
+def test_precompute_gdd_rows_uses_dynamic_column() -> None:
+    """precompute_gdd_rows uses f'gdd_{crop_type}' — not hardcoded column names."""
+    rows = [
+        {
+            "date": "2025-06-01",
+            "temperature_max": 42.0,
+            "temperature_min": 28.0,
+            "gdd_agrumes": None,
+        },
+    ]
+    result, count = precompute_gdd_rows(rows, "agrumes")
+    assert count == 1
+    # Column name derived from crop_type
+    assert f"gdd_agrumes" in result[0]
+    assert result[0]["gdd_agrumes"] == 19.0
+
+
+def test_precompute_gdd_rows_unknown_crop_noop() -> None:
+    """Crops not in CROP_TYPE_TO_REFERENTIAL_JSON are skipped — no crash."""
+    rows = [{"date": "2025-01-01", "temperature_max": 30.0, "temperature_min": 20.0}]
+    result, count = precompute_gdd_rows(rows, "unknown_crop")
+    assert count == 0
+    assert result == rows

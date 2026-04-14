@@ -196,3 +196,5 @@ def _extract_centroid_from_boundary(boundary) -> tuple:
         return (lat_wgs84, lon_wgs84)
 
     return (avg_lat, avg_lon)
+
+

@@ -268,6 +268,18 @@ export class StockEntriesController {
     return this.stockEntriesService.cancelStockEntry(id, organizationId, userId);
   }
 
+  @Post(':id/reverse')
+  @ApiOperation({ summary: 'Reverse a posted stock entry' })
+  @ApiParam({ name: 'id', description: 'Stock entry ID' })
+  @ApiResponse({ status: 200, description: 'Stock entry reversed successfully' })
+  @ApiResponse({ status: 400, description: 'Stock entry cannot be reversed' })
+  @ApiResponse({ status: 404, description: 'Stock entry not found' })
+  async reverse(@Param('id') id: string, @Req() req: any, @Body() body: { reason: string }) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.stockEntriesService.reverseStockEntry(id, organizationId, userId, body.reason);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })

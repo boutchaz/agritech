@@ -110,7 +110,7 @@ export class CalibrationExportService {
 
     const { data: parcelRow, error: parcelError } = await supabase
       .from("parcels")
-      .select("planting_year")
+      .select("planting_year, crop_type")
       .eq("id", record.parcel_id)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -125,6 +125,10 @@ export class CalibrationExportService {
       parcelRow && typeof (parcelRow as { planting_year?: unknown }).planting_year === "number"
         ? (parcelRow as { planting_year: number }).planting_year
         : null;
+    const cropType =
+      parcelRow && typeof (parcelRow as { crop_type?: unknown }).crop_type === "string"
+        ? (parcelRow as { crop_type: string }).crop_type
+        : null;
 
     const snapshotInput: CalibrationSnapshotInput = {
       calibration_id: record.id,
@@ -138,6 +142,7 @@ export class CalibrationExportService {
         record.phenology_stage ??
         (typeof output.phase_age === "string" ? output.phase_age : "unknown"),
       organization_id: record.organization_id,
+      crop_type: cropType,
       planting_year: plantingYear,
       calibration_history: history.map((item) => ({
         id: item.id,

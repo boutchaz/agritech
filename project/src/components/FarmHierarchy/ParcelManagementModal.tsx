@@ -644,11 +644,22 @@ const ParcelManagementModal = ({
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {availablePlantingSystems.map((system) => (
-                                <SelectItem key={system.type} value={system.type}>
-                                  {system.type} ({system.spacing})
-                                </SelectItem>
-                              ))}
+                              {availablePlantingSystems.map((system) => {
+                                const uniqueValue = `${system.type} (${system.spacing})`;
+                                return (
+                                  <SelectItem key={uniqueValue} value={uniqueValue}>
+                                    {system.type} ({system.spacing}) — {
+                                      "treesPerHectare" in system
+                                        ? `${system.treesPerHectare} arb/ha`
+                                        : "plantsPerHectare" in system
+                                          ? `${(system as { plantsPerHectare: number }).plantsPerHectare} plants/ha`
+                                          : "seedsPerHectare" in system
+                                            ? `${(system as { seedingRate: string }).seedingRate}`
+                                            : ""
+                                    }
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </FormField>

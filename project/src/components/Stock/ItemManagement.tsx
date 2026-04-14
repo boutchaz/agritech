@@ -22,7 +22,6 @@ import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -53,7 +52,7 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
@@ -65,6 +64,7 @@ import LowStockAlerts from './LowStockAlerts';
 import FarmStockLevels from './FarmStockLevels';
 import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 
@@ -150,7 +150,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       onOpenChange(false);
       onSuccess?.();
     } catch (error: unknown) {
-      toast.error(`Failed to create item group: ${error instanceof Error ? error.message : ''}`);
+      toast.error(t('items.itemGroup.createFailed'));
     }
   };
 
@@ -434,7 +434,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     >
 
         <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="item_code">{t('items.itemCode')} *</Label>
               <Input
@@ -487,7 +487,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             {itemGroups.length === 0 ? (
               <div className="mt-1 p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {t('items.itemGroup.noGroupsFound')}
+                  {t('items.itemGroup.noGroups')}
                 </p>
                 <Button
                   type="button"
@@ -575,7 +575,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="default_unit">{t('items.defaultUnit')} *</Label>
@@ -680,35 +680,39 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_active')}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_active" className="text-sm cursor-pointer">{t('items.active')}</Label>
+              <Switch
+                id="is_active"
+                checked={watch('is_active') ?? true}
+                onCheckedChange={(checked) => setValue('is_active', checked)}
               />
-              <span className="text-sm">{t('items.active')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_sales_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_sales_item" className="text-sm cursor-pointer">{t('items.salesItem')}</Label>
+              <Switch
+                id="is_sales_item"
+                checked={watch('is_sales_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_sales_item', checked)}
               />
-              <span className="text-sm">{t('items.salesItem')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_purchase_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_purchase_item" className="text-sm cursor-pointer">{t('items.purchaseItem')}</Label>
+              <Switch
+                id="is_purchase_item"
+                checked={watch('is_purchase_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_purchase_item', checked)}
               />
-              <span className="text-sm">{t('items.purchaseItem')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_stock_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_stock_item" className="text-sm cursor-pointer">{t('items.stockItem')}</Label>
+              <Switch
+                id="is_stock_item"
+                checked={watch('is_stock_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_stock_item', checked)}
               />
-              <span className="text-sm">{t('items.stockItem')}</span>
-            </label>
+            </div>
           </div>
 
           {watch('is_sales_item') && (
@@ -933,6 +937,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   const updateVariant = useUpdateItemVariant();
   const deleteVariant = useDeleteItemVariant();
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const [variantToDelete, setVariantToDelete] = useState<ProductVariant | null>(null);
 
   // Fetch work units for unit selection
   const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
@@ -1053,15 +1058,19 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   };
 
   const handleDelete = async (variant: ProductVariant) => {
-    if (!window.confirm(t('items.variants.deleteConfirm', 'Delete this variant?'))) {
-      return;
-    }
+    setVariantToDelete(variant);
+  };
+
+  const confirmVariantDelete = async () => {
+    if (!variantToDelete) return;
 
     try {
-      await deleteVariant.mutateAsync(variant.id);
+      await deleteVariant.mutateAsync(variantToDelete.id);
       toast.success(t('items.variants.deleted', 'Variant deleted'));
     } catch (error: unknown) {
       toast.error(`Failed to delete variant: ${error instanceof Error ? error.message : ''}`);
+    } finally {
+      setVariantToDelete(null);
     }
   };
 
@@ -1353,6 +1362,33 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
             )}
           </div>
         </div>
+
+      <AlertDialog open={!!variantToDelete} onOpenChange={(open) => !open && setVariantToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('items.variants.deleteTitle', 'Delete Variant')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('items.variants.deleteConfirm', 'Are you sure you want to delete this variant? This action cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmVariantDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteVariant.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t('items.deleting')}
+                </>
+              ) : (
+                t('items.delete')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ResponsiveDialog>
   );
 }
@@ -1375,8 +1411,7 @@ export default function ItemManagement() {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const [timelineItem, setTimelineItem] = useState<Item | null>(null);
 
   // Fetch stock levels for items with farm context
   const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
@@ -1639,6 +1674,15 @@ export default function ItemManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setTimelineItem(item)}
+                        className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
+                        title={t('items.timeline.open', 'History')}
+                      >
+                        <Clock3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setSelectedItemForDetails(item)}
                         className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
                         title={t('items.viewDetails', 'View Details')}
@@ -1752,6 +1796,15 @@ export default function ItemManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => setTimelineItem(item)}
+                        className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
+                        title={t('items.timeline.open', 'History')}
+                      >
+                        <Clock3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setSelectedItemForDetails(item)}
                         className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
                         title={t('items.viewDetails', 'View Details')}
@@ -1789,6 +1842,14 @@ export default function ItemManagement() {
           }
         }}
       />
+
+      {timelineItem && (
+        <ItemStockTimeline
+          itemId={timelineItem.id}
+          itemName={timelineItem.item_name}
+          onClose={() => setTimelineItem(null)}
+        />
+      )}
 
       {/* Item Details Dialog */}
       {selectedItemForDetails && (
@@ -1845,15 +1906,7 @@ export default function ItemManagement() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={confirmAction.title}
-        description={confirmAction.description}
-        variant={confirmAction.variant}
-        onConfirm={confirmAction.onConfirm}
-      />
-    </>
+       </AlertDialog>
+     </>
   );
 }

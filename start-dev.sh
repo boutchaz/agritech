@@ -1,6 +1,6 @@
 #!/bin/bash
 # AgriTech Development Environment - Start All Services
-# This script starts Supabase, Backend API, Satellite Service, and Frontend
+# This script starts Supabase, Backend API, Frontend, Marketplace, and Admin App
 
 set -e
 
@@ -16,42 +16,25 @@ echo "=========================================="
 echo ""
 
 # ========================================
-# 1. Start Supabase (Docker)
+# 1. Start Supabase (CLI)
 # ========================================
 echo "📦 Starting Supabase..."
-cd "$AGRITECH_ROOT/supabase"
-docker compose up -d > "$LOG_DIR/supabase.log" 2>&1 &
-echo "✅ Supabase starting..."
-sleep 5
+cd "$AGRITECH_ROOT/project"
+supabase start > "$LOG_DIR/supabase.log" 2>&1 &
+echo "✅ Supabase starting (API: 54321, Studio: 54323)..."
+sleep 10
 
 # ========================================
 # 2. Stop existing services
 # ========================================
 echo "🛑 Stopping existing services..."
 pkill -f "nest start" 2>/dev/null || true
-pkill -f "uvicorn app.main" 2>/dev/null || true
 pkill -f "vite" 2>/dev/null || true
 pkill -f "next dev" 2>/dev/null || true
 sleep 2
 
 # ========================================
-# 3. Start Satellite Service (CDSE)
-# ========================================
-echo "🛰️  Starting Satellite Service (CDSE)..."
-cd "$AGRITECH_ROOT/backend-service"
-
-# Source satellite env (create backend-service/.satellite-env from .satellite-env.example)
-if [ ! -f "$AGRITECH_ROOT/backend-service/.satellite-env" ]; then
-    echo "❌ Missing backend-service/.satellite-env — copy .satellite-env.example and fill in your keys"
-    exit 1
-fi
-source "$AGRITECH_ROOT/backend-service/.satellite-env"
-nohup venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload > "$LOG_DIR/satellite.log" 2>&1 &
-echo "✅ Satellite Service starting on port 8001..."
-sleep 3
-
-# ========================================
-# 4. Start NestJS Backend API
+# 3. Start NestJS Backend API
 # ========================================
 echo "🔧 Starting Backend API (NestJS)..."
 cd "$AGRITECH_ROOT/agritech-api"
@@ -96,7 +79,16 @@ echo "✅ Marketplace starting on port 3002..."
 sleep 5
 
 # ========================================
-# 7. Show Status
+# 7. Start Admin App (Vite)
+# ========================================
+echo "🔐 Starting Admin App (Vite)..."
+cd "$AGRITECH_ROOT/admin-app"
+nohup npm run dev > "$LOG_DIR/admin.log" 2>&1 &
+echo "✅ Admin App starting on port 5174..."
+sleep 3
+
+# ========================================
+# 8. Show Status
 # ========================================
 echo ""
 echo "=========================================="
@@ -105,17 +97,18 @@ echo "=========================================="
 echo ""
 echo "Service            | Port  | URL                    | Log"
 echo "-------------------|-------|------------------------|-------------"
-echo "Supabase          | N/A   | Local Docker           | $LOG_DIR/supabase.log"
+echo "Supabase API      | 54321 | http://localhost:54321 | $LOG_DIR/supabase.log"
+echo "Supabase Studio   | 54323 | http://localhost:54323 |"
 echo "Backend API       | 3001  | http://localhost:3001  | $LOG_DIR/backend.log"
-echo "Satellite Service | 8001  | http://localhost:8001  | $LOG_DIR/satellite.log"
 echo "Frontend          | 5173  | http://localhost:5173  | $LOG_DIR/frontend.log"
 echo "Marketplace       | 3002  | http://localhost:3002  | $LOG_DIR/marketplace.log"
+echo "Admin App         | 5174  | http://localhost:5174  | $LOG_DIR/admin.log"
 echo ""
 echo "📝 View logs:"
 echo "   tail -f $LOG_DIR/frontend.log"
 echo "   tail -f $LOG_DIR/backend.log"
-echo "   tail -f $LOG_DIR/satellite.log"
 echo "   tail -f $LOG_DIR/marketplace.log"
+echo "   tail -f $LOG_DIR/admin.log"
 echo ""
 echo "🛑 Stop all services:"
 echo "   ./stop-dev.sh"
@@ -137,13 +130,17 @@ check_port() {
     fi
 }
 
+check_port 54321 # Supabase API
+check_port 54323 # Supabase Studio
 check_port 3001  # Backend API
 check_port 5173  # Frontend
-check_port 8001  # Satellite Service
 check_port 3002  # Marketplace
+check_port 5174  # Admin App
 
 echo ""
 echo "✨ Development environment ready!"
 echo "   Frontend: http://localhost:5173"
+echo "   Admin App: http://localhost:5174"
 echo "   Marketplace: http://localhost:3002"
+echo "   Supabase Studio: http://localhost:54323"
 echo ""

@@ -22,6 +22,57 @@ GEE_INIT_TIMEOUT = 30  # seconds
 logger = logging.getLogger(__name__)
 
 
+def _normalize_service_account_key_data(raw_key_data: Any) -> dict[str, Any] | str:
+    """Normalize service-account key data loaded from env/config.
+
+    Supports already-parsed dicts plus JSON strings with or without wrapping quotes.
+    """
+    if isinstance(raw_key_data, dict):
+        return raw_key_data
+
+    if not isinstance(raw_key_data, str):
+        raise ValueError(
+            f"GEE_PRIVATE_KEY has unexpected type: {type(raw_key_data)}"
+        )
+
+    normalized = raw_key_data.strip()
+    if (
+        len(normalized) >= 2
+        and normalized[0] == normalized[-1]
+        and normalized[0] in {"'", '"'}
+    ):
+        normalized = normalized[1:-1].strip()
+
+    if normalized.startswith("{"):
+        try:
+            parsed = json.loads(normalized)
+        except json.JSONDecodeError:
+            return normalized
+        if isinstance(parsed, dict):
+            return parsed
+
+    return normalized
+
+
+def _resolve_service_account_email(
+    configured_email: str,
+    private_key_data: dict[str, Any] | str,
+) -> str:
+    """Prefer explicit config, then fall back to the key payload's client_email."""
+    service_account_email = configured_email.strip()
+    if service_account_email:
+        return service_account_email
+
+    if isinstance(private_key_data, dict):
+        client_email = str(private_key_data.get("client_email", "")).strip()
+        if client_email:
+            return client_email
+
+    raise ValueError(
+        "GEE service-account email is missing; set GEE_SERVICE_ACCOUNT or include client_email in GEE_PRIVATE_KEY"
+    )
+
+
 def _serialize_ts_dict_for_api(obs: Dict[str, Any]) -> Dict[str, Any]:
     """Map internal per-observation stats to API / Pydantic TimeSeriesPoint fields.
 
@@ -198,8 +249,14 @@ class EarthEngineService:
             return
 
         try:
-            if settings.GEE_SERVICE_ACCOUNT and settings.GEE_PRIVATE_KEY:
-                private_key_data = settings.GEE_PRIVATE_KEY
+            if settings.GEE_PRIVATE_KEY:
+                private_key_data = _normalize_service_account_key_data(
+                    settings.GEE_PRIVATE_KEY
+                )
+                service_account_email = _resolve_service_account_email(
+                    settings.GEE_SERVICE_ACCOUNT,
+                    private_key_data,
+                )
                 temp_path = None
 
                 # Diagnostic logging (without exposing sensitive data)
@@ -226,7 +283,7 @@ class EarthEngineService:
                             json.dump(private_key_data, f)
                             temp_path = f.name
                         credentials = ee.ServiceAccountCredentials(
-                            settings.GEE_SERVICE_ACCOUNT, temp_path
+                            service_account_email, temp_path
                         )
                     elif isinstance(private_key_data, str):
                         # It's a string - try original approach first (key_data parameter)
@@ -236,7 +293,7 @@ class EarthEngineService:
                                 "GEE_PRIVATE_KEY is a string, using key_data parameter (original approach)"
                             )
                             credentials = ee.ServiceAccountCredentials(
-                                settings.GEE_SERVICE_ACCOUNT, key_data=private_key_data
+                                service_account_email, key_data=private_key_data
                             )
                             # Don't initialize here - let it initialize below with the rest
                         except Exception as key_data_error:
@@ -255,15 +312,11 @@ class EarthEngineService:
                                     f.write(private_key_data)
                                     temp_path = f.name
                                 credentials = ee.ServiceAccountCredentials(
-                                    settings.GEE_SERVICE_ACCOUNT, temp_path
+                                    service_account_email, temp_path
                                 )
                             else:
                                 # Re-raise the original error if it's not JSON
                                 raise key_data_error
-                    else:
-                        raise ValueError(
-                            f"GEE_PRIVATE_KEY has unexpected type: {type(private_key_data)}"
-                        )
 
                     with concurrent.futures.ThreadPoolExecutor(
                         max_workers=1

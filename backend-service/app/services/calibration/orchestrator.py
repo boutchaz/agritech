@@ -25,7 +25,6 @@ from .pipeline.s5_anomaly_detection import detect_anomalies
 from .pipeline.s6_yield_potential import calculate_yield_potential
 from .pipeline.s7_zone_detection import classify_zones
 from .pipeline.s8_health_score import calculate_health_score
-from .support.gdd_service import precompute_gdd_rows
 from .referential_utils import get_calibration_capabilities
 from .types import (
     CalibrationInput,
@@ -36,14 +35,28 @@ from .types import (
     MaturityPhase,
 )
 
-FROST_THRESHOLD_BY_CROP = {
-    "olivier": -2.0,
-    "agrumes": 0.0,
-    "avocatier": 2.0,
-    "palmier_dattier": -4.0,
-}
 
-EVERGREEN_CROPS = {"olivier", "agrumes", "avocatier"}
+def _get_frost_threshold(reference_data: dict[str, Any] | None) -> float:
+    """Read frost threshold from referentiel seuils_meteo.gel.threshold_c."""
+    if reference_data:
+        gel = (reference_data.get("seuils_meteo") or {}).get("gel") or {}
+        val = gel.get("threshold_c")
+        if isinstance(val, (int, float)):
+            return float(val)
+    return -2.0  # safe default
+
+
+def _is_evergreen(reference_data: dict[str, Any] | None) -> bool:
+    """Determine if crop is evergreen from referentiel capacites_calibrage."""
+    if reference_data:
+        cap = reference_data.get("capacites_calibrage") or {}
+        # Explicit flag if present
+        if "evergreen" in cap:
+            return bool(cap["evergreen"])
+        # state_machine phenology mode implies defined cycle → treat as evergreen
+        if cap.get("phenology_mode") == "state_machine":
+            return True
+    return False
 
 _COMPONENT_MAX_SCORES: dict[str, float] = {
     "satellite": 30.0,
@@ -212,18 +225,10 @@ async def run_calibration_pipeline(
         for p in step1.index_time_series.get("NIRv", [])
     ]
 
-    # --- Phase 2: GDD + S2A + S3 + S4 + S6 all run concurrently ---
-    # S4 reads step2.daily_weather / extreme_events only — GDD enrichment writes
-    # cumulative_gdd and monthly_aggregates.gdd_total, so no race condition.
-    (gdd_rows, _), signal_classification, step3, step4, step6 = await asyncio.gather(
-        asyncio.to_thread(
-            precompute_gdd_rows,
-            weather_rows,
-            calibration_input.crop_type,
-            variety=calibration_input.variety,
-            nirv_series=nirv_series_raw,
-            reference_data=calibration_input.reference_data,
-        ),
+    # --- Phase 2: S2A + S3 + S4 + S6 all run concurrently ---
+    # GDD is pre-computed in weather_daily_data — no need for precompute_gdd_rows.
+    # S4 state machine computes its own GDD internally (with chill gating + resets).
+    signal_classification, step3, step4, step6 = await asyncio.gather(
         asyncio.to_thread(
             classify_signal,
             step1, step2, calibration_input.crop_type,
@@ -260,13 +265,13 @@ async def run_calibration_pipeline(
         ),
     )
 
-    # Enrich step2 with crop-aware GDD totals (sequential write — safe post-phase-2)
+    # Enrich step2 with cumulative GDD from pre-computed weather_daily_data columns
     gdd_column = f"gdd_{calibration_input.crop_type}"
     crop_aware_cumulative: dict[str, float] = {}
     monthly_gdd_totals: dict[str, float] = defaultdict(float)
     running_gdd = 0.0
-    for row in sorted(gdd_rows, key=lambda r: str(r.get("date", ""))):
-        daily = float(row.get(gdd_column, 0.0))
+    for row in sorted(weather_rows, key=lambda r: str(r.get("date", ""))):
+        daily = float(row.get(gdd_column) or 0.0)
         running_gdd += daily
         month_key = str(row.get("date", ""))[:7]
         crop_aware_cumulative[month_key] = round(running_gdd, 3)
@@ -278,43 +283,6 @@ async def run_calibration_pipeline(
 
     if not step4.yearly_stages:
         raise ValueError("Unable to detect phenology from observed satellite history")
-
-    # Persist computed GDD to weather_gdd_daily cache (async task, no blocking)
-    _w0 = weather_rows[0] if weather_rows else {}
-    _cache_lat = _w0.get("latitude")
-    _cache_lon = _w0.get("longitude")
-    if _cache_lat is not None and _cache_lon is not None and gdd_rows:
-        from ..supabase_service import supabase_service as _ss
-        asyncio.create_task(
-            _ss.upsert_gdd_rows(_cache_lat, _cache_lon, calibration_input.crop_type, list(gdd_rows))
-        )
-
-    # Build NDVI raster for zone detection
-    ndvi_values = [p.value for p in observed_ndvi_points] if observed_ndvi_points else [0.0]
-    median_ndvi = float(np.median(ndvi_values))
-
-    pixel_coords: list[dict[str, float]] | None = None
-    if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
-        valid_pixels = [
-            p for p in ndvi_raster_pixels
-            if p.get("value") is not None
-        ]
-        pixel_values = [float(p["value"]) for p in valid_pixels]
-        if len(pixel_values) > 1:
-            raster = np.array(pixel_values, dtype=np.float64).reshape(-1, 1)
-            has_real_zones = True
-            # Preserve geographic coordinates for smooth heatmap rendering
-            if all(p.get("lon") is not None and p.get("lat") is not None for p in valid_pixels):
-                pixel_coords = [
-                    {"lon": float(p["lon"]), "lat": float(p["lat"])}
-                    for p in valid_pixels
-                ]
-        else:
-            raster = np.array([[median_ndvi]], dtype=np.float64)
-            has_real_zones = False
-    else:
-        raster = np.array([[median_ndvi]], dtype=np.float64)
-        has_real_zones = False
 
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
@@ -332,8 +300,10 @@ async def run_calibration_pipeline(
             crop_type=calibration_input.crop_type,
         ),
         asyncio.to_thread(
-            classify_zones, raster, ndvi_percentiles,
-            pixel_coords=pixel_coords,
+            classify_zones,
+            ndvi_percentiles,
+            ndvi_raster_pixels=ndvi_raster_pixels,
+            observed_ndvi_points=observed_ndvi_points,
         ),
     )
 
@@ -379,12 +349,14 @@ async def run_calibration_pipeline(
         )
     )
 
+    has_real_zones = step7.zone_summary is not None and len(step7.zone_summary) > 1
+
     data_quality_flags: list[str] = []
     if len(ndvi_points) < MIN_SATELLITE_IMAGES:
         data_quality_flags.append("insufficient_satellite_data")
     if not has_real_zones:
         data_quality_flags.append("single_pixel_zones")
-    if calibration_input.crop_type in EVERGREEN_CROPS and not step4.referential_cycle_used:
+    if _is_evergreen(calibration_input.reference_data) and not step4.referential_cycle_used:
         data_quality_flags.append("evergreen_phenology_approximate")
     if step4.status != "ok":
         data_quality_flags.append(f"phenology_{step4.status}")

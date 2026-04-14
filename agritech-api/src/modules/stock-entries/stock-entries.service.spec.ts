@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { StockEntriesService } from './stock-entries.service';
@@ -12,8 +13,15 @@ import {
 } from '../../../test/helpers/mock-database.helper';
 import { TEST_IDS } from '../../../test/helpers/test-utils';
 import { StockEntryType, StockEntryStatus, ValuationMethod } from './dto/create-stock-entry.dto';
+import { StockAccountingService } from './stock-accounting.service';
+import { SequencesService } from '../sequences/sequences.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 describe('StockEntriesService', () => {
+  type QueryMock = jest.Mock<
+    (query: string, values?: unknown[]) => { rows: any[] } | Promise<{ rows: any[] }>
+  >;
+
   let service: StockEntriesService;
   let mockClient: MockSupabaseClient;
   let mockDatabaseService: {
@@ -21,9 +29,27 @@ describe('StockEntriesService', () => {
     getPgPool: jest.Mock;
   };
   let mockPool: {
-    connect: jest.Mock;
+    connect: jest.Mock<() => Promise<PoolClient>>;
   };
-  let mockPgClient: PoolClient;
+  let mockPgClient: {
+    query: QueryMock;
+    release: jest.Mock<() => void>;
+  };
+  let mockStockAccountingService: {
+    createJournalEntryForStockEntry: jest.Mock<
+      (...args: any[]) => Promise<{ success: boolean; error?: string }>
+    >;
+    createReversalJournalEntry: jest.Mock<
+      (...args: any[]) => Promise<{ success: boolean; error?: string }>
+    >;
+  };
+  let mockSequencesService: {
+    generateStockEntryNumber: jest.Mock<(organizationId: string) => Promise<string>>;
+    generateJournalEntryNumber: jest.Mock<(organizationId: string) => Promise<string>>;
+  };
+  let mockNotificationsService: {
+    createNotificationsForUsers: jest.Mock<(...args: any[]) => Promise<void>>;
+  };
 
   // ============================================================
   // TEST DATA FIXTURES
@@ -116,12 +142,12 @@ describe('StockEntriesService', () => {
   beforeEach(async () => {
     mockClient = createMockSupabaseClient();
     mockPgClient = {
-      query: jest.fn(),
-      release: jest.fn(),
-    } as unknown as PoolClient;
+      query: jest.fn<QueryMock>(),
+      release: jest.fn<() => void>(),
+    };
 
     mockPool = {
-      connect: jest.fn().mockResolvedValue(mockPgClient),
+      connect: jest.fn<() => Promise<PoolClient>>().mockResolvedValue(mockPgClient as unknown as PoolClient),
     };
 
     mockDatabaseService = {
@@ -129,10 +155,35 @@ describe('StockEntriesService', () => {
       getPgPool: jest.fn(() => mockPool),
     };
 
+    mockStockAccountingService = {
+      createJournalEntryForStockEntry: jest
+        .fn<(...args: any[]) => Promise<{ success: boolean; error?: string }>>()
+        .mockResolvedValue({ success: true }),
+      createReversalJournalEntry: jest
+        .fn<(...args: any[]) => Promise<{ success: boolean; error?: string }>>()
+        .mockResolvedValue({ success: true }),
+    };
+
+    mockSequencesService = {
+      generateStockEntryNumber: jest
+        .fn<(organizationId: string) => Promise<string>>()
+        .mockResolvedValue('SE-REV-0001'),
+      generateJournalEntryNumber: jest
+        .fn<(organizationId: string) => Promise<string>>()
+        .mockResolvedValue('JE-REV-0001'),
+    };
+
+    mockNotificationsService = {
+      createNotificationsForUsers: jest.fn<(...args: any[]) => Promise<void>>().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StockEntriesService,
         { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: StockAccountingService, useValue: mockStockAccountingService },
+        { provide: SequencesService, useValue: mockSequencesService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
       ],
     }).compile();
 
@@ -858,10 +909,32 @@ describe('StockEntriesService', () => {
               return { rows: [{ entry_number: 'SE-20240101-0001' }] };
             }
             if (query.includes('INSERT INTO stock_entries')) {
-              return { rows: [{ id: 'se1' }] };
+              return {
+                rows: [
+                  {
+                    id: 'se1',
+                    organization_id: TEST_IDS.organization,
+                    entry_type: StockEntryType.MATERIAL_ISSUE,
+                    entry_number: 'SE-REV-0001',
+                    entry_date: '2024-01-01',
+                    from_warehouse_id: 'wh1',
+                    status: StockEntryStatus.POSTED,
+                  },
+                ],
+              };
             }
             if (query.includes('INSERT INTO stock_entry_items')) {
-              return { rows: [{ id: 'sei1' }] };
+              return {
+                rows: [
+                  {
+                    id: 'sei1',
+                    item_id: 'item1',
+                    quantity: 10,
+                    unit: 'kg',
+                    valuation_method: valuationMethod,
+                  },
+                ],
+              };
             }
             if (query.includes('SELECT COALESCE(SUM(quantity)')) {
               return { rows: [{ balance: '1000' }] };
@@ -890,6 +963,431 @@ describe('StockEntriesService', () => {
           expect(result).toBeDefined();
         }
       );
+
+      describe('Moving Average Valuation', () => {
+        it('should compute weighted average cost across all batches', async () => {
+          const dto = {
+            organization_id: TEST_IDS.organization,
+            entry_type: StockEntryType.MATERIAL_ISSUE,
+            entry_date: '2024-01-01',
+            from_warehouse_id: 'wh1',
+            items: [
+              {
+                item_id: 'item1',
+                quantity: 50,
+                unit: 'kg',
+                valuation_method: ValuationMethod.MOVING_AVERAGE,
+              },
+            ],
+            status: StockEntryStatus.POSTED,
+          } as any;
+
+          let movementParams: any[] = [];
+
+          mockPgClient.query = jest.fn().mockImplementation((query: string, params?: any[]) => {
+            if (query.includes('BEGIN')) return { rows: [] };
+            if (query.includes('INSERT INTO stock_entries')) {
+              return {
+                rows: [
+                  {
+                    id: 'se1',
+                    organization_id: TEST_IDS.organization,
+                    entry_type: StockEntryType.MATERIAL_ISSUE,
+                    entry_number: 'SE-REV-0001',
+                    entry_date: '2024-01-01',
+                    from_warehouse_id: 'wh1',
+                    status: StockEntryStatus.POSTED,
+                  },
+                ],
+              };
+            }
+            if (query.includes('INSERT INTO stock_entry_items')) {
+              return {
+                rows: [
+                  {
+                    id: 'sei1',
+                    item_id: 'item1',
+                    quantity: 50,
+                    unit: 'kg',
+                    valuation_method: ValuationMethod.MOVING_AVERAGE,
+                  },
+                ],
+              };
+            }
+            if (query.includes('SELECT id FROM stock_movements')) {
+              return { rows: [] };
+            }
+            if (query.includes('SELECT COALESCE(SUM(quantity), 0) as balance')) {
+              return { rows: [{ balance: '100' }] };
+            }
+            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+              return {
+                rows: [
+                  { id: 'val1', remaining_quantity: '50', cost_per_unit: '10' },
+                  { id: 'val2', remaining_quantity: '30', cost_per_unit: '15' },
+                  { id: 'val3', remaining_quantity: '20', cost_per_unit: '20' },
+                ],
+              };
+            }
+            if (query.includes('UPDATE stock_valuation')) {
+              return { rows: [] };
+            }
+            if (query.includes('INSERT INTO stock_movements')) {
+              movementParams = params || [];
+              return { rows: [] };
+            }
+            if (query.includes('COMMIT')) return { rows: [] };
+            return { rows: [] };
+          });
+
+          await service.createStockEntry(dto);
+
+          expect(movementParams[9]).toBeCloseTo(13.5);
+          expect(movementParams[10]).toBeCloseTo(-675);
+        });
+
+        it('should reduce all batches proportionally for moving average', async () => {
+          const dto = {
+            organization_id: TEST_IDS.organization,
+            entry_type: StockEntryType.MATERIAL_ISSUE,
+            entry_date: '2024-01-01',
+            from_warehouse_id: 'wh1',
+            items: [
+              {
+                item_id: 'item1',
+                quantity: 50,
+                unit: 'kg',
+                valuation_method: ValuationMethod.MOVING_AVERAGE,
+              },
+            ],
+            status: StockEntryStatus.POSTED,
+          } as any;
+
+          const valuationUpdates: Array<{ quantity: number; batchId: string }> = [];
+
+          mockPgClient.query = jest.fn().mockImplementation((query: string, params?: any[]) => {
+            if (query.includes('BEGIN')) return { rows: [] };
+            if (query.includes('INSERT INTO stock_entries')) {
+              return {
+                rows: [
+                  {
+                    id: 'se1',
+                    organization_id: TEST_IDS.organization,
+                    entry_type: StockEntryType.MATERIAL_ISSUE,
+                    entry_number: 'SE-REV-0001',
+                    entry_date: '2024-01-01',
+                    from_warehouse_id: 'wh1',
+                    status: StockEntryStatus.POSTED,
+                  },
+                ],
+              };
+            }
+            if (query.includes('INSERT INTO stock_entry_items')) {
+              return {
+                rows: [
+                  {
+                    id: 'sei1',
+                    item_id: 'item1',
+                    quantity: 50,
+                    unit: 'kg',
+                    valuation_method: ValuationMethod.MOVING_AVERAGE,
+                  },
+                ],
+              };
+            }
+            if (query.includes('SELECT id FROM stock_movements')) {
+              return { rows: [] };
+            }
+            if (query.includes('SELECT COALESCE(SUM(quantity), 0) as balance')) {
+              return { rows: [{ balance: '100' }] };
+            }
+            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+              return {
+                rows: [
+                  { id: 'val1', remaining_quantity: '50', cost_per_unit: '10' },
+                  { id: 'val2', remaining_quantity: '30', cost_per_unit: '15' },
+                  { id: 'val3', remaining_quantity: '20', cost_per_unit: '20' },
+                ],
+              };
+            }
+            if (query.includes('UPDATE stock_valuation')) {
+              valuationUpdates.push({ quantity: params?.[0], batchId: params?.[1] });
+              return { rows: [] };
+            }
+            if (query.includes('INSERT INTO stock_movements')) {
+              return { rows: [] };
+            }
+            if (query.includes('COMMIT')) return { rows: [] };
+            return { rows: [] };
+          });
+
+          await service.createStockEntry(dto);
+
+          expect(valuationUpdates).toHaveLength(3);
+          expect(valuationUpdates).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ batchId: 'val1', quantity: 25 }),
+              expect.objectContaining({ batchId: 'val2', quantity: 15 }),
+              expect.objectContaining({ batchId: 'val3', quantity: 10 }),
+            ])
+          );
+        });
+
+        it('should throw when insufficient total valuation for moving average', async () => {
+          const dto = {
+            organization_id: TEST_IDS.organization,
+            entry_type: StockEntryType.MATERIAL_ISSUE,
+            entry_date: '2024-01-01',
+            from_warehouse_id: 'wh1',
+            items: [
+              {
+                item_id: 'item1',
+                quantity: 100,
+                unit: 'kg',
+                valuation_method: ValuationMethod.MOVING_AVERAGE,
+              },
+            ],
+            status: StockEntryStatus.POSTED,
+          } as any;
+
+          mockPgClient.query = jest.fn().mockImplementation((query: string) => {
+            if (query.includes('BEGIN')) return { rows: [] };
+            if (query.includes('INSERT INTO stock_entries')) {
+              return {
+                rows: [
+                  {
+                    id: 'se1',
+                    organization_id: TEST_IDS.organization,
+                    entry_type: StockEntryType.MATERIAL_ISSUE,
+                    entry_number: 'SE-REV-0001',
+                    entry_date: '2024-01-01',
+                    from_warehouse_id: 'wh1',
+                    status: StockEntryStatus.POSTED,
+                  },
+                ],
+              };
+            }
+            if (query.includes('INSERT INTO stock_entry_items')) {
+              return {
+                rows: [
+                  {
+                    id: 'sei1',
+                    item_id: 'item1',
+                    quantity: 100,
+                    unit: 'kg',
+                    valuation_method: ValuationMethod.MOVING_AVERAGE,
+                  },
+                ],
+              };
+            }
+            if (query.includes('SELECT id FROM stock_movements')) {
+              return { rows: [] };
+            }
+            if (query.includes('SELECT COALESCE(SUM(quantity), 0) as balance')) {
+              return { rows: [{ balance: '100' }] };
+            }
+            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+              return {
+                rows: [
+                  { id: 'val1', remaining_quantity: '25', cost_per_unit: '10' },
+                  { id: 'val2', remaining_quantity: '25', cost_per_unit: '15' },
+                ],
+              };
+            }
+            if (query.includes('ROLLBACK')) return { rows: [] };
+            return { rows: [] };
+          });
+
+          await expect(service.createStockEntry(dto)).rejects.toThrow(BadRequestException);
+          await expect(service.createStockEntry(dto)).rejects.toThrow('Insufficient valuation');
+        });
+      });
+    });
+
+    describe('Stock Entry Reversal', () => {
+      it('should reverse a posted material receipt', async () => {
+        let originalStatusUpdateParams: any[] = [];
+
+        mockPgClient.query = jest.fn().mockImplementation((query: string, params?: any[]) => {
+          if (query.includes('BEGIN')) return { rows: [] };
+          if (query.includes('FROM stock_entries se') && query.includes('FOR UPDATE OF se')) {
+            return {
+              rows: [
+                {
+                  id: 'se1',
+                  organization_id: TEST_IDS.organization,
+                  entry_type: StockEntryType.MATERIAL_RECEIPT,
+                  entry_number: 'SE-20240101-0001',
+                  entry_date: '2024-01-01',
+                  to_warehouse_id: 'wh1',
+                  status: StockEntryStatus.POSTED,
+                  stock_entry_items: [
+                    {
+                      id: 'sei1',
+                      line_number: 1,
+                      item_id: 'item1',
+                      item_name: 'NPK Fertilizer',
+                      quantity: 10,
+                      unit: 'kg',
+                      cost_per_unit: 50,
+                    },
+                  ],
+                },
+              ],
+            };
+          }
+          if (query.includes("WHERE reference_type = 'reversal'")) {
+            return { rows: [] };
+          }
+          if (query.includes('INSERT INTO stock_entries')) {
+            return {
+              rows: [
+                {
+                  id: 'se-rev-1',
+                  organization_id: TEST_IDS.organization,
+                  entry_number: 'SE-REV-0001',
+                  entry_date: '2024-01-02',
+                },
+              ],
+            };
+          }
+          if (query.includes('INSERT INTO stock_entry_items')) {
+            return { rows: [] };
+          }
+          if (query.includes('FROM stock_valuation') && query.includes('stock_entry_id = $5')) {
+            return {
+              rows: [{ id: 'val1', remaining_quantity: '10', cost_per_unit: '50' }],
+            };
+          }
+          if (query.includes('UPDATE stock_valuation')) {
+            return { rows: [] };
+          }
+          if (query.includes('INSERT INTO stock_movements')) {
+            return { rows: [] };
+          }
+          if (query.includes('UPDATE stock_entries SET status = $1')) {
+            originalStatusUpdateParams = params || [];
+            return { rows: [] };
+          }
+          if (query.includes('COMMIT')) return { rows: [] };
+          return { rows: [] };
+        });
+
+        const result = await service.reverseStockEntry(
+          'se1',
+          TEST_IDS.organization,
+          TEST_IDS.user,
+          'Damaged goods'
+        );
+
+        expect(result).toEqual(
+          expect.objectContaining({
+            original_entry_id: 'se1',
+            reversal_entry_id: 'se-rev-1',
+            reversal_number: 'SE-REV-0001',
+          })
+        );
+        expect(originalStatusUpdateParams[0]).toBe(StockEntryStatus.REVERSED);
+      });
+
+      it('should reject reversal of draft entry', async () => {
+        mockPgClient.query = jest.fn().mockImplementation((query: string) => {
+          if (query.includes('BEGIN')) return { rows: [] };
+          if (query.includes('FROM stock_entries se') && query.includes('FOR UPDATE OF se')) {
+            return {
+              rows: [
+                {
+                  id: 'se1',
+                  organization_id: TEST_IDS.organization,
+                  entry_type: StockEntryType.MATERIAL_RECEIPT,
+                  entry_number: 'SE-20240101-0001',
+                  status: StockEntryStatus.DRAFT,
+                  stock_entry_items: [],
+                },
+              ],
+            };
+          }
+          if (query.includes('ROLLBACK')) return { rows: [] };
+          return { rows: [] };
+        });
+
+        await expect(
+          service.reverseStockEntry('se1', TEST_IDS.organization, TEST_IDS.user, 'Wrong entry')
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should reject reversal of already reversed entry', async () => {
+        mockPgClient.query = jest.fn().mockImplementation((query: string) => {
+          if (query.includes('BEGIN')) return { rows: [] };
+          if (query.includes('FROM stock_entries se') && query.includes('FOR UPDATE OF se')) {
+            return {
+              rows: [
+                {
+                  id: 'se1',
+                  organization_id: TEST_IDS.organization,
+                  entry_type: StockEntryType.MATERIAL_RECEIPT,
+                  entry_number: 'SE-20240101-0001',
+                  status: StockEntryStatus.POSTED,
+                  stock_entry_items: [],
+                },
+              ],
+            };
+          }
+          if (query.includes("WHERE reference_type = 'reversal'")) {
+            return { rows: [{ id: 'se-rev-1', entry_number: 'SE-REV-0001' }] };
+          }
+          if (query.includes('ROLLBACK')) return { rows: [] };
+          return { rows: [] };
+        });
+
+        await expect(
+          service.reverseStockEntry('se1', TEST_IDS.organization, TEST_IDS.user, 'Duplicate')
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should reject reversal without reason', async () => {
+        await expect(
+          service.reverseStockEntry('se1', TEST_IDS.organization, TEST_IDS.user, '')
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.reverseStockEntry('se1', TEST_IDS.organization, TEST_IDS.user, '')
+        ).rejects.toThrow('Reversal reason is required');
+      });
+    });
+
+    describe('Cancel Safety', () => {
+      it('should reject cancellation of posted entry', async () => {
+        mockPgClient.query = jest.fn().mockImplementation((query: string) => {
+          if (query.includes('BEGIN')) return { rows: [] };
+          if (query.includes('SELECT id, status FROM stock_entries') && query.includes('FOR UPDATE')) {
+            return { rows: [{ id: 'se1', status: StockEntryStatus.POSTED }] };
+          }
+          if (query.includes('ROLLBACK')) return { rows: [] };
+          return { rows: [] };
+        });
+
+        await expect(
+          service.cancelStockEntry('se1', TEST_IDS.organization, TEST_IDS.user)
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.cancelStockEntry('se1', TEST_IDS.organization, TEST_IDS.user)
+        ).rejects.toThrow('reversal');
+      });
+
+      it('should reject cancellation of reversed entry', async () => {
+        mockPgClient.query = jest.fn().mockImplementation((query: string) => {
+          if (query.includes('BEGIN')) return { rows: [] };
+          if (query.includes('SELECT id, status FROM stock_entries') && query.includes('FOR UPDATE')) {
+            return { rows: [{ id: 'se1', status: StockEntryStatus.REVERSED }] };
+          }
+          if (query.includes('ROLLBACK')) return { rows: [] };
+          return { rows: [] };
+        });
+
+        await expect(
+          service.cancelStockEntry('se1', TEST_IDS.organization, TEST_IDS.user)
+        ).rejects.toThrow(BadRequestException);
+      });
     });
 
     describe('Stock Reconciliation', () => {

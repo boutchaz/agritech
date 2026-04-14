@@ -138,6 +138,7 @@ def compute_olive_gdd_two_phase(
     reference_data: dict[str, Any] | None = None,
     tbase: float | None = None,
     tupper: float | None = None,
+    gdd_column: str = "gdd_olivier",
 ) -> list[dict[str, Any]]:
     """De Melo-Abreu (2004) two-phase chill-heating model for olive.
 
@@ -232,9 +233,9 @@ def compute_olive_gdd_two_phase(
                             daily = 0.0
 
             season_cumulative_gdd += daily
-            copied["gdd_olivier"] = round(daily, 4)
+            copied[gdd_column] = round(daily, 4)
         else:
-            copied["gdd_olivier"] = 0.0
+            copied[gdd_column] = 0.0
 
         result.append(copied)
 
@@ -322,6 +323,7 @@ def precompute_gdd_rows(
             reference_data=reference_data,
             tbase=tbase,
             tupper=tupper,
+            gdd_column=column,
         )
         updated = sum(
             1

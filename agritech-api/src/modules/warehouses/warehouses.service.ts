@@ -16,6 +16,7 @@ export class WarehousesService {
       .from('warehouses')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true);
 
     const from = (page - 1) * pageSize;
@@ -23,6 +24,7 @@ export class WarehousesService {
       .from('warehouses')
       .select('*')
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true)
       .order('name', { ascending: true })
       .range(from, from + pageSize - 1);
@@ -43,6 +45,7 @@ export class WarehousesService {
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -115,6 +118,7 @@ export class WarehousesService {
       .update(updateData)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -134,9 +138,10 @@ export class WarehousesService {
 
     const { error } = await supabase
       .from('warehouses')
-      .update({ is_active: false })
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete warehouse: ${error.message}`);
@@ -157,6 +162,8 @@ export class WarehousesService {
         warehouse:warehouses(id, name)
       `)
       .eq('organization_id', organizationId)
+      .is('item.deleted_at', null)
+      .is('warehouse.deleted_at', null)
       .order('item_name', { ascending: true });
 
     if (filters?.warehouse_id) {

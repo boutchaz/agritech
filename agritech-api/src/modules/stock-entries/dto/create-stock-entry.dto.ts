@@ -12,6 +12,7 @@ export enum StockEntryStatus {
   DRAFT = 'Draft',
   POSTED = 'Posted',
   CANCELLED = 'Cancelled',
+  REVERSED = 'Reversed',
 }
 
 export enum ValuationMethod {

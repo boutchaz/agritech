@@ -554,14 +554,14 @@ class SupabaseService:
                 response = await client.get(
                     f"{self.supabase_url}/rest/v1/weather_daily_data",
                     headers=self.headers,
-                    params={
-                        "select": "*",
-                        "latitude": f"eq.{lat}",
-                        "longitude": f"eq.{lon}",
-                        "date": f"gte.{start_date}",
-                        "date": f"lte.{end_date}",
-                        "order": "date.asc",
-                    },
+                    params=[
+                        ("select", "*"),
+                        ("latitude", f"eq.{lat}"),
+                        ("longitude", f"eq.{lon}"),
+                        ("date", f"gte.{start_date}"),
+                        ("date", f"lte.{end_date}"),
+                        ("order", "date.asc"),
+                    ],
                 )
                 response.raise_for_status()
                 return response.json()
@@ -590,26 +590,40 @@ class SupabaseService:
         lat = self._round_weather_coordinate(latitude)
         lon = self._round_weather_coordinate(longitude)
 
+        # Load GDD params per crop from referentiel for inline computation
+        from .calibration.referential_utils import (
+            CROP_TYPE_TO_REFERENTIAL_JSON,
+            get_gdd_tbase_tupper,
+        )
+        crop_gdd_params: list[tuple[str, float, float]] = []
+        for ct in CROP_TYPE_TO_REFERENTIAL_JSON:
+            tb, tu = get_gdd_tbase_tupper(ct)
+            if tb is not None:
+                crop_gdd_params.append((ct, tb, tu if tu is not None else 40.0))
+
         rows = []
         for r in records:
             tmin = float(r.get("temp_min") or r.get("temperature_min") or 0.0)
             tmax = float(r.get("temp_max") or r.get("temperature_max") or 0.0)
             tavg = (tmin + tmax) / 2.0
-            rows.append(
-                {
-                    "latitude": lat,
-                    "longitude": lon,
-                    "date": str(r.get("date")),
-                    "temperature_min": tmin,
-                    "temperature_max": tmax,
-                    "temperature_mean": round(tavg, 2),
-                    "precipitation_sum": r.get("precip") or r.get("precipitation_sum") or 0.0,
-                    "wind_speed_max": r.get("wind_speed_max"),
-                    "et0_fao_evapotranspiration": r.get("et0") or r.get("et0_fao_evapotranspiration"),
-                    "source": source,
-                    "chill_hours": 1.0 if tmin < 7.2 else 0.0,
-                }
-            )
+            row_data: dict = {
+                "latitude": lat,
+                "longitude": lon,
+                "date": str(r.get("date")),
+                "temperature_min": tmin,
+                "temperature_max": tmax,
+                "temperature_mean": round(tavg, 2),
+                "precipitation_sum": r.get("precip") or r.get("precipitation_sum") or 0.0,
+                "wind_speed_max": r.get("wind_speed_max"),
+                "et0_fao_evapotranspiration": r.get("et0") or r.get("et0_fao_evapotranspiration"),
+                "source": source,
+                "chill_hours": 1.0 if tmin < 7.2 else 0.0,
+            }
+            # Compute GDD for each crop inline (written to weather_daily_data columns)
+            for ct, tb, tu in crop_gdd_params:
+                gdd_val = max(0.0, (min(tmax, tu) + max(tmin, tb)) / 2.0 - tb)
+                row_data[f"gdd_{ct}"] = round(gdd_val, 4)
+            rows.append(row_data)
 
         if not rows:
             return False
@@ -630,30 +644,22 @@ class SupabaseService:
             logger.error(f"Error upserting weather daily data: {e}")
             return False
 
-        # Compute and persist simple-crop GDD using referential formula (Tupper-capped).
-        # Thresholds match FALLBACK_GDD_TBASE / FALLBACK_GDD_TUPPER in referential_utils.py.
-        # Olive is excluded here — its two-phase model requires NIRv data (orchestrator handles it).
-        _SIMPLE_CROPS: list[tuple[str, float, float]] = [
-            ("agrumes",         13.0, 36.0),
-            ("avocatier",       10.0, 33.0),
-            ("palmier_dattier", 18.0, 45.0),
-        ]
-        for crop_type, tbase, tupper in _SIMPLE_CROPS:
+        # Persist GDD to generic weather_gdd_daily table (any crop, no schema change).
+        # Persist GDD to generic weather_gdd_daily table (same values already in weather_daily_data).
+        for ct, tb, tu in crop_gdd_params:
             gdd_records: List[Dict[str, Any]] = []
             for r in records:
                 tmin_r = float(r.get("temp_min") or r.get("temperature_min") or 0.0)
                 tmax_r = float(r.get("temp_max") or r.get("temperature_max") or 0.0)
-                capped_max = min(tmax_r, tupper)
-                floored_min = max(tmin_r, tbase)
-                gdd_val = max(0.0, (capped_max + floored_min) / 2.0 - tbase)
+                gdd_val = max(0.0, (min(tmax_r, tu) + max(tmin_r, tb)) / 2.0 - tb)
                 gdd_records.append(
                     {
                         "date": str(r.get("date")),
-                        f"gdd_{crop_type}": round(gdd_val, 4),
+                        f"gdd_{ct}": round(gdd_val, 4),
                         "chill_hours": 1.0 if tmin_r < 7.2 else 0.0,
                     }
                 )
-            await self.upsert_gdd_rows(lat, lon, crop_type, gdd_records)
+            await self.upsert_gdd_rows(lat, lon, ct, gdd_records)
 
         return True
 

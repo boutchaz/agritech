@@ -24,6 +24,8 @@ export interface CalibrationSnapshotInput {
   /** Current parcel phase from state machine */
   parcel_phase: string;
   organization_id: string;
+  /** From parcels.crop_type — used to load referentiel GDD thresholds */
+  crop_type?: string | null;
   /** From parcels.planting_year — phenology year list filter */
   planting_year?: number | null;
   /** Calibration history for this parcel */
@@ -188,6 +190,8 @@ export interface PhenologyDashboardData {
     mode: string;
   }>;
   yearly_stages: Record<string, Record<string, string>>;
+  /** GDD entry thresholds from referentiel stades_bbch, keyed by phase_kc */
+  referentiel_gdd: Record<string, number> | null;
 }
 
 export interface BlockBAnalyse {
