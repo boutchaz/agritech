@@ -5,7 +5,8 @@ import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { loginViaApi, signInWithGoogle } from '@/lib/auth-api'
+// signInWithGoogle — restore when re-enabling Google OAuth on this page
+import { loginViaApi } from '@/lib/auth-api'
 import { useAuth } from '@/hooks/useAuth'
 import {
   trackLoginAttempt,
@@ -41,7 +42,7 @@ function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
-  const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false)
+  // const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false) // Google OAuth temporarily disabled
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -88,21 +89,22 @@ function LoginPage() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setIsOAuthLoading(true)
-    setError(null)
-    trackLoginAttempt('google')
-
-    try {
-      await signInWithGoogle()
-      trackLoginSuccess('google')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('auth.errors.oauthFailed')
-      setError(errorMessage)
-      trackLoginFailure('google', errorMessage)
-      setIsOAuthLoading(false)
-    }
-  }
+  // Google OAuth temporarily disabled — uncomment block below to restore
+  // const handleGoogleSignIn = async () => {
+  //   setIsOAuthLoading(true)
+  //   setError(null)
+  //   trackLoginAttempt('google')
+  //
+  //   try {
+  //     await signInWithGoogle()
+  //     trackLoginSuccess('google')
+  //   } catch (err) {
+  //     const errorMessage = err instanceof Error ? err.message : t('auth.errors.oauthFailed')
+  //     setError(errorMessage)
+  //     trackLoginFailure('google', errorMessage)
+  //     setIsOAuthLoading(false)
+  //   }
+  // }
 
   return (
     <AuthLayout
@@ -116,6 +118,8 @@ function LoginPage() {
       backLabel={t('auth.backToLanding')}
     >
       <div className="space-y-6">
+        {/* Google OAuth temporarily disabled — restore with handleGoogleSignIn + isOAuthLoading */}
+        {/*
         <div className="space-y-3">
           <Button
             type="button"
@@ -148,6 +152,7 @@ function LoginPage() {
             <span className="bg-white px-4 font-medium text-slate-600">{t('auth.orContinueWith')}</span>
           </div>
         </div>
+        */}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -205,7 +210,7 @@ function LoginPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || isOAuthLoading}
+            disabled={isLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:from-emerald-700 hover:to-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? t('auth.signingIn') : t('auth.signIn.button')}

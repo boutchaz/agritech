@@ -47,6 +47,7 @@ import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_
 import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
 import { Route as AuthenticatedmiscUtilitiesRouteImport } from './routes/_authenticated/(misc)/utilities'
 import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_authenticated/(misc)/notifications'
+import { Route as AuthenticatedmiscModulesRouteImport } from './routes/_authenticated/(misc)/modules'
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
@@ -116,7 +117,6 @@ import { Route as AuthenticatedinventoryStockReportsRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockReorderSuggestionsRouteImport } from './routes/_authenticated/(inventory)/stock/reorder-suggestions'
 import { Route as AuthenticatedinventoryStockReceptionRouteImport } from './routes/_authenticated/(inventory)/stock/reception'
 import { Route as AuthenticatedinventoryStockQuickStockRouteImport } from './routes/_authenticated/(inventory)/stock/quick-stock'
-import { Route as AuthenticatedinventoryStockItemsRouteImport } from './routes/_authenticated/(inventory)/stock/items'
 import { Route as AuthenticatedinventoryStockInventoryRouteImport } from './routes/_authenticated/(inventory)/stock/inventory'
 import { Route as AuthenticatedinventoryStockGroupsRouteImport } from './routes/_authenticated/(inventory)/stock/groups'
 import { Route as AuthenticatedinventoryStockExpiryAlertsRouteImport } from './routes/_authenticated/(inventory)/stock/expiry-alerts'
@@ -146,6 +146,7 @@ import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } fro
 import { Route as AuthenticatedaccountingAccountingAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/accounts'
 import { Route as AuthenticatedworkforceWorkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.index'
 import { Route as AuthenticatedproductionParcelsParcelIdIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.index'
+import { Route as AuthenticatedinventoryStockItemsIndexRouteImport } from './routes/_authenticated/(inventory)/stock/items.index'
 import { Route as AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport } from './routes/_authenticated/(workforce)/workforce/workers.piece-work'
 import { Route as AuthenticatedworkforceWorkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.calendar'
 import { Route as AuthenticatedproductionParcelsParcelIdWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.weather'
@@ -378,6 +379,12 @@ const AuthenticatedmiscNotificationsRoute =
   AuthenticatedmiscNotificationsRouteImport.update({
     id: '/(misc)/notifications',
     path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedmiscModulesRoute =
+  AuthenticatedmiscModulesRouteImport.update({
+    id: '/(misc)/modules',
+    path: '/modules',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedmiscMarketplaceRoute =
@@ -789,12 +796,6 @@ const AuthenticatedinventoryStockQuickStockRoute =
     path: '/quick-stock',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
-const AuthenticatedinventoryStockItemsRoute =
-  AuthenticatedinventoryStockItemsRouteImport.update({
-    id: '/items',
-    path: '/items',
-    getParentRoute: () => AuthenticatedinventoryStockRoute,
-  } as any)
 const AuthenticatedinventoryStockInventoryRoute =
   AuthenticatedinventoryStockInventoryRouteImport.update({
     id: '/inventory',
@@ -969,6 +970,12 @@ const AuthenticatedproductionParcelsParcelIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
   } as any)
+const AuthenticatedinventoryStockItemsIndexRoute =
+  AuthenticatedinventoryStockItemsIndexRouteImport.update({
+    id: '/items/',
+    path: '/items/',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceWorkersPieceWorkRoute =
   AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport.update({
     id: '/(workforce)/workforce/workers/piece-work',
@@ -1037,9 +1044,9 @@ const AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute =
   } as any)
 const AuthenticatedinventoryStockItemsItemIdRoute =
   AuthenticatedinventoryStockItemsItemIdRouteImport.update({
-    id: '/$itemId',
-    path: '/$itemId',
-    getParentRoute: () => AuthenticatedinventoryStockItemsRoute,
+    id: '/items/$itemId',
+    path: '/items/$itemId',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport.update({
@@ -1144,6 +1151,7 @@ export interface FileRoutesByFullPath {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1192,7 +1200,6 @@ export interface FileRoutesByFullPath {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1255,6 +1262,7 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
@@ -1302,6 +1310,7 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1348,7 +1357,6 @@ export interface FileRoutesByTo {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1408,6 +1416,7 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
@@ -1459,6 +1468,7 @@ export interface FileRoutesById {
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/_authenticated/(misc)/modules': typeof AuthenticatedmiscModulesRoute
   '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1507,7 +1517,6 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/_authenticated/(inventory)/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/_authenticated/(inventory)/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/_authenticated/(inventory)/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/_authenticated/(inventory)/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1570,6 +1579,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/_authenticated/(workforce)/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/_authenticated/(inventory)/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
@@ -1622,6 +1632,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/modules'
     | '/notifications'
     | '/utilities'
     | '/biological-assets'
@@ -1670,7 +1681,6 @@ export interface FileRouteTypes {
     | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
     | '/stock/quick-stock'
     | '/stock/reception'
     | '/stock/reorder-suggestions'
@@ -1733,6 +1743,7 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items/'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
     | '/parcels/$parcelId/ai/alerts'
@@ -1780,6 +1791,7 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/modules'
     | '/notifications'
     | '/utilities'
     | '/biological-assets'
@@ -1826,7 +1838,6 @@ export interface FileRouteTypes {
     | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
     | '/stock/quick-stock'
     | '/stock/reception'
     | '/stock/reorder-suggestions'
@@ -1886,6 +1897,7 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
     | '/parcels/$parcelId/ai/alerts'
@@ -1936,6 +1948,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
+    | '/_authenticated/(misc)/modules'
     | '/_authenticated/(misc)/notifications'
     | '/_authenticated/(misc)/utilities'
     | '/_authenticated/(production)/biological-assets'
@@ -1984,7 +1997,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/expiry-alerts'
     | '/_authenticated/(inventory)/stock/groups'
     | '/_authenticated/(inventory)/stock/inventory'
-    | '/_authenticated/(inventory)/stock/items'
     | '/_authenticated/(inventory)/stock/quick-stock'
     | '/_authenticated/(inventory)/stock/reception'
     | '/_authenticated/(inventory)/stock/reorder-suggestions'
@@ -2047,6 +2059,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/parcels/$parcelId/weather'
     | '/_authenticated/(workforce)/workforce/tasks/calendar'
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
+    | '/_authenticated/(inventory)/stock/items/'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
     | '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
@@ -2347,6 +2360,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AuthenticatedmiscNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(misc)/modules': {
+      id: '/_authenticated/(misc)/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof AuthenticatedmiscModulesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(misc)/marketplace': {
@@ -2832,13 +2852,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockQuickStockRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
-    '/_authenticated/(inventory)/stock/items': {
-      id: '/_authenticated/(inventory)/stock/items'
-      path: '/items'
-      fullPath: '/stock/items'
-      preLoaderRoute: typeof AuthenticatedinventoryStockItemsRouteImport
-      parentRoute: typeof AuthenticatedinventoryStockRoute
-    }
     '/_authenticated/(inventory)/stock/inventory': {
       id: '/_authenticated/(inventory)/stock/inventory'
       path: '/inventory'
@@ -3042,6 +3055,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdIndexRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
     }
+    '/_authenticated/(inventory)/stock/items/': {
+      id: '/_authenticated/(inventory)/stock/items/'
+      path: '/items'
+      fullPath: '/stock/items/'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsIndexRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(workforce)/workforce/workers/piece-work': {
       id: '/_authenticated/(workforce)/workforce/workers/piece-work'
       path: '/workforce/workers/piece-work'
@@ -3121,10 +3141,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/(inventory)/stock/items/$itemId': {
       id: '/_authenticated/(inventory)/stock/items/$itemId'
-      path: '/$itemId'
+      path: '/items/$itemId'
       fullPath: '/stock/items/$itemId'
       preLoaderRoute: typeof AuthenticatedinventoryStockItemsItemIdRouteImport
-      parentRoute: typeof AuthenticatedinventoryStockItemsRoute
+      parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(production)/parcels/$parcelId/satellite/': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/'
@@ -3290,21 +3310,6 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
     AuthenticatedinventoryInventoryRouteChildren,
   )
 
-interface AuthenticatedinventoryStockItemsRouteChildren {
-  AuthenticatedinventoryStockItemsItemIdRoute: typeof AuthenticatedinventoryStockItemsItemIdRoute
-}
-
-const AuthenticatedinventoryStockItemsRouteChildren: AuthenticatedinventoryStockItemsRouteChildren =
-  {
-    AuthenticatedinventoryStockItemsItemIdRoute:
-      AuthenticatedinventoryStockItemsItemIdRoute,
-  }
-
-const AuthenticatedinventoryStockItemsRouteWithChildren =
-  AuthenticatedinventoryStockItemsRoute._addFileChildren(
-    AuthenticatedinventoryStockItemsRouteChildren,
-  )
-
 interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
   AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
@@ -3314,7 +3319,6 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
   AuthenticatedinventoryStockInventoryRoute: typeof AuthenticatedinventoryStockInventoryRoute
-  AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRouteWithChildren
   AuthenticatedinventoryStockQuickStockRoute: typeof AuthenticatedinventoryStockQuickStockRoute
   AuthenticatedinventoryStockReceptionRoute: typeof AuthenticatedinventoryStockReceptionRoute
   AuthenticatedinventoryStockReorderSuggestionsRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -3324,6 +3328,8 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockSuppliersRoute: typeof AuthenticatedinventoryStockSuppliersRoute
   AuthenticatedinventoryStockWarehousesRoute: typeof AuthenticatedinventoryStockWarehousesRoute
   AuthenticatedinventoryStockIndexRoute: typeof AuthenticatedinventoryStockIndexRoute
+  AuthenticatedinventoryStockItemsItemIdRoute: typeof AuthenticatedinventoryStockItemsItemIdRoute
+  AuthenticatedinventoryStockItemsIndexRoute: typeof AuthenticatedinventoryStockItemsIndexRoute
 }
 
 const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRouteChildren =
@@ -3344,8 +3350,6 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
       AuthenticatedinventoryStockGroupsRoute,
     AuthenticatedinventoryStockInventoryRoute:
       AuthenticatedinventoryStockInventoryRoute,
-    AuthenticatedinventoryStockItemsRoute:
-      AuthenticatedinventoryStockItemsRouteWithChildren,
     AuthenticatedinventoryStockQuickStockRoute:
       AuthenticatedinventoryStockQuickStockRoute,
     AuthenticatedinventoryStockReceptionRoute:
@@ -3364,6 +3368,10 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
       AuthenticatedinventoryStockWarehousesRoute,
     AuthenticatedinventoryStockIndexRoute:
       AuthenticatedinventoryStockIndexRoute,
+    AuthenticatedinventoryStockItemsItemIdRoute:
+      AuthenticatedinventoryStockItemsItemIdRoute,
+    AuthenticatedinventoryStockItemsIndexRoute:
+      AuthenticatedinventoryStockItemsIndexRoute,
   }
 
 const AuthenticatedinventoryStockRouteWithChildren =
@@ -3652,6 +3660,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  AuthenticatedmiscModulesRoute: typeof AuthenticatedmiscModulesRoute
   AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
   AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -3709,6 +3718,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:
     AuthenticatedmiscMarketplaceRouteWithChildren,
+  AuthenticatedmiscModulesRoute: AuthenticatedmiscModulesRoute,
   AuthenticatedmiscNotificationsRoute: AuthenticatedmiscNotificationsRoute,
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
   AuthenticatedproductionBiologicalAssetsRoute:

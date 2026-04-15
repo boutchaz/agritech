@@ -6534,5 +6534,48 @@
     "date": "Date",
     "quantityUsed": "Quantité",
     "areaTreated": "Surface traitée"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Accédez à toutes les fonctionnalités selon votre rôle et permissions",
+    "accessible": "accessibles",
+    "rolesLegend": "Rôles",
+    "sections": {
+      "main": "Principal"
+    },
+    "marketplace": {
+      "received": "Demandes reçues",
+      "sent": "Demandes envoyées"
+    },
+    "desc": {
+      "dashboard": "Vue d'ensemble de l'activité, métriques et alertes",
+      "farmHierarchy": "Gérer les fermes, secteurs et structure organisationnelle",
+      "parcels": "Consulter et gérer les parcelles agricoles et cartes",
+      "stock": "Suivre l'inventaire, produits et mouvements d'entrepôt",
+      "infrastructure": "Gérer les bâtiments, équipements et structures",
+      "chat": "Demandez des recommandations intelligentes à AgromindIA",
+      "workers": "Gérer les employés, journaliers et affectations d'équipe",
+      "tasks": "Créer, assigner et suivre les tâches terrain et opérationnelles",
+      "campaigns": "Planifier et suivre les campagnes de production saisonnières",
+      "cropCycles": "Suivre le cycle de culture du semis à la récolte",
+      "harvests": "Enregistrer et gérer les opérations de récolte et rendements",
+      "receptionBatches": "Gérer la réception et le lotissement des produits",
+      "qualityControl": "Contrôles qualité, classement et tests de conformité",
+      "trees": "Inventaire et suivi des plantations d'arbres fruitiers",
+      "orchards": "Gérer les blocs vergers, variétés et plans de plantation",
+      "pruning": "Planifier et suivre les opérations de taille",
+      "compliance": "Suivi de conformité réglementaire et préparation aux audits",
+      "certifications": "Gérer les certifications (GlobalGAP, bio, etc.)",
+      "quotes": "Créer et gérer les devis",
+      "salesOrders": "Traiter les bons de commande clients",
+      "purchaseOrders": "Gérer les bons de commande fournisseurs",
+      "accounting": "Vue d'ensemble financière et tableau de bord comptable",
+      "invoices": "Créer et gérer les factures",
+      "payments": "Suivre les paiements et règlements",
+      "journal": "Écritures comptables et grand livre",
+      "reports": "Rapports financiers, compte de résultat et bilan",
+      "marketplaceReceived": "Consulter et répondre aux demandes de devis reçues",
+      "marketplaceSent": "Suivre les demandes de devis envoyées"
+    }
   }
 }

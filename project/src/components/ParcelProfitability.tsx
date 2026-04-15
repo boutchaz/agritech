@@ -38,6 +38,7 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 interface ParcelProfitabilityProps {
   parcelId: string;
@@ -242,20 +243,33 @@ const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
             />
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
-            onClick={() => setShowAddCost(true)}
-            variant="destructive"
+            type="button"
+            variant="outline"
             size="sm"
+            onClick={() => setShowAddCost(true)}
+            className={cn(
+              'rounded-lg border shadow-sm',
+              'border-rose-200/90 bg-rose-50/90 !text-rose-900 hover:bg-rose-100/90 hover:!text-rose-950',
+              'dark:border-rose-500/40 dark:bg-rose-950/35 dark:!text-rose-100 dark:hover:bg-rose-950/55 dark:hover:!text-white'
+            )}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus aria-hidden />
             {t('profitability.buttons.addCost')}
           </Button>
-          <Button variant="green"
-            onClick={() => setShowAddRevenue(true)}
+          <Button
+            type="button"
+            variant="outline"
             size="sm"
+            onClick={() => setShowAddRevenue(true)}
+            className={cn(
+              'rounded-lg border shadow-sm',
+              'border-emerald-200/90 bg-emerald-50/90 !text-emerald-900 hover:bg-emerald-100/90 hover:!text-emerald-950',
+              'dark:border-emerald-500/40 dark:bg-emerald-950/35 dark:!text-emerald-100 dark:hover:bg-emerald-950/55 dark:hover:!text-white'
+            )}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus aria-hidden />
             {t('profitability.buttons.addRevenue')}
           </Button>
         </div>

@@ -6715,5 +6715,48 @@
     "date": "Date",
     "quantityUsed": "Quantity",
     "areaTreated": "Area"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Access all platform features based on your role and permissions",
+    "accessible": "accessible",
+    "rolesLegend": "Roles",
+    "sections": {
+      "main": "Main"
+    },
+    "marketplace": {
+      "received": "Received Requests",
+      "sent": "Sent Requests"
+    },
+    "desc": {
+      "dashboard": "Overview of farm activity, metrics, and alerts",
+      "farmHierarchy": "Manage farms, sectors, and organizational structure",
+      "parcels": "View and manage agricultural parcels and maps",
+      "stock": "Track inventory, products, and warehouse movements",
+      "infrastructure": "Manage buildings, equipment, and farm structures",
+      "chat": "Ask AgromindIA for intelligent recommendations",
+      "workers": "Manage employees, day laborers, and team assignments",
+      "tasks": "Create, assign, and track field and operational tasks",
+      "campaigns": "Plan and monitor seasonal production campaigns",
+      "cropCycles": "Track crop lifecycle from planting to harvest",
+      "harvests": "Record and manage harvest operations and yields",
+      "receptionBatches": "Manage incoming product reception and batching",
+      "qualityControl": "Quality checks, grading, and compliance testing",
+      "trees": "Inventory and monitor fruit tree plantations",
+      "orchards": "Manage orchard blocks, varieties, and planting plans",
+      "pruning": "Schedule and track pruning operations",
+      "compliance": "Track regulatory compliance and audit readiness",
+      "certifications": "Manage certifications (GlobalGAP, organic, etc.)",
+      "quotes": "Create and manage price quotations",
+      "salesOrders": "Process customer sales orders",
+      "purchaseOrders": "Manage supplier purchase orders",
+      "accounting": "Financial overview and accounting dashboard",
+      "invoices": "Create and manage invoices",
+      "payments": "Track payments and settlements",
+      "journal": "Accounting journal entries and ledger",
+      "reports": "Financial reports, P&L, and balance sheets",
+      "marketplaceReceived": "View and respond to incoming quote requests",
+      "marketplaceSent": "Track outgoing quote requests"
+    }
   }
 }

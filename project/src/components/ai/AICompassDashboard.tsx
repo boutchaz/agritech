@@ -1,4 +1,4 @@
-import type { ComponentProps } from 'react';
+import { Fragment, type ComponentProps } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -124,74 +124,98 @@ function WorkflowStepper({ parcelId, aiPhase, hasCalibrationData }: { parcelId: 
     },
   ];
 
+  const circleClass = (step: WorkflowStep) =>
+    `flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+      step.done
+        ? 'border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-600'
+        : step.current
+          ? 'border-emerald-500 bg-white text-emerald-600 dark:border-emerald-400 dark:bg-slate-800 dark:text-emerald-400 ring-4 ring-emerald-500/20'
+          : 'border-slate-300 bg-slate-50 text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'
+    }`;
+
+  const segmentClass = (completed: boolean) =>
+    completed ? 'bg-emerald-400 dark:bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700';
+
+  const stepTitleClass = (step: WorkflowStep) =>
+    step.done
+      ? 'text-emerald-700 dark:text-emerald-300'
+      : step.current
+        ? 'text-slate-900 dark:text-white'
+        : 'text-slate-500 dark:text-slate-400';
+
+  const renderStepTitle = (step: WorkflowStep) =>
+    step.current && step.href ? (
+      <Link
+        to="/parcels/$parcelId/ai/calibration"
+        params={{ parcelId }}
+        className="hover:underline underline-offset-2"
+      >
+        {step.label}
+      </Link>
+    ) : (
+      step.label
+    );
+
   return (
     <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
-      <div className="flex items-center gap-2 mb-5">
+      <div className="mb-5 flex items-center gap-2">
         <Compass className="h-5 w-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
           {t('compass.stepper.title')}
         </h3>
       </div>
-      <div className="relative flex flex-col gap-0 sm:flex-row sm:gap-0">
+
+      {/* sm+: connectors between icons (avoids full-width bars stacked under each circle) */}
+      <div className="hidden sm:block">
+        <div className="flex items-center">
+          {steps.map((step, i) => {
+            const Icon = step.icon;
+            return (
+              <Fragment key={step.key}>
+                {i > 0 && (
+                  <div
+                    className={`h-0.5 min-w-[1rem] flex-1 rounded-full ${segmentClass(steps[i - 1].done)}`}
+                    aria-hidden
+                  />
+                )}
+                <div className={circleClass(step)}>
+                  {step.done ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
+                </div>
+              </Fragment>
+            );
+          })}
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-4">
+          {steps.map((step) => (
+            <div key={`${step.key}-copy`} className="min-w-0 text-center">
+              <p className={`text-sm font-semibold ${stepTitleClass(step)}`}>{renderStepTitle(step)}</p>
+              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{step.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile: vertical rail; line sits between steps only */}
+      <div className="flex flex-col sm:hidden">
         {steps.map((step, i) => {
           const Icon = step.icon;
           const isLast = i === steps.length - 1;
-
           return (
-            <div key={step.key} className="flex-1">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="flex flex-col items-center">
+            <div key={step.key} className="flex gap-3">
+              <div className="flex w-10 shrink-0 flex-col items-center">
+                <div className={circleClass(step)}>
+                  {step.done ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
+                </div>
+                {!isLast && (
                   <div
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                      step.done
-                        ? 'border-emerald-500 bg-emerald-500 text-white dark:border-emerald-400 dark:bg-emerald-600'
-                        : step.current
-                          ? 'border-emerald-500 bg-white text-emerald-600 dark:border-emerald-400 dark:bg-slate-800 dark:text-emerald-400 ring-4 ring-emerald-500/20'
-                          : 'border-slate-300 bg-slate-50 text-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500'
-                    }`}
-                  >
-                    {step.done ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <Icon className="h-5 w-5" />
-                    )}
-                  </div>
-                  {!isLast && (
-                    <div
-                      className={`h-full w-0.5 min-h-[2rem] sm:h-0.5 sm:w-full sm:min-w-[2rem] mt-1 sm:mt-0 sm:ml-0 ${
-                        step.done
-                          ? 'bg-emerald-400 dark:bg-emerald-600'
-                          : 'bg-slate-200 dark:bg-slate-700'
-                      }`}
-                    />
-                  )}
-                </div>
-                <div className="pb-6 sm:pb-0 sm:pt-1">
-                  <p
-                    className={`text-sm font-semibold ${
-                      step.done
-                        ? 'text-emerald-700 dark:text-emerald-300'
-                        : step.current
-                          ? 'text-slate-900 dark:text-white'
-                          : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    {step.current && step.href ? (
-                      <Link
-                        to="/parcels/$parcelId/ai/calibration"
-                        params={{ parcelId }}
-                        className="hover:underline underline-offset-2"
-                      >
-                        {step.label}
-                      </Link>
-                    ) : (
-                      step.label
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                    {step.description}
-                  </p>
-                </div>
+                    className={`mt-1 min-h-[1.75rem] w-0.5 flex-1 rounded-full ${segmentClass(step.done)}`}
+                    aria-hidden
+                  />
+                )}
+              </div>
+              <div className={`min-w-0 flex-1 ${isLast ? '' : 'pb-4'}`}>
+                <p className={`text-sm font-semibold ${stepTitleClass(step)}`}>{renderStepTitle(step)}</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{step.description}</p>
               </div>
             </div>
           );
