@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useModuleBasedDashboard } from "@/hooks/useModuleBasedDashboard";
 import { useNavigate, useLocation } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -127,6 +128,9 @@ const Sidebar = ({
   const location = useLocation();
   const { t, i18n } = useTranslation("common");
   const { currentOrganization } = useAuth();
+  const { activeModules } = useModuleBasedDashboard();
+  const activeModuleSet = new Set(activeModules);
+  const isModuleActive = (slug: string) => activeModuleSet.size === 0 || activeModuleSet.has(slug);
   const isRTL = isRTLLocale(i18n.language);
   const { bothRailsCollapsed } = useSidebarMargin(isRTL);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -799,8 +803,8 @@ const Sidebar = ({
                 </Button>
               </ProtectedNavItem>
 
-              {/* AI Chat */}
-              <ProtectedNavItem action="read" subject="Chat">
+              {/* AI Chat — gated on analytics module */}
+              {isModuleActive('analytics') && <ProtectedNavItem action="read" subject="Chat">
                 <Button
                   variant="ghost"
                   data-tour="nav-chat"
@@ -811,7 +815,7 @@ const Sidebar = ({
                   {renderIcon(Bot)}
                   {renderText(t("nav.chat"))}
                 </Button>
-              </ProtectedNavItem>
+              </ProtectedNavItem>}
             </div>
 
             {/* ========== PERSONNEL SECTION ========== */}
@@ -1119,6 +1123,7 @@ const Sidebar = ({
             </div>
 
             {/* ========== COMPLIANCE SECTION ========== */}
+            {isModuleActive('compliance') && <>
             <Separator
               className={cn(
                 "my-3 opacity-50",
@@ -1234,6 +1239,7 @@ const Sidebar = ({
                 </>
               )}
             </div>
+            </>}
 
             {/* ========== SALES & PURCHASING SECTION ========== */}
             <ProtectedNavItem action="read" subject="Invoice">
@@ -1503,8 +1509,8 @@ const Sidebar = ({
               </div>
             </ProtectedNavItem>
 
-            {/* ========== MARKETPLACE ========== */}
-            <ProtectedNavItem action="read" subject="Invoice">
+            {/* ========== MARKETPLACE — gated on marketplace module ========== */}
+            {isModuleActive('marketplace') && <ProtectedNavItem action="read" subject="Invoice">
               <Separator
                 className={cn(
                   "my-3 opacity-50",
@@ -1637,7 +1643,7 @@ const Sidebar = ({
                   </>
                 )}
               </div>
-            </ProtectedNavItem>
+            </ProtectedNavItem>}
           </nav>
         </ScrollArea>
 

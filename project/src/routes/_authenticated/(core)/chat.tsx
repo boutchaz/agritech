@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChatInterface } from '@/components/Chat/ChatInterface';
 import { createFileRoute } from '@tanstack/react-router';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+// withRouteProtection replaced by withModuleProtection for module gating
 import { useTranslation } from 'react-i18next';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Bot } from 'lucide-react';
@@ -45,6 +45,8 @@ const ChatPage = () => {
   );
 };
 
+import { withModuleProtection } from '@/components/authorization/withModuleProtection';
+
 export const Route = createFileRoute('/_authenticated/(core)/chat')({
-  component: withRouteProtection(ChatPage, 'read', 'Chat'),
+  component: withModuleProtection(ChatPage, 'analytics', 'AgromindIA', 'read', 'Chat'),
 });

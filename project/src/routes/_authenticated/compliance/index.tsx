@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { format, differenceInDays, isAfter, isBefore, addDays } from 'date-fns';
@@ -47,8 +47,18 @@ import {
   type ComplianceCheckResponseDto,
 } from '@/lib/api/compliance';
 
+import { ModuleGate } from '@/components/authorization/ModuleGate';
+
+function ComplianceDashboardGuarded() {
+  return (
+    <ModuleGate moduleSlug="compliance" moduleName="Conformité & Certifications">
+      <ComplianceDashboardPage />
+    </ModuleGate>
+  );
+}
+
 export const Route = createFileRoute('/_authenticated/compliance/')({
-  component: ComplianceDashboardPage,
+  component: ComplianceDashboardGuarded,
 });
 
 const dateLocales: Record<string, Locale> = { fr, en: enUS, ar };

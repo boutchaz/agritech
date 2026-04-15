@@ -19,8 +19,18 @@ import { SampleSchedulesList } from '@/components/LabServices/SampleSchedulesLis
 import { SectionLoader } from '@/components/ui/loader';
 
 
+import { ModuleGate } from '@/components/authorization/ModuleGate';
+
+function LabServicesGuarded() {
+  return (
+    <ModuleGate moduleSlug="analytics" moduleName="Services de laboratoire">
+      <LabServicesPage />
+    </ModuleGate>
+  );
+}
+
 export const Route = createFileRoute('/_authenticated/(misc)/lab-services')({
-  component: LabServicesPage,
+  component: LabServicesGuarded,
 });
 
 function LabServicesPage() {
