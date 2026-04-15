@@ -32,13 +32,14 @@ const SubscriptionBanner = () => {
   return (
     <div
       className={cn(
-        'relative border-b px-4 py-3',
+        'relative border-b px-4 py-3.5',
         isTrialing
-          ? 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20'
-          : 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/20',
+          ? 'border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10'
+          : 'border-amber-200/80 bg-amber-50/90 dark:border-amber-900/60 dark:bg-amber-950/25',
         isRTL && 'text-right'
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
+      role="status"
     >
       <div
         className={cn(
@@ -53,14 +54,12 @@ const SubscriptionBanner = () => {
           )}
         >
           {isTrialing ? (
-            <Zap
-              className={cn(
-                'h-5 w-5 flex-shrink-0',
-                isTrialing ? 'text-blue-600 dark:text-blue-400' : ''
-              )}
-            />
+            <Zap className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden />
           ) : (
-            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-yellow-600 dark:text-yellow-400" />
+            <AlertTriangle
+              className="h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400"
+              aria-hidden
+            />
           )}
 
           <div className={cn('min-w-0 flex-1', isRTL ? 'text-right' : 'text-left')}>
@@ -102,13 +101,9 @@ const SubscriptionBanner = () => {
         >
           <Button
             type="button"
+            variant="default"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className={cn(
-              'h-10 flex-1 rounded-md px-4 text-sm font-medium md:flex-initial',
-              isTrialing
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-yellow-600 text-white hover:bg-yellow-700'
-            )}
+            className="h-10 flex-1 rounded-md px-4 text-sm font-medium md:flex-initial"
           >
             {isTrialing ? t('subscriptionBanner.upgradeNow') : t('subscriptionBanner.manageSubscription')}
           </Button>
@@ -118,7 +113,7 @@ const SubscriptionBanner = () => {
             variant="ghost"
             size="icon"
             onClick={() => setDismissed(true)}
-            className="h-10 w-10 shrink-0 text-slate-500 hover:bg-accent hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label={t('app.close')}
           >
             <X className="h-5 w-5" />

@@ -299,8 +299,8 @@ export default function ReceptionBatchList({
         </div>
       ) : undefined}
       filters={
-        <div className="bg-white p-4 rounded-lg shadow-sm border">
-          <div className="space-y-3">
+        <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+          <div className="space-y-4">
             <FilterBar
               searchValue={tableState.search}
               onSearchChange={(value) => tableState.setSearch(value)}
@@ -359,7 +359,7 @@ export default function ReceptionBatchList({
         />
       ) : undefined}
     >
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
         {isLoading ? (
           <SectionLoader />
         ) : batches.length === 0 ? (
@@ -384,7 +384,7 @@ export default function ReceptionBatchList({
             emptyTitle={emptyTitle}
             className="p-3 lg:p-0"
             renderCard={(batch) => (
-              <div className="border rounded-lg p-4 bg-white shadow-sm space-y-4">
+              <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <p className="font-semibold text-gray-900 truncate">{batch.batch_code}</p>

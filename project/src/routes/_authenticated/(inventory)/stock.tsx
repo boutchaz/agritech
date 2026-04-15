@@ -85,9 +85,10 @@ const AppContent = () => {
         />
       }
     >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+      {/* pt-0: avoid a gray strip between ModernPageHeader and the tab row (main bg shows through padding). */}
+      <div className="px-3 pb-20 pt-0 sm:px-4 md:px-6 md:pb-6">
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
+        <Tabs value={activeTab} onValueChange={handleTabChange} data-tour="stock-overview">
           <div
             className={cn(
               'relative flex w-full min-w-0 items-center gap-1',
@@ -112,7 +113,7 @@ const AppContent = () => {
           </div>
         </Tabs>
 
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <Outlet />
         </div>
       </div>

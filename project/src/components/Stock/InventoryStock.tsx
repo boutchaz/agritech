@@ -164,7 +164,7 @@ export default function InventoryStock() {
     <ListPageLayout
       header={
         <div>
-          <h2 className="text-2xl font-bold">{t('inventoryStock.title')}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('inventoryStock.title')}</h2>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
             {t('inventoryStock.subtitle')}
           </p>
