@@ -147,7 +147,33 @@ const TaskForm = ({
     formState: { errors, isSubmitting },
   } = form;
 
-  const formData = watch();
+  // Watch individual fields to avoid full-form re-render on every keystroke
+  const watchFarmId = watch('farm_id');
+  const watchParcelId = watch('parcel_id');
+  const watchTaskType = watch('task_type');
+  const watchTitle = watch('title');
+  const watchPriority = watch('priority');
+  const watchPaymentType = watch('payment_type');
+  const watchWorkUnitId = watch('work_unit_id');
+  const watchScheduledStart = watch('scheduled_start');
+  const watchCropCycleId = watch('crop_cycle_id');
+  const watchUnitsRequired = watch('units_required');
+  const watchRatePerUnit = watch('rate_per_unit');
+
+  // Backward-compat alias for template references
+  const formData = {
+    farm_id: watchFarmId,
+    parcel_id: watchParcelId,
+    task_type: watchTaskType,
+    title: watchTitle,
+    priority: watchPriority,
+    payment_type: watchPaymentType,
+    work_unit_id: watchWorkUnitId,
+    scheduled_start: watchScheduledStart,
+    crop_cycle_id: watchCropCycleId,
+    units_required: watchUnitsRequired,
+    rate_per_unit: watchRatePerUnit,
+  };
 
   useEffect(() => {
     if (task) {
