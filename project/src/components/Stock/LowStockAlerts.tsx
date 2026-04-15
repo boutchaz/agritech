@@ -160,7 +160,12 @@ export default function LowStockAlerts({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => navigate({ to: '/stock/items', search: { itemId: item.item_id } })}
+                    onClick={() =>
+                      navigate({
+                        to: '/stock/items/$itemId',
+                        params: { itemId: item.item_id },
+                      })
+                    }
                   >
                     <ExternalLink className="w-3 h-3 mr-1" />
                     {t('stock.lowStockAlerts.viewItem', 'View Item')}

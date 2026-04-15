@@ -335,7 +335,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
               <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
             </div>
-            <Button onClick={onCreateClick}>
+            <Button variant="default" onClick={onCreateClick}>
               <Plus className="w-4 h-4 mr-2" />
               {t('stockEntries.newEntry')}
             </Button>

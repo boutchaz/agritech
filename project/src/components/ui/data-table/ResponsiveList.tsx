@@ -23,6 +23,7 @@ export interface ResponsiveListProps<T> {
   className?: string;
   /** Extra content rendered below the empty state (e.g. secondary message) */
   emptyExtra?: ReactNode;
+  onRowClick?: (item: T) => void;
 }
 
 export function ResponsiveList<T>({
@@ -39,6 +40,7 @@ export function ResponsiveList<T>({
   emptyAction,
   className,
   emptyExtra,
+  onRowClick,
 }: ResponsiveListProps<T>) {
   if (isLoading) {
     return <SectionLoader />;
@@ -93,7 +95,18 @@ export function ResponsiveList<T>({
               {items.map((item) => (
                 <tr
                   key={keyExtractor(item)}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  className={cn(
+                    'hover:bg-gray-50 dark:hover:bg-gray-700',
+                    onRowClick && 'cursor-pointer'
+                  )}
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  onKeyDown={onRowClick ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onRowClick(item);
+                    }
+                  } : undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
                 >
                   {renderTable(item)}
                 </tr>

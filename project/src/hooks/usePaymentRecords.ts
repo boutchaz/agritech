@@ -6,11 +6,15 @@ import type { CreatePaymentRecordRequest } from '@/types/payments';
 
 export function usePaymentRecords(filters?: PaymentFilters) {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['payment-records', currentOrganization?.id, filters],
-    queryFn: () => paymentRecordsApi.getAll(filters, currentOrganization?.id),
-    enabled: !!currentOrganization?.id,
+    queryKey: ['payment-records', organizationId, filters],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return paymentRecordsApi.getAll(filters, organizationId);
+    },
+    enabled: !!organizationId,
     staleTime: 60000,
   });
 }
@@ -31,22 +35,30 @@ export function usePaymentRecord(paymentId: string | null) {
 
 export function usePaymentStatistics() {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['payment-statistics', currentOrganization?.id],
-    queryFn: () => paymentRecordsApi.getStatistics(currentOrganization!.id),
-    enabled: !!currentOrganization?.id,
+    queryKey: ['payment-statistics', organizationId],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return paymentRecordsApi.getStatistics(organizationId);
+    },
+    enabled: !!organizationId,
     staleTime: 60000,
   });
 }
 
 export function usePaymentAdvances(filters?: { worker_id?: string; status?: string }) {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['payment-advances', currentOrganization?.id, filters],
-    queryFn: () => paymentRecordsApi.getAdvances(currentOrganization!.id, filters),
-    enabled: !!currentOrganization?.id,
+    queryKey: ['payment-advances', organizationId, filters],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return paymentRecordsApi.getAdvances(organizationId, filters);
+    },
+    enabled: !!organizationId,
     staleTime: 60000,
   });
 }

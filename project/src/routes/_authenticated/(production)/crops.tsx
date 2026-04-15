@@ -1,23 +1,86 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
-import { useCrops } from '@/hooks/useCrops';
+import { useCrops, useCreateCrop } from '@/hooks/useCrops';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
 import { Sprout, Plus, Building2 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 function CropsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const createCrop = useCreateCrop();
 
   const { data: crops = [], isLoading, isError } = useCrops();
+
+  const createSchema = useMemo(() => {
+    const requiredMessage = t('validation.required', 'Required');
+    const optionalNumber = z.preprocess(
+      (value) => value === '' || value === null ? undefined : value,
+      z.coerce.number().optional(),
+    );
+
+    return z.object({
+      farm_id: z.string().min(1, requiredMessage),
+      variety_id: z.string().min(1, requiredMessage),
+      name: z.string().min(1, requiredMessage),
+      parcel_id: z.string().optional(),
+      planting_date: z.string().optional(),
+      expected_harvest_date: z.string().optional(),
+      planted_area: optionalNumber,
+      notes: z.string().optional(),
+    });
+  }, [t]);
+
+  type FormData = z.input<typeof createSchema>;
+  type SubmitData = z.output<typeof createSchema>;
+
+  const form = useForm<FormData, unknown, SubmitData>({
+    resolver: zodResolver(createSchema),
+    defaultValues: {
+      farm_id: '',
+      variety_id: '',
+      name: '',
+      parcel_id: '',
+      planting_date: '',
+      expected_harvest_date: '',
+      planted_area: undefined,
+      notes: '',
+    },
+  });
+
+  const onSubmit = async (data: SubmitData) => {
+    try {
+      await createCrop.mutateAsync({
+        farm_id: data.farm_id,
+        variety_id: data.variety_id,
+        name: data.name,
+        parcel_id: data.parcel_id || undefined,
+        planting_date: data.planting_date || undefined,
+        expected_harvest_date: data.expected_harvest_date || undefined,
+        planted_area: data.planted_area,
+        notes: data.notes || undefined,
+      });
+      toast.success(t('crops.createSuccess', 'Crop created successfully'));
+      setShowForm(false);
+      form.reset();
+    } catch {
+      toast.error(t('crops.createError', 'Failed to create crop'));
+    }
+  };
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -118,14 +181,123 @@ function CropsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">{t('crops.addCrop', 'Add Crop')}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {t('crops.formComingSoon', 'Full crop form with variety selection, area, and dates coming soon.')}
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                {t('common.cancel', 'Cancel')}
-              </Button>
-            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <label htmlFor="crop-farm-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.farmId', 'Farm ID')}
+                </label>
+                <Input
+                  id="crop-farm-id"
+                  {...form.register('farm_id')}
+                  placeholder={t('crops.farmIdPlaceholder', 'Enter farm ID')}
+                  className={form.formState.errors.farm_id ? 'border-red-400' : ''}
+                />
+                {form.formState.errors.farm_id && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.farm_id.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="crop-variety-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.varietyId', 'Variety ID')}
+                </label>
+                <Input
+                  id="crop-variety-id"
+                  {...form.register('variety_id')}
+                  placeholder={t('crops.varietyIdPlaceholder', 'Enter variety ID')}
+                  className={form.formState.errors.variety_id ? 'border-red-400' : ''}
+                />
+                {form.formState.errors.variety_id && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.variety_id.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="crop-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.cropName', 'Crop Name')}
+                </label>
+                <Input
+                  id="crop-name"
+                  {...form.register('name')}
+                  placeholder={t('crops.cropNamePlaceholder', 'Enter crop name')}
+                  className={form.formState.errors.name ? 'border-red-400' : ''}
+                />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.name.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="crop-parcel-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.parcelId', 'Parcel ID')}
+                </label>
+                <Input
+                  id="crop-parcel-id"
+                  {...form.register('parcel_id')}
+                  placeholder={t('crops.parcelIdPlaceholder', 'Enter parcel ID')}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="crop-planting-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('crops.plantingDate', 'Planting Date')}
+                  </label>
+                  <Input id="crop-planting-date" {...form.register('planting_date')} type="date" />
+                </div>
+
+                <div>
+                  <label htmlFor="crop-expected-harvest-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('crops.expectedHarvest', 'Expected Harvest Date')}
+                  </label>
+                  <Input id="crop-expected-harvest-date" {...form.register('expected_harvest_date')} type="date" />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="crop-planted-area" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.plantedArea', 'Planted Area (ha)')}
+                </label>
+                <Input
+                  id="crop-planted-area"
+                  {...form.register('planted_area')}
+                  type="number"
+                  step="0.01"
+                  placeholder={t('crops.plantedAreaPlaceholder', 'Enter planted area')}
+                  className={form.formState.errors.planted_area ? 'border-red-400' : ''}
+                />
+                {form.formState.errors.planted_area && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.planted_area.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="crop-notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('crops.notes', 'Notes')}
+                </label>
+                <Textarea
+                  id="crop-notes"
+                  {...form.register('notes')}
+                  placeholder={t('crops.notesPlaceholder', 'Add crop notes')}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowForm(false);
+                    form.reset();
+                  }}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button type="submit" variant="green" disabled={createCrop.isPending}>
+                  {createCrop.isPending ? t('common.creating', 'Creating...') : t('common.create', 'Create')}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

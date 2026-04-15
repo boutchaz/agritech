@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { cropsApi, type Crop } from '@/lib/api/crops';
+import { cropsApi, type Crop, type CreateCropInput } from '@/lib/api/crops';
 
 export type { Crop } from '@/lib/api/crops';
 
@@ -54,5 +54,21 @@ export function useCrop(cropId: string | null) {
     queryFn: () => cropsApi.getById(organizationId!, cropId!),
     enabled: !!organizationId && !!cropId,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateCrop() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: (data: CreateCropInput) => {
+      const orgId = currentOrganization?.id;
+      if (!orgId) throw new Error('No organization selected');
+      return cropsApi.create(orgId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['crops'] });
+    },
   });
 }

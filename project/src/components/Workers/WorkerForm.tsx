@@ -457,8 +457,8 @@ const WorkerForm = ({
       <Button type="button" variant="outline" onClick={onClose}>
         {t("workers.form.buttons.cancel")}
       </Button>
-      <Button type="submit" form="worker-form" disabled={isSubmitting}>
-        {isSubmitting ? (
+      <Button type="submit" form="worker-form" disabled={isSubmitting || createWorker.isPending || updateWorker.isPending}>
+        {isSubmitting || createWorker.isPending || updateWorker.isPending ? (
           <>
             <ButtonLoader />
             <span>{t("workers.form.buttons.saving")}</span>
@@ -481,9 +481,7 @@ const WorkerForm = ({
   const formContent = (
     <form
       id="worker-form"
-      onSubmit={handleSubmit((data) => {
-        void submitWorker(data);
-      })}
+      onSubmit={handleSubmit((data) => submitWorker(data))}
       className="space-y-6"
     >
       {/* Error Summary */}

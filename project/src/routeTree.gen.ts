@@ -156,6 +156,7 @@ import { Route as AuthenticatedproductionParcelsParcelIdAnalyseRouteImport } fro
 import { Route as AuthenticatedproductionParcelsParcelIdAiRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.sent'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.received'
+import { Route as AuthenticatedinventoryStockItemsItemIdRouteImport } from './routes/_authenticated/(inventory)/stock/items.$itemId'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.index'
 import { Route as AuthenticatedproductionParcelsParcelIdAiIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.index'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.timeseries'
@@ -1028,6 +1029,12 @@ const AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute =
     path: '/quote-requests/received',
     getParentRoute: () => AuthenticatedmiscMarketplaceRoute,
   } as any)
+const AuthenticatedinventoryStockItemsItemIdRoute =
+  AuthenticatedinventoryStockItemsItemIdRouteImport.update({
+    id: '/$itemId',
+    path: '/$itemId',
+    getParentRoute: () => AuthenticatedinventoryStockItemsRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport.update({
     id: '/',
@@ -1178,7 +1185,7 @@ export interface FileRoutesByFullPath {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1229,6 +1236,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
@@ -1332,7 +1340,7 @@ export interface FileRoutesByTo {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1382,6 +1390,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1489,7 +1498,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/_authenticated/(inventory)/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRouteWithChildren
   '/_authenticated/(inventory)/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/_authenticated/(inventory)/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/_authenticated/(inventory)/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1540,6 +1549,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/_authenticated/(inventory)/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/_authenticated/(production)/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
@@ -1701,6 +1711,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/compliance/certifications/'
     | '/compliance/corrective-actions/'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/ai'
@@ -1854,6 +1865,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/compliance/certifications'
     | '/compliance/corrective-actions'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -2011,6 +2023,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks/'
     | '/_authenticated/compliance/certifications/'
     | '/_authenticated/compliance/corrective-actions/'
+    | '/_authenticated/(inventory)/stock/items/$itemId'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
     | '/_authenticated/(production)/parcels/$parcelId/ai'
@@ -3087,6 +3100,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport
       parentRoute: typeof AuthenticatedmiscMarketplaceRoute
     }
+    '/_authenticated/(inventory)/stock/items/$itemId': {
+      id: '/_authenticated/(inventory)/stock/items/$itemId'
+      path: '/$itemId'
+      fullPath: '/stock/items/$itemId'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsItemIdRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockItemsRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/satellite/': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/'
       path: '/'
@@ -3251,6 +3271,21 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
     AuthenticatedinventoryInventoryRouteChildren,
   )
 
+interface AuthenticatedinventoryStockItemsRouteChildren {
+  AuthenticatedinventoryStockItemsItemIdRoute: typeof AuthenticatedinventoryStockItemsItemIdRoute
+}
+
+const AuthenticatedinventoryStockItemsRouteChildren: AuthenticatedinventoryStockItemsRouteChildren =
+  {
+    AuthenticatedinventoryStockItemsItemIdRoute:
+      AuthenticatedinventoryStockItemsItemIdRoute,
+  }
+
+const AuthenticatedinventoryStockItemsRouteWithChildren =
+  AuthenticatedinventoryStockItemsRoute._addFileChildren(
+    AuthenticatedinventoryStockItemsRouteChildren,
+  )
+
 interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
   AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
@@ -3260,7 +3295,7 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
   AuthenticatedinventoryStockInventoryRoute: typeof AuthenticatedinventoryStockInventoryRoute
-  AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRoute
+  AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRouteWithChildren
   AuthenticatedinventoryStockQuickStockRoute: typeof AuthenticatedinventoryStockQuickStockRoute
   AuthenticatedinventoryStockReceptionRoute: typeof AuthenticatedinventoryStockReceptionRoute
   AuthenticatedinventoryStockReorderSuggestionsRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -3291,7 +3326,7 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
     AuthenticatedinventoryStockInventoryRoute:
       AuthenticatedinventoryStockInventoryRoute,
     AuthenticatedinventoryStockItemsRoute:
-      AuthenticatedinventoryStockItemsRoute,
+      AuthenticatedinventoryStockItemsRouteWithChildren,
     AuthenticatedinventoryStockQuickStockRoute:
       AuthenticatedinventoryStockQuickStockRoute,
     AuthenticatedinventoryStockReceptionRoute:

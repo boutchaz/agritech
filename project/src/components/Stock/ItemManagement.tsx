@@ -61,8 +61,6 @@ import { toast } from 'sonner';
 import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
-import FarmStockLevels from './FarmStockLevels';
-import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
 import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -1393,11 +1391,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   );
 }
 
-interface ItemManagementProps {
-  selectedItemId?: string;
-}
-
-export default function ItemManagement({ selectedItemId }: ItemManagementProps) {
+export default function ItemManagement() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
@@ -1405,7 +1399,6 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItemForDetails, setSelectedItemForDetails] = useState<Item | null>(null);
   
   const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -1534,32 +1527,11 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
   };
 
   const openItemDetails = (item: Item) => {
-    setSelectedItemForDetails(item);
     void navigate({
-      to: '/stock/items',
-      search: { itemId: item.id },
-      replace: true,
+      to: '/stock/items/$itemId',
+      params: { itemId: item.id },
     });
   };
-
-  const closeItemDetails = () => {
-    setSelectedItemForDetails(null);
-    void navigate({
-      to: '/stock/items',
-      search: () => ({}),
-      replace: true,
-    });
-  };
-
-  useEffect(() => {
-    if (!selectedItemId) {
-      setSelectedItemForDetails(null);
-      return;
-    }
-
-    const matchingItem = items.find((item) => item.id === selectedItemId) || null;
-    setSelectedItemForDetails(matchingItem);
-  }, [items, selectedItemId]);
 
   return (
     <>
@@ -1651,6 +1623,7 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
               label: t('items.createItem'),
               onClick: handleCreate,
             } : undefined}
+            onRowClick={openItemDetails}
             renderCard={(item) => {
               const stockLevel = stockLevels[item.id];
               const isLowStock = stockLevel?.is_low_stock ||
@@ -1843,7 +1816,10 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleVariants(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleVariants(item);
+                        }}
                         className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
                         title={t('items.variants.title', 'Variants')}
                       >
@@ -1852,7 +1828,10 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setTimelineItem(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setTimelineItem(item);
+                        }}
                         className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
                         title={t('items.timeline.open', 'History')}
                       >
@@ -1861,19 +1840,33 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedItemForDetails(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openItemDetails(item);
+                        }}
                         className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
                         title={t('items.viewDetails', 'View Details')}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="p-1 sm:p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                        className="p-1 sm:p-2"
+                      >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item);
+                        }}
                         className="p-1 text-red-600 hover:text-red-700 sm:p-2"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1905,34 +1898,6 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
           itemName={timelineItem.item_name}
           onClose={() => setTimelineItem(null)}
         />
-      )}
-
-      {/* Item Details Dialog */}
-      {selectedItemForDetails && (
-        <ResponsiveDialog
-          open={!!selectedItemForDetails}
-          onOpenChange={(open) => {
-            if (!open) closeItemDetails();
-          }}
-          title={selectedItemForDetails.item_name}
-          description={t('items.itemDetails', 'Item Details and Stock Information')}
-          size="4xl"
-          contentClassName="max-h-[90vh] overflow-y-auto"
-        >
-            <div className="space-y-6 mt-4">
-              {/* Stock Levels by Farm */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.stockByFarm', 'Stock by Farm')}</h3>
-                <FarmStockLevels item_id={selectedItemForDetails.id} showWarehouseDetails={true} />
-              </div>
-
-              {/* Farm Usage */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
-                <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
-              </div>
-            </div>
-        </ResponsiveDialog>
       )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

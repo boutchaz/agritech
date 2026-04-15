@@ -45,14 +45,14 @@ export const productApplicationsApi = {
       if (wrappedResponse.success && Array.isArray(wrappedResponse.applications)) {
         return wrappedResponse.applications;
       }
+      throw new Error('Failed to load product applications');
     }
 
-    // Fallback: if response is already an array (backward compatibility)
     if (Array.isArray(response)) {
       return response;
     }
 
-    return [];
+    throw new Error('Unexpected response format from product applications API');
   },
 
   /**

@@ -319,7 +319,9 @@
     "marketplace": "السوق",
     "receivedRequests": "الطلبات المستلمة",
     "sentRequests": "الطلبات المرسلة",
-    "viewMarketplace": "عرض السوق"
+    "viewMarketplace": "عرض السوق",
+    "paymentRecords": "المدفوعات",
+    "bankAccounts": "الحسابات البنكية"
   },
   "sidebar": {
     "collapse": "طي",
@@ -6268,5 +6270,67 @@
   "dragHandle": "اسحب لإعادة الترتيب",
   "toggleSatellite": "تبديل عرض القمر الصناعي",
   "fullscreen": "ملء الشاشة",
-  "exitFullscreen": "الخروج من وضع ملء الشاشة"
+  "exitFullscreen": "الخروج من وضع ملء الشاشة",
+  "crops": {
+    "pageTitle": "المحاصيل",
+    "description": "إدارة محاصيلك وتتبع نموها.",
+    "addCrop": "إضافة محصول",
+    "noCrops": "لا توجد محاصيل بعد",
+    "noCropsDescription": "ابدأ بإضافة أول محصول لك.",
+    "farm": "المزرعة",
+    "parcel": "القطعة",
+    "area": "المساحة",
+    "plantingDate": "تاريخ الزراعة",
+    "expectedHarvest": "الحصاد المتوقع"
+  },
+  "bankAccounts": {
+    "pageTitle": "الحسابات البنكية",
+    "description": "إدارة الحسابات البنكية لمنظمتك.",
+    "addAccount": "إضافة حساب",
+    "noAccounts": "لا توجد حسابات بنكية بعد",
+    "noAccountsDescription": "ابدأ بإضافة أول حساب بنكي.",
+    "bankName": "البنك",
+    "accountNumber": "رقم الحساب",
+    "currency": "العملة",
+    "confirmDelete": "حذف الحساب البنكي",
+    "confirmDeleteDescription": "هل أنت متأكد من حذف هذا الحساب البنكي؟",
+    "deleteSuccess": "تم حذف الحساب البنكي بنجاح",
+    "deleteError": "فشل حذف الحساب البنكي"
+  },
+  "deliveries": {
+    "pageTitle": "التوصيلات",
+    "description": "تتبع وإدارة توصيلات منتجاتك.",
+    "addDelivery": "توصيلة جديدة",
+    "noDeliveries": "لا توجد توصيلات بعد",
+    "noDeliveriesDescription": "أنشئ أول توصيلة لبدء التتبع.",
+    "date": "التاريخ",
+    "type": "النوع",
+    "cancelSuccess": "تم إلغاء التوصيلة",
+    "cancelError": "فشل إلغاء التوصيلة"
+  },
+  "payments": {
+    "pageTitle": "سجلات الدفع",
+    "description": "تتبع مدفوعات العمال والسلف والموافقات.",
+    "newPayment": "دفعة جديدة",
+    "noPayments": "لا توجد سجلات دفع بعد",
+    "noPaymentsDescription": "ستظهر سجلات الدفع هنا بمجرد إنشائها.",
+    "type": "النوع",
+    "period": "الفترة",
+    "approve": "موافقة",
+    "process": "معالجة",
+    "approveSuccess": "تمت الموافقة على الدفعة",
+    "approveError": "فشلت الموافقة على الدفعة",
+    "processSuccess": "تمت معالجة الدفعة",
+    "processError": "فشلت معالجة الدفعة"
+  },
+  "productApplications": {
+    "pageTitle": "تطبيقات المنتجات",
+    "description": "تتبع المعالجات واستخدام المنتجات من المخزون.",
+    "addApplication": "تسجيل تطبيق",
+    "noApplications": "لا توجد تطبيقات منتجات بعد",
+    "noApplicationsDescription": "سجل أول تطبيق منتج لتتبع المعالجات.",
+    "date": "التاريخ",
+    "quantityUsed": "الكمية",
+    "areaTreated": "المساحة المعالجة"
+  }
 }

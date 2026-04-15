@@ -6435,5 +6435,67 @@
   "dragHandle": "Glisser pour réorganiser",
   "toggleSatellite": "Basculer vue satellite",
   "fullscreen": "Plein écran",
-  "exitFullscreen": "Quitter le plein écran"
+  "exitFullscreen": "Quitter le plein écran",
+  "crops": {
+    "pageTitle": "Cultures",
+    "description": "Gérez vos cultures et suivez leur croissance.",
+    "addCrop": "Ajouter une culture",
+    "noCrops": "Aucune culture",
+    "noCropsDescription": "Commencez par ajouter votre première culture.",
+    "farm": "Ferme",
+    "parcel": "Parcelle",
+    "area": "Surface",
+    "plantingDate": "Plantation",
+    "expectedHarvest": "Récolte prévue"
+  },
+  "bankAccounts": {
+    "pageTitle": "Comptes bancaires",
+    "description": "Gérez les comptes bancaires de votre organisation.",
+    "addAccount": "Ajouter un compte",
+    "noAccounts": "Aucun compte bancaire",
+    "noAccountsDescription": "Commencez par ajouter votre premier compte bancaire.",
+    "bankName": "Banque",
+    "accountNumber": "N° de compte",
+    "currency": "Devise",
+    "confirmDelete": "Supprimer le compte bancaire",
+    "confirmDeleteDescription": "Êtes-vous sûr de vouloir supprimer ce compte bancaire ?",
+    "deleteSuccess": "Compte bancaire supprimé avec succès",
+    "deleteError": "Échec de la suppression du compte bancaire"
+  },
+  "deliveries": {
+    "pageTitle": "Livraisons",
+    "description": "Suivez et gérez vos livraisons de produits.",
+    "addDelivery": "Nouvelle livraison",
+    "noDeliveries": "Aucune livraison",
+    "noDeliveriesDescription": "Créez votre première livraison pour commencer le suivi.",
+    "date": "Date",
+    "type": "Type",
+    "cancelSuccess": "Livraison annulée",
+    "cancelError": "Échec de l'annulation de la livraison"
+  },
+  "payments": {
+    "pageTitle": "Paiements",
+    "description": "Suivez les paiements, avances et approbations des travailleurs.",
+    "newPayment": "Nouveau paiement",
+    "noPayments": "Aucun paiement",
+    "noPaymentsDescription": "Les paiements apparaîtront ici une fois créés.",
+    "type": "Type",
+    "period": "Période",
+    "approve": "Approuver",
+    "process": "Traiter",
+    "approveSuccess": "Paiement approuvé",
+    "approveError": "Échec de l'approbation du paiement",
+    "processSuccess": "Paiement traité",
+    "processError": "Échec du traitement du paiement"
+  },
+  "productApplications": {
+    "pageTitle": "Applications de produits",
+    "description": "Suivez les traitements et l'utilisation des produits depuis le stock.",
+    "addApplication": "Enregistrer une application",
+    "noApplications": "Aucune application de produit",
+    "noApplicationsDescription": "Enregistrez votre première application de produit.",
+    "date": "Date",
+    "quantityUsed": "Quantité",
+    "areaTreated": "Surface traitée"
+  }
 }
