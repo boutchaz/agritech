@@ -1,111 +1,132 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, IsDate, IsUUID, IsOptional, IsEnum, IsNotEmpty, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsNumber, IsUUID, IsOptional, IsEnum, IsNotEmpty, Min, IsDateString } from 'class-validator';
 
+// Enums match database CHECK constraints
 export enum BiologicalAssetType {
-  TREE = 'tree',
-  LIVESTOCK = 'livestock',
-  VINE = 'vine',
-  SHRUB = 'shrub',
-  OTHER = 'other',
+  BEARER_PLANT = 'bearer_plant',
+  CONSUMABLE_PLANT = 'consumable_plant',
+  LIVESTOCK_BEARER = 'livestock_bearer',
+  LIVESTOCK_CONSUMABLE = 'livestock_consumable',
 }
 
 export enum BiologicalAssetStatus {
-  ACTIVE = 'active',
-  DORMANT = 'dormant',
-  DISEASED = 'diseased',
-  DEAD = 'dead',
-  HARVESTED = 'harvested',
-  REMOVED = 'removed',
+  IMMATURE = 'immature',
+  PRODUCTIVE = 'productive',
+  DECLINING = 'declining',
+  DISPOSED = 'disposed',
+}
+
+export enum DepreciationMethod {
+  STRAIGHT_LINE = 'straight_line',
+  DECLINING_BALANCE = 'declining_balance',
+  UNITS_OF_PRODUCTION = 'units_of_production',
 }
 
 export class CreateBiologicalAssetDto {
-  @ApiProperty({ description: 'Organization ID' })
-  @IsUUID()
-  @IsNotEmpty()
-  organization_id: string;
-
-  @ApiProperty({ description: 'Farm ID' })
+  @ApiProperty()
   @IsUUID()
   @IsNotEmpty()
   farm_id: string;
 
-  @ApiProperty({ description: 'Parcel ID (optional)' })
+  @ApiPropertyOptional()
   @IsUUID()
   @IsOptional()
   parcel_id?: string;
 
-  @ApiProperty({ description: 'Asset type', enum: BiologicalAssetType })
+  @ApiProperty({ enum: BiologicalAssetType })
   @IsEnum(BiologicalAssetType)
   @IsNotEmpty()
   asset_type: BiologicalAssetType;
 
-  @ApiProperty({ description: 'Asset name/code' })
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  asset_category?: string;
+
+  @ApiProperty()
   @IsString()
   @IsNotEmpty()
-  name: string;
+  asset_name: string;
 
-  @ApiProperty({ description: 'Species/variety' })
+  @ApiProperty()
   @IsString()
-  @IsOptional()
-  variety?: string;
-
-  @ApiProperty({ description: 'Rootstock (for trees/vines)' })
-  @IsString()
-  @IsOptional()
-  rootstock?: string;
-
-  @ApiProperty({ description: 'Planting date' })
-  @IsDate()
-  @Type(() => Date)
   @IsNotEmpty()
-  planting_date: Date;
+  asset_code: string;
 
-  @ApiProperty({ description: 'Expected harvest date' })
-  @IsDate()
-  @Type(() => Date)
-  @IsOptional()
-  expected_harvest_date?: Date;
-
-  @ApiProperty({ description: 'Quantity' })
-  @IsNumber()
-  @Min(1)
-  @IsNotEmpty()
-  quantity: number;
-
-  @ApiProperty({ description: 'Unit of measurement' })
-  @IsString()
-  @IsOptional()
-  unit?: string;
-
-  @ApiProperty({ description: 'Current age in years' })
+  @ApiPropertyOptional()
   @IsNumber()
   @Min(0)
   @IsOptional()
-  age_years?: number;
+  quantity?: number;
 
-  @ApiProperty({ description: 'Current status', enum: BiologicalAssetStatus })
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  area_ha?: number;
+
+  @ApiProperty()
+  @IsDateString()
+  @IsNotEmpty()
+  acquisition_date: string;
+
+  @ApiPropertyOptional()
+  @IsDateString()
+  @IsOptional()
+  maturity_date?: string;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  expected_useful_life_years?: number;
+
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  current_age_years?: number;
+
+  @ApiPropertyOptional({ enum: BiologicalAssetStatus })
   @IsEnum(BiologicalAssetStatus)
   @IsOptional()
   status?: BiologicalAssetStatus;
 
-  @ApiProperty({ description: 'GPS coordinates (latitude)' })
+  @ApiProperty()
   @IsNumber()
-  @IsOptional()
-  latitude?: number;
+  @Min(0)
+  @IsNotEmpty()
+  initial_cost: number;
 
-  @ApiProperty({ description: 'GPS coordinates (longitude)' })
+  @ApiPropertyOptional({ enum: DepreciationMethod })
+  @IsEnum(DepreciationMethod)
+  @IsOptional()
+  depreciation_method?: DepreciationMethod;
+
+  @ApiPropertyOptional()
   @IsNumber()
+  @Min(0)
   @IsOptional()
-  longitude?: number;
+  residual_value?: number;
 
-  @ApiProperty({ description: 'Notes' })
+  @ApiPropertyOptional()
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  expected_annual_yield?: number;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  expected_yield_unit?: string;
+
+  @ApiPropertyOptional()
+  @IsString()
+  @IsOptional()
+  variety_info?: string;
+
+  @ApiPropertyOptional()
   @IsString()
   @IsOptional()
   notes?: string;
-
-  @ApiProperty({ description: 'Image URL' })
-  @IsString()
-  @IsOptional()
-  image_url?: string;
 }
