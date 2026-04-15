@@ -36,6 +36,7 @@ const AppContent = () => {
       { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', primary: true, tourId: 'stock-warehouses' },
       { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', primary: true, tourId: 'stock-movements' },
       { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception', primary: true },
+      { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries', primary: true },
       { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports', primary: true },
       // Overflow tabs — inside "More" dropdown
       { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard' },
@@ -103,7 +104,7 @@ const AppContent = () => {
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         {/* Tabs */}
-        <Tabs value={isOverflowActive ? undefined : activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
+        <Tabs value={isOverflowActive ? '__none__' : activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
           <div
             className={cn(
               'relative flex w-full min-w-0 items-center gap-1',
