@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReferentielsRouteImport } from './routes/_authenticated/referentiels'
 import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
 import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
@@ -177,6 +178,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedReferentielsRoute =
   AuthenticatedReferentielsRouteImport.update({
@@ -1118,6 +1124,7 @@ export interface FileRoutesByFullPath {
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1277,6 +1284,7 @@ export interface FileRoutesByTo {
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1431,6 +1439,7 @@ export interface FileRoutesById {
   '/(public)/rdv-siam': typeof publicRdvSiamRoute
   '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
   '/_authenticated/referentiels': typeof AuthenticatedReferentielsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1593,6 +1602,7 @@ export interface FileRouteTypes {
     | '/rdv-siam'
     | '/terms-of-service'
     | '/referentiels'
+    | '/reports'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1752,6 +1762,7 @@ export interface FileRouteTypes {
     | '/rdv-siam'
     | '/terms-of-service'
     | '/referentiels'
+    | '/reports'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1905,6 +1916,7 @@ export interface FileRouteTypes {
     | '/(public)/rdv-siam'
     | '/(public)/terms-of-service'
     | '/_authenticated/referentiels'
+    | '/_authenticated/reports'
     | '/(auth)/auth/callback'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
@@ -2084,6 +2096,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referentiels': {
       id: '/_authenticated/referentiels'
@@ -3620,6 +3639,7 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedReferentielsRoute: typeof AuthenticatedReferentielsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
   AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
@@ -3671,6 +3691,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReferentielsRoute: AuthenticatedReferentielsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedaccountingAccountingRoute:
     AuthenticatedaccountingAccountingRouteWithChildren,
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
