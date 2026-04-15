@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 
 export default function QuickStockEntry() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const [warehouseId, setWarehouseId] = useState<string>('');
   const [barcode, setBarcode] = useState('');
@@ -95,7 +96,7 @@ export default function QuickStockEntry() {
               <SelectContent>
                 {warehousesLoading ? (
                   <SelectItem value="_loading" disabled>
-                    {t('app.loading', 'Loading...')}
+                    {tCommon('app.loading', 'Loading...')}
                   </SelectItem>
                 ) : warehousesError ? (
                   <SelectItem value="_error" disabled>

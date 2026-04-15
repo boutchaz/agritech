@@ -79,6 +79,7 @@ const getMovementQuantityClass = (quantity: number) => {
 
 export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemStockTimelineProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const isMobile = useIsMobile();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -106,15 +107,14 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
       (a, b) => new Date(a.movement_date).getTime() - new Date(b.movement_date).getTime(),
     );
 
-    let runningBalance = 0;
-
-    const withBalance = ascending.map((movement) => {
-      runningBalance += Number(movement.quantity || 0);
-      return {
+    const withBalance = ascending.reduce<TimelineMovement[]>((acc, movement) => {
+      const prevBalance = acc.length > 0 ? acc[acc.length - 1].runningBalance : 0;
+      acc.push({
         ...movement,
-        runningBalance,
-      };
-    });
+        runningBalance: prevBalance + Number(movement.quantity || 0),
+      });
+      return acc;
+    }, []);
 
     return withBalance.reverse();
   }, [movements]);
@@ -357,7 +357,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
             ) : null}
           </div>
           <Button variant="outline" onClick={onClose}>
-            {t('app.close', 'Close')}
+            {tCommon('app.close', 'Close')}
           </Button>
         </div>
       </div>

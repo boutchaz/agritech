@@ -148,9 +148,9 @@ export class HealthService {
     const idle = stats.idle ?? 0;
 
     let status: ServiceStatus = 'up';
-    if (waiting > 10 || (total > 0 && idle === 0 && waiting > 0)) {
+    if (waiting > 10) {
       status = 'down';
-    } else if (waiting > 5 || (total > 0 && idle === 0)) {
+    } else if (waiting > 5) {
       status = 'degraded';
     }
 

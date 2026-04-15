@@ -53,7 +53,7 @@ function ProductApplicationsPage() {
   const [showForm, setShowForm] = useState(false);
   const [filterFarm, setFilterFarm] = useState<string>('all');
 
-  const { data: applications = [], isLoading } = useProductApplications();
+  const { data: applications = [], isLoading, isError } = useProductApplications();
   const { data: farms = [] } = useFarms(organizationId);
   const farmsArray = Array.isArray(farms) ? farms : [];
 
@@ -162,7 +162,7 @@ function ProductApplicationsPage() {
                   <MapPin className="w-4 h-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalArea} ha</div>
+                  <div className="text-2xl font-bold">{stats.totalArea} {t('common.hectares', 'ha')}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -173,7 +173,7 @@ function ProductApplicationsPage() {
                   <TrendingUp className="w-4 h-4 text-orange-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalCost} {currentOrganization.currency || 'MAD'}</div>
+                  <div className="text-2xl font-bold">{stats.totalCost} {currentOrganization.currency || t('common.mad', 'MAD')}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -227,6 +227,10 @@ function ProductApplicationsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border overflow-hidden">
             {isLoading ? (
               <SectionLoader />
+            ) : isError ? (
+              <div className="flex items-center justify-center h-48">
+                <p className="text-sm text-red-500">{t('common.error', 'An error occurred while loading data.')}</p>
+              </div>
             ) : paginatedItems.length === 0 ? (
               <EmptyState
                 variant="card"
@@ -268,7 +272,7 @@ function ProductApplicationsPage() {
                       </div>
                       {app.cost != null && app.cost > 0 && (
                         <Badge className="bg-orange-100 text-orange-800 shrink-0">
-                          {app.cost} {app.currency || 'MAD'}
+                          {app.cost} {app.currency || t('common.mad', 'MAD')}
                         </Badge>
                       )}
                     </div>
@@ -279,15 +283,15 @@ function ProductApplicationsPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">{t('productApplications.area', 'Surface')}</p>
-                        <p className="font-medium">{app.area_treated} ha</p>
+                        <p className="font-medium">{app.area_treated} {t('common.hectares', 'ha')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">{t('productApplications.farm', 'Ferme')}</p>
-                        <p className="font-medium truncate">{app.farm?.name || '—'}</p>
+                        <p className="font-medium truncate">{app.farm?.name || t('common.notAvailable', '—')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">{t('productApplications.parcel', 'Parcelle')}</p>
-                        <p className="font-medium truncate">{app.parcel?.name || '—'}</p>
+                        <p className="font-medium truncate">{app.parcel?.name || t('common.notAvailable', '—')}</p>
                       </div>
                     </div>
                     {app.notes && (
@@ -309,7 +313,7 @@ function ProductApplicationsPage() {
                 renderTable={(app: ProductApplication) => (
                   <>
                     <TableCell className="font-medium">
-                      {app.inventory?.name || '—'}
+                      {app.inventory?.name || t('common.notAvailable', '—')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
@@ -317,16 +321,16 @@ function ProductApplicationsPage() {
                         {format(new Date(app.application_date), 'dd/MM/yyyy')}
                       </div>
                     </TableCell>
-                    <TableCell>{app.farm?.name || '—'}</TableCell>
-                    <TableCell>{app.parcel?.name || '—'}</TableCell>
+                    <TableCell>{app.farm?.name || t('common.notAvailable', '—')}</TableCell>
+                    <TableCell>{app.parcel?.name || t('common.notAvailable', '—')}</TableCell>
                     <TableCell>
                       {app.quantity_used} {app.inventory?.unit || ''}
                     </TableCell>
-                    <TableCell>{app.area_treated} ha</TableCell>
+                    <TableCell>{app.area_treated} {t('common.hectares', 'ha')}</TableCell>
                     <TableCell>
                       {app.cost != null && app.cost > 0
-                        ? `${app.cost} ${app.currency || 'MAD'}`
-                        : '—'}
+                        ? `${app.cost} ${app.currency || t('common.mad', 'MAD')}`
+                        : t('common.notAvailable', '—')}
                     </TableCell>
                   </>
                 )}

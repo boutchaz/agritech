@@ -64,6 +64,7 @@ interface WarehouseFormProps {
 
 function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -429,7 +430,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              {t('app.cancel')}
+              {tCommon('app.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
@@ -449,6 +450,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 
 export default function WarehouseManagement() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: warehouses = [], isLoading, error, refetch } = useWarehouses();
@@ -534,7 +536,7 @@ export default function WarehouseManagement() {
         <AlertCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
         <p className="text-red-600 dark:text-red-400 mb-4">{t('warehouses.loadError')}</p>
         <Button onClick={() => refetch()} variant="outline">
-          {t('app.retry')}
+          {tCommon('app.retry')}
         </Button>
       </div>
     );
@@ -619,7 +621,7 @@ export default function WarehouseManagement() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {warehouse.is_active ? t('app.active') : t('app.inactive')}
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
                 </span>
               </div>
 
@@ -730,7 +732,7 @@ export default function WarehouseManagement() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {warehouse.is_active ? t('app.active') : t('app.inactive')}
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
                 </span>
               </TableCell>
               <TableCell className="text-right">
@@ -775,7 +777,7 @@ export default function WarehouseManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('app.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

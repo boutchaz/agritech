@@ -48,9 +48,9 @@ function PaymentsPage() {
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [processTarget, setProcessTarget] = useState<string | null>(null);
-  const [processMethod, setProcessMethod] = useState<PaymentMethod>('cash');
+  const [processMethod, setProcessMethod] = useState<PaymentMethod | ''>('');
 
-  const { data: payments = [], isLoading } = usePaymentRecords();
+  const { data: payments = [], isLoading, isError } = usePaymentRecords();
   const { data: workers = [] } = useWorkers(organizationId);
   const workersArray = Array.isArray(workers) ? workers : [];
   const approveMutation = useApprovePayment();
@@ -214,6 +214,10 @@ function PaymentsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border overflow-hidden">
             {isLoading ? (
               <SectionLoader />
+            ) : isError ? (
+              <div className="flex items-center justify-center h-48">
+                <p className="text-sm text-red-500">{t('common.error', 'An error occurred while loading data.')}</p>
+              </div>
             ) : paginatedItems.length === 0 ? (
               <EmptyState
                 variant="card"
@@ -246,7 +250,7 @@ function PaymentsPage() {
                       <div>
                         <p className="text-xs text-gray-500">{t('payments.period', 'Période')}</p>
                         <p className="font-medium">
-                          {payment.period_start ? format(new Date(payment.period_start), 'dd MMM') : '—'}
+                          {payment.period_start ? format(new Date(payment.period_start), 'dd MMM') : t('common.notAvailable', '—')}
                           {payment.period_end ? ` - ${format(new Date(payment.period_end), 'dd MMM')}` : ''}
                         </p>
                       </div>
@@ -262,7 +266,7 @@ function PaymentsPage() {
                         </Button>
                       )}
                       {payment.status === 'approved' && (
-                        <Button variant="outline" size="sm" onClick={() => { setProcessTarget(payment.id); setProcessMethod('cash'); }}>
+                        <Button variant="outline" size="sm" onClick={() => { setProcessTarget(payment.id); setProcessMethod(''); }}>
                           {t('payments.process', 'Traiter')}
                         </Button>
                       )}
@@ -281,10 +285,10 @@ function PaymentsPage() {
                 }
                 renderTable={(payment) => (
                   <>
-                    <TableCell className="font-medium">{payment.worker_name || '—'}</TableCell>
+                    <TableCell className="font-medium">{payment.worker_name || t('common.notAvailable', '—')}</TableCell>
                     <TableCell>{t(`payments.types.${payment.payment_type}`, payment.payment_type)}</TableCell>
                     <TableCell>
-                      {payment.period_start ? format(new Date(payment.period_start), 'dd/MM/yyyy') : '—'}
+                      {payment.period_start ? format(new Date(payment.period_start), 'dd/MM/yyyy') : t('common.notAvailable', '—')}
                       {payment.period_end ? ` → ${format(new Date(payment.period_end), 'dd/MM/yyyy')}` : ''}
                     </TableCell>
                     <TableCell className="font-bold">{Number(payment.net_amount || 0).toLocaleString()} MAD</TableCell>
@@ -299,7 +303,7 @@ function PaymentsPage() {
                           </Button>
                         )}
                         {payment.status === 'approved' && (
-                          <Button variant="outline" size="sm" onClick={() => { setProcessTarget(payment.id); setProcessMethod('cash'); }}>
+                          <Button variant="outline" size="sm" onClick={() => { setProcessTarget(payment.id); setProcessMethod(''); }}>
                             {t('payments.process', 'Traiter')}
                           </Button>
                         )}
@@ -335,8 +339,8 @@ function PaymentsPage() {
               <Button
                 type="button"
                 variant="green"
-                disabled={processMutation.isPending}
-                onClick={() => handleProcess(processTarget, processMethod)}
+                disabled={processMutation.isPending || !processMethod}
+                onClick={() => { if (processMethod) handleProcess(processTarget, processMethod); }}
               >
                 {processMutation.isPending ? t('payments.processing', 'Traitement...') : t('payments.process', 'Traiter')}
               </Button>
@@ -345,7 +349,8 @@ function PaymentsPage() {
         >
           <div className="space-y-4">
             <Label>{t('payments.paymentMethod', 'Méthode de paiement')}</Label>
-            <NativeSelect value={processMethod} onChange={(e) => setProcessMethod(e.target.value as PaymentMethod)}>
+            <NativeSelect value={processMethod} onChange={(e) => setProcessMethod(e.target.value as PaymentMethod | '')}>
+              <option value="" disabled>{t('payments.selectMethodPlaceholder', '-- Select method --')}</option>
               <option value="cash">{t('payments.methods.cash', 'Espèces')}</option>
               <option value="bank_transfer">{t('payments.methods.bankTransfer', 'Virement bancaire')}</option>
               <option value="check">{t('payments.methods.check', 'Chèque')}</option>
@@ -490,15 +495,15 @@ function PaymentFormDialog({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label>{t('payments.baseAmount', 'Montant de base')} *</Label>
-            <Input {...form.register('base_amount')} type="number" step="0.01" placeholder="0.00" className={form.formState.errors.base_amount ? 'border-red-400' : ''} />
+            <Input {...form.register('base_amount')} type="number" step="0.01" placeholder={t('common.enterAmount', '0.00')} className={form.formState.errors.base_amount ? 'border-red-400' : ''} />
           </div>
           <div className="space-y-2">
             <Label>{t('payments.daysWorked', 'Jours travaillés')}</Label>
-            <Input {...form.register('days_worked')} type="number" step="1" placeholder="0" />
+            <Input {...form.register('days_worked')} type="number" step="1" placeholder={t('common.enterNumber', '0')} />
           </div>
           <div className="space-y-2">
             <Label>{t('payments.hoursWorked', 'Heures travaillées')}</Label>
-            <Input {...form.register('hours_worked')} type="number" step="0.5" placeholder="0" />
+            <Input {...form.register('hours_worked')} type="number" step="0.5" placeholder={t('common.enterNumber', '0')} />
           </div>
         </div>
 

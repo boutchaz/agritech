@@ -50,7 +50,7 @@ function CropsPage() {
   const [filterFarm, setFilterFarm] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  const { data: crops = [], isLoading } = useCrops(
+  const { data: crops = [], isLoading, isError } = useCrops(
     filterFarm !== 'all' ? { farmId: filterFarm } : undefined,
   );
   const { data: farms = [] } = useFarms(organizationId);
@@ -216,6 +216,10 @@ function CropsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border overflow-hidden">
             {isLoading ? (
               <SectionLoader />
+            ) : isError ? (
+              <div className="flex items-center justify-center h-48">
+                <p className="text-sm text-red-500">{t('common.error', 'An error occurred while loading data.')}</p>
+              </div>
             ) : paginatedItems.length === 0 ? (
               <EmptyState
                 variant="card"
@@ -247,11 +251,11 @@ function CropsPage() {
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div>
                         <p className="text-xs text-gray-500">{t('crops.parcel', 'Parcelle')}</p>
-                        <p className="font-medium truncate">{crop.parcel_name || '—'}</p>
+                        <p className="font-medium truncate">{crop.parcel_name || t('common.notAvailable', '—')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-500">{t('crops.area', 'Surface')}</p>
-                        <p className="font-medium">{crop.planted_area ? `${crop.planted_area} ha` : '—'}</p>
+                        <p className="font-medium">{crop.planted_area ? `${crop.planted_area} ${t('common.hectares', 'ha')}` : t('common.notAvailable', '—')}</p>
                       </div>
                       {crop.planting_date && (
                         <div>
@@ -282,13 +286,13 @@ function CropsPage() {
                 renderTable={(crop: Crop) => (
                   <>
                     <TableCell className="font-medium">{crop.name}</TableCell>
-                    <TableCell>{crop.farm_name || '—'}</TableCell>
-                    <TableCell>{crop.parcel_name || '—'}</TableCell>
-                    <TableCell>{crop.planted_area ? `${crop.planted_area} ha` : '—'}</TableCell>
-                    <TableCell>{crop.planting_date ? format(new Date(crop.planting_date), 'dd/MM/yyyy') : '—'}</TableCell>
-                    <TableCell>{crop.expected_harvest_date ? format(new Date(crop.expected_harvest_date), 'dd/MM/yyyy') : '—'}</TableCell>
+                    <TableCell>{crop.farm_name || t('common.notAvailable', '—')}</TableCell>
+                    <TableCell>{crop.parcel_name || t('common.notAvailable', '—')}</TableCell>
+                    <TableCell>{crop.planted_area ? `${crop.planted_area} ${t('common.hectares', 'ha')}` : t('common.notAvailable', '—')}</TableCell>
+                    <TableCell>{crop.planting_date ? format(new Date(crop.planting_date), 'dd/MM/yyyy') : t('common.notAvailable', '—')}</TableCell>
+                    <TableCell>{crop.expected_harvest_date ? format(new Date(crop.expected_harvest_date), 'dd/MM/yyyy') : t('common.notAvailable', '—')}</TableCell>
                     <TableCell>
-                      {crop.status ? <Badge className={getStatusColor(crop.status)}>{t(`crops.status.${crop.status}`, crop.status)}</Badge> : '—'}
+                      {crop.status ? <Badge className={getStatusColor(crop.status)}>{t(`crops.status.${crop.status}`, crop.status)}</Badge> : t('common.notAvailable', '—')}
                     </TableCell>
                   </>
                 )}
@@ -465,7 +469,7 @@ function CropFormDialog({
 
         <div className="space-y-2">
           <Label>{t('crops.plantedArea', 'Surface plantée (ha)')}</Label>
-          <Input {...form.register('planted_area')} type="number" step="0.01" placeholder="0.00" />
+          <Input {...form.register('planted_area')} type="number" step="0.01" placeholder={t('common.enterAmount', '0.00')} />
         </div>
 
         <div className="space-y-2">

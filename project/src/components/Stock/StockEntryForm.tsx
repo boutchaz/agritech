@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -136,6 +136,11 @@ export default function StockEntryForm({
   });
   const [variantOptionsByItemId, setVariantOptionsByItemId] = useState<Record<string, ProductVariant[]>>({});
   const [variantLoadingByItemId, setVariantLoadingByItemId] = useState<Record<string, boolean>>({});
+  /** Mirrors variant cache so applySelectedItem does not depend on that state (avoids infinite effect loops). */
+  const variantOptionsByItemIdRef = useRef<Record<string, ProductVariant[]>>({});
+  useEffect(() => {
+    variantOptionsByItemIdRef.current = variantOptionsByItemId;
+  }, [variantOptionsByItemId]);
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
   const typeStyles = {
     green: {
@@ -194,7 +199,7 @@ export default function StockEntryForm({
       form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
       form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
 
-      if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
+      if (!variantOptionsByItemIdRef.current[itemId] && currentOrganization?.id) {
         setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
         try {
           const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
@@ -206,7 +211,7 @@ export default function StockEntryForm({
         }
       }
     },
-    [currentOrganization?.id, form, items, variantOptionsByItemId],
+    [currentOrganization?.id, form, items],
   );
 
   useEffect(() => {

@@ -325,7 +325,7 @@ function DeliveriesPage() {
                                 )}
                               </div>
                               {farm.total_area != null && (
-                                <span className="ml-auto text-xs text-muted-foreground">{farm.total_area} ha</span>
+                                <span className="ml-auto text-xs text-muted-foreground">{farm.total_area} {t('common.hectares', 'ha')}</span>
                               )}
                             </CommandItem>
                           ))}

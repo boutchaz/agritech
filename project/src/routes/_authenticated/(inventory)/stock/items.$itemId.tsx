@@ -12,6 +12,7 @@ import { useCurrency } from '@/hooks/useCurrency';
 
 function ItemDetailsPage() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { itemId } = Route.useParams();
@@ -29,7 +30,7 @@ function ItemDetailsPage() {
         title={t('items.noItemsTitle', 'Item not found')}
         description={t('items.noItemsFound', 'The selected item could not be found.')}
         action={{
-          label: t('app.back', 'Back'),
+          label: tCommon('app.back', 'Back'),
           onClick: () => navigate({ to: '/stock/items' }),
           variant: 'outline',
         }}
@@ -41,7 +42,7 @@ function ItemDetailsPage() {
     <div className="space-y-6">
       <Button variant="outline" onClick={() => navigate({ to: '/stock/items' })}>
         <ArrowLeft className="mr-2 h-4 w-4" />
-        {t('app.back', 'Back')}
+        {tCommon('app.back', 'Back')}
       </Button>
 
       <Card>

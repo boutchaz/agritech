@@ -51,6 +51,7 @@ type SupplierFormData = z.infer<typeof supplierSchema>;
 
 export default function SupplierManagement() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const { data: suppliers = [], isLoading, error, refetch } = useSuppliers();
   const createSupplier = useCreateSupplier();
@@ -263,7 +264,7 @@ export default function SupplierManagement() {
             {t('suppliers.loadError', { error: error instanceof Error ? error.message : t('suppliers.unknownError') })}
           </p>
           <Button onClick={() => refetch()}>
-            {t('app.retry')}
+            {tCommon('app.retry')}
           </Button>
         </div>
       ) : isLoading ? (
@@ -577,7 +578,7 @@ export default function SupplierManagement() {
                 onClick={() => setShowForm(false)}
                 disabled={isSubmitting}
               >
-                {t('app.cancel')}
+                {tCommon('app.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
@@ -607,7 +608,7 @@ export default function SupplierManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('app.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

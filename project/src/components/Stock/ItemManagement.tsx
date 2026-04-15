@@ -120,6 +120,7 @@ interface ItemVariantsDialogProps {
 
 function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess?: () => void }) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
   const [groupName, setGroupName] = useState('');
@@ -147,7 +148,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       setGroupDescription('');
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       toast.error(t('items.itemGroup.createFailed'));
     }
   };
@@ -201,7 +202,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
             onClick={() => onOpenChange(false)}
             disabled={createItemGroup.isPending}
           >
-            {t('app.cancel')}
+            {tCommon('app.cancel', 'Cancel')}
           </Button>
           <Button
             type="submit"
@@ -225,6 +226,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -735,12 +737,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                     disabled={categoriesLoading}
                   >
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={categoriesLoading ? t('app.loading') : t('items.marketplace.selectCategory', 'Select a category')} />
+                      <SelectValue placeholder={categoriesLoading ? tCommon('app.loading', 'Loading...') : t('items.marketplace.selectCategory', 'Select a category')} />
                     </SelectTrigger>
                     <SelectContent>
                       {marketplaceCategories.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">
-                          {categoriesLoading ? t('app.loading') : 'No categories available. Check console for errors.'}
+                          {categoriesLoading ? tCommon('app.loading', 'Loading...') : 'No categories available. Check console for errors.'}
                         </div>
                       ) : (
                         marketplaceCategories.map((cat) => (
@@ -903,7 +905,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                onClick={() => onOpenChange(false)}
                disabled={isSubmitting || createItem.isPending || updateItem.isPending}
              >
-               {t('app.cancel')}
+               {tCommon('app.cancel', 'Cancel')}
              </Button>
              <Button type="submit" disabled={isSubmitting || createItem.isPending || updateItem.isPending}>
                {isSubmitting || createItem.isPending || updateItem.isPending ? (
@@ -1370,7 +1372,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmVariantDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -1913,7 +1915,7 @@ export default function ItemManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

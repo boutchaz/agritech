@@ -8718,6 +8718,7 @@ export class DemoDataService {
       await this.clearDemoData(organizationId);
       this.logger.log("✅ Existing data cleared");
 
+      // --- SIAM farms & parcels (3 farms, 17 parcels in Meknès) ---
       const { farms, parcels } = await this.createSiamFarmsAndParcels(
         organizationId,
       );
@@ -8725,6 +8726,19 @@ export class DemoDataService {
         `✅ Created ${farms.length} SIAM farms and ${parcels.length} SIAM parcels`,
       );
 
+      // Use first farm as primary for methods that expect a single farm
+      const primaryFarm = farms[0];
+      const primaryFarmId = primaryFarm?.id;
+      if (!primaryFarmId) throw new Error("No SIAM farm created");
+
+      // --- Satellite & Weather data ---
+      await this.createDemoSatelliteIndicesData(organizationId, primaryFarmId, parcels);
+      this.logger.log(`✅ Created SIAM satellite indices data`);
+
+      await this.createDemoWeatherData(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM weather data`);
+
+      // --- SIAM-specific agronomist data ---
       const calibrations = await this.createSiamCalibrations(
         organizationId,
         parcels,
@@ -8732,28 +8746,417 @@ export class DemoDataService {
       );
       this.logger.log(`✅ Created ${calibrations.length} SIAM calibrations`);
 
-      const recommendations = await this.createSiamRecommendations(
+      const siamRecommendations = await this.createSiamRecommendations(
         organizationId,
         parcels,
       );
       this.logger.log(
-        `✅ Created ${recommendations.length} SIAM AI recommendations`,
-      );
-
-      const harvestRecords = await this.createSiamHarvestRecords(
-        organizationId,
-        parcels,
-        userId,
-      );
-      this.logger.log(
-        `✅ Created ${harvestRecords.length} SIAM harvest records`,
+        `✅ Created ${siamRecommendations.length} SIAM AI recommendations`,
       );
 
       const analyses = await this.createSiamAnalyses(organizationId, parcels);
       this.logger.log(`✅ Created ${analyses.length} SIAM analyses`);
 
+      // --- Workers ---
+      const workers = await this.createDemoWorkers(
+        organizationId,
+        primaryFarmId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${workers.length} SIAM workers`);
+
+      // --- Cost Centers ---
+      await this.createDemoCostCenters(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM cost centers`);
+
+      // --- Chart of Accounts ---
+      const accounts = await this.createDemoChartOfAccounts(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${accounts.length} SIAM accounts`);
+
+      // --- Tasks ---
+      const tasks = await this.createDemoTasks(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        userId,
+      );
+      this.logger.log(`✅ Created ${tasks.length} SIAM tasks`);
+
+      // --- Infrastructure ---
+      await this.createDemoStructures(organizationId, primaryFarmId, userId);
+      this.logger.log(`✅ Created SIAM infrastructure`);
+
+      // --- Items & Warehouses ---
+      const { warehouse, finishedGoodsWarehouse, items } =
+        await this.createDemoItems(organizationId, primaryFarmId, userId);
+      this.logger.log(`✅ Created SIAM items and warehouses`);
+
+      // --- Stock Entries ---
+      await this.createDemoStockEntries(
+        organizationId,
+        warehouse,
+        finishedGoodsWarehouse,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM stock entries`);
+
+      // --- Marketplace ---
+      await this.createDemoMarketplaceData(organizationId, items, userId);
+      this.logger.log(`✅ Created SIAM marketplace data`);
+
+      // --- Customers & Suppliers ---
+      const { customers, suppliers } = await this.createDemoParties(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM customers/suppliers`);
+
+      // --- Quotes ---
+      const quotes = await this.createDemoQuotes(
+        organizationId,
+        customers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${quotes.length} SIAM quotes`);
+
+      // --- Sales Orders ---
+      const salesOrders = await this.createDemoSalesOrders(
+        organizationId,
+        customers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${salesOrders.length} SIAM sales orders`);
+
+      await this.linkQuotesToSalesOrders(organizationId, quotes, salesOrders);
+      this.logger.log(`✅ Linked SIAM quotes to sales orders`);
+
+      // --- Purchase Orders ---
+      const purchaseOrders = await this.createDemoPurchaseOrders(
+        organizationId,
+        suppliers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${purchaseOrders.length} SIAM purchase orders`);
+
+      // --- Invoices ---
+      const invoices = await this.createDemoInvoices(
+        organizationId,
+        parcels,
+        customers,
+        suppliers,
+        items,
+        salesOrders,
+        purchaseOrders,
+        userId,
+      );
+      this.logger.log(`✅ Created ${invoices.length} SIAM invoices`);
+
+      // --- Bank Accounts ---
+      const bankAccounts = await this.createDemoBankAccounts(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${bankAccounts.length} SIAM bank accounts`);
+
+      // --- Payments ---
+      const payments = await this.createDemoPayments(
+        organizationId,
+        customers,
+        suppliers,
+        invoices,
+        bankAccounts,
+        userId,
+      );
+      this.logger.log(`✅ Created ${payments.length} SIAM payments`);
+
+      // --- Journal Entries ---
+      const journalEntries = await this.createDemoJournalEntries(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${journalEntries.length} SIAM journal entries`);
+
+      // --- Harvests (SIAM version — richer data) ---
+      const harvests = await this.createSiamHarvestRecords(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${harvests.length} SIAM harvest records`);
+
+      // --- Reception Batches ---
+      await this.createDemoReceptionBatches(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM reception batches`);
+
+      // --- Financial Data ---
+      await this.createDemoFinancialData(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM financial data`);
+
+      // --- Utilities ---
+      const utilities = await this.createDemoUtilities(
+        organizationId,
+        primaryFarmId,
+        parcels,
+      );
+      this.logger.log(`✅ Created ${utilities.length} SIAM utilities`);
+
+      // --- Fiscal Years ---
+      await this.createDemoFiscalYears(organizationId, userId);
+      this.logger.log(`✅ Created SIAM fiscal years`);
+
+      // --- Taxes ---
+      const taxes = await this.createDemoTaxes(organizationId, userId);
+      this.logger.log(`✅ Created ${taxes.length} SIAM taxes`);
+
+      // --- Task Assignments ---
+      await this.createDemoTaskAssignments(organizationId, tasks, workers);
+      this.logger.log(`✅ Created SIAM task assignments`);
+
+      // --- Deliveries ---
+      const deliveries = await this.createDemoDeliveries(
+        organizationId,
+        primaryFarmId,
+        customers,
+        workers,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created ${deliveries.length} SIAM deliveries`);
+
+      await this.createDemoDeliveryTracking(deliveries, userId);
+      this.logger.log(`✅ Created SIAM delivery tracking`);
+
+      // --- Product Applications ---
+      const applications = await this.createDemoProductApplications(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        items,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${applications.length} SIAM product applications`);
+
+      // --- Soil Analyses ---
+      const soilAnalyses = await this.createDemoSoilAnalyses(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${soilAnalyses.length} SIAM soil analyses`);
+
+      // --- Work Records ---
+      const workRecords = await this.createDemoWorkRecords(
+        organizationId,
+        primaryFarmId,
+        workers,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${workRecords.length} SIAM work records`);
+
+      // --- Campaigns ---
+      const campaigns = await this.createDemoCampaigns(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${campaigns.length} SIAM campaigns`);
+
+      // --- Biological Assets ---
+      const biologicalAssets = await this.createDemoBiologicalAssets(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${biologicalAssets.length} SIAM biological assets`);
+
+      // --- Notifications ---
+      await this.createDemoNotifications(organizationId, userId);
+      this.logger.log(`✅ Created SIAM notifications`);
+
+      // --- Analysis Recommendations ---
+      const analysisRecommendations =
+        await this.createDemoAnalysisRecommendations(analyses);
       this.logger.log(
-        `SIAM demo data seeding completed successfully for organization ${organizationId}`,
+        `✅ Created ${analysisRecommendations.length} SIAM analysis recommendations`,
+      );
+
+      // --- Certifications ---
+      const certifications = await this.createDemoCertifications(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${certifications.length} SIAM certifications`);
+
+      // --- Compliance Checks ---
+      const complianceChecks = await this.createDemoComplianceChecks(
+        organizationId,
+        certifications,
+      );
+      this.logger.log(`✅ Created ${complianceChecks.length} SIAM compliance checks`);
+
+      // --- Corrective Actions ---
+      const correctiveActions = await this.createDemoCorrectiveActions(
+        organizationId,
+        certifications,
+        complianceChecks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${correctiveActions.length} SIAM corrective actions`);
+
+      // --- Crop Cycles ---
+      const cropCycles = await this.createDemoCropCycles(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        campaigns,
+        userId,
+      );
+      this.logger.log(`✅ Created ${cropCycles.length} SIAM crop cycles`);
+
+      await this.createDemoCropCycleStages(cropCycles);
+      this.logger.log(`✅ Created SIAM crop cycle stages`);
+
+      await this.createDemoHarvestEvents(cropCycles);
+      this.logger.log(`✅ Created SIAM harvest events`);
+
+      await this.createDemoCropTemplates(organizationId);
+      this.logger.log(`✅ Created SIAM crop templates`);
+
+      // --- Quality Inspections ---
+      await this.createDemoQualityInspections(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        cropCycles,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM quality inspections`);
+
+      // --- Task Extras ---
+      const { categories: taskCategories } = await this.createDemoTaskExtras(
+        organizationId,
+        tasks,
+        workers,
+      );
+      this.logger.log(`✅ Created SIAM task categories and time logs`);
+
+      await this.createDemoTaskComments(tasks, workers, userId);
+      this.logger.log(`✅ Created SIAM task comments`);
+
+      await this.createDemoTaskDependencies(tasks);
+      this.logger.log(`✅ Created SIAM task dependencies`);
+
+      await this.createDemoTaskEquipment(tasks);
+      this.logger.log(`✅ Created SIAM task equipment`);
+
+      await this.createDemoTaskTemplates(taskCategories);
+      this.logger.log(`✅ Created SIAM task templates`);
+
+      // --- Worker Payment Records ---
+      const paymentRecords = await this.createDemoPaymentRecords(
+        organizationId,
+        primaryFarmId,
+        workers,
+        userId,
+      );
+      this.logger.log(`✅ Created ${paymentRecords.length} SIAM payment records`);
+
+      // --- Harvest Forecasts ---
+      await this.createDemoHarvestForecasts(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM harvest forecasts`);
+
+      // --- Cost Center Budgets ---
+      await this.createDemoCostCenterBudgets(organizationId);
+      this.logger.log(`✅ Created SIAM cost center budgets`);
+
+      // --- Stock Movements ---
+      await this.createDemoStockMovements(organizationId, warehouse, finishedGoodsWarehouse, items, userId);
+      this.logger.log(`✅ Created SIAM stock movements`);
+
+      // --- Inventory Batches ---
+      await this.createDemoInventoryBatches(organizationId, items, suppliers, purchaseOrders);
+      this.logger.log(`✅ Created SIAM inventory batches`);
+
+      // --- Payment Advances ---
+      await this.createDemoPaymentAdvances(organizationId, primaryFarmId, workers, userId);
+      this.logger.log(`✅ Created SIAM payment advances`);
+
+      // --- Payment Bonuses & Deductions ---
+      await this.createDemoPaymentBonusesAndDeductions(paymentRecords);
+      this.logger.log(`✅ Created SIAM payment bonuses and deductions`);
+
+      // --- Métayage Settlements ---
+      await this.createDemoMetayage(organizationId, primaryFarmId, workers, parcels, harvests, userId);
+      this.logger.log(`✅ Created SIAM metayage settlements`);
+
+      // --- Biological Asset Valuations ---
+      await this.createDemoBioAssetValuations(organizationId, biologicalAssets);
+      this.logger.log(`✅ Created SIAM biological asset valuations`);
+
+      // --- Pest/Disease Reports ---
+      await this.createDemoPestReports(organizationId, primaryFarmId, parcels, userId);
+      this.logger.log(`✅ Created SIAM pest/disease reports`);
+
+      // --- AI features ---
+      await this.createDemoAnnualPlans(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM annual plans`);
+
+      await this.createDemoMonitoringAnalyses(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM monitoring analyses`);
+
+      await this.createDemoSeasonTracking(organizationId, parcels, userId);
+      this.logger.log(`✅ Created SIAM season tracking`);
+
+      await this.createDemoChatHistory(organizationId, userId);
+      this.logger.log(`✅ Created SIAM chat history`);
+
+      await this.createDemoAIQuota(organizationId);
+      this.logger.log(`✅ Created SIAM AI quota`);
+
+      // --- Piece Work Records ---
+      const pieceWorkRecords = await this.createDemoPieceWorkRecords(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${pieceWorkRecords.length} SIAM piece work records`);
+
+      this.logger.log(
+        `✅ SIAM demo data seeding completed successfully for organization ${organizationId}`,
       );
     } catch (error) {
       this.logger.error(
