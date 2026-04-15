@@ -31,8 +31,8 @@ async def get_historical_weather(
         raise HTTPException(
             status_code=400, detail="start_date must be before end_date"
         )
-    if (end_date - start_date).days > 365 * 3:
-        raise HTTPException(status_code=400, detail="Maximum date range is 3 years")
+    if (end_date - start_date).days > 365 * 4:
+        raise HTTPException(status_code=400, detail="Maximum date range is 4 years")
 
     try:
         records = await weather_service.fetch_with_db_cache(
