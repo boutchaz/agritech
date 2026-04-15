@@ -3,12 +3,20 @@
     "title": "Gestion des Stocks",
     "subtitle": "Gestion complète de l'inventaire, des entrées et des entrepôts",
     "tabs": {
+      "dashboard": "Tableau de bord",
       "items": "Articles",
       "groups": "Groupes d'Articles",
       "inventory": "Inventaire & Achats",
-      "entries": "Entrées de Stock",
-      "reception": "Lots de Réception",
-      "reports": "Rapports & Analyses"
+      "entries": "Mouvements de Stock",
+      "batches": "Lots",
+      "approvals": "Approbations",
+      "stockTake": "Inventaire tournant",
+      "quickStock": "Saisie rapide",
+      "expiryAlerts": "Alertes d'expiration",
+      "reorder": "Réapprovisionnement",
+      "reception": "Réception Récoltes",
+      "reports": "Rapports & Analyses",
+      "more": "Plus"
     },
     "lowStockAlerts": {
       "title": "Alertes de Stock Faible",
@@ -502,9 +510,9 @@
         "awaitingDecision": "En attente de décision"
       },
       "empty": {
-        "title": "Aucun lot de réception trouvé",
+        "title": "Aucune réception enregistrée",
         "searchTitle": "Aucun lot de réception correspondant trouvé",
-        "description": "Créez votre premier lot de réception pour suivre le contrôle qualité des récoltes",
+        "description": "Enregistrez l'arrivée de vos récoltes : pesée, contrôle qualité, puis décidez — vente directe, stockage ou transformation.",
         "searchDescription": "Essayez d'ajuster vos critères de recherche"
       },
       "mobile": {
@@ -550,6 +558,47 @@
         "cancelButton": "Annuler",
         "cancelAction": "Annuler le Lot",
         "deleteAction": "Supprimer le Lot"
+      }
+    },
+    "detail": {
+      "title": "Détails du lot de réception",
+      "loading": "Chargement des détails...",
+      "notFound": "Lot de réception non trouvé",
+      "batchCode": "Code du lot",
+      "receptionDate": "Date de réception",
+      "receptionTime": "Heure de réception",
+      "warehouse": "Entrepôt de réception",
+      "parcel": "Parcelle d'origine",
+      "crop": "Culture",
+      "harvest": "Récolte liée",
+      "producer": "Producteur",
+      "receivedBy": "Réceptionné par",
+      "weightInfo": "Pesée",
+      "weight": "Poids brut",
+      "quantity": "Quantité",
+      "qualityControl": "Contrôle qualité",
+      "grade": "Grade",
+      "score": "Score",
+      "humidity": "Humidité",
+      "maturity": "Maturité",
+      "temperature": "Température",
+      "moisture": "Teneur en eau",
+      "qualityNotes": "Notes qualité",
+      "decision": "Décision",
+      "notes": "Notes",
+      "created": "Créé le",
+      "updated": "Modifié le",
+      "workflow": {
+        "title": "Progression",
+        "received": "Réceptionné",
+        "qualityChecked": "Qualité vérifiée",
+        "decisionMade": "Décision prise",
+        "processed": "Traité",
+        "cancelled": "Annulé",
+        "addQualityCheck": "Ajouter contrôle qualité",
+        "makeDecision": "Prendre une décision",
+        "processBatch": "Traiter le lot",
+        "viewStockEntry": "Voir le mouvement de stock"
       }
     },
     "form": {

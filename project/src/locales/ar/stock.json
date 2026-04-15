@@ -3,12 +3,20 @@
     "title": "إدارة المخزون",
     "subtitle": "إدارة شاملة للمخزون والإدخالات والمستودعات",
     "tabs": {
+      "dashboard": "لوحة المعلومات",
       "items": "المواد",
       "groups": "مجموعات المواد",
       "inventory": "المخزون والمشتريات",
-      "entries": "قيود المخزون",
-      "reception": "دفعات الاستلام",
-      "reports": "التقارير والتحليلات"
+      "entries": "حركات المخزون",
+      "batches": "الدفعات",
+      "approvals": "الموافقات",
+      "stockTake": "الجرد",
+      "quickStock": "إدخال سريع",
+      "expiryAlerts": "تنبيهات الانتهاء",
+      "reorder": "إعادة التعبئة",
+      "reception": "استلام المحاصيل",
+      "reports": "التقارير والتحليلات",
+      "more": "المزيد"
     },
     "lowStockAlerts": {
       "title": "تنبيهات انخفاض المخزون",
@@ -502,9 +510,9 @@
         "awaitingDecision": "في انتظار القرار"
       },
       "empty": {
-        "title": "لا توجد دفعات استلام",
+        "title": "لم يتم تسجيل أي استلام بعد",
         "searchTitle": "لا توجد دفعات استلام مطابقة",
-        "description": "أنشئ أول دفعة استلام لتتبع مراقبة جودة المحاصيل",
+        "description": "سجّل وصول محاصيلك: الوزن، فحص الجودة، ثم قرّر — بيع مباشر، تخزين، أو تصنيع.",
         "searchDescription": "حاول تعديل معايير البحث"
       },
       "mobile": {
@@ -550,6 +558,47 @@
         "cancelButton": "إلغاء",
         "cancelAction": "إلغاء الدفعة",
         "deleteAction": "حذف الدفعة"
+      }
+    },
+    "detail": {
+      "title": "تفاصيل دفعة الاستلام",
+      "loading": "جاري تحميل التفاصيل...",
+      "notFound": "دفعة الاستلام غير موجودة",
+      "batchCode": "رمز الدفعة",
+      "receptionDate": "تاريخ الاستلام",
+      "receptionTime": "وقت الاستلام",
+      "warehouse": "مستودع الاستلام",
+      "parcel": "القطعة المصدر",
+      "crop": "المحصول",
+      "harvest": "الحصاد المرتبط",
+      "producer": "المُنتِج",
+      "receivedBy": "استلم بواسطة",
+      "weightInfo": "الوزن",
+      "weight": "الوزن الإجمالي",
+      "quantity": "الكمية",
+      "qualityControl": "مراقبة الجودة",
+      "grade": "الدرجة",
+      "score": "النقاط",
+      "humidity": "الرطوبة",
+      "maturity": "النضج",
+      "temperature": "الحرارة",
+      "moisture": "محتوى الماء",
+      "qualityNotes": "ملاحظات الجودة",
+      "decision": "القرار",
+      "notes": "ملاحظات",
+      "created": "أُنشئ",
+      "updated": "عُدّل",
+      "workflow": {
+        "title": "التقدم",
+        "received": "مُستَلَم",
+        "qualityChecked": "فحص الجودة مُنجز",
+        "decisionMade": "تم اتخاذ القرار",
+        "processed": "مُعالَج",
+        "cancelled": "مُلغى",
+        "addQualityCheck": "إضافة فحص الجودة",
+        "makeDecision": "اتخاذ قرار",
+        "processBatch": "معالجة الدفعة",
+        "viewStockEntry": "عرض حركة المخزون"
       }
     },
     "form": {

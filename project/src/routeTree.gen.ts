@@ -39,6 +39,7 @@ import { Route as AuthenticatedproductionParcelsRouteImport } from './routes/_au
 import { Route as AuthenticatedproductionOrchardsRouteImport } from './routes/_authenticated/(production)/orchards'
 import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_authenticated/(production)/harvests'
 import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './routes/_authenticated/(production)/farm-hierarchy'
+import { Route as AuthenticatedproductionCropsRouteImport } from './routes/_authenticated/(production)/crops'
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
 import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
@@ -117,6 +118,7 @@ import { Route as AuthenticatedinventoryStockInventoryRouteImport } from './rout
 import { Route as AuthenticatedinventoryStockGroupsRouteImport } from './routes/_authenticated/(inventory)/stock/groups'
 import { Route as AuthenticatedinventoryStockExpiryAlertsRouteImport } from './routes/_authenticated/(inventory)/stock/expiry-alerts'
 import { Route as AuthenticatedinventoryStockEntriesRouteImport } from './routes/_authenticated/(inventory)/stock/entries'
+import { Route as AuthenticatedinventoryStockDeliveriesRouteImport } from './routes/_authenticated/(inventory)/stock/deliveries'
 import { Route as AuthenticatedinventoryStockDashboardRouteImport } from './routes/_authenticated/(inventory)/stock/dashboard'
 import { Route as AuthenticatedinventoryStockBatchesRouteImport } from './routes/_authenticated/(inventory)/stock/batches'
 import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './routes/_authenticated/(inventory)/stock/approvals'
@@ -134,6 +136,7 @@ import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from '.
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
+import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
 import { Route as AuthenticatedaccountingAccountingAgedReceivablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-receivables'
 import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-payables'
@@ -324,6 +327,12 @@ const AuthenticatedproductionFarmHierarchyRoute =
   AuthenticatedproductionFarmHierarchyRouteImport.update({
     id: '/(production)/farm-hierarchy',
     path: '/farm-hierarchy',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedproductionCropsRoute =
+  AuthenticatedproductionCropsRouteImport.update({
+    id: '/(production)/crops',
+    path: '/crops',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedproductionCropCyclesRoute =
@@ -789,6 +798,12 @@ const AuthenticatedinventoryStockEntriesRoute =
     path: '/entries',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockDeliveriesRoute =
+  AuthenticatedinventoryStockDeliveriesRouteImport.update({
+    id: '/deliveries',
+    path: '/deliveries',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockDashboardRoute =
   AuthenticatedinventoryStockDashboardRouteImport.update({
     id: '/dashboard',
@@ -889,6 +904,12 @@ const AuthenticatedaccountingAccountingCashFlowRoute =
   AuthenticatedaccountingAccountingCashFlowRouteImport.update({
     id: '/cash-flow',
     path: '/cash-flow',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingBankAccountsRoute =
+  AuthenticatedaccountingAccountingBankAccountsRouteImport.update({
+    id: '/bank-accounts',
+    path: '/bank-accounts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingBalanceSheetRoute =
@@ -1100,6 +1121,7 @@ export interface FileRoutesByFullPath {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
+  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1118,6 +1140,7 @@ export interface FileRoutesByFullPath {
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
@@ -1135,6 +1158,7 @@ export interface FileRoutesByFullPath {
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
@@ -1251,6 +1275,7 @@ export interface FileRoutesByTo {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
+  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1267,6 +1292,7 @@ export interface FileRoutesByTo {
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
@@ -1284,6 +1310,7 @@ export interface FileRoutesByTo {
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
@@ -1401,6 +1428,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
+  '/_authenticated/(production)/crops': typeof AuthenticatedproductionCropsRoute
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1419,6 +1447,7 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
@@ -1436,6 +1465,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/_authenticated/(inventory)/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/_authenticated/(inventory)/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/_authenticated/(inventory)/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/_authenticated/(inventory)/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
   '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
@@ -1557,6 +1587,7 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
+    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1575,6 +1606,7 @@ export interface FileRouteTypes {
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
     | '/accounting/customers'
     | '/accounting/general-ledger'
@@ -1592,6 +1624,7 @@ export interface FileRouteTypes {
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
+    | '/stock/deliveries'
     | '/stock/entries'
     | '/stock/expiry-alerts'
     | '/stock/groups'
@@ -1708,6 +1741,7 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
+    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1724,6 +1758,7 @@ export interface FileRouteTypes {
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
     | '/accounting/customers'
     | '/accounting/general-ledger'
@@ -1741,6 +1776,7 @@ export interface FileRouteTypes {
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
+    | '/stock/deliveries'
     | '/stock/entries'
     | '/stock/expiry-alerts'
     | '/stock/groups'
@@ -1857,6 +1893,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/biological-assets'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
+    | '/_authenticated/(production)/crops'
     | '/_authenticated/(production)/farm-hierarchy'
     | '/_authenticated/(production)/harvests'
     | '/_authenticated/(production)/orchards'
@@ -1875,6 +1912,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
     | '/_authenticated/(accounting)/accounting/balance-sheet'
+    | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
     | '/_authenticated/(accounting)/accounting/customers'
     | '/_authenticated/(accounting)/accounting/general-ledger'
@@ -1892,6 +1930,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/approvals'
     | '/_authenticated/(inventory)/stock/batches'
     | '/_authenticated/(inventory)/stock/dashboard'
+    | '/_authenticated/(inventory)/stock/deliveries'
     | '/_authenticated/(inventory)/stock/entries'
     | '/_authenticated/(inventory)/stock/expiry-alerts'
     | '/_authenticated/(inventory)/stock/groups'
@@ -2201,6 +2240,13 @@ declare module '@tanstack/react-router' {
       path: '/farm-hierarchy'
       fullPath: '/farm-hierarchy'
       preLoaderRoute: typeof AuthenticatedproductionFarmHierarchyRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(production)/crops': {
+      id: '/_authenticated/(production)/crops'
+      path: '/crops'
+      fullPath: '/crops'
+      preLoaderRoute: typeof AuthenticatedproductionCropsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/crop-cycles': {
@@ -2749,6 +2795,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockEntriesRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/deliveries': {
+      id: '/_authenticated/(inventory)/stock/deliveries'
+      path: '/deliveries'
+      fullPath: '/stock/deliveries'
+      preLoaderRoute: typeof AuthenticatedinventoryStockDeliveriesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/dashboard': {
       id: '/_authenticated/(inventory)/stock/dashboard'
       path: '/dashboard'
@@ -2866,6 +2919,13 @@ declare module '@tanstack/react-router' {
       path: '/cash-flow'
       fullPath: '/accounting/cash-flow'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCashFlowRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/bank-accounts': {
+      id: '/_authenticated/(accounting)/accounting/bank-accounts'
+      path: '/bank-accounts'
+      fullPath: '/accounting/bank-accounts'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingBankAccountsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/balance-sheet': {
@@ -3072,6 +3132,7 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingAgedPayablesRoute: typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   AuthenticatedaccountingAccountingAgedReceivablesRoute: typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
@@ -3098,6 +3159,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingAgedReceivablesRoute,
     AuthenticatedaccountingAccountingBalanceSheetRoute:
       AuthenticatedaccountingAccountingBalanceSheetRoute,
+    AuthenticatedaccountingAccountingBankAccountsRoute:
+      AuthenticatedaccountingAccountingBankAccountsRoute,
     AuthenticatedaccountingAccountingCashFlowRoute:
       AuthenticatedaccountingAccountingCashFlowRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
@@ -3152,6 +3215,7 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
   AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
   AuthenticatedinventoryStockDashboardRoute: typeof AuthenticatedinventoryStockDashboardRoute
+  AuthenticatedinventoryStockDeliveriesRoute: typeof AuthenticatedinventoryStockDeliveriesRoute
   AuthenticatedinventoryStockEntriesRoute: typeof AuthenticatedinventoryStockEntriesRoute
   AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
@@ -3176,6 +3240,8 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
       AuthenticatedinventoryStockBatchesRoute,
     AuthenticatedinventoryStockDashboardRoute:
       AuthenticatedinventoryStockDashboardRoute,
+    AuthenticatedinventoryStockDeliveriesRoute:
+      AuthenticatedinventoryStockDeliveriesRoute,
     AuthenticatedinventoryStockEntriesRoute:
       AuthenticatedinventoryStockEntriesRoute,
     AuthenticatedinventoryStockExpiryAlertsRoute:
@@ -3496,6 +3562,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
+  AuthenticatedproductionCropsRoute: typeof AuthenticatedproductionCropsRoute
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
@@ -3551,6 +3618,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
     AuthenticatedproductionCropCyclesRouteWithChildren,
+  AuthenticatedproductionCropsRoute: AuthenticatedproductionCropsRoute,
   AuthenticatedproductionFarmHierarchyRoute:
     AuthenticatedproductionFarmHierarchyRoute,
   AuthenticatedproductionHarvestsRoute: AuthenticatedproductionHarvestsRoute,

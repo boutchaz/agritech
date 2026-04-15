@@ -368,6 +368,10 @@ export default function ReceptionBatchList({
             icon={Package}
             title={emptyTitle}
             description={emptyMessage}
+            action={!tableState.search ? {
+              label: t('receptionBatches.list.create'),
+              onClick: onCreateClick,
+            } : undefined}
           />
         ) : (
           <ResponsiveList

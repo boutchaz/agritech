@@ -323,7 +323,7 @@ Sprint 7 (Advanced + Cleanup) ────────┘
 
 ---
 
-## Sprint 5 — Barcode + Batch (5-7 days)
+## Sprint 5 — Barcode + Batch ✅ DONE (2026-04-15)
 
 ### 5.1 Barcode scanner UI
 **Priority**: IMPORTANT  
@@ -365,7 +365,7 @@ Sprint 7 (Advanced + Cleanup) ────────┘
 
 ---
 
-## Sprint 6 — Offline + Field Ops (7-10 days)
+## Sprint 6 — Offline + Field Ops ✅ DONE (2026-04-15)
 
 ### 6.1 Offline queue (IndexedDB)
 **Priority**: HIGH (rural Morocco)  
@@ -428,7 +428,7 @@ Sprint 7 (Advanced + Cleanup) ────────┘
 
 ---
 
-## Sprint 7 — Advanced + Cleanup (3-5 days)
+## Sprint 7 — Advanced + Cleanup ✅ DONE (2026-04-15)
 
 ### 7.1 Stock dashboard with summary cards
 Enhance `StockReportsDashboard.tsx` with: total stock value, low stock count, pending entries, recent movements, warehouse utilization.

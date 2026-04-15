@@ -320,9 +320,20 @@ export class StockEntriesService {
    */
   async postStockEntry(stockEntryId: string, organizationId: string, userId: string): Promise<any> {
     const result = await this.executeInPgTransaction(async (client) => {
-      // 1. Get stock entry with items
+      // 1. Lock stock entry row, then fetch with items
+      const lockResult = await client.query(
+        `SELECT * FROM stock_entries
+         WHERE id = $1 AND organization_id = $2
+         FOR UPDATE`,
+        [stockEntryId, organizationId],
+      );
+
+      if (lockResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found');
+      }
+
       const entryResult = await client.query(
-        `SELECT se.*, 
+        `SELECT se.*,
          COALESCE(
            json_agg(
              json_build_object(
@@ -350,14 +361,9 @@ export class StockEntriesService {
          FROM stock_entries se
           LEFT JOIN stock_entry_items sei ON sei.stock_entry_id = se.id
           WHERE se.id = $1 AND se.organization_id = $2
-          GROUP BY se.id
-          FOR UPDATE OF se`,
+          GROUP BY se.id`,
          [stockEntryId, organizationId],
        );
-
-      if (entryResult.rows.length === 0) {
-        throw new NotFoundException('Stock entry not found');
-      }
 
       const stockEntry = entryResult.rows[0];
       let entryItems = stockEntry.stock_entry_items || [];
