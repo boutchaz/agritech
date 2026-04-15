@@ -10,7 +10,7 @@ import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 
 interface SoilAnalysisProps {
-  onSave: (data: SoilAnalysisData) => void;
+  onSave: (data: SoilAnalysisData) => void | Promise<void>;
   onCancel: () => void;
   initialData?: SoilAnalysisData;
 }
@@ -120,7 +120,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
 
   const onSubmit = async (formData: SoilAnalysisFormData) => {
     try {
-      onSave(formData);
+      await onSave(formData);
     } catch (error: unknown) {
       handleFormError(error, setError, {
         toastMessage: 'Failed to save soil analysis',

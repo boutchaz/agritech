@@ -17,7 +17,7 @@ interface Parcel {
 }
 
 interface SoilAnalysisFormProps {
-  onSave: (data: SoilAnalysis) => void;
+  onSave: (data: SoilAnalysis) => void | Promise<void>;
   onCancel: () => void;
   initialData?: SoilAnalysis;
   selectedParcel?: Parcel | null;
@@ -96,7 +96,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
         },
         recommendations: [],
       };
-      onSave(soilAnalysis);
+      await onSave(soilAnalysis);
     } catch (error: unknown) {
       handleFormError(error, setError, {
         toastMessage: 'Erreur lors de l\'enregistrement de l\'analyse du sol',
