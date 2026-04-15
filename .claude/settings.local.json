@@ -119,7 +119,10 @@
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/browse/dist/browse url:*)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse goto *)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse wait *)",
-      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse screenshot *)"
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse screenshot *)",
+      "Bash(npx eslint *)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse click *)",
+      "Bash(npx tsr *)"
     ],
     "deny": [],
     "ask": []

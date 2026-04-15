@@ -15,6 +15,7 @@ import {
   Megaphone,
   BookOpen,
   Globe,
+  Package,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -30,6 +31,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { to: '/', label: 'Référentiels', icon: Database, match: (p: string) => p === '/' || p.startsWith('/referentiels') },
     { to: '/clients', label: 'Clients', icon: Building2, match: (p: string) => p === '/clients' || p.startsWith('/clients/') },
     { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
+    { to: '/modules', label: 'Modules', icon: Package },
     { to: '/email-templates', label: 'Email Templates', icon: Mail },
     { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },
     { to: '/banners', label: 'Banners', icon: Megaphone },

@@ -297,4 +297,42 @@ export class AdminController {
   ) {
     return this.supportedCountriesService.toggleEnabled(id, body.enabled);
   }
+
+  // ============================================
+  // Module Management Endpoints
+  // ============================================
+
+  @Get('modules')
+  async getModules() {
+    return this.adminService.getModules();
+  }
+
+  @Get('modules/:id')
+  async getModule(@Param('id') id: string) {
+    return this.adminService.getModule(id);
+  }
+
+  @Post('modules')
+  async createModule(@Body() body: Record<string, unknown>) {
+    return this.adminService.createModule(body);
+  }
+
+  @Patch('modules/:id')
+  async updateModule(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    return this.adminService.updateModule(id, body);
+  }
+
+  @Delete('modules/:id')
+  async deleteModule(@Param('id') id: string) {
+    return this.adminService.deleteModule(id);
+  }
+
+  @Put('modules/:id/translations/:locale')
+  async upsertModuleTranslation(
+    @Param('id') moduleId: string,
+    @Param('locale') locale: string,
+    @Body() body: { name?: string; description?: string; features?: string[] },
+  ) {
+    return this.adminService.upsertModuleTranslation(moduleId, locale, body);
+  }
 }

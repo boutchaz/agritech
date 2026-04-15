@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useModuleBasedDashboard } from '@/hooks/useModuleBasedDashboard';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui/loader';
@@ -8,78 +8,41 @@ import { Button } from '@/components/ui/button';
 import { Lock, Settings, ArrowLeft } from 'lucide-react';
 
 /**
- * Maps route path prefixes to module slugs.
- * When a user navigates to a route, we check if its module is active.
+ * Gate component that checks if the current route is allowed by the org's active modules.
+ *
+ * Uses `navigation_items` from the `modules` table (managed via admin panel)
+ * to determine which routes belong to which modules. No hardcoded mapping.
+ *
+ * Behavior:
+ * - If modules haven't loaded yet → show children (avoid flash)
+ * - If no modules have navigation_items configured → permissive (show all)
+ * - If current path is in an active module's navigation_items → show children
+ * - If current path is NOT in any active module's navigation_items → show disabled page
+ *
+ * Props are optional — when used without props, auto-detects from current path.
  */
-export const ROUTE_MODULE_MAP: Record<string, string> = {
-  // Tier 3 — independently toggleable add-ons
-  '/compliance': 'compliance',
-  '/marketplace': 'marketplace',
-  '/lab-services': 'analytics',
-  '/chat': 'analytics',
-  // Tier 2 — production pack (these form a tight cluster)
-  '/stock': 'inventory',
-  '/accounting': 'accounting',
-  '/workers': 'hr',
-  '/workforce': 'hr',
-  '/tasks': 'farm_management',
-  '/harvests': 'farm_management',
-  '/crops': 'farm_management',
-  '/crop-cycles': 'farm_management',
-  '/product-applications': 'farm_management',
-  '/biological-assets': 'farm_management',
-  '/orchards': 'farm_management',
-  '/parcels': 'farm_management',
-  '/infrastructure': 'farm_management',
-  '/pest-alerts': 'farm_management',
-  '/quality-control': 'farm_management',
-  '/deliveries': 'inventory',
-};
-
-/**
- * Resolves the module slug for a given path.
- * Matches the longest prefix first.
- */
-export function getModuleForPath(path: string): string | null {
-  const entries = Object.entries(ROUTE_MODULE_MAP).sort(
-    (a, b) => b[0].length - a[0].length,
-  );
-  for (const [prefix, slug] of entries) {
-    if (path.startsWith(prefix)) return slug;
-  }
-  return null;
-}
-
-interface ModuleGateProps {
-  /** Module slug to check (e.g., 'compliance', 'marketplace', 'analytics') */
-  moduleSlug: string;
-  /** Module display name for the disabled page */
-  moduleName?: string;
-  children: React.ReactNode;
-}
-
-/**
- * Gate component that checks if a module is active for the current organization.
- * Shows a "module disabled" page if the module is not active.
- * Renders children normally if the module is active.
- */
-export function ModuleGate({ moduleSlug, moduleName, children }: ModuleGateProps) {
+export function ModuleGate({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { activeModules, isLoading } = useModuleBasedDashboard();
+  const { location } = useRouterState();
+  const { isNavigationEnabled, availableNavigation, isLoading } = useModuleBasedDashboard();
   const { userRole } = useAuth();
 
   if (isLoading) return <PageLoader />;
 
-  // If no modules loaded yet (first load), allow access to avoid flash
-  if (activeModules.length === 0) return <>{children}</>;
+  // Permissive fallback: if no navigation_items configured in any module, allow everything
+  if (availableNavigation.length === 0) return <>{children}</>;
 
-  const isActive = activeModules.includes(moduleSlug);
+  const currentPath = location.pathname;
+  const isAllowed = isNavigationEnabled(currentPath);
 
-  if (isActive) return <>{children}</>;
+  if (isAllowed) return <>{children}</>;
+
+  // Core routes always allowed (dashboard, settings, etc.)
+  const alwaysAllowed = ['/dashboard', '/settings', '/farm-hierarchy', '/notifications'];
+  if (alwaysAllowed.some(p => currentPath.startsWith(p))) return <>{children}</>;
 
   const isAdmin = userRole?.role_name === 'organization_admin' || userRole?.role_name === 'system_admin';
-  const displayName = moduleName || moduleSlug.replace(/_/g, ' ');
 
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
@@ -91,9 +54,7 @@ export function ModuleGate({ moduleSlug, moduleName, children }: ModuleGateProps
           {t('modules.disabled.title', 'Module non activé')}
         </h2>
         <p className="text-gray-600 dark:text-gray-400 mb-2">
-          {t('modules.disabled.description', 'Le module {{module}} n\'est pas activé pour votre organisation.', {
-            module: displayName,
-          })}
+          {t('modules.disabled.descriptionGeneric', 'Cette fonctionnalité n\'est pas activée pour votre organisation.')}
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
           {isAdmin

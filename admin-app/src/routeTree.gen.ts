@@ -15,6 +15,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSupportedCountriesRouteImport } from './routes/_authenticated/supported-countries'
 import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
+import { Route as AuthenticatedModulesRouteImport } from './routes/_authenticated/modules'
 import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authenticated/email-templates'
 import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
@@ -52,6 +53,11 @@ const AuthenticatedSubscriptionModelRoute =
 const AuthenticatedRdvRoute = AuthenticatedRdvRouteImport.update({
   id: '/rdv',
   path: '/rdv',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedModulesRoute = AuthenticatedModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedEmailTemplatesRoute =
@@ -101,6 +107,7 @@ export interface FileRoutesByFullPath {
   '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/modules': typeof AuthenticatedModulesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
@@ -114,6 +121,7 @@ export interface FileRoutesByTo {
   '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/modules': typeof AuthenticatedModulesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
   '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/_authenticated/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/_authenticated/modules': typeof AuthenticatedModulesRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
   '/_authenticated/supported-countries': typeof AuthenticatedSupportedCountriesRoute
@@ -147,6 +156,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/cron-jobs'
     | '/email-templates'
+    | '/modules'
     | '/rdv'
     | '/subscription-model'
     | '/supported-countries'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/clients'
     | '/cron-jobs'
     | '/email-templates'
+    | '/modules'
     | '/rdv'
     | '/subscription-model'
     | '/supported-countries'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/_authenticated/clients'
     | '/_authenticated/cron-jobs'
     | '/_authenticated/email-templates'
+    | '/_authenticated/modules'
     | '/_authenticated/rdv'
     | '/_authenticated/subscription-model'
     | '/_authenticated/supported-countries'
@@ -230,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/rdv'
       fullPath: '/rdv'
       preLoaderRoute: typeof AuthenticatedRdvRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/modules': {
+      id: '/_authenticated/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof AuthenticatedModulesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/email-templates': {
@@ -301,6 +320,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
   AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
   AuthenticatedEmailTemplatesRoute: typeof AuthenticatedEmailTemplatesRoute
+  AuthenticatedModulesRoute: typeof AuthenticatedModulesRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
   AuthenticatedSupportedCountriesRoute: typeof AuthenticatedSupportedCountriesRoute
@@ -314,6 +334,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
   AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,
   AuthenticatedEmailTemplatesRoute: AuthenticatedEmailTemplatesRoute,
+  AuthenticatedModulesRoute: AuthenticatedModulesRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
   AuthenticatedSupportedCountriesRoute: AuthenticatedSupportedCountriesRoute,

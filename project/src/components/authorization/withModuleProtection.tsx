@@ -5,26 +5,24 @@ import type { Action, Subject } from '../../lib/casl/ability';
 
 /**
  * HOC that wraps a route with both:
- * 1. Module activation check (is the module enabled for this org?)
+ * 1. Module activation check (is the route's module enabled for this org?)
  * 2. CASL permission check (does the user have the right role?)
  *
  * Module check runs first — if the module is disabled, the user sees
  * "Module not enabled" instead of "Access denied".
  *
  * Usage:
- *   component: withModuleProtection(MyPage, 'compliance', 'Compliance', 'read', 'Certification')
+ *   component: withModuleProtection(MyPage, 'read', 'Certification')
  */
 export function withModuleProtection<P extends object>(
   Component: React.ComponentType<P>,
-  moduleSlug: string,
-  moduleName: string,
   action: Action,
   subject: Subject,
   redirectTo?: string,
 ) {
   const ProtectedComponent = (props: P) => {
     return (
-      <ModuleGate moduleSlug={moduleSlug} moduleName={moduleName}>
+      <ModuleGate>
         <ProtectedRoute action={action} subject={subject} redirectTo={redirectTo}>
           <Component {...props} />
         </ProtectedRoute>

@@ -48,5 +48,5 @@ const ChatPage = () => {
 import { withModuleProtection } from '@/components/authorization/withModuleProtection';
 
 export const Route = createFileRoute('/_authenticated/(core)/chat')({
-  component: withModuleProtection(ChatPage, 'analytics', 'AgromindIA', 'read', 'Chat'),
+  component: withModuleProtection(ChatPage, 'read', 'Chat'),
 });

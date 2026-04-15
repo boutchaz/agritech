@@ -40,7 +40,7 @@ import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 function MarketplaceGuarded() {
   return (
-    <ModuleGate moduleSlug="marketplace" moduleName="Marketplace">
+    <ModuleGate>
       <MarketplacePage />
     </ModuleGate>
   );

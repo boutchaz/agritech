@@ -23,7 +23,7 @@ import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 function LabServicesGuarded() {
   return (
-    <ModuleGate moduleSlug="analytics" moduleName="Services de laboratoire">
+    <ModuleGate>
       <LabServicesPage />
     </ModuleGate>
   );

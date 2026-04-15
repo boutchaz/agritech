@@ -51,7 +51,7 @@ import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 function ComplianceDashboardGuarded() {
   return (
-    <ModuleGate moduleSlug="compliance" moduleName="Conformité & Certifications">
+    <ModuleGate>
       <ComplianceDashboardPage />
     </ModuleGate>
   );

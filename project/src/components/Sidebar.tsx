@@ -128,9 +128,8 @@ const Sidebar = ({
   const location = useLocation();
   const { t, i18n } = useTranslation("common");
   const { currentOrganization } = useAuth();
-  const { activeModules } = useModuleBasedDashboard();
-  const activeModuleSet = new Set(activeModules);
-  const isModuleActive = (slug: string) => activeModuleSet.size === 0 || activeModuleSet.has(slug);
+  const { isNavigationEnabled, availableNavigation } = useModuleBasedDashboard();
+  const isRouteEnabled = (path: string) => availableNavigation.length === 0 || isNavigationEnabled(path);
   const isRTL = isRTLLocale(i18n.language);
   const { bothRailsCollapsed } = useSidebarMargin(isRTL);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -804,7 +803,7 @@ const Sidebar = ({
               </ProtectedNavItem>
 
               {/* AI Chat — gated on analytics module */}
-              {isModuleActive('analytics') && <ProtectedNavItem action="read" subject="Chat">
+              {isRouteEnabled('/chat') && <ProtectedNavItem action="read" subject="Chat">
                 <Button
                   variant="ghost"
                   data-tour="nav-chat"
@@ -1123,7 +1122,7 @@ const Sidebar = ({
             </div>
 
             {/* ========== COMPLIANCE SECTION ========== */}
-            {isModuleActive('compliance') && <>
+            {isRouteEnabled('/compliance') && <>
             <Separator
               className={cn(
                 "my-3 opacity-50",
@@ -1510,7 +1509,7 @@ const Sidebar = ({
             </ProtectedNavItem>
 
             {/* ========== MARKETPLACE — gated on marketplace module ========== */}
-            {isModuleActive('marketplace') && <ProtectedNavItem action="read" subject="Invoice">
+            {isRouteEnabled('/marketplace') && <ProtectedNavItem action="read" subject="Invoice">
               <Separator
                 className={cn(
                   "my-3 opacity-50",

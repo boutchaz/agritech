@@ -962,4 +962,153 @@ export class AdminService {
     if (error) throw error;
     return { success: true };
   }
+
+  // ============================================
+  // Module Management
+  // ============================================
+
+  async getModules() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new NotFoundException('Module not found');
+    return data;
+  }
+
+  async createModule(input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Check slug uniqueness
+    if (input.slug) {
+      const { data: existing } = await client
+        .from('modules')
+        .select('id')
+        .eq('slug', input.slug as string)
+        .maybeSingle();
+
+      if (existing) {
+        throw new BadRequestException(`Module with slug "${input.slug}" already exists`);
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .insert({
+        name: input.name || input.slug,
+        slug: input.slug,
+        icon: input.icon || null,
+        color: input.color || null,
+        category: input.category || 'other',
+        description: input.description || null,
+        display_order: input.display_order || 0,
+        price_monthly: input.price_monthly || 0,
+        is_required: input.is_required || false,
+        is_recommended: input.is_recommended || false,
+        is_addon_eligible: input.is_addon_eligible || false,
+        is_available: input.is_available !== false,
+        required_plan: input.required_plan || null,
+        dashboard_widgets: input.dashboard_widgets || [],
+        navigation_items: input.navigation_items || [],
+        features: input.features || [],
+      })
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateModule(id: string, input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Check module exists
+    const { data: existing } = await client
+      .from('modules')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existing) throw new NotFoundException('Module not found');
+
+    // Build update payload — only include provided fields
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const allowedFields = [
+      'name', 'slug', 'icon', 'color', 'category', 'description',
+      'display_order', 'price_monthly', 'is_required', 'is_recommended',
+      'is_addon_eligible', 'is_available', 'required_plan',
+      'dashboard_widgets', 'navigation_items', 'features',
+    ];
+    for (const field of allowedFields) {
+      if (field in input) {
+        update[field] = input[field];
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .update(update)
+      .eq('id', id)
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Soft delete — set is_available = false
+    const { data, error } = await client
+      .from('modules')
+      .update({ is_available: false, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new NotFoundException('Module not found');
+    return data;
+  }
+
+  async upsertModuleTranslation(
+    moduleId: string,
+    locale: string,
+    input: { name?: string; description?: string; features?: string[] },
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('module_translations')
+      .upsert(
+        {
+          module_id: moduleId,
+          locale,
+          name: input.name,
+          description: input.description,
+          features: input.features,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'module_id,locale' },
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 }
