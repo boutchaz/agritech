@@ -73,7 +73,7 @@ const TOUR_ROUTES: Record<TourId, string> = {
   'infrastructure': '/infrastructure',
   'billing': '/accounting/quotes',
   'accounting': '/accounting',
-  'satellite': '/satellite-analysis',
+  'satellite': '/production/satellite-analysis',
   'reports': '/reports',
   'settings': '/settings/account',
 };

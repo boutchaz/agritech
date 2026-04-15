@@ -34,6 +34,7 @@ import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_aut
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
 import { Route as AuthenticatedproductionTreesRouteImport } from './routes/_authenticated/(production)/trees'
+import { Route as AuthenticatedproductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/satellite-analysis'
 import { Route as AuthenticatedproductionQualityControlRouteImport } from './routes/_authenticated/(production)/quality-control'
 import { Route as AuthenticatedproductionPruningRouteImport } from './routes/_authenticated/(production)/pruning'
 import { Route as AuthenticatedproductionProductApplicationsRouteImport } from './routes/_authenticated/(production)/product-applications'
@@ -299,6 +300,12 @@ const AuthenticatedproductionTreesRoute =
   AuthenticatedproductionTreesRouteImport.update({
     id: '/(production)/trees',
     path: '/trees',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedproductionSatelliteAnalysisRoute =
+  AuthenticatedproductionSatelliteAnalysisRouteImport.update({
+    id: '/(production)/satellite-analysis',
+    path: '/satellite-analysis',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedproductionQualityControlRoute =
@@ -1149,6 +1156,7 @@ export interface FileRoutesByFullPath {
   '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -1306,6 +1314,7 @@ export interface FileRoutesByTo {
   '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
@@ -1462,6 +1471,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/_authenticated/(production)/pruning': typeof AuthenticatedproductionPruningRoute
   '/_authenticated/(production)/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/_authenticated/(production)/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/_authenticated/(production)/trees': typeof AuthenticatedproductionTreesRoute
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -1624,6 +1634,7 @@ export interface FileRouteTypes {
     | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/settings'
     | '/tasks'
@@ -1781,6 +1792,7 @@ export interface FileRouteTypes {
     | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/workers'
     | '/pest-alerts/$reportId'
@@ -1936,6 +1948,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/product-applications'
     | '/_authenticated/(production)/pruning'
     | '/_authenticated/(production)/quality-control'
+    | '/_authenticated/(production)/satellite-analysis'
     | '/_authenticated/(production)/trees'
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
@@ -2243,6 +2256,13 @@ declare module '@tanstack/react-router' {
       path: '/trees'
       fullPath: '/trees'
       preLoaderRoute: typeof AuthenticatedproductionTreesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(production)/satellite-analysis': {
+      id: '/_authenticated/(production)/satellite-analysis'
+      path: '/satellite-analysis'
+      fullPath: '/satellite-analysis'
+      preLoaderRoute: typeof AuthenticatedproductionSatelliteAnalysisRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/quality-control': {
@@ -3644,6 +3664,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductApplicationsRoute: typeof AuthenticatedproductionProductApplicationsRoute
   AuthenticatedproductionPruningRoute: typeof AuthenticatedproductionPruningRoute
   AuthenticatedproductionQualityControlRoute: typeof AuthenticatedproductionQualityControlRoute
+  AuthenticatedproductionSatelliteAnalysisRoute: typeof AuthenticatedproductionSatelliteAnalysisRoute
   AuthenticatedproductionTreesRoute: typeof AuthenticatedproductionTreesRoute
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -3706,6 +3727,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionPruningRoute: AuthenticatedproductionPruningRoute,
   AuthenticatedproductionQualityControlRoute:
     AuthenticatedproductionQualityControlRoute,
+  AuthenticatedproductionSatelliteAnalysisRoute:
+    AuthenticatedproductionSatelliteAnalysisRoute,
   AuthenticatedproductionTreesRoute: AuthenticatedproductionTreesRoute,
   AuthenticatedsettingsSettingsRoute:
     AuthenticatedsettingsSettingsRouteWithChildren,

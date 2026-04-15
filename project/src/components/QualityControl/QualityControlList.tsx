@@ -3,7 +3,9 @@ import {
   useQualityInspections,
   useQualityControlStats,
   useDeleteInspection,
+  useUpdateInspectionStatus,
 } from '@/hooks/useQualityControl';
+import QualityControlForm from './QualityControlForm';
 import { useTranslation } from 'react-i18next';
 import {
   TableCell,
@@ -45,10 +47,14 @@ import {
   BarChart3,
   Clock,
   Eye,
+  Pencil,
+  PlayCircle,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { InspectionType, InspectionStatus } from '@/lib/api/quality-control';
+import type { QualityInspection, InspectionType, InspectionStatus } from '@/lib/api/quality-control';
 
 const STATUS_COLORS: Record<InspectionStatus, string> = {
   scheduled: 'bg-blue-100 text-blue-800',
@@ -71,6 +77,9 @@ export default function QualityControlList() {
   const [filterStatus, setFilterStatus] = useState<InspectionStatus | 'all'>('all');
   const [filterType, setFilterType] = useState<InspectionType | 'all'>('all');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingInspection, setEditingInspection] = useState<QualityInspection | null>(null);
+  const [detailInspection, setDetailInspection] = useState<QualityInspection | null>(null);
 
   const tableState = useServerTableState({
     defaultPageSize: 12,
@@ -87,6 +96,7 @@ export default function QualityControlList() {
 
   const { data: stats } = useQualityControlStats();
   const deleteInspection = useDeleteInspection();
+  const updateStatus = useUpdateInspectionStatus();
 
   const inspections = paginatedData?.data ?? [];
   const totalItems = paginatedData?.total ?? 0;
@@ -141,7 +151,26 @@ export default function QualityControlList() {
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
-  const renderActions = (inspectionId: string, canDelete: boolean) => (
+  const handleStatusChange = async (id: string, status: InspectionStatus) => {
+    try {
+      await updateStatus.mutateAsync({ id, status });
+      toast.success(t('production.qualityControl.list.actions.statusUpdated', 'Status updated'));
+    } catch {
+      toast.error(t('production.qualityControl.list.actions.statusFailed', 'Failed to update status'));
+    }
+  };
+
+  const handleOpenForm = (inspection?: QualityInspection) => {
+    setEditingInspection(inspection || null);
+    setFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingInspection(null);
+  };
+
+  const renderActions = (inspection: QualityInspection) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm">
@@ -149,22 +178,47 @@ export default function QualityControlList() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => toast.info(t('production.qualityControl.list.actions.viewDetails', 'View details coming soon'))}>
+        <DropdownMenuItem onClick={() => setDetailInspection(inspection)}>
           <Eye className="w-4 h-4 mr-2" />
           {t('production.qualityControl.list.actions.viewDetails', 'View Details')}
         </DropdownMenuItem>
-        {canDelete && (
+        <DropdownMenuItem onClick={() => handleOpenForm(inspection)}>
+          <Pencil className="w-4 h-4 mr-2" />
+          {t('production.qualityControl.list.actions.edit', 'Edit')}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {inspection.status === 'scheduled' && (
+          <DropdownMenuItem onClick={() => handleStatusChange(inspection.id, 'in_progress')}>
+            <PlayCircle className="w-4 h-4 mr-2" />
+            {t('production.qualityControl.list.actions.startInspection', 'Start Inspection')}
+          </DropdownMenuItem>
+        )}
+        {inspection.status === 'in_progress' && (
           <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setConfirmDelete(inspectionId)}
-              className="text-red-600"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {t('production.qualityControl.list.actions.delete', 'Delete')}
+            <DropdownMenuItem onClick={() => handleStatusChange(inspection.id, 'completed')}>
+              <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+              {t('production.qualityControl.list.actions.markCompleted', 'Mark Completed')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleStatusChange(inspection.id, 'failed')}>
+              <XCircle className="w-4 h-4 mr-2 text-red-600" />
+              {t('production.qualityControl.list.actions.markFailed', 'Mark Failed')}
             </DropdownMenuItem>
           </>
         )}
+        {!['completed', 'cancelled'].includes(inspection.status) && (
+          <DropdownMenuItem onClick={() => handleStatusChange(inspection.id, 'cancelled')}>
+            <XCircle className="w-4 h-4 mr-2" />
+            {t('production.qualityControl.list.actions.cancel', 'Cancel')}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setConfirmDelete(inspection.id)}
+          className="text-red-600"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          {t('production.qualityControl.list.actions.delete', 'Delete')}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -294,7 +348,7 @@ export default function QualityControlList() {
                     </p>
                     <p className="font-semibold text-gray-900 break-all">#{inspection.id.slice(0, 8)}</p>
                   </div>
-                  {renderActions(inspection.id, inspection.status !== 'in_progress')}
+                  {renderActions(inspection)}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -386,12 +440,95 @@ export default function QualityControlList() {
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                {renderActions(inspection.id, inspection.status !== 'in_progress')}
+                {renderActions(inspection)}
               </TableCell>
             </>
           )}
         />
       </div>
+
+      <QualityControlForm
+        open={formOpen}
+        onClose={handleCloseForm}
+        inspection={editingInspection}
+      />
+
+      {detailInspection && (
+        <AlertDialog
+          open={!!detailInspection}
+          onOpenChange={() => setDetailInspection(null)}
+        >
+          <AlertDialogContent className="sm:max-w-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t('production.qualityControl.detail.title', 'Inspection Details')}
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.form.type', 'Type')}</p>
+                      <Badge className={TYPE_COLORS[detailInspection.type]}>
+                        {getTypeLabel(detailInspection.type)}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.form.status', 'Status')}</p>
+                      <Badge className={STATUS_COLORS[detailInspection.status]}>
+                        {getStatusLabel(detailInspection.status)}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.list.card.farm', 'Farm')}</p>
+                      <p className="text-gray-900">{detailInspection.parcel?.farm?.name || detailInspection.farm?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.list.card.parcel', 'Parcel')}</p>
+                      <p className="text-gray-900">{detailInspection.parcel?.name || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.list.card.date', 'Date')}</p>
+                      <p className="text-gray-900">{formatDate(detailInspection.inspection_date)}</p>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.list.card.score', 'Score')}</p>
+                      {detailInspection.overall_score != null ? (
+                        <p className={`font-semibold ${getScoreColor(detailInspection.overall_score)}`}>
+                          {detailInspection.overall_score}/100
+                        </p>
+                      ) : (
+                        <p className="text-gray-400">—</p>
+                      )}
+                    </div>
+                    {detailInspection.inspector && (
+                      <div className="col-span-2">
+                        <p className="font-medium text-gray-500">{t('production.qualityControl.form.inspector', 'Inspector')}</p>
+                        <p className="text-gray-900">{detailInspection.inspector.first_name} {detailInspection.inspector.last_name}</p>
+                      </div>
+                    )}
+                  </div>
+                  {detailInspection.notes && (
+                    <div>
+                      <p className="font-medium text-gray-500">{t('production.qualityControl.form.notes', 'Notes')}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{detailInspection.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.close', 'Close')}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                handleOpenForm(detailInspection);
+                setDetailInspection(null);
+              }}>
+                <Pencil className="w-4 h-4 mr-2" />
+                {t('production.qualityControl.list.actions.edit', 'Edit')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       {confirmDelete && (
         <AlertDialog

@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { useProductApplications } from '@/hooks/useProductApplications';
+import { useProductApplications, useDeleteProductApplication } from '@/hooks/useProductApplications';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import type { ProductApplication } from '@/lib/api/product-applications';
 import { ApplicationFormDialog } from '@/components/parcels/ApplicationFormDialog';
@@ -34,6 +34,12 @@ import {
   useServerTableState,
 } from '@/components/ui/data-table';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Droplets,
   Plus,
   Building2,
@@ -41,17 +47,29 @@ import {
   Calendar,
   Scale,
   TrendingUp,
+  MoreVertical,
+  Eye,
+  Trash2,
+  ClipboardList,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { toast } from 'sonner';
 import { format } from 'date-fns';
 
 function ProductApplicationsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const organizationId = currentOrganization?.id;
 
   const [showForm, setShowForm] = useState(false);
   const [filterFarm, setFilterFarm] = useState<string>('all');
+  const [selectedApp, setSelectedApp] = useState<ProductApplication | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [appToDelete, setAppToDelete] = useState<ProductApplication | null>(null);
+
+  const deleteMutation = useDeleteProductApplication();
 
   const { data: applications = [], isLoading, isError } = useProductApplications();
   const { data: farms = [] } = useFarms(organizationId);
@@ -109,6 +127,20 @@ function ProductApplicationsPage() {
 
   // Resolve farm for the dialog — use filtered farm or first farm
   const dialogFarmId = filterFarm !== 'all' ? filterFarm : farmsArray[0]?.id || '';
+
+  const handleDelete = async () => {
+    if (!appToDelete) return;
+    try {
+      await deleteMutation.mutateAsync(appToDelete.id);
+      toast.success(t('productApplications.deleteSuccess', 'Application supprimée avec succès'));
+    } catch (error) {
+      console.error('Error deleting application:', error);
+      toast.error(error instanceof Error ? error.message : t('productApplications.deleteError', 'Erreur lors de la suppression'));
+    } finally {
+      setConfirmDeleteOpen(false);
+      setAppToDelete(null);
+    }
+  };
 
   if (!currentOrganization) return <PageLoader />;
 
@@ -294,9 +326,40 @@ function ProductApplicationsPage() {
                         <p className="font-medium truncate">{app.parcel?.name || t('common.notAvailable', '—')}</p>
                       </div>
                     </div>
-                    {app.notes && (
-                      <p className="text-xs text-gray-500 italic truncate">{app.notes}</p>
+                    {app.task && (
+                      <button
+                        onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: app.task!.id } })}
+                        className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5" />
+                        <span className="truncate">{app.task.title}</span>
+                      </button>
                     )}
+                    <div className="flex items-center justify-between pt-1">
+                      {app.notes ? (
+                        <p className="text-xs text-gray-500 italic truncate flex-1">{app.notes}</p>
+                      ) : <div />}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedApp(app)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t('common.viewDetails', 'Voir détails')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setAppToDelete(app); setConfirmDeleteOpen(true); }}
+                            className="text-red-600 dark:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('common.delete', 'Supprimer')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 )}
                 renderTableHeader={
@@ -305,9 +368,11 @@ function ProductApplicationsPage() {
                     <TableHead>{t('productApplications.date', 'Date')}</TableHead>
                     <TableHead>{t('productApplications.farm', 'Ferme')}</TableHead>
                     <TableHead>{t('productApplications.parcel', 'Parcelle')}</TableHead>
+                    <TableHead>{t('productApplications.task', 'Tâche')}</TableHead>
                     <TableHead>{t('productApplications.quantity', 'Quantité')}</TableHead>
                     <TableHead>{t('productApplications.area', 'Surface')}</TableHead>
                     <TableHead>{t('productApplications.cost', 'Coût')}</TableHead>
+                    <TableHead className="w-[60px]">{t('common.actions', 'Actions')}</TableHead>
                   </TableRow>
                 }
                 renderTable={(app: ProductApplication) => (
@@ -324,6 +389,19 @@ function ProductApplicationsPage() {
                     <TableCell>{app.farm?.name || t('common.notAvailable', '—')}</TableCell>
                     <TableCell>{app.parcel?.name || t('common.notAvailable', '—')}</TableCell>
                     <TableCell>
+                      {app.task ? (
+                        <button
+                          onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: app.task!.id } })}
+                          className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
+                        >
+                          <ClipboardList className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[150px]">{app.task.title}</span>
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">{t('common.notAvailable', '—')}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       {app.quantity_used} {app.inventory?.unit || ''}
                     </TableCell>
                     <TableCell>{app.area_treated} {t('common.hectares', 'ha')}</TableCell>
@@ -331,6 +409,28 @@ function ProductApplicationsPage() {
                       {app.cost != null && app.cost > 0
                         ? `${app.cost} ${app.currency || t('common.mad', 'MAD')}`
                         : t('common.notAvailable', '—')}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedApp(app)}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            {t('common.viewDetails', 'Voir détails')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => { setAppToDelete(app); setConfirmDeleteOpen(true); }}
+                            className="text-red-600 dark:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('common.delete', 'Supprimer')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </>
                 )}
@@ -348,6 +448,83 @@ function ProductApplicationsPage() {
           onSuccess={() => setShowForm(false)}
         />
       )}
+
+      {/* Detail Dialog */}
+      {selectedApp && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSelectedApp(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {selectedApp.inventory?.name || t('productApplications.unknownProduct', 'Produit')}
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedApp(null)}>✕</Button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">{t('productApplications.date', 'Date')}</p>
+                <p className="font-medium">{format(new Date(selectedApp.application_date), 'dd/MM/yyyy')}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.quantity', 'Quantité')}</p>
+                <p className="font-medium">{selectedApp.quantity_used} {selectedApp.inventory?.unit || ''}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.area', 'Surface')}</p>
+                <p className="font-medium">{selectedApp.area_treated} {t('common.hectares', 'ha')}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.cost', 'Coût')}</p>
+                <p className="font-medium">
+                  {selectedApp.cost != null && selectedApp.cost > 0
+                    ? `${selectedApp.cost} ${selectedApp.currency || t('common.mad', 'MAD')}`
+                    : t('common.notAvailable', '—')}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.farm', 'Ferme')}</p>
+                <p className="font-medium">{selectedApp.farm?.name || t('common.notAvailable', '—')}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.parcel', 'Parcelle')}</p>
+                <p className="font-medium">{selectedApp.parcel?.name || t('common.notAvailable', '—')}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">{t('productApplications.task', 'Tâche')}</p>
+                {selectedApp.task ? (
+                  <button
+                    onClick={() => { setSelectedApp(null); navigate({ to: '/tasks/$taskId', params: { taskId: selectedApp.task!.id } }); }}
+                    className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    <ClipboardList className="w-3.5 h-3.5" />
+                    {selectedApp.task.title}
+                  </button>
+                ) : (
+                  <p className="font-medium text-gray-400">{t('common.notAvailable', '—')}</p>
+                )}
+              </div>
+            </div>
+            {selectedApp.notes && (
+              <div>
+                <p className="text-sm text-gray-500">{t('productApplications.notes', 'Notes')}</p>
+                <p className="text-sm mt-1">{selectedApp.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title={t('productApplications.confirmDeleteTitle', 'Supprimer cette application ?')}
+        description={t(
+          'productApplications.confirmDeleteDescription',
+          'Cette action est irréversible. Le stock sera restauré et les écritures comptables seront supprimées.'
+        )}
+        variant="destructive"
+        onConfirm={handleDelete}
+        loading={deleteMutation.isPending}
+      />
     </>
   );
 }

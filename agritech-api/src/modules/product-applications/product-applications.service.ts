@@ -52,6 +52,12 @@ export class ProductApplicationsService {
           ),
           parcels!product_applications_parcel_id_fkey (
             name
+          ),
+          tasks (
+            id,
+            title,
+            status,
+            task_type
           )
         `)
         .eq('organization_id', organizationId)
@@ -71,9 +77,11 @@ export class ProductApplicationsService {
         },
         farm: app.farms ? { name: app.farms.name } : null,
         parcel: app.parcels ? { name: app.parcels.name } : null,
+        task: app.tasks ? { id: app.tasks.id, title: app.tasks.title, status: app.tasks.status, task_type: app.tasks.task_type } : null,
         items: undefined,
         farms: undefined,
         parcels: undefined,
+        tasks: undefined,
       }));
 
       return {
@@ -264,6 +272,99 @@ export class ProductApplicationsService {
           stock_movement_id: stockMovement.id,
         },
       };
+    });
+  }
+
+  /**
+   * Delete a product application and reverse stock movement, valuation, and journal entry
+   */
+  async deleteProductApplication(userId: string, organizationId: string, applicationId: string) {
+    return this.executeInPgTransaction(async (client) => {
+      // 1. Get the application
+      const appResult = await client.query(
+        `SELECT * FROM product_applications
+         WHERE id = $1 AND organization_id = $2`,
+        [applicationId, organizationId],
+      );
+
+      if (appResult.rows.length === 0) {
+        throw new NotFoundException('Product application not found');
+      }
+
+      const application = appResult.rows[0];
+
+      // 2. Find and delete related stock movement
+      const movementResult = await client.query(
+        `SELECT * FROM stock_movements
+         WHERE reference_type = 'ProductApplication' AND reference_id = $1
+         AND organization_id = $2`,
+        [applicationId, organizationId],
+      );
+
+      if (movementResult.rows.length > 0) {
+        const movement = movementResult.rows[0];
+
+        // 3. Reverse stock valuation — restore consumed quantities
+        // We need to add back the quantity that was consumed
+        const warehouseId = movement.warehouse_id;
+
+        // Find the most recent valuation batch for this item and add back stock
+        const valuationResult = await client.query(
+          `SELECT id FROM stock_valuation
+           WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [organizationId, application.product_id, warehouseId],
+        );
+
+        if (valuationResult.rows.length > 0) {
+          await client.query(
+            `UPDATE stock_valuation
+             SET remaining_quantity = remaining_quantity + $1
+             WHERE id = $2`,
+            [application.quantity_used, valuationResult.rows[0].id],
+          );
+        }
+
+        // 4. Delete the stock movement
+        await client.query(
+          `DELETE FROM stock_movements WHERE id = $1`,
+          [movement.id],
+        );
+      }
+
+      // 5. Delete related journal entries
+      const supabase = this.databaseService.getAdminClient();
+      const { data: journalEntries } = await supabase
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('reference_id', applicationId);
+
+      if (journalEntries && journalEntries.length > 0) {
+        for (const entry of journalEntries) {
+          await client.query(
+            `DELETE FROM journal_entry_items WHERE journal_entry_id = $1`,
+            [entry.id],
+          );
+          await client.query(
+            `DELETE FROM journal_entries WHERE id = $1`,
+            [entry.id],
+          );
+        }
+      }
+
+      // 6. Delete the product application
+      await client.query(
+        `DELETE FROM product_applications WHERE id = $1`,
+        [applicationId],
+      );
+
+      this.logger.log(
+        `Product application ${applicationId} deleted with stock/accounting reversal`,
+      );
+
+      return { success: true, message: 'Product application deleted successfully' };
     });
   }
 

@@ -22,6 +22,7 @@ export interface ProductApplication {
   };
   farm: { name: string } | null;
   parcel: { name: string } | null;
+  task: { id: string; title: string; status: string; task_type: string } | null;
 }
 
 export interface CreateProductApplicationDto {
@@ -63,5 +64,9 @@ export const productApplicationsApi = {
 
   async create(data: CreateProductApplicationDto, organizationId?: string): Promise<{ success: boolean; application: ProductApplication }> {
     return apiClient.post(BASE_URL, data, {}, organizationId);
+  },
+
+  async delete(id: string, organizationId?: string): Promise<{ success: boolean; message: string }> {
+    return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
   },
 };

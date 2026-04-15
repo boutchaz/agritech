@@ -730,91 +730,91 @@ const TasksList = ({
       }
       stats={
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{t('tasks.stats.pending')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-gray-400 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{t('tasks.stats.pending')}</p>
+                <p className="truncate text-xl font-bold text-gray-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-white">{stats.pending}</p>
               </div>
-              <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hidden sm:block">
-                <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-400">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-500 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.assigned', 'Assigned')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.assigned}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
-                <User className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 sm:flex">
+                <Clock className="h-4 w-4 shrink-0 text-gray-500 xl:h-5 xl:w-5" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-purple-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.in_progress}</p>
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-blue-400 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-blue-500 dark:text-blue-400">{t('tasks.stats.assigned', 'Assigned')}</p>
+                <p className="truncate text-xl font-bold text-blue-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-blue-100">{stats.assigned}</p>
               </div>
-              <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg hidden sm:block">
-                <Play className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide truncate">{t('tasks.stats.completed')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg hidden sm:block">
-                <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 sm:flex">
+                <User className="h-4 w-4 shrink-0 text-blue-500 xl:h-5 xl:w-5" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-amber-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">{t('tasks.stats.onHold', 'On Hold')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.on_hold}</p>
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-purple-500 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-purple-600 dark:text-purple-400">{t('tasks.stats.inProgress')}</p>
+                <p className="truncate text-xl font-bold text-purple-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-purple-100">{stats.in_progress}</p>
               </div>
-              <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg hidden sm:block">
-                <Pause className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide truncate">{t('tasks.stats.overdue')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
-                <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30 sm:flex">
+                <Play className="h-4 w-4 shrink-0 text-purple-600 xl:h-5 xl:w-5" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-emerald-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide truncate">{t('tasks.stats.completionRate', 'Completion')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-green-500 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-green-600 dark:text-green-400">{t('tasks.stats.completed')}</p>
+                <p className="truncate text-xl font-bold text-green-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-green-100">{stats.completed}</p>
               </div>
-              <div className="p-1.5 sm:p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hidden sm:block">
-                <Target className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-600" />
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30 sm:flex">
+                <CheckCircle className="h-4 w-4 shrink-0 text-green-600 xl:h-5 xl:w-5" />
               </div>
             </div>
-            <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+          </div>
+
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-amber-500 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400">{t('tasks.stats.onHold', 'On Hold')}</p>
+                <p className="truncate text-xl font-bold text-amber-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-amber-100">{stats.on_hold}</p>
+              </div>
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/30 sm:flex">
+                <Pause className="h-4 w-4 shrink-0 text-amber-600 xl:h-5 xl:w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-red-500 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-red-600 dark:text-red-400">{t('tasks.stats.overdue')}</p>
+                <p className="truncate text-xl font-bold text-red-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-red-100">{stats.overdue}</p>
+              </div>
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/30 sm:flex">
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 xl:h-5 xl:w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0 overflow-hidden rounded-lg border-l-4 border-emerald-500 bg-white p-2 shadow dark:bg-gray-800 sm:p-4">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">{t('tasks.stats.completionRate', 'Completion')}</p>
+                <p className="truncate text-xl font-bold text-emerald-900 sm:text-2xl lg:text-xl xl:text-2xl dark:text-emerald-100">{stats.completionRate}%</p>
+              </div>
+              <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/30 sm:flex">
+                <Target className="h-4 w-4 shrink-0 text-emerald-600 xl:h-5 xl:w-5" />
+              </div>
+            </div>
+            <div className="mt-2 h-1.5 w-full min-w-0 rounded-full bg-gray-200 dark:bg-gray-700">
               <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                className="h-1.5 rounded-full bg-emerald-500 transition-all duration-300"
                 style={{ width: `${stats.completionRate}%` }}
               />
             </div>

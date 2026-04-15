@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -60,6 +60,23 @@ export class ProductApplicationsController {
       throw new Error('Organization ID is required');
     }
     return this.productApplicationsService.createProductApplication(req.user.id, organizationId, createDto);
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete a product application and reverse stock/accounting' })
+  @ApiResponse({ status: 200, description: 'Product application deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Product application not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Delete, 'ProductApplication'))
+  async deleteProductApplication(
+    @Request() req,
+    @Param('id') id: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+    return this.productApplicationsService.deleteProductApplication(req.user.id, organizationId, id);
   }
 
   @Get('available-products')

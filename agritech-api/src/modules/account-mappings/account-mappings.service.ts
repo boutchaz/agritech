@@ -443,7 +443,66 @@ export class AccountMappingsService {
   }
 
   /**
-   * Initialize default mappings for an organization based on country code
+   * Hardcoded default mapping definitions per country/standard.
+   * These replace the global-template approach that required pre-seeded rows.
+   */
+  private getDefaultMappingDefinitions(countryCode: string, accountingStandard: string) {
+    const key = `${countryCode}_${accountingStandard}`;
+
+    const definitions: Record<string, Array<{
+      mapping_type: string;
+      mapping_key: string;
+      account_code: string;
+      description: string;
+    }>> = {
+      MA_CGNC: [
+        // Cost types — mapped to CGNC expense accounts
+        { mapping_type: 'cost_type', mapping_key: 'planting', account_code: '6110', description: 'Achats de semences et plants' },
+        { mapping_type: 'cost_type', mapping_key: 'fertilization', account_code: '6111', description: 'Achats d\'engrais' },
+        { mapping_type: 'cost_type', mapping_key: 'pesticide', account_code: '6112', description: 'Achats de produits phytosanitaires' },
+        { mapping_type: 'cost_type', mapping_key: 'irrigation', account_code: '6121', description: 'Eau d\'irrigation' },
+        { mapping_type: 'cost_type', mapping_key: 'maintenance', account_code: '6125', description: 'Entretien et réparations' },
+        { mapping_type: 'cost_type', mapping_key: 'harvesting', account_code: '6141', description: 'Services agricoles externes' },
+        { mapping_type: 'cost_type', mapping_key: 'pruning', account_code: '6141', description: 'Services agricoles externes' },
+        { mapping_type: 'cost_type', mapping_key: 'transport', account_code: '6144', description: 'Transport sur achats' },
+        { mapping_type: 'cost_type', mapping_key: 'labor', account_code: '6171', description: 'Salaires permanents' },
+        { mapping_type: 'cost_type', mapping_key: 'salary', account_code: '6171', description: 'Salaires permanents' },
+        { mapping_type: 'cost_type', mapping_key: 'wages', account_code: '6172', description: 'Salaires journaliers' },
+        { mapping_type: 'cost_type', mapping_key: 'materials', account_code: '6126', description: 'Pièces de rechange' },
+        { mapping_type: 'cost_type', mapping_key: 'utilities', account_code: '6167', description: 'Électricité' },
+        { mapping_type: 'cost_type', mapping_key: 'other', account_code: '6131', description: 'Locations machines agricoles' },
+
+        // Revenue types
+        { mapping_type: 'revenue_type', mapping_key: 'product_sales', account_code: '7111', description: 'Ventes fruits et légumes' },
+        { mapping_type: 'revenue_type', mapping_key: 'service_income', account_code: '7121', description: 'Prestations de services agricoles' },
+        { mapping_type: 'revenue_type', mapping_key: 'other_income', account_code: '7180', description: 'Autres produits d\'exploitation' },
+
+        // Harvest sale channels
+        { mapping_type: 'harvest_sale', mapping_key: 'market', account_code: '7111', description: 'Ventes fruits et légumes - marché' },
+        { mapping_type: 'harvest_sale', mapping_key: 'export', account_code: '7119', description: 'Ventes exportations' },
+        { mapping_type: 'harvest_sale', mapping_key: 'wholesale', account_code: '7111', description: 'Ventes fruits et légumes - gros' },
+        { mapping_type: 'harvest_sale', mapping_key: 'direct', account_code: '7111', description: 'Ventes fruits et légumes - direct' },
+        { mapping_type: 'harvest_sale', mapping_key: 'processing', account_code: '7118', description: 'Ventes produits transformés' },
+
+        // Cash accounts
+        { mapping_type: 'cash', mapping_key: 'bank', account_code: '5141', description: 'Banque - Compte courant' },
+        { mapping_type: 'cash', mapping_key: 'cash', account_code: '5161', description: 'Caisse principale' },
+        { mapping_type: 'cash', mapping_key: 'petty_cash', account_code: '5162', description: 'Caisse ferme' },
+
+        // Receivable/Payable (used by invoices and payments)
+        { mapping_type: 'receivable', mapping_key: 'trade', account_code: '3420', description: 'Clients' },
+        { mapping_type: 'payable', mapping_key: 'trade', account_code: '4410', description: 'Fournisseurs' },
+        { mapping_type: 'tax', mapping_key: 'collected', account_code: '4457', description: 'TVA collectée' },
+        { mapping_type: 'tax', mapping_key: 'deductible', account_code: '4456', description: 'TVA déductible' },
+      ],
+    };
+
+    return definitions[key] || [];
+  }
+
+  /**
+   * Initialize default mappings for an organization based on country code.
+   * Uses hardcoded defaults instead of global templates.
    */
   async initializeDefaultMappings(organizationId: string, countryCode: string) {
     const supabaseClient = this.databaseService.getAdminClient();
@@ -465,18 +524,7 @@ export class AccountMappingsService {
         return { message: 'Mappings already initialized', count: 0 };
       }
 
-      const { data: templates, error: templateError } = await supabaseClient
-        .from('account_mappings')
-        .select('mapping_type, mapping_key, source_key, account_code, description, metadata')
-        .is('organization_id', null)
-        .eq('country_code', effectiveCountry.toUpperCase())
-        .eq('accounting_standard', accountingStandard);
-
-      if (templateError) {
-        throw new BadRequestException(`Failed to load mapping templates: ${templateError.message}`);
-      }
-
-      const accountCodeToId = new Map<string, string>();
+      // Load org accounts to resolve codes → IDs
       const { data: orgAccounts, error: accountsError } = await supabaseClient
         .from('accounts')
         .select('id, code')
@@ -486,43 +534,66 @@ export class AccountMappingsService {
         throw new BadRequestException(`Failed to load accounts: ${accountsError.message}`);
       }
 
-      for (const account of orgAccounts || []) {
+      if (!orgAccounts || orgAccounts.length === 0) {
+        throw new BadRequestException(
+          'No accounts found for this organization. Please set up your chart of accounts first (Accounting → Accounts), then initialize mappings.',
+        );
+      }
+
+      const accountCodeToId = new Map<string, string>();
+      for (const account of orgAccounts) {
         accountCodeToId.set(account.code, account.id);
       }
 
-      const rows = (templates || []).map((template) => {
-        const accountCode = template.account_code;
-        const accountId = accountCode ? accountCodeToId.get(accountCode) || null : null;
-        return {
+      // Get hardcoded defaults for this country/standard
+      const defaults = this.getDefaultMappingDefinitions(
+        effectiveCountry.toUpperCase(),
+        accountingStandard.toUpperCase(),
+      );
+
+      if (defaults.length === 0) {
+        throw new BadRequestException(
+          `No default mapping definitions available for ${effectiveCountry}/${accountingStandard}. Please add mappings manually.`,
+        );
+      }
+
+      // Only create mappings for accounts that exist in the org
+      const rows = defaults
+        .filter((def) => accountCodeToId.has(def.account_code))
+        .map((def) => ({
           organization_id: organizationId,
           country_code: effectiveCountry,
           accounting_standard: accountingStandard,
-          mapping_type: template.mapping_type,
-          mapping_key: template.mapping_key,
-          source_key: template.source_key || template.mapping_key,
-          account_id: accountId,
-          account_code: accountCode,
-          description: template.description,
+          mapping_type: def.mapping_type,
+          mapping_key: def.mapping_key,
+          source_key: def.mapping_key,
+          account_id: accountCodeToId.get(def.account_code)!,
+          account_code: def.account_code,
+          description: def.description,
           is_active: true,
-          metadata: template.metadata || {},
-        };
-      });
+          metadata: {},
+        }));
 
-      if (rows.length > 0) {
-        // Use plain insert — we already checked that no org mappings exist above
-        const { error: insertError } = await supabaseClient
-          .from('account_mappings')
-          .insert(rows);
-
-        if (insertError) {
-          throw new BadRequestException(`Failed to initialize mappings: ${insertError.message}`);
-        }
+      if (rows.length === 0) {
+        throw new BadRequestException(
+          'None of the default account codes were found in your chart of accounts. Please set up your chart of accounts first (Accounting → Accounts).',
+        );
       }
 
-      return {
-        message: 'Default mappings initialized successfully',
-        count: rows.length,
-      };
+      const { error: insertError } = await supabaseClient
+        .from('account_mappings')
+        .insert(rows);
+
+      if (insertError) {
+        throw new BadRequestException(`Failed to initialize mappings: ${insertError.message}`);
+      }
+
+      const skipped = defaults.length - rows.length;
+      const message = skipped > 0
+        ? `Initialized ${rows.length} mappings (${skipped} skipped — account codes not found in your chart)`
+        : `Default mappings initialized successfully`;
+
+      return { message, count: rows.length };
     } catch (error) {
       this.logger.error('Error in initializeDefaultMappings:', error);
       throw error;

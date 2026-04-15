@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { TreeDeciduous, Calendar, Scissors, Sprout } from 'lucide-react';
+import { TreeDeciduous, Calendar, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,7 @@ function Trees() {
     icon: typeof TreeDeciduous;
     title: string;
     description: string;
-    route: '/orchards' | '/pruning' | '/crops' | '/harvests';
+    route: '/orchards' | '/pruning' | '/harvests';
     search?: { module: 'fruit-trees' };
     color: string;
     bgColor: string;
@@ -68,16 +68,6 @@ function Trees() {
       onClick: () => navigate({ to: '/pruning' }),
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
-    },
-    {
-      icon: Sprout,
-      title: t('trees.varieties', 'Tree Varieties'),
-      description: t('trees.varietiesDesc', 'Browse available tree varieties'),
-      route: '/crops',
-      search: { module: 'fruit-trees' },
-      onClick: () => window.location.assign('/crops?module=fruit-trees'),
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
     },
     {
       icon: Calendar,
