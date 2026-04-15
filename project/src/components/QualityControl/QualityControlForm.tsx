@@ -11,16 +11,16 @@ import { useCreateInspection, useUpdateInspection } from '@/hooks/useQualityCont
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { FormField } from '@/components/ui/FormField';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/Textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@/components/ui/radix-select';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import type { QualityInspection, InspectionType, InspectionStatus } from '@/lib/api/quality-control';
