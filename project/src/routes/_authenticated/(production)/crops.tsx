@@ -147,7 +147,7 @@ function CropsPage() {
                     <CardTitle className="text-lg font-semibold">{crop.name}</CardTitle>
                     {crop.status && (
                       <Badge className={getStatusColor(crop.status)}>
-                        {crop.status}
+                        {t(`crops.status.${crop.status}`, crop.status)}
                       </Badge>
                     )}
                   </div>
@@ -161,7 +161,7 @@ function CropsPage() {
                       <p><span className="font-medium">{t('crops.parcel', 'Parcel')}:</span> {crop.parcel_name}</p>
                     )}
                     {crop.planted_area && (
-                      <p><span className="font-medium">{t('crops.area', 'Area')}:</span> {crop.planted_area} ha</p>
+                      <p><span className="font-medium">{t('crops.area', 'Area')}:</span> {crop.planted_area} {t('crops.hectares', 'ha')}</p>
                     )}
                     {crop.planting_date && (
                       <p><span className="font-medium">{t('crops.plantingDate', 'Planted')}:</span> {format(new Date(crop.planting_date), 'dd MMM yyyy')}</p>

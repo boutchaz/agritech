@@ -24,6 +24,8 @@ function PaymentsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
+  const [processTarget, setProcessTarget] = useState<string | null>(null);
+  const [processMethod, setProcessMethod] = useState<PaymentMethod>('cash');
 
   const { data: payments = [], isLoading, isError } = usePaymentRecords();
   const approveMutation = useApprovePayment();
@@ -112,13 +114,14 @@ function PaymentsPage() {
     }
   };
 
-  const handleProcess = async (paymentId: string) => {
+  const handleProcess = async (paymentId: string, paymentMethod: PaymentMethod) => {
     try {
       await processMutation.mutateAsync({
         paymentId,
-        data: { payment_method: 'bank_transfer' as PaymentMethod },
+        data: { payment_method: paymentMethod },
       });
       toast.success(t('payments.processSuccess', 'Payment processed'));
+      setProcessTarget(null);
     } catch {
       toast.error(t('payments.processError', 'Failed to process payment'));
     }
@@ -181,7 +184,7 @@ function PaymentsPage() {
                     </CardTitle>
                     {payment.status && (
                       <Badge className={getStatusColor(payment.status)}>
-                        {payment.status}
+                        {t(`payments.status.${payment.status}`, payment.status)}
                       </Badge>
                     )}
                   </div>
@@ -189,14 +192,14 @@ function PaymentsPage() {
                 <CardContent>
                   <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     {payment.payment_type && (
-                      <p><span className="font-medium">{t('payments.type', 'Type')}:</span> {payment.payment_type}</p>
+                      <p><span className="font-medium">{t('payments.type', 'Type')}:</span> {t(`payments.types.${payment.payment_type}`, payment.payment_type)}</p>
                     )}
                     {payment.period_start && (
-                      <p><span className="font-medium">{t('payments.period', 'Period')}:</span> {format(new Date(payment.period_start), 'dd MMM')} - {payment.period_end ? format(new Date(payment.period_end), 'dd MMM yyyy') : '...'}</p>
+                      <p><span className="font-medium">{t('payments.period', 'Period')}:</span> {format(new Date(payment.period_start), 'dd MMM')} - {payment.period_end ? format(new Date(payment.period_end), 'dd MMM yyyy') : t('common.ongoing', '...')}</p>
                     )}
                     {payment.net_amount !== undefined && payment.net_amount !== null && (
                       <p className="text-lg font-bold text-gray-900 dark:text-white">
-                        {Number(payment.net_amount).toLocaleString()} MAD
+                        {Number(payment.net_amount).toLocaleString()} {t('common.mad', 'MAD')}
                       </p>
                     )}
                   </div>
@@ -207,7 +210,7 @@ function PaymentsPage() {
                       </Button>
                     )}
                     {payment.status === 'approved' && (
-                      <Button variant="outline" size="sm" onClick={() => handleProcess(payment.id)}>
+                      <Button variant="outline" size="sm" onClick={() => { setProcessTarget(payment.id); setProcessMethod('cash'); }}>
                         {t('payments.process', 'Process')}
                       </Button>
                     )}
@@ -372,6 +375,44 @@ function PaymentsPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {processTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-sm w-full">
+            <h2 className="text-lg font-semibold mb-4">{t('payments.selectMethod', 'Select Payment Method')}</h2>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="process-method" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('payments.paymentMethod', 'Payment Method')}
+                </label>
+                <NativeSelect
+                  id="process-method"
+                  value={processMethod}
+                  onChange={(e) => setProcessMethod(e.target.value as PaymentMethod)}
+                >
+                  <option value="cash">{t('payments.methods.cash', 'Cash')}</option>
+                  <option value="bank_transfer">{t('payments.methods.bank_transfer', 'Bank Transfer')}</option>
+                  <option value="check">{t('payments.methods.check', 'Check')}</option>
+                  <option value="mobile_money">{t('payments.methods.mobile_money', 'Mobile Money')}</option>
+                </NativeSelect>
+              </div>
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="outline" onClick={() => setProcessTarget(null)}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="green"
+                  disabled={processMutation.isPending}
+                  onClick={() => handleProcess(processTarget, processMethod)}
+                >
+                  {processMutation.isPending ? t('payments.processing', 'Processing...') : t('payments.process', 'Process')}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}

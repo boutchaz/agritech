@@ -160,7 +160,7 @@ function DeliveriesPage() {
                     </CardTitle>
                     {delivery.status && (
                       <Badge className={getStatusColor(delivery.status)}>
-                        {delivery.status}
+                        {t(`deliveries.status.${delivery.status}`, delivery.status)}
                       </Badge>
                     )}
                   </div>
@@ -171,11 +171,11 @@ function DeliveriesPage() {
                       <p><span className="font-medium">{t('deliveries.date', 'Date')}:</span> {format(new Date(delivery.delivery_date), 'dd MMM yyyy')}</p>
                     )}
                     {delivery.delivery_type && (
-                      <p><span className="font-medium">{t('deliveries.type', 'Type')}:</span> {delivery.delivery_type}</p>
+                      <p><span className="font-medium">{t('deliveries.type', 'Type')}:</span> {t(`deliveries.types.${delivery.delivery_type}`, delivery.delivery_type)}</p>
                     )}
                     {delivery.total_amount !== undefined && delivery.total_amount !== null && (
                       <p className="text-lg font-bold text-gray-900 dark:text-white">
-                        {Number(delivery.total_amount).toLocaleString()} {delivery.currency || 'MAD'}
+                        {Number(delivery.total_amount).toLocaleString()} {delivery.currency || t('common.mad', 'MAD')}
                       </p>
                     )}
                   </div>

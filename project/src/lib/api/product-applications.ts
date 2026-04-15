@@ -5,15 +5,23 @@ const BASE_URL = '/api/v1/product-applications';
 export interface ProductApplication {
   id: string;
   product_id: string;
+  farm_id: string;
+  parcel_id: string | null;
   application_date: string;
   quantity_used: number;
   area_treated: number;
-  notes: string;
+  cost: number | null;
+  currency: string | null;
+  notes: string | null;
+  task_id: string | null;
+  images: string[] | null;
   created_at: string;
   inventory: {
     name: string;
     unit: string;
   };
+  farm: { name: string } | null;
+  parcel: { name: string } | null;
 }
 
 export interface CreateProductApplicationDto {
@@ -26,12 +34,11 @@ export interface CreateProductApplicationDto {
   cost?: number;
   farm_id: string;
   currency?: string;
+  task_id?: string;
+  images?: string[];
 }
 
 export const productApplicationsApi = {
-  /**
-   * Get all product applications for an organization
-   */
   async getAll(organizationId?: string): Promise<ProductApplication[]> {
     const response = await apiClient.get<{ success: boolean; applications: ProductApplication[]; total: number } | ProductApplication[]>(
       BASE_URL,
@@ -39,7 +46,6 @@ export const productApplicationsApi = {
       organizationId
     );
 
-    // Check if response is wrapped in success object
     if (response && typeof response === 'object' && 'success' in response) {
       const wrappedResponse = response as { success: boolean; applications: ProductApplication[]; total: number };
       if (wrappedResponse.success && Array.isArray(wrappedResponse.applications)) {
@@ -55,9 +61,6 @@ export const productApplicationsApi = {
     throw new Error('Unexpected response format from product applications API');
   },
 
-  /**
-   * Create a new product application
-   */
   async create(data: CreateProductApplicationDto, organizationId?: string): Promise<{ success: boolean; application: ProductApplication }> {
     return apiClient.post(BASE_URL, data, {}, organizationId);
   },

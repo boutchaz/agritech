@@ -174,7 +174,7 @@ function BankAccountsPage() {
                     )}
                     {account.current_balance !== null && account.current_balance !== undefined && (
                       <p className="text-lg font-bold text-gray-900 dark:text-white">
-                        {Number(account.current_balance).toLocaleString()} {account.currency_code || 'MAD'}
+                        {Number(account.current_balance).toLocaleString()} {account.currency_code || t('common.mad', 'MAD')}
                       </p>
                     )}
                   </div>

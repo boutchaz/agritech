@@ -46,6 +46,12 @@ export class ProductApplicationsService {
           items!inner (
             item_name,
             default_unit
+          ),
+          farms!product_applications_farm_id_fkey (
+            name
+          ),
+          parcels!product_applications_parcel_id_fkey (
+            name
           )
         `)
         .eq('organization_id', organizationId)
@@ -57,15 +63,17 @@ export class ProductApplicationsService {
       }
 
       // Transform the response to match the expected DTO structure
-      // items (item_name, default_unit) -> inventory (name, unit)
       const transformedApplications = (data || []).map((app: any) => ({
         ...app,
         inventory: {
-          name: app.items.item_name,
-          unit: app.items.default_unit,
+          name: app.items?.item_name,
+          unit: app.items?.default_unit,
         },
-        // Remove the items property as it's transformed to inventory
+        farm: app.farms ? { name: app.farms.name } : null,
+        parcel: app.parcels ? { name: app.parcels.name } : null,
         items: undefined,
+        farms: undefined,
+        parcels: undefined,
       }));
 
       return {

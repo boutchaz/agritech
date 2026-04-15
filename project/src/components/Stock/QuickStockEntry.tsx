@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
 import { useBarcodeLookup } from '@/hooks/useBarcodeLookup';
-import { useQuery } from '@tanstack/react-query';
+import { useWarehouses } from '@/hooks/useWarehouses';
 import { Barcode, Package, Plus, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,18 +26,7 @@ export default function QuickStockEntry() {
   const [quantity, setQuantity] = useState('');
   const [lastEntry, setLastEntry] = useState<string | null>(null);
 
-  const { data: warehouses = [] } = useQuery({
-    queryKey: ['warehouses-quick', currentOrganization?.id],
-    queryFn: async () => {
-      if (!currentOrganization?.id) throw new Error('No organization');
-      const res = await fetch('/api/v1/warehouses', {
-        headers: { 'X-Organization-Id': currentOrganization.id },
-      });
-      const data = await res.json();
-      return (data.data || data || []) as Array<{ id: string; name: string }>;
-    },
-    enabled: !!currentOrganization?.id,
-  });
+  const { data: warehouses = [], isLoading: warehousesLoading, isError: warehousesError } = useWarehouses();
 
   const { data: foundItem, isLoading: isSearching } = useBarcodeLookup(barcode || null);
   const createEntry = useCreateStockEntry();
@@ -79,22 +68,22 @@ export default function QuickStockEntry() {
         }
       );
     },
-    [barcode, warehouseId, quantity, currentOrganization?.id, foundItem, createEntry, t]
+    [barcode, warehouseId, quantity, currentOrganization, foundItem, createEntry, t]
   );
 
   return (
-    <div className="max-w-md mx-auto space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {t('quickStockEntry.title', 'Quick Stock Entry')}
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
           {t('quickStockEntry.subtitle', 'Fast stock entry for mobile devices')}
         </p>
       </div>
 
       <Card className="dark:border-gray-700">
-        <CardContent className="p-4 space-y-4">
+        <CardContent className="space-y-5 p-4 sm:p-6">
           <div>
             <label htmlFor="quick-warehouse" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
               {t('quickStockEntry.warehouse', 'Warehouse')}
@@ -104,9 +93,23 @@ export default function QuickStockEntry() {
                 <SelectValue placeholder={t('quickStockEntry.selectWarehouse', 'Select warehouse')} />
               </SelectTrigger>
               <SelectContent>
-                {warehouses.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
-                ))}
+                {warehousesLoading ? (
+                  <SelectItem value="_loading" disabled>
+                    {t('app.loading', 'Loading...')}
+                  </SelectItem>
+                ) : warehousesError ? (
+                  <SelectItem value="_error" disabled>
+                    {t('common.error', 'An error occurred while loading data.')}
+                  </SelectItem>
+                ) : warehouses.length === 0 ? (
+                  <SelectItem value="_empty" disabled>
+                    {t('quickStockEntry.noWarehouses', 'No warehouses available')}
+                  </SelectItem>
+                ) : (
+                  warehouses.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -172,7 +175,8 @@ export default function QuickStockEntry() {
             <Button
               type="submit"
               disabled={!barcode || !warehouseId || !quantity || !foundItem || createEntry.isPending}
-              className="w-full min-h-[48px] text-lg bg-green-600 hover:bg-green-700"
+              variant="green"
+              className="w-full min-h-[48px] text-lg"
             >
               {createEntry.isPending ? (
                 t('quickStockEntry.submitting', 'Adding...')
