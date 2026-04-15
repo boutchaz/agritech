@@ -57,21 +57,15 @@ export class FiscalYearsService {
       throw new ConflictException('Fiscal year with this name already exists');
     }
 
-    // If this is set as active, deactivate other fiscal years
-    if (createDto.is_active) {
-      await client
-        .from('fiscal_years')
-        .update({ is_active: false })
-        .eq('organization_id', organizationId)
-        .eq('is_active', true);
-    }
+    const { is_current, ...rest } = createDto as CreateFiscalYearDto & { is_current?: boolean };
 
     const { data, error } = await client
       .from('fiscal_years')
       .insert({
         organization_id: organizationId,
         created_by: userId,
-        ...createDto,
+        is_current: is_current ?? false,
+        ...rest,
       })
       .select()
       .single();
@@ -108,20 +102,10 @@ export class FiscalYearsService {
       }
     }
 
-    // If setting as active, deactivate other fiscal years
-    if (updateDto.is_active && !existing.is_active) {
-      await client
-        .from('fiscal_years')
-        .update({ is_active: false })
-        .eq('organization_id', organizationId)
-        .eq('is_active', true);
-    }
-
     const { data, error } = await client
       .from('fiscal_years')
       .update({
         ...updateDto,
-        updated_by: userId,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -146,13 +130,13 @@ export class FiscalYearsService {
       throw new NotFoundException('Fiscal year not found');
     }
 
-    // Prevent deletion of active fiscal year
-    if (existing.is_active) {
-      throw new ConflictException('Cannot delete active fiscal year');
+    // Prevent deletion of current fiscal year
+    if (existing.is_current) {
+      throw new ConflictException('Cannot delete current fiscal year');
     }
 
     // Prevent deletion of closed fiscal year
-    if (existing.is_closed) {
+    if (existing.status === 'closed') {
       throw new ConflictException('Cannot delete closed fiscal year');
     }
 
@@ -170,7 +154,7 @@ export class FiscalYearsService {
     return { id };
   }
 
-  async close(id: string, organizationId: string, userId: string) {
+  async close(id: string, organizationId: string, userId: string, closingNotes?: string) {
     const client = this.databaseService.getAdminClient();
 
     // Check if fiscal year exists
@@ -180,16 +164,18 @@ export class FiscalYearsService {
     }
 
     // Prevent closing already closed fiscal year
-    if (existing.is_closed) {
+    if (existing.status === 'closed') {
       throw new ConflictException('Fiscal year is already closed');
     }
 
     const { data, error } = await client
       .from('fiscal_years')
       .update({
-        is_closed: true,
-        is_active: false,
-        updated_by: userId,
+        status: 'closed',
+        is_current: false,
+        closed_at: new Date().toISOString(),
+        closed_by: userId,
+        closing_notes: closingNotes || null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -215,15 +201,16 @@ export class FiscalYearsService {
     }
 
     // Prevent reopening already open fiscal year
-    if (!existing.is_closed) {
+    if (existing.status !== 'closed') {
       throw new ConflictException('Fiscal year is not closed');
     }
 
     const { data, error } = await client
       .from('fiscal_years')
       .update({
-        is_closed: false,
-        updated_by: userId,
+        status: 'open',
+        closed_at: null,
+        closed_by: null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -245,7 +232,7 @@ export class FiscalYearsService {
       .from('fiscal_years')
       .select('*')
       .eq('organization_id', organizationId)
-      .eq('is_active', true)
+      .eq('is_current', true)
       .single();
 
     if (error && error.code !== 'PGRST116') {

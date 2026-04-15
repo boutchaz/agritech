@@ -133,17 +133,18 @@ export function NotificationFilters({
           </ScrollArea>
         </div>
       ) : (
-        // Compact horizontal scroll for type filters
+        // Compact horizontal scroll for type filters (native overflow: Radix ScrollArea + flex
+        // without w-max/shrink-0 can clip nowrap chips in narrow popovers)
         <div className="border-b pb-2">
-          <ScrollArea className="w-full">
-            <div className="flex gap-1.5 pb-1">
+          <div className="w-full min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain">
+            <div className="flex w-max gap-1.5 pb-1">
               {typeFilters.map((filter) => (
                 <Button
                   key={filter.value}
                   variant={typeFilter === filter.value ? 'default' : 'ghost'}
                   size="sm"
                   className={cn(
-                    'whitespace-nowrap relative',
+                    'shrink-0 whitespace-nowrap relative',
                     typeFilter === filter.value
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-muted/50'
@@ -165,7 +166,7 @@ export function NotificationFilters({
                 </Button>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
       )}
 
