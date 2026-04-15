@@ -19,8 +19,11 @@ export function usePaymentRecord(paymentId: string | null) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['payment-record', paymentId],
-    queryFn: () => paymentRecordsApi.getOne(paymentId!, currentOrganization?.id),
+    queryKey: ['payment-record', currentOrganization?.id, paymentId],
+    queryFn: () => {
+      if (!currentOrganization?.id || !paymentId) throw new Error('Missing organizationId or paymentId');
+      return paymentRecordsApi.getOne(paymentId, currentOrganization.id);
+    },
     enabled: !!paymentId && !!currentOrganization?.id,
     staleTime: 60000,
   });

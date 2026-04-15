@@ -319,7 +319,9 @@
     "marketplace": "Marketplace",
     "receivedRequests": "Demandes reçues",
     "sentRequests": "Demandes envoyées",
-    "viewMarketplace": "Voir la marketplace"
+    "viewMarketplace": "Voir la marketplace",
+    "paymentRecords": "Paiements",
+    "bankAccounts": "Comptes bancaires"
   },
   "sidebar": {
     "collapse": "Réduire",

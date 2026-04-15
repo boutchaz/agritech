@@ -6,11 +6,15 @@ export type { ProductApplication } from '@/lib/api/product-applications';
 
 export function useProductApplications() {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['product-applications', currentOrganization?.id],
-    queryFn: () => productApplicationsApi.getAll(currentOrganization?.id),
-    enabled: !!currentOrganization?.id,
+    queryKey: ['product-applications', organizationId],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return productApplicationsApi.getAll(organizationId);
+    },
+    enabled: !!organizationId,
     staleTime: 60000,
   });
 }
@@ -21,7 +25,9 @@ export function useCreateProductApplication() {
 
   return useMutation({
     mutationFn: (data: CreateProductApplicationDto) => {
-      return productApplicationsApi.create(data, currentOrganization?.id);
+      const orgId = currentOrganization?.id;
+      if (!orgId) throw new Error('No organization selected');
+      return productApplicationsApi.create(data, orgId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-applications'] });

@@ -1393,10 +1393,15 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   );
 }
 
-export default function ItemManagement() {
+interface ItemManagementProps {
+  selectedItemId?: string;
+}
+
+export default function ItemManagement({ selectedItemId }: ItemManagementProps) {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
+  const navigate = useNavigate();
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1528,6 +1533,34 @@ export default function ItemManagement() {
     }
   };
 
+  const openItemDetails = (item: Item) => {
+    setSelectedItemForDetails(item);
+    void navigate({
+      to: '/stock/items',
+      search: { itemId: item.id },
+      replace: true,
+    });
+  };
+
+  const closeItemDetails = () => {
+    setSelectedItemForDetails(null);
+    void navigate({
+      to: '/stock/items',
+      search: () => ({}),
+      replace: true,
+    });
+  };
+
+  useEffect(() => {
+    if (!selectedItemId) {
+      setSelectedItemForDetails(null);
+      return;
+    }
+
+    const matchingItem = items.find((item) => item.id === selectedItemId) || null;
+    setSelectedItemForDetails(matchingItem);
+  }, [items, selectedItemId]);
+
   return (
     <>
       <ListPageLayout
@@ -1624,7 +1657,10 @@ export default function ItemManagement() {
                 (item.minimum_stock_level && stockLevel && stockLevel.total_quantity < item.minimum_stock_level);
 
               return (
-                <Card className="border shadow-sm">
+                <Card
+                  className="cursor-pointer border shadow-sm transition-colors hover:bg-muted/30"
+                  onClick={() => openItemDetails(item)}
+                >
                   <CardContent className="space-y-4 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -1665,7 +1701,10 @@ export default function ItemManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleVariants(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleVariants(item);
+                        }}
                         className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
                         title={t('items.variants.title', 'Variants')}
                       >
@@ -1674,7 +1713,10 @@ export default function ItemManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setTimelineItem(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setTimelineItem(item);
+                        }}
                         className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
                         title={t('items.timeline.open', 'History')}
                       >
@@ -1683,19 +1725,33 @@ export default function ItemManagement() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedItemForDetails(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openItemDetails(item);
+                        }}
                         className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
                         title={t('items.viewDetails', 'View Details')}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="p-1 sm:p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                        className="p-1 sm:p-2"
+                      >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item);
+                        }}
                         className="p-1 text-red-600 hover:text-red-700 sm:p-2"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1855,7 +1911,9 @@ export default function ItemManagement() {
       {selectedItemForDetails && (
         <ResponsiveDialog
           open={!!selectedItemForDetails}
-          onOpenChange={(open) => !open && setSelectedItemForDetails(null)}
+          onOpenChange={(open) => {
+            if (!open) closeItemDetails();
+          }}
           title={selectedItemForDetails.item_name}
           description={t('items.itemDetails', 'Item Details and Stock Information')}
           size="4xl"

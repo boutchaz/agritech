@@ -11,14 +11,13 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 
 function CropsPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
 
-  const { data: crops = [], isLoading } = useCrops();
+  const { data: crops = [], isLoading, isError } = useCrops();
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -57,6 +56,10 @@ function CropsPage() {
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-48" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex items-center justify-center h-48">
+            <p className="text-sm text-red-500">{t('common.error', 'An error occurred while loading data.')}</p>
           </div>
         ) : crops.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">
@@ -131,5 +134,5 @@ function CropsPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/crops')({
-  component: withRouteProtection(CropsPage, 'read', 'Crop'),
+  component: withRouteProtection(CropsPage, 'read', 'CropCycle'),
 });

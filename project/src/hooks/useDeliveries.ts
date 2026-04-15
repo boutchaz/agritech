@@ -1,48 +1,62 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { deliveriesApi } from '@/lib/api/deliveries';
-import type { DeliveryFilters } from '@/types/harvests';
-import type { CreateDeliveryRequest } from '@/types/harvests';
+import type { DeliveryFilters, CreateDeliveryRequest } from '@/types/harvests';
 
 export function useDeliveries(filters?: DeliveryFilters) {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['deliveries', currentOrganization?.id, filters],
-    queryFn: () => deliveriesApi.getAll(filters, currentOrganization?.id),
-    enabled: !!currentOrganization?.id,
+    queryKey: ['deliveries', organizationId, filters],
+    queryFn: () => {
+      if (!organizationId) throw new Error('No organization selected');
+      return deliveriesApi.getAll(filters, organizationId);
+    },
+    enabled: !!organizationId,
     staleTime: 60000,
   });
 }
 
 export function useDelivery(deliveryId: string | null) {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['delivery', deliveryId],
-    queryFn: () => deliveriesApi.getOne(deliveryId!, currentOrganization?.id),
-    enabled: !!deliveryId && !!currentOrganization?.id,
+    queryKey: ['delivery', organizationId, deliveryId],
+    queryFn: () => {
+      if (!organizationId || !deliveryId) throw new Error('Missing organizationId or deliveryId');
+      return deliveriesApi.getOne(deliveryId, organizationId);
+    },
+    enabled: !!deliveryId && !!organizationId,
     staleTime: 60000,
   });
 }
 
 export function useDeliveryItems(deliveryId: string | null) {
   const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
 
   return useQuery({
-    queryKey: ['delivery-items', deliveryId],
-    queryFn: () => deliveriesApi.getItems(deliveryId!, currentOrganization?.id),
-    enabled: !!deliveryId && !!currentOrganization?.id,
+    queryKey: ['delivery-items', organizationId, deliveryId],
+    queryFn: () => {
+      if (!organizationId || !deliveryId) throw new Error('Missing organizationId or deliveryId');
+      return deliveriesApi.getItems(deliveryId, organizationId);
+    },
+    enabled: !!deliveryId && !!organizationId,
     staleTime: 60000,
   });
 }
 
 export function useCreateDelivery() {
   const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: (data: CreateDeliveryRequest) => {
-      return deliveriesApi.create(data, undefined);
+      const orgId = currentOrganization?.id;
+      if (!orgId) throw new Error('No organization selected');
+      return deliveriesApi.create(data, orgId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveries'] });

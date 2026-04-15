@@ -35,6 +35,7 @@ import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_aut
 import { Route as AuthenticatedproductionTreesRouteImport } from './routes/_authenticated/(production)/trees'
 import { Route as AuthenticatedproductionQualityControlRouteImport } from './routes/_authenticated/(production)/quality-control'
 import { Route as AuthenticatedproductionPruningRouteImport } from './routes/_authenticated/(production)/pruning'
+import { Route as AuthenticatedproductionProductApplicationsRouteImport } from './routes/_authenticated/(production)/product-applications'
 import { Route as AuthenticatedproductionParcelsRouteImport } from './routes/_authenticated/(production)/parcels'
 import { Route as AuthenticatedproductionOrchardsRouteImport } from './routes/_authenticated/(production)/orchards'
 import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_authenticated/(production)/harvests'
@@ -71,6 +72,7 @@ import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
+import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
@@ -305,6 +307,12 @@ const AuthenticatedproductionPruningRoute =
     path: '/pruning',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedproductionProductApplicationsRoute =
+  AuthenticatedproductionProductApplicationsRouteImport.update({
+    id: '/(production)/product-applications',
+    path: '/product-applications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedproductionParcelsRoute =
   AuthenticatedproductionParcelsRouteImport.update({
     id: '/(production)/parcels',
@@ -514,6 +522,12 @@ const AuthenticatedComplianceCertificationsCertIdRoute =
   AuthenticatedComplianceCertificationsCertIdRouteImport.update({
     id: '/compliance/certifications/$certId',
     path: '/compliance/certifications/$certId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforcePaymentsRoute =
+  AuthenticatedworkforceWorkforcePaymentsRouteImport.update({
+    id: '/(workforce)/workforce/payments',
+    path: '/workforce/payments',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
@@ -1126,6 +1140,7 @@ export interface FileRoutesByFullPath {
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
@@ -1206,6 +1221,7 @@ export interface FileRoutesByFullPath {
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1280,6 +1296,7 @@ export interface FileRoutesByTo {
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
@@ -1357,6 +1374,7 @@ export interface FileRoutesByTo {
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
@@ -1433,6 +1451,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/_authenticated/(production)/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/_authenticated/(production)/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/_authenticated/(production)/pruning': typeof AuthenticatedproductionPruningRoute
   '/_authenticated/(production)/quality-control': typeof AuthenticatedproductionQualityControlRoute
   '/_authenticated/(production)/trees': typeof AuthenticatedproductionTreesRoute
@@ -1513,6 +1532,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1592,6 +1612,7 @@ export interface FileRouteTypes {
     | '/harvests'
     | '/orchards'
     | '/parcels'
+    | '/product-applications'
     | '/pruning'
     | '/quality-control'
     | '/trees'
@@ -1672,6 +1693,7 @@ export interface FileRouteTypes {
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/payments'
     | '/compliance/certifications/$certId'
     | '/accounting/'
     | '/stock/'
@@ -1746,6 +1768,7 @@ export interface FileRouteTypes {
     | '/harvests'
     | '/orchards'
     | '/parcels'
+    | '/product-applications'
     | '/pruning'
     | '/quality-control'
     | '/trees'
@@ -1823,6 +1846,7 @@ export interface FileRouteTypes {
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/payments'
     | '/compliance/certifications/$certId'
     | '/accounting'
     | '/stock'
@@ -1898,6 +1922,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/harvests'
     | '/_authenticated/(production)/orchards'
     | '/_authenticated/(production)/parcels'
+    | '/_authenticated/(production)/product-applications'
     | '/_authenticated/(production)/pruning'
     | '/_authenticated/(production)/quality-control'
     | '/_authenticated/(production)/trees'
@@ -1978,6 +2003,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
+    | '/_authenticated/(workforce)/workforce/payments'
     | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
     | '/_authenticated/(inventory)/stock/'
@@ -2212,6 +2238,13 @@ declare module '@tanstack/react-router' {
       path: '/pruning'
       fullPath: '/pruning'
       preLoaderRoute: typeof AuthenticatedproductionPruningRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(production)/product-applications': {
+      id: '/_authenticated/(production)/product-applications'
+      path: '/product-applications'
+      fullPath: '/product-applications'
+      preLoaderRoute: typeof AuthenticatedproductionProductApplicationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/parcels': {
@@ -2464,6 +2497,13 @@ declare module '@tanstack/react-router' {
       path: '/compliance/certifications/$certId'
       fullPath: '/compliance/certifications/$certId'
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/payments': {
+      id: '/_authenticated/(workforce)/workforce/payments'
+      path: '/workforce/payments'
+      fullPath: '/workforce/payments'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforcePaymentsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/employees': {
@@ -3567,6 +3607,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
   AuthenticatedproductionParcelsRoute: typeof AuthenticatedproductionParcelsRouteWithChildren
+  AuthenticatedproductionProductApplicationsRoute: typeof AuthenticatedproductionProductApplicationsRoute
   AuthenticatedproductionPruningRoute: typeof AuthenticatedproductionPruningRoute
   AuthenticatedproductionQualityControlRoute: typeof AuthenticatedproductionQualityControlRoute
   AuthenticatedproductionTreesRoute: typeof AuthenticatedproductionTreesRoute
@@ -3584,6 +3625,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
@@ -3625,6 +3667,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionOrchardsRoute: AuthenticatedproductionOrchardsRoute,
   AuthenticatedproductionParcelsRoute:
     AuthenticatedproductionParcelsRouteWithChildren,
+  AuthenticatedproductionProductApplicationsRoute:
+    AuthenticatedproductionProductApplicationsRoute,
   AuthenticatedproductionPruningRoute: AuthenticatedproductionPruningRoute,
   AuthenticatedproductionQualityControlRoute:
     AuthenticatedproductionQualityControlRoute,
@@ -3654,6 +3698,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceDayLaborersRoute,
   AuthenticatedworkforceWorkforceEmployeesRoute:
     AuthenticatedworkforceWorkforceEmployeesRoute,
+  AuthenticatedworkforceWorkforcePaymentsRoute:
+    AuthenticatedworkforceWorkforcePaymentsRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:

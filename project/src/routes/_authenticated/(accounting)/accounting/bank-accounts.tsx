@@ -20,7 +20,7 @@ function BankAccountsPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const { data: accounts = [], isLoading } = useBankAccounts();
+  const { data: accounts = [], isLoading, isError } = useBankAccounts();
   const deleteMutation = useDeleteBankAccount();
 
   const handleDelete = (id: string) => {
@@ -67,6 +67,10 @@ function BankAccountsPage() {
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse bg-white dark:bg-gray-800 rounded-lg p-6 h-48" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex items-center justify-center h-48">
+            <p className="text-sm text-red-500">{t('common.error', 'An error occurred while loading data.')}</p>
           </div>
         ) : accounts.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg">

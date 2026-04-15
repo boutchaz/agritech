@@ -66,16 +66,6 @@ export default function LowStockAlerts({
             </p>
           </div>
         </div>
-        {showActions && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate({ to: '/stock/entries', search: { type: 'Material Receipt' } })}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {t('stock.lowStockAlerts.createEntry', 'Create Stock Entry')}
-          </Button>
-        )}
       </div>
 
       <div className="space-y-2">

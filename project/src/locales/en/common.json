@@ -319,7 +319,9 @@
     "marketplace": "Marketplace",
     "receivedRequests": "Received Requests",
     "sentRequests": "Sent Requests",
-    "viewMarketplace": "View Marketplace"
+    "viewMarketplace": "View Marketplace",
+    "paymentRecords": "Payment Records",
+    "bankAccounts": "Bank Accounts"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -6614,5 +6616,67 @@
   "dragHandle": "Drag to reorder",
   "toggleSatellite": "Toggle satellite view",
   "fullscreen": "Fullscreen",
-  "exitFullscreen": "Exit fullscreen"
+  "exitFullscreen": "Exit fullscreen",
+  "crops": {
+    "pageTitle": "Crops",
+    "description": "Manage your crop plantings and track growth.",
+    "addCrop": "Add Crop",
+    "noCrops": "No crops yet",
+    "noCropsDescription": "Start by adding your first crop planting.",
+    "farm": "Farm",
+    "parcel": "Parcel",
+    "area": "Area",
+    "plantingDate": "Planted",
+    "expectedHarvest": "Expected Harvest"
+  },
+  "bankAccounts": {
+    "pageTitle": "Bank Accounts",
+    "description": "Manage your organization bank accounts.",
+    "addAccount": "Add Account",
+    "noAccounts": "No bank accounts yet",
+    "noAccountsDescription": "Start by adding your first bank account.",
+    "bankName": "Bank",
+    "accountNumber": "Account #",
+    "currency": "Currency",
+    "confirmDelete": "Delete Bank Account",
+    "confirmDeleteDescription": "Are you sure you want to delete this bank account?",
+    "deleteSuccess": "Bank account deleted successfully",
+    "deleteError": "Failed to delete bank account"
+  },
+  "deliveries": {
+    "pageTitle": "Deliveries",
+    "description": "Track and manage your product deliveries.",
+    "addDelivery": "New Delivery",
+    "noDeliveries": "No deliveries yet",
+    "noDeliveriesDescription": "Create your first delivery to start tracking.",
+    "date": "Date",
+    "type": "Type",
+    "cancelSuccess": "Delivery cancelled",
+    "cancelError": "Failed to cancel delivery"
+  },
+  "payments": {
+    "pageTitle": "Payment Records",
+    "description": "Track worker payments, advances, and approvals.",
+    "newPayment": "New Payment",
+    "noPayments": "No payment records yet",
+    "noPaymentsDescription": "Payment records will appear here once created.",
+    "type": "Type",
+    "period": "Period",
+    "approve": "Approve",
+    "process": "Process",
+    "approveSuccess": "Payment approved",
+    "approveError": "Failed to approve payment",
+    "processSuccess": "Payment processed",
+    "processError": "Failed to process payment"
+  },
+  "productApplications": {
+    "pageTitle": "Product Applications",
+    "description": "Track crop treatments and product usage from inventory.",
+    "addApplication": "Record Application",
+    "noApplications": "No product applications yet",
+    "noApplicationsDescription": "Record your first product application to track treatments.",
+    "date": "Date",
+    "quantityUsed": "Quantity",
+    "areaTreated": "Area"
+  }
 }
