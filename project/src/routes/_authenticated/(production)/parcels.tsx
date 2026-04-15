@@ -189,7 +189,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
               </Button>
             </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
-            <div data-testid="parcels-empty-state">
+            <div data-testid="parcels-empty-state" className="bg-white dark:bg-gray-800 rounded-lg">
               <EmptyState
                 icon={MapPin}
                 title={t('parcels.emptyTitle', 'No parcels yet')}
