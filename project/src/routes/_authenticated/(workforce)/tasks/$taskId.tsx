@@ -29,7 +29,7 @@ import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
 import type { TaskAssignment } from '@/lib/api/task-assignments';
-import { useCropsForTask, type Crop } from '@/hooks/useCrops';
+type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import type { CompleteHarvestTaskRequest } from '@/types/tasks';
@@ -141,16 +141,9 @@ function TaskDetailPage() {
     }
   }, [showHarvestForm, lotNumber, task]);
 
-  const { data: crops = [] } = useCropsForTask({
-    farmId: task?.farm_id,
-    parcelId: task?.parcel_id,
-    enabled: !!task?.farm_id,
-  });
-
   const { data: parcel } = useParcelById(task?.parcel_id);
 
-  const availableCrops: Crop[] = useMemo(() => {
-    if (crops.length > 0) return crops;
+  const availableCrops: CropOption[] = useMemo(() => {
     if (parcel && parcel.crop_type && task?.parcel_id) {
       return [{
         id: `parcel-${parcel.id}`,
@@ -162,10 +155,10 @@ function TaskDetailPage() {
         variety_name: parcel.variety || undefined,
         created_at: parcel.created_at || new Date().toISOString(),
         updated_at: parcel.updated_at || new Date().toISOString(),
-      } as Crop];
+      }];
     }
-    return crops;
-  }, [crops, parcel, task?.parcel_id, task?.farm_id]);
+    return [];
+  }, [parcel, task?.parcel_id, task?.farm_id]);
 
   const initialCropId = task?.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
   const firstAvailableCropId = availableCrops[0]?.id;
@@ -780,7 +773,7 @@ function TaskDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {availableCrops.map((crop: Crop) => (
+                      {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>

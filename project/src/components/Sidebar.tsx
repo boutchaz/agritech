@@ -212,7 +212,6 @@ const Sidebar = ({
     getInitialSectionState([
       "/campaigns",
       "/crop-cycles",
-      "/crops",
       "/harvests",
       "/reception-batches",
       "/quality-control",
@@ -270,8 +269,7 @@ const Sidebar = ({
         [
           "/campaigns",
           "/crop-cycles",
-          "/crops",
-          "/harvests",
+              "/harvests",
           "/reception-batches",
           "/quality-control",
           "/biological-assets",
@@ -955,13 +953,6 @@ const Sidebar = ({
                         isActive={currentPath === "/crop-cycles"}
                       />
                     </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="CropCycle">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/crops"
-                        label={t("nav.crops", "Crops")}
-                        isActive={currentPath === "/crops"}
-                      />
-                    </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Harvest">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/harvests"
@@ -1039,17 +1030,6 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/crop-cycles", e)}
                         >
                           {renderText(t("nav.cropCycles", "Crop Cycles"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="CropCycle">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/crops",
-                          )}
-                          onClick={(e) => handleNavigation("/crops", e)}
-                        >
-                          {renderText(t("nav.crops", "Crops"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Harvest">

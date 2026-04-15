@@ -80,7 +80,6 @@ import { CropCyclesModule } from "./modules/crop-cycles/crop-cycles.module";
 import { CropCycleStagesModule } from "./modules/crop-cycle-stages/crop-cycle-stages.module";
 import { HarvestEventsModule } from "./modules/harvest-events/harvest-events.module";
 import { CropTemplatesModule } from "./modules/crop-templates/crop-templates.module";
-import { CropsModule } from "./modules/crops/crops.module";
 import { QualityControlModule } from "./modules/quality-control/quality-control.module";
 import { AdoptionModule } from "./modules/adoption/adoption.module";
 import { OnboardingModule } from "./modules/onboarding/onboarding.module";
@@ -194,7 +193,6 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     CropCycleStagesModule,
     HarvestEventsModule,
     CropTemplatesModule,
-    CropsModule,
     QualityControlModule,
 
     DocumentTemplatesModule,

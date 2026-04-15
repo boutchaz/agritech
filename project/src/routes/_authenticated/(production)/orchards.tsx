@@ -1,10 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { Plus, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cropsApi } from '@/lib/api/crops';
 import { useAuth } from '@/hooks/useAuth';
+import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { FilterBar, ResponsiveList, ListPageLayout } from '@/components/ui/data-table';
@@ -16,15 +15,13 @@ export const Route = createFileRoute('/_authenticated/(production)/orchards')({
 
 function Orchards() {
   const { t } = useTranslation();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Use crops API with module filter for fruit-trees
-  const { data: orchards, isLoading } = useQuery({
-    queryKey: ['crops', organizationId, 'fruit-trees'],
-    queryFn: () => cropsApi.getAll(organizationId!, { module: 'fruit-trees' }),
-    enabled: !!organizationId,
-  });
+  // Use parcels with tree_type as orchards
+  const { data: allParcels = [], isLoading } = useParcelsByOrganization(organizationId || undefined);
+  const orchards = useMemo(() => allParcels.filter((p) => p.tree_type), [allParcels]);
 
   const filteredOrchards = useMemo(() => {
     if (!searchTerm.trim()) return orchards;

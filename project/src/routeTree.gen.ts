@@ -41,7 +41,6 @@ import { Route as AuthenticatedproductionParcelsRouteImport } from './routes/_au
 import { Route as AuthenticatedproductionOrchardsRouteImport } from './routes/_authenticated/(production)/orchards'
 import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_authenticated/(production)/harvests'
 import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './routes/_authenticated/(production)/farm-hierarchy'
-import { Route as AuthenticatedproductionCropsRouteImport } from './routes/_authenticated/(production)/crops'
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
 import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
@@ -342,12 +341,6 @@ const AuthenticatedproductionFarmHierarchyRoute =
   AuthenticatedproductionFarmHierarchyRouteImport.update({
     id: '/(production)/farm-hierarchy',
     path: '/farm-hierarchy',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedproductionCropsRoute =
-  AuthenticatedproductionCropsRouteImport.update({
-    id: '/(production)/crops',
-    path: '/crops',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedproductionCropCyclesRoute =
@@ -1149,7 +1142,6 @@ export interface FileRoutesByFullPath {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1307,7 +1299,6 @@ export interface FileRoutesByTo {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1464,7 +1455,6 @@ export interface FileRoutesById {
   '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/_authenticated/(production)/crops': typeof AuthenticatedproductionCropsRoute
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1627,7 +1617,6 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
-    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1785,7 +1774,6 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
-    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1941,7 +1929,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/biological-assets'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
-    | '/_authenticated/(production)/crops'
     | '/_authenticated/(production)/farm-hierarchy'
     | '/_authenticated/(production)/harvests'
     | '/_authenticated/(production)/orchards'
@@ -2305,13 +2292,6 @@ declare module '@tanstack/react-router' {
       path: '/farm-hierarchy'
       fullPath: '/farm-hierarchy'
       preLoaderRoute: typeof AuthenticatedproductionFarmHierarchyRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/(production)/crops': {
-      id: '/_authenticated/(production)/crops'
-      path: '/crops'
-      fullPath: '/crops'
-      preLoaderRoute: typeof AuthenticatedproductionCropsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/crop-cycles': {
@@ -3657,7 +3637,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  AuthenticatedproductionCropsRoute: typeof AuthenticatedproductionCropsRoute
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
@@ -3716,7 +3695,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
     AuthenticatedproductionCropCyclesRouteWithChildren,
-  AuthenticatedproductionCropsRoute: AuthenticatedproductionCropsRoute,
   AuthenticatedproductionFarmHierarchyRoute:
     AuthenticatedproductionFarmHierarchyRoute,
   AuthenticatedproductionHarvestsRoute: AuthenticatedproductionHarvestsRoute,

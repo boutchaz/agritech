@@ -6,8 +6,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cropsApi } from '@/lib/api/crops';
 import { tasksApi } from '@/lib/api/tasks';
+import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
 import type { TaskSummary } from '@/types/tasks';
 
 export const Route = createFileRoute('/_authenticated/(production)/trees')({
@@ -20,12 +20,10 @@ function Trees() {
   const navigate = useNavigate();
   const organizationId = currentOrganization?.id;
 
-  // Fetch tree crops with module filter
-  const { data: treeCrops, isLoading: cropsLoading } = useQuery({
-    queryKey: ['crops', organizationId, 'fruit-trees'],
-    queryFn: () => cropsApi.getAll(organizationId!),
-    enabled: !!organizationId,
-  });
+  // Use parcels with tree_type as proxy for tree crops
+  const { data: parcelsData = [] } = useParcelsByOrganization(organizationId);
+  const treeCrops = parcelsData.filter((p) => p.tree_type);
+  const cropsLoading = false;
 
   // Fetch pruning tasks
   const { data: pruningTasks } = useQuery({

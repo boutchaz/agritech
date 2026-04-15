@@ -18,7 +18,8 @@ import {
 import { useUpdateTask } from '../../hooks/useTasks';
 import { useTaskAssignments } from '../../hooks/useTaskAssignments';
 import { tasksApi } from '../../lib/api/tasks';
-import { useCropsForTask, type Crop } from '../../hooks/useCrops';
+// crops module removed — parcel.crop_type used directly for harvest context
+type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
 import { useParcelById } from '../../hooks/useParcelsQuery';
@@ -106,25 +107,14 @@ const TaskDetailDialog = ({
     }
   }, [showHarvestForm, lotNumber, task.parcel_id, task.farm_id]);
 
-  const { data: crops = [] } = useCropsForTask({
-    farmId: task.farm_id,
-    parcelId: task.parcel_id,
-    enabled: !!task.farm_id,
-  });
-
-  // Fetch parcel details to get crop_type if no crops are found
+  // Fetch parcel details to get crop_type
   const { data: parcel } = useParcelById(task.parcel_id);
 
-  // Create a virtual crop from parcel if parcel has crop_type but no crops exist
-  const availableCrops: Crop[] = useMemo(() => {
-    if (crops.length > 0) {
-      return crops;
-    }
-    
-    // If no crops found but parcel has crop_type, create a virtual crop
+  // Build crop options from parcel crop_type
+  const availableCrops = useMemo(() => {
     if (parcel && parcel.crop_type && task.parcel_id) {
       return [{
-        id: `parcel-${parcel.id}`, // Virtual ID based on parcel - backend will handle this
+        id: `parcel-${parcel.id}`,
         name: parcel.crop_type,
         parcel_id: parcel.id,
         parcel_name: parcel.name,
@@ -133,11 +123,11 @@ const TaskDetailDialog = ({
         variety_name: parcel.variety || undefined,
         created_at: parcel.created_at || new Date().toISOString(),
         updated_at: parcel.updated_at || new Date().toISOString(),
-      } as Crop];
+      } as CropOption];
     }
-    
-    return crops;
-  }, [crops, parcel, task.parcel_id, task.farm_id]);
+
+    return [];
+  }, [parcel, task.parcel_id, task.farm_id]);
 
   // Harvest completion form data
   // Auto-initialize crop_id with virtual crop from parcel if available and no crop_id in task
@@ -727,7 +717,7 @@ const TaskDetailDialog = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {availableCrops.map((crop: Crop) => (
+                      {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>
