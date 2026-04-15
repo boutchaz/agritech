@@ -127,7 +127,7 @@ export class HealthService {
     const heapPercent = Math.round((mem.heapUsed / mem.heapTotal) * 100);
 
     const status: ServiceStatus =
-      heapPercent > 90 ? 'down' : heapPercent > 75 ? 'degraded' : 'up';
+      heapPercent > 90 ? 'down' : heapPercent > 85 ? 'degraded' : 'up';
 
     return {
       status,
@@ -150,7 +150,7 @@ export class HealthService {
     let status: ServiceStatus = 'up';
     if (waiting > 10 || (total > 0 && idle === 0 && waiting > 0)) {
       status = 'down';
-    } else if (waiting > 3 || (total > 0 && idle <= 1)) {
+    } else if (waiting > 5 || (total > 0 && idle === 0)) {
       status = 'degraded';
     }
 

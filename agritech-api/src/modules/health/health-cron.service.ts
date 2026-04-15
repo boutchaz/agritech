@@ -117,13 +117,21 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
     } else if (check.status === 'degraded') {
       this.serviceStates.set(name, { status: 'degraded', downSince: prev.downSince });
 
+      const details = check.details
+        ? Object.entries(check.details).map(([k, v]) => `${k}=${v}`).join(', ')
+        : '';
+      const message = check.responseTimeMs > 0
+        ? `${name} is responding slowly (${check.responseTimeMs}ms)`
+        : `${name} is degraded${details ? `: ${details}` : ''}`;
+
       await this.alertService.notify({
         service: name,
         status: 'degraded',
         severity: 'warning',
         responseTimeMs: check.responseTimeMs,
         url: this.serviceUrls[name],
-        message: `${name} is responding slowly (${check.responseTimeMs}ms)`,
+        error: check.error,
+        message,
       });
     }
   }
