@@ -122,7 +122,9 @@
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse screenshot *)",
       "Bash(npx eslint *)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse click *)",
-      "Bash(npx tsr *)"
+      "Bash(npx tsr *)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse console *)",
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse restart *)"
     ],
     "deny": [],
     "ask": []

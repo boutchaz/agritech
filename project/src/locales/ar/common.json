@@ -2276,6 +2276,9 @@
       "title": "لا توجد قوالب بعد",
       "description": "قم بإنشاء قالبك الأول لتخصيص رؤوس وتذييلات المستندات"
     },
+    "editor": {
+      "preview": "معاينة"
+    },
     "actions": {
       "preview": "معاينة",
       "setDefault": "تعيين كافتراضي",
@@ -2292,6 +2295,40 @@
     "setDefault": {
       "success": "تم تحديث القالب الافتراضي",
       "failed": "فشل تعيين القالب الافتراضي"
+    },
+    "preview": {
+      "title": "معاينة: {{name}}",
+      "loadingTitle": "معاينة القالب",
+      "notFound": "تعذر تحميل القالب.",
+      "draftHint": "أنت تعرض تغييرات غير محفوظة من المحرر.",
+      "sampleCompany": "اسم الشركة",
+      "sampleAddress": "شارع العمل 123",
+      "sampleCity": "المدينة، البلد",
+      "sampleEmail": "contact@example.com",
+      "sampleInvoiceTitle": "فاتورة رقم INV-2024-001",
+      "sampleQuoteTitle": "عرض سعر رقم QUO-2024-001",
+      "sampleSalesOrderTitle": "أمر بيع رقم SO-2024-001",
+      "samplePurchaseOrderTitle": "أمر شراء رقم PO-2024-001",
+      "sampleReportTitle": "عنوان التقرير",
+      "sampleGeneralTitle": "عنوان المستند",
+      "sampleDate": "التاريخ: {{date}}",
+      "sampleCustomer": "اسم العميل",
+      "sampleCustomerStreet": "شارع العميل 456",
+      "sampleCustomerCity": "المدينة، البلد",
+      "colDescription": "الوصف",
+      "colQty": "الكمية",
+      "colUnitPrice": "سعر الوحدة",
+      "colAmount": "المبلغ",
+      "line1": "منتج تجريبي أ",
+      "line2": "منتج تجريبي ب",
+      "total": "الإجمالي",
+      "reportSample1": "يعرض هذا مثالاً لكيفية ظهور نص التقرير مع الهوامش والخط.",
+      "reportSample2": "سيأتي النص والأرقام النهائية من التقارير المُنشأة.",
+      "generalSample": "يعرض هذا مثالاً لتنسيق المستندات العامة.",
+      "footerContactLine": "العنوان · الهاتف · البريد (مثال)",
+      "pageOf": "صفحة 1 من 3",
+      "contentHeight": "ارتفاع منطقة المحتوى: {{mm}} مم",
+      "note": "محتوى تجريبي فقط. ستستخدم المستندات المُنشأة البيانات الفعلية."
     }
   },
   "network": {

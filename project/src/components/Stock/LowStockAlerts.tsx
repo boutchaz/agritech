@@ -147,6 +147,7 @@ export default function LowStockAlerts({
                   <Button
                     size="sm"
                     variant="outline"
+                    className="text-slate-900 dark:text-slate-100"
                     onClick={() =>
                       navigate({
                         to: '/stock/entries',
@@ -160,6 +161,7 @@ export default function LowStockAlerts({
                   <Button
                     size="sm"
                     variant="ghost"
+                    className="text-slate-900 dark:text-slate-100"
                     onClick={() =>
                       navigate({
                         to: '/stock/items/$itemId',

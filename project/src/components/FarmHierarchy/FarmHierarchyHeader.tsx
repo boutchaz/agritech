@@ -62,6 +62,8 @@ const FarmHierarchyHeader = ({
           )}
           {onImport && (
             <Button
+              type="button"
+              variant="outline"
               onClick={onImport}
             >
               <Upload className="w-4 h-4" />

@@ -605,6 +605,24 @@
   "errors": {
     "invalidPlanPayload": "Le serveur a renvoyé un plan annuel invalide."
   },
+  "usage": {
+    "tokenChart": "Utilisation des jetons",
+    "noData": "Aucune donnée d'utilisation pour cette période",
+    "recentActivity": "Activité récente",
+    "export": "Exporter CSV",
+    "date": "Date",
+    "feature": "Type",
+    "model": "Modèle",
+    "tokens": "Jetons",
+    "noEntries": "Aucune utilisation IA enregistrée",
+    "showLess": "Afficher moins",
+    "showAll": "Tout afficher ({{count}})",
+    "totalTokens": "Total jetons",
+    "totalRequests": "Total requêtes",
+    "requests": "Requêtes",
+    "loadFailedTitle": "Impossible de charger les détails d'utilisation",
+    "loadFailedDescription": "Vérifiez votre connexion et réessayez."
+  },
   "settings": {
     "title": "Paramètres IA",
     "description": "Gérez votre utilisation IA, quotas et configuration des fournisseurs.",

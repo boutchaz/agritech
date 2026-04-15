@@ -101,6 +101,14 @@ function AuthenticatedLayout() {
     })
   }, [isDarkMode])
 
+  /** Radix portals render under `body`; Tailwind `dark:` only applies under an ancestor with `.dark`. Theme was only on a layout div, so portaled popovers/menus stayed light — sync to `<html>`. */
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode)
+    return () => {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDarkMode])
+
   // Mock modules data - this should come from your state management
   const modules = [
     { id: 'dashboard', name: 'Dashboard', icon: 'Home', active: true, category: 'general' },
@@ -137,10 +145,7 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div
-      className={cn(isDarkMode ? 'dark' : '', 'flex min-h-0 flex-1 flex-col')}
-      dir={isRTL ? 'rtl' : 'ltr'}
-    >
+    <div className="flex min-h-0 flex-1 flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       <div
         data-authenticated-app
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-100 dark:bg-slate-950"

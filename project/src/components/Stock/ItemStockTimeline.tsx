@@ -57,7 +57,8 @@ const formatNumber = (value: number) =>
     maximumFractionDigits: 3,
   }).format(value);
 
-const getWarehouseLabel = (movement: StockMovementWithDetails, t: (key: string, fallback?: string) => string) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getWarehouseLabel = (movement: StockMovementWithDetails, t: any) => {
   const warehouseName = movement.warehouse?.name || '—';
 
   if (movement.movement_type === 'TRANSFER') {
@@ -135,7 +136,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
     );
   }, [timelineMovements]);
 
-  const unit = timelineMovements[0]?.unit || movements[0]?.item?.default_unit || '';
+  const unit = timelineMovements[0]?.unit || (movements[0]?.item as Record<string, unknown>)?.default_unit as string || '';
 
   return (
     <ResponsiveDialog

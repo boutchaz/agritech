@@ -605,6 +605,24 @@
   "errors": {
     "invalidPlanPayload": "The server returned an invalid season plan."
   },
+  "usage": {
+    "tokenChart": "Token Usage",
+    "noData": "No usage data for this period",
+    "recentActivity": "Recent Activity",
+    "export": "Export CSV",
+    "date": "Date",
+    "feature": "Type",
+    "model": "Model",
+    "tokens": "Tokens",
+    "noEntries": "No AI usage recorded yet",
+    "showLess": "Show Less",
+    "showAll": "Show All ({{count}})",
+    "totalTokens": "Total Tokens",
+    "totalRequests": "Total Requests",
+    "requests": "Requests",
+    "loadFailedTitle": "Could not load usage details",
+    "loadFailedDescription": "Check your connection and try again."
+  },
   "settings": {
     "title": "AI Settings",
     "description": "Manage your AI usage, quotas, and provider configuration.",

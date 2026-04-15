@@ -1,4 +1,5 @@
-import {  useEffect  } from "react";
+import { useEffect, useState } from 'react';
+import { DocumentTemplatePreview } from './DocumentTemplatePreview';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -25,7 +26,7 @@ import {
 } from '@/hooks/useDocumentTemplates';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Loader2, FileText, ImageIcon, Ruler, Palette, Table, Type, Droplets, Settings2 } from 'lucide-react';
+import { Loader2, FileText, ImageIcon, Ruler, Palette, Table, Type, Droplets, Settings2, Eye } from 'lucide-react';
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
@@ -145,6 +146,8 @@ export function DocumentTemplateEditor({
   documentType,
 }: DocumentTemplateEditorProps) {
   const { t } = useTranslation();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDraft, setPreviewDraft] = useState<Record<string, unknown> | null>(null);
   const { data: template, isLoading: loadingTemplate } = useDocumentTemplate(templateId);
   const createTemplate = useCreateDocumentTemplate();
   const updateTemplate = useUpdateDocumentTemplate();
@@ -154,6 +157,7 @@ export function DocumentTemplateEditor({
     handleSubmit,
     reset,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TemplateFormData>({
@@ -327,7 +331,13 @@ export function DocumentTemplateEditor({
     }
   };
 
+  const handleOpenPreview = () => {
+    setPreviewDraft(getValues() as unknown as Record<string, unknown>);
+    setPreviewOpen(true);
+  };
+
   return (
+    <>
     <ResponsiveDialog
       open={isOpen}
       onOpenChange={onClose}
@@ -950,7 +960,16 @@ export function DocumentTemplateEditor({
               </div>
             </ScrollArea>
 
-            <DialogFooter className="px-6 py-4 border-t">
+            <DialogFooter className="px-6 py-4 border-t flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2 mr-auto"
+                onClick={handleOpenPreview}
+              >
+                <Eye className="h-4 w-4" />
+                {t('documents.editor.preview', 'Preview')}
+              </Button>
               <Button type="button" variant="outline" onClick={onClose}>
                 {t('documents.cancel', 'Cancel')}
               </Button>
@@ -962,5 +981,15 @@ export function DocumentTemplateEditor({
           </form>
         )}
     </ResponsiveDialog>
+      <DocumentTemplatePreview
+        isOpen={previewOpen}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewDraft(null);
+        }}
+        templateId={null}
+        draftTemplate={previewDraft}
+      />
+    </>
   );
 }

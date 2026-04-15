@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,7 +16,34 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Activity, Download, ChevronDown, ChevronUp } from 'lucide-react';
-import type { UsageLogResponse } from '@/hooks/useAiQuota';
+import type { DailyTokenAggregate, UsageLogEntry, UsageLogResponse } from '@/hooks/useAiQuota';
+
+function aggregateDailyFromEntries(entries: UsageLogEntry[]): DailyTokenAggregate[] {
+  const dayMap = new Map<
+    string,
+    { total_tokens: number; request_count: number; by_model: Record<string, number> }
+  >();
+  for (const entry of entries) {
+    const date = entry.created_at.substring(0, 10);
+    const tokens = entry.tokens_used || 0;
+    if (!dayMap.has(date)) {
+      dayMap.set(date, { total_tokens: 0, request_count: 0, by_model: {} });
+    }
+    const day = dayMap.get(date)!;
+    day.total_tokens += tokens;
+    day.request_count += 1;
+    const modelKey = entry.model || 'unknown';
+    day.by_model[modelKey] = (day.by_model[modelKey] || 0) + tokens;
+  }
+  return Array.from(dayMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, data]) => ({
+      date,
+      total_tokens: data.total_tokens,
+      request_count: data.request_count,
+      by_model: data.by_model,
+    }));
+}
 
 interface AiTokenUsageProps {
   usageLog: UsageLogResponse;
@@ -54,27 +83,38 @@ const MODEL_COLORS = [
 ];
 
 export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('ai');
   const [showAllEntries, setShowAllEntries] = useState(false);
+
+  const dailyAggregates = useMemo(() => {
+    const fromApi = usageLog.daily_aggregates ?? [];
+    if (fromApi.length > 0) return fromApi;
+    return aggregateDailyFromEntries(usageLog.recent_entries ?? []);
+  }, [usageLog.daily_aggregates, usageLog.recent_entries]);
 
   // Extract all unique models from daily aggregates
   const allModels = useMemo(() => {
     const models = new Set<string>();
-    for (const day of usageLog.daily_aggregates) {
+    for (const day of dailyAggregates) {
       for (const model of Object.keys(day.by_model)) {
         models.add(model);
       }
     }
     return Array.from(models);
-  }, [usageLog.daily_aggregates]);
+  }, [dailyAggregates]);
 
   // Chart data: flatten by_model into top-level keys
   const chartData = useMemo(() => {
-    return usageLog.daily_aggregates.map((day) => ({
+    return dailyAggregates.map((day) => ({
       date: formatDate(day.date),
+      requests: day.request_count,
       ...day.by_model,
     }));
-  }, [usageLog.daily_aggregates]);
+  }, [dailyAggregates]);
+
+  /** When tokens are 0 but requests exist, stacked areas are invisible — show bar chart */
+  const showRequestsChart =
+    usageLog.total_tokens === 0 && usageLog.total_requests > 0 && chartData.length > 0;
 
   const modelColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -84,9 +124,8 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
     return map;
   }, [allModels]);
 
-  const visibleEntries = showAllEntries
-    ? usageLog.recent_entries
-    : usageLog.recent_entries.slice(0, 10);
+  const recentEntries = usageLog.recent_entries ?? [];
+  const visibleEntries = showAllEntries ? recentEntries : recentEntries.slice(0, 10);
 
   const periodLabel = `${formatDate(usageLog.period_start)} – ${formatDate(usageLog.period_end)}`;
 
@@ -98,7 +137,7 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{formatTokens(usageLog.total_tokens)}</div>
             <p className="text-xs text-muted-foreground">
-              {t('ai.usage.totalTokens', 'Total Tokens')}
+              {t('usage.totalTokens', 'Total Tokens')}
             </p>
           </CardContent>
         </Card>
@@ -106,7 +145,7 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{usageLog.total_requests}</div>
             <p className="text-xs text-muted-foreground">
-              {t('ai.usage.totalRequests', 'Total Requests')}
+              {t('usage.totalRequests', 'Total Requests')}
             </p>
           </CardContent>
         </Card>
@@ -118,7 +157,7 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />
-              {t('ai.usage.tokenChart', 'Token Usage')}
+              {t('usage.tokenChart', 'Token Usage')}
             </CardTitle>
             <span className="text-xs text-muted-foreground">{periodLabel}</span>
           </div>
@@ -126,38 +165,55 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
         <CardContent>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="date" className="text-xs" />
-                <YAxis tickFormatter={formatTokens} className="text-xs" />
-                <Tooltip
-                  formatter={(value, name) => [
-                    formatTokens(Number(value)),
-                    String(name),
-                  ]}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px',
-                  }}
-                />
-                <Legend />
-                {allModels.map((model, i) => (
-                  <Area
-                    key={model}
-                    type="monotone"
-                    dataKey={model}
-                    stackId="1"
-                    stroke={modelColorMap[model]}
-                    fill={modelColorMap[model]}
-                    fillOpacity={0.6 - i * 0.1}
+              {showRequestsChart ? (
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis allowDecimals={false} className="text-xs" />
+                  <Tooltip
+                    formatter={(value) => [String(value), t('usage.totalRequests', 'Total Requests')]}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
                   />
-                ))}
-              </AreaChart>
+                  <Bar dataKey="requests" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('usage.requests', 'Requests')} />
+                </BarChart>
+              ) : (
+                <AreaChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="date" className="text-xs" />
+                  <YAxis tickFormatter={formatTokens} className="text-xs" />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      formatTokens(Number(value)),
+                      String(name),
+                    ]}
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Legend />
+                  {allModels.map((model, i) => (
+                    <Area
+                      key={model}
+                      type="monotone"
+                      dataKey={model}
+                      stackId="1"
+                      stroke={modelColorMap[model]}
+                      fill={modelColorMap[model]}
+                      fillOpacity={0.6 - i * 0.1}
+                    />
+                  ))}
+                </AreaChart>
+              )}
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
-              {t('ai.usage.noData', 'No usage data for this period')}
+              {t('usage.noData', 'No usage data for this period')}
             </div>
           )}
         </CardContent>
@@ -167,10 +223,10 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>{t('ai.usage.recentActivity', 'Recent Activity')}</CardTitle>
+            <CardTitle>{t('usage.recentActivity', 'Recent Activity')}</CardTitle>
             <Button variant="outline" size="sm" className="gap-1">
               <Download className="w-4 h-4" />
-              {t('ai.usage.export', 'Export CSV')}
+              {t('usage.export', 'Export CSV')}
             </Button>
           </div>
         </CardHeader>
@@ -180,16 +236,16 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
               <thead>
                 <tr className="border-b text-left">
                   <th className="pb-2 font-medium text-muted-foreground">
-                    {t('ai.usage.date', 'Date')}
+                    {t('usage.date', 'Date')}
                   </th>
                   <th className="pb-2 font-medium text-muted-foreground">
-                    {t('ai.usage.feature', 'Type')}
+                    {t('usage.feature', 'Type')}
                   </th>
                   <th className="pb-2 font-medium text-muted-foreground">
-                    {t('ai.usage.model', 'Model')}
+                    {t('usage.model', 'Model')}
                   </th>
                   <th className="pb-2 font-medium text-muted-foreground text-right">
-                    {t('ai.usage.tokens', 'Tokens')}
+                    {t('usage.tokens', 'Tokens')}
                   </th>
                 </tr>
               </thead>
@@ -217,14 +273,14 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
                 {visibleEntries.length === 0 && (
                   <tr>
                     <td colSpan={4} className="py-8 text-center text-muted-foreground">
-                      {t('ai.usage.noEntries', 'No AI usage recorded yet')}
+                      {t('usage.noEntries', 'No AI usage recorded yet')}
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
-          {usageLog.recent_entries.length > 10 && (
+          {recentEntries.length > 10 && (
             <Button
               variant="ghost"
               size="sm"
@@ -234,13 +290,13 @@ export function AiTokenUsage({ usageLog }: AiTokenUsageProps) {
               {showAllEntries ? (
                 <>
                   <ChevronUp className="w-4 h-4 mr-1" />
-                  {t('ai.usage.showLess', 'Show Less')}
+                  {t('usage.showLess', 'Show Less')}
                 </>
               ) : (
                 <>
                   <ChevronDown className="w-4 h-4 mr-1" />
-                  {t('ai.usage.showAll', 'Show All ({{count}})', {
-                    count: usageLog.recent_entries.length,
+                  {t('usage.showAll', 'Show All ({{count}})', {
+                    count: recentEntries.length,
                   })}
                 </>
               )}

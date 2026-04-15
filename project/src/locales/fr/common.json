@@ -2290,6 +2290,9 @@
       "title": "Aucun modèle pour le moment",
       "description": "Créez votre premier modèle pour personnaliser les en-têtes et pieds de page des documents"
     },
+    "editor": {
+      "preview": "Aperçu"
+    },
     "actions": {
       "preview": "Aperçu",
       "setDefault": "Définir par défaut",
@@ -2306,6 +2309,40 @@
     "setDefault": {
       "success": "Modèle par défaut mis à jour",
       "failed": "Échec de la définition du modèle par défaut"
+    },
+    "preview": {
+      "title": "Aperçu : {{name}}",
+      "loadingTitle": "Aperçu du modèle",
+      "notFound": "Impossible de charger le modèle.",
+      "draftHint": "Vous visualisez des modifications non enregistrées depuis l’éditeur.",
+      "sampleCompany": "Raison sociale",
+      "sampleAddress": "123 rue du Commerce",
+      "sampleCity": "Ville, pays",
+      "sampleEmail": "contact@exemple.com",
+      "sampleInvoiceTitle": "Facture n° INV-2024-001",
+      "sampleQuoteTitle": "Devis n° QUO-2024-001",
+      "sampleSalesOrderTitle": "Commande de vente n° SO-2024-001",
+      "samplePurchaseOrderTitle": "Bon de commande n° PO-2024-001",
+      "sampleReportTitle": "Titre du rapport",
+      "sampleGeneralTitle": "Titre du document",
+      "sampleDate": "Date : {{date}}",
+      "sampleCustomer": "Nom du client",
+      "sampleCustomerStreet": "456 avenue Client",
+      "sampleCustomerCity": "Ville, pays",
+      "colDescription": "Description",
+      "colQty": "Qté",
+      "colUnitPrice": "Prix unitaire",
+      "colAmount": "Montant",
+      "line1": "Produit exemple A",
+      "line2": "Produit exemple B",
+      "total": "Total",
+      "reportSample1": "Cet exemple illustre le rendu d’un rapport avec vos marges et typographie.",
+      "reportSample2": "Le texte et les chiffres définitifs viendront des rapports générés.",
+      "generalSample": "Cet exemple illustre la mise en page générale de vos documents.",
+      "footerContactLine": "Adresse · Téléphone · E-mail (exemple)",
+      "pageOf": "Page 1 sur 3",
+      "contentHeight": "Hauteur utile du contenu : {{mm}} mm",
+      "note": "Contenu d’exemple uniquement. Les documents générés utiliseront les données réelles."
     }
   },
   "network": {

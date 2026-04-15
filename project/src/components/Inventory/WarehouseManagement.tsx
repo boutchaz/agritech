@@ -664,7 +664,12 @@ export default function WarehouseManagement() {
               </div>
 
               <div className="mt-4 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEdit(warehouse)}
+                  className="text-slate-700 dark:text-slate-100"
+                >
                   <Edit className="w-4 h-4" />
                 </Button>
                 <Button
@@ -737,7 +742,12 @@ export default function WarehouseManagement() {
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(warehouse)}
+                    className="text-slate-700 dark:text-slate-100"
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button

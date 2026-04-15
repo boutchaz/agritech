@@ -2294,6 +2294,9 @@
       "title": "No templates yet",
       "description": "Create your first template to customize document headers and footers"
     },
+    "editor": {
+      "preview": "Preview"
+    },
     "actions": {
       "preview": "Preview",
       "setDefault": "Set Default",
@@ -2310,6 +2313,40 @@
     "setDefault": {
       "success": "Default template updated",
       "failed": "Failed to set default template"
+    },
+    "preview": {
+      "title": "Preview: {{name}}",
+      "loadingTitle": "Template preview",
+      "notFound": "Template could not be loaded.",
+      "draftHint": "You are viewing unsaved changes from the editor.",
+      "sampleCompany": "Company name",
+      "sampleAddress": "123 Business Street",
+      "sampleCity": "City, Country",
+      "sampleEmail": "contact@example.com",
+      "sampleInvoiceTitle": "Invoice #INV-2024-001",
+      "sampleQuoteTitle": "Quote #QUO-2024-001",
+      "sampleSalesOrderTitle": "Sales Order #SO-2024-001",
+      "samplePurchaseOrderTitle": "Purchase Order #PO-2024-001",
+      "sampleReportTitle": "Report title",
+      "sampleGeneralTitle": "Document title",
+      "sampleDate": "Date: {{date}}",
+      "sampleCustomer": "Customer name",
+      "sampleCustomerStreet": "456 Customer Avenue",
+      "sampleCustomerCity": "City, Country",
+      "colDescription": "Description",
+      "colQty": "Qty",
+      "colUnitPrice": "Unit price",
+      "colAmount": "Amount",
+      "line1": "Sample product A",
+      "line2": "Sample product B",
+      "total": "Total",
+      "reportSample1": "This sample shows how report content will use your margins and typography.",
+      "reportSample2": "Final text and figures come from generated reports.",
+      "generalSample": "This sample shows how general documents will use your page layout and styles.",
+      "footerContactLine": "Address · Phone · Email (sample)",
+      "pageOf": "Page 1 of 3",
+      "contentHeight": "Content area height: {{mm}} mm",
+      "note": "Sample content only. Generated documents will use live data."
     }
   },
   "network": {

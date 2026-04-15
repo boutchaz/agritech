@@ -312,7 +312,12 @@ export default function SupplierManagement() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(supplier)}
+                    className="text-slate-700 dark:text-slate-100"
+                  >
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>
@@ -378,7 +383,12 @@ export default function SupplierManagement() {
               </TableCell>
               <TableCell className="px-4 py-3 text-sm text-right">
                 <div className="flex justify-end space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(supplier)}
+                    className="text-slate-700 dark:text-slate-100"
+                  >
                     <Pencil className="w-4 h-4" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>

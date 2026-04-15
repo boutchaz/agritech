@@ -20,7 +20,28 @@ export class AccountMappingsService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
-  private async getOrganizationAccountingContext(organizationId: string) {
+  /**
+   * Default accounting standard per country (must match global account_mappings seed templates).
+   */
+  private defaultAccountingStandardForCountry(countryCode: string): string {
+    const cc = countryCode.toUpperCase();
+    const map: Record<string, string> = {
+      MA: 'CGNC',
+      FR: 'PCG',
+      TN: 'PCN',
+      US: 'GAAP',
+      GB: 'FRS102',
+      DE: 'HGB',
+    };
+    return map[cc] || 'CGNC';
+  }
+
+  /**
+   * Resolves country + accounting standard for the org.
+   * When either is missing, fills from preferredCountryCode (e.g. query param on initialize) or MA,
+   * derives the standard from country, and persists to organizations so accounting features work end-to-end.
+   */
+  private async getOrganizationAccountingContext(organizationId: string, preferredCountryCode?: string) {
     const supabaseClient = this.databaseService.getAdminClient();
     const { data, error } = await supabaseClient
       .from('organizations')
@@ -32,13 +53,35 @@ export class AccountMappingsService {
       throw new BadRequestException('Organization accounting context not found');
     }
 
-    if (!data.country_code || !data.accounting_standard) {
-      throw new BadRequestException('Organization country_code or accounting_standard not set');
+    const preferred = preferredCountryCode?.trim()?.toUpperCase();
+    const existingCountry = data.country_code?.trim();
+    const existingStandard = data.accounting_standard?.trim();
+
+    let country = existingCountry || preferred || 'MA';
+    let standard = existingStandard || this.defaultAccountingStandardForCountry(country);
+
+    const needsPersist = !existingCountry || !existingStandard;
+    if (needsPersist) {
+      const { error: updateError } = await supabaseClient
+        .from('organizations')
+        .update({
+          country_code: country,
+          accounting_standard: standard,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', organizationId);
+
+      if (updateError) {
+        this.logger.error(`Failed to persist organization accounting defaults: ${updateError.message}`);
+        throw new BadRequestException(
+          `Could not save organization country and accounting standard: ${updateError.message}`,
+        );
+      }
     }
 
     return {
-      countryCode: String(data.country_code).toUpperCase(),
-      accountingStandard: String(data.accounting_standard).toUpperCase(),
+      countryCode: country.toUpperCase(),
+      accountingStandard: standard.toUpperCase(),
     };
   }
 
@@ -406,8 +449,10 @@ export class AccountMappingsService {
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
-      const { countryCode: orgCountry, accountingStandard } = await this.getOrganizationAccountingContext(organizationId);
-      const effectiveCountry = (countryCode || orgCountry).toUpperCase();
+      const { countryCode: effectiveCountry, accountingStandard } = await this.getOrganizationAccountingContext(
+        organizationId,
+        countryCode,
+      );
 
       // Check if mappings already exist
       const { data: existingMappings } = await supabaseClient
@@ -424,7 +469,7 @@ export class AccountMappingsService {
         .from('account_mappings')
         .select('mapping_type, mapping_key, source_key, account_code, description, metadata')
         .is('organization_id', null)
-        .eq('country_code', effectiveCountry)
+        .eq('country_code', effectiveCountry.toUpperCase())
         .eq('accounting_standard', accountingStandard);
 
       if (templateError) {

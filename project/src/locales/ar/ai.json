@@ -605,6 +605,24 @@
   "errors": {
     "invalidPlanPayload": "أعاد الخادم خطة موسم غير صالحة."
   },
+  "usage": {
+    "tokenChart": "استخدام الرموز",
+    "noData": "لا توجد بيانات استخدام لهذه الفترة",
+    "recentActivity": "النشاط الأخير",
+    "export": "تصدير CSV",
+    "date": "التاريخ",
+    "feature": "النوع",
+    "model": "النموذج",
+    "tokens": "الرموز",
+    "noEntries": "لا يوجد سجل لاستخدام الذكاء الاصطناعي بعد",
+    "showLess": "عرض أقل",
+    "showAll": "عرض الكل ({{count}})",
+    "totalTokens": "إجمالي الرموز",
+    "totalRequests": "إجمالي الطلبات",
+    "requests": "الطلبات",
+    "loadFailedTitle": "تعذر تحميل تفاصيل الاستخدام",
+    "loadFailedDescription": "تحقق من الاتصال وحاول مرة أخرى."
+  },
   "settings": {
     "title": "إعدادات الذكاء الاصطناعي",
     "description": "إدارة استخدام الذكاء الاصطناعي والحصص وتكوين المزودين.",

@@ -239,13 +239,14 @@ export class AiQuotaService {
     const quota = await this.getOrCreateQuota(organizationId);
     const supabase = this.databaseService.getAdminClient();
 
-    // Fetch all usage entries for current period
+    // Fetch all usage entries for current period [period_start, period_end)
+    // period_end is the first instant of the next month (exclusive).
     const { data: entries, error } = await supabase
       .from('ai_usage_log')
       .select('id, created_at, feature, provider, model, tokens_used, is_byok')
       .eq('organization_id', organizationId)
       .gte('created_at', quota.period_start)
-      .lte('created_at', quota.period_end)
+      .lt('created_at', quota.period_end)
       .order('created_at', { ascending: false });
 
     if (error) {
