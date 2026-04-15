@@ -106,13 +106,20 @@ import { Route as AuthenticatedproductionCropCyclesCycleIdRouteImport } from './
 import { Route as AuthenticatedmiscMarketplaceOrdersRouteImport } from './routes/_authenticated/(misc)/marketplace/orders'
 import { Route as AuthenticatedinventoryStockWarehousesRouteImport } from './routes/_authenticated/(inventory)/stock/warehouses'
 import { Route as AuthenticatedinventoryStockSuppliersRouteImport } from './routes/_authenticated/(inventory)/stock/suppliers'
+import { Route as AuthenticatedinventoryStockStockTakeRouteImport } from './routes/_authenticated/(inventory)/stock/stock-take'
 import { Route as AuthenticatedinventoryStockStockRouteImport } from './routes/_authenticated/(inventory)/stock/stock'
 import { Route as AuthenticatedinventoryStockReportsRouteImport } from './routes/_authenticated/(inventory)/stock/reports'
+import { Route as AuthenticatedinventoryStockReorderSuggestionsRouteImport } from './routes/_authenticated/(inventory)/stock/reorder-suggestions'
 import { Route as AuthenticatedinventoryStockReceptionRouteImport } from './routes/_authenticated/(inventory)/stock/reception'
+import { Route as AuthenticatedinventoryStockQuickStockRouteImport } from './routes/_authenticated/(inventory)/stock/quick-stock'
 import { Route as AuthenticatedinventoryStockItemsRouteImport } from './routes/_authenticated/(inventory)/stock/items'
 import { Route as AuthenticatedinventoryStockInventoryRouteImport } from './routes/_authenticated/(inventory)/stock/inventory'
 import { Route as AuthenticatedinventoryStockGroupsRouteImport } from './routes/_authenticated/(inventory)/stock/groups'
+import { Route as AuthenticatedinventoryStockExpiryAlertsRouteImport } from './routes/_authenticated/(inventory)/stock/expiry-alerts'
 import { Route as AuthenticatedinventoryStockEntriesRouteImport } from './routes/_authenticated/(inventory)/stock/entries'
+import { Route as AuthenticatedinventoryStockDashboardRouteImport } from './routes/_authenticated/(inventory)/stock/dashboard'
+import { Route as AuthenticatedinventoryStockBatchesRouteImport } from './routes/_authenticated/(inventory)/stock/batches'
+import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './routes/_authenticated/(inventory)/stock/approvals'
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
@@ -716,6 +723,12 @@ const AuthenticatedinventoryStockSuppliersRoute =
     path: '/suppliers',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockStockTakeRoute =
+  AuthenticatedinventoryStockStockTakeRouteImport.update({
+    id: '/stock-take',
+    path: '/stock-take',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockStockRoute =
   AuthenticatedinventoryStockStockRouteImport.update({
     id: '/stock',
@@ -728,10 +741,22 @@ const AuthenticatedinventoryStockReportsRoute =
     path: '/reports',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockReorderSuggestionsRoute =
+  AuthenticatedinventoryStockReorderSuggestionsRouteImport.update({
+    id: '/reorder-suggestions',
+    path: '/reorder-suggestions',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockReceptionRoute =
   AuthenticatedinventoryStockReceptionRouteImport.update({
     id: '/reception',
     path: '/reception',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockQuickStockRoute =
+  AuthenticatedinventoryStockQuickStockRouteImport.update({
+    id: '/quick-stock',
+    path: '/quick-stock',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedinventoryStockItemsRoute =
@@ -752,10 +777,34 @@ const AuthenticatedinventoryStockGroupsRoute =
     path: '/groups',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockExpiryAlertsRoute =
+  AuthenticatedinventoryStockExpiryAlertsRouteImport.update({
+    id: '/expiry-alerts',
+    path: '/expiry-alerts',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockEntriesRoute =
   AuthenticatedinventoryStockEntriesRouteImport.update({
     id: '/entries',
     path: '/entries',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockDashboardRoute =
+  AuthenticatedinventoryStockDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockBatchesRoute =
+  AuthenticatedinventoryStockBatchesRouteImport.update({
+    id: '/batches',
+    path: '/batches',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockApprovalsRoute =
+  AuthenticatedinventoryStockApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedinventoryInventoryReceptionBatchesRoute =
@@ -1083,13 +1132,20 @@ export interface FileRoutesByFullPath {
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
   '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
@@ -1225,13 +1281,20 @@ export interface FileRoutesByTo {
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
   '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
@@ -1370,13 +1433,20 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/_authenticated/(inventory)/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/_authenticated/(inventory)/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/_authenticated/(inventory)/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
   '/_authenticated/(inventory)/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/_authenticated/(inventory)/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
   '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/_authenticated/(inventory)/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/_authenticated/(inventory)/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/_authenticated/(inventory)/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/_authenticated/(inventory)/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/_authenticated/(inventory)/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/_authenticated/(inventory)/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/_authenticated/(inventory)/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/_authenticated/(inventory)/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/_authenticated/(misc)/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
@@ -1519,13 +1589,20 @@ export interface FileRouteTypes {
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/approvals'
+    | '/stock/batches'
+    | '/stock/dashboard'
     | '/stock/entries'
+    | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
     | '/stock/items'
+    | '/stock/quick-stock'
     | '/stock/reception'
+    | '/stock/reorder-suggestions'
     | '/stock/reports'
     | '/stock/stock'
+    | '/stock/stock-take'
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/marketplace/orders'
@@ -1661,13 +1738,20 @@ export interface FileRouteTypes {
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/approvals'
+    | '/stock/batches'
+    | '/stock/dashboard'
     | '/stock/entries'
+    | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
     | '/stock/items'
+    | '/stock/quick-stock'
     | '/stock/reception'
+    | '/stock/reorder-suggestions'
     | '/stock/reports'
     | '/stock/stock'
+    | '/stock/stock-take'
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/marketplace/orders'
@@ -1805,13 +1889,20 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/sales-orders'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
+    | '/_authenticated/(inventory)/stock/approvals'
+    | '/_authenticated/(inventory)/stock/batches'
+    | '/_authenticated/(inventory)/stock/dashboard'
     | '/_authenticated/(inventory)/stock/entries'
+    | '/_authenticated/(inventory)/stock/expiry-alerts'
     | '/_authenticated/(inventory)/stock/groups'
     | '/_authenticated/(inventory)/stock/inventory'
     | '/_authenticated/(inventory)/stock/items'
+    | '/_authenticated/(inventory)/stock/quick-stock'
     | '/_authenticated/(inventory)/stock/reception'
+    | '/_authenticated/(inventory)/stock/reorder-suggestions'
     | '/_authenticated/(inventory)/stock/reports'
     | '/_authenticated/(inventory)/stock/stock'
+    | '/_authenticated/(inventory)/stock/stock-take'
     | '/_authenticated/(inventory)/stock/suppliers'
     | '/_authenticated/(inventory)/stock/warehouses'
     | '/_authenticated/(misc)/marketplace/orders'
@@ -2581,6 +2672,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockSuppliersRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/stock-take': {
+      id: '/_authenticated/(inventory)/stock/stock-take'
+      path: '/stock-take'
+      fullPath: '/stock/stock-take'
+      preLoaderRoute: typeof AuthenticatedinventoryStockStockTakeRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/stock': {
       id: '/_authenticated/(inventory)/stock/stock'
       path: '/stock'
@@ -2595,11 +2693,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockReportsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/reorder-suggestions': {
+      id: '/_authenticated/(inventory)/stock/reorder-suggestions'
+      path: '/reorder-suggestions'
+      fullPath: '/stock/reorder-suggestions'
+      preLoaderRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/reception': {
       id: '/_authenticated/(inventory)/stock/reception'
       path: '/reception'
       fullPath: '/stock/reception'
       preLoaderRoute: typeof AuthenticatedinventoryStockReceptionRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/quick-stock': {
+      id: '/_authenticated/(inventory)/stock/quick-stock'
+      path: '/quick-stock'
+      fullPath: '/stock/quick-stock'
+      preLoaderRoute: typeof AuthenticatedinventoryStockQuickStockRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(inventory)/stock/items': {
@@ -2623,11 +2735,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockGroupsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/expiry-alerts': {
+      id: '/_authenticated/(inventory)/stock/expiry-alerts'
+      path: '/expiry-alerts'
+      fullPath: '/stock/expiry-alerts'
+      preLoaderRoute: typeof AuthenticatedinventoryStockExpiryAlertsRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/entries': {
       id: '/_authenticated/(inventory)/stock/entries'
       path: '/entries'
       fullPath: '/stock/entries'
       preLoaderRoute: typeof AuthenticatedinventoryStockEntriesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/dashboard': {
+      id: '/_authenticated/(inventory)/stock/dashboard'
+      path: '/dashboard'
+      fullPath: '/stock/dashboard'
+      preLoaderRoute: typeof AuthenticatedinventoryStockDashboardRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/batches': {
+      id: '/_authenticated/(inventory)/stock/batches'
+      path: '/batches'
+      fullPath: '/stock/batches'
+      preLoaderRoute: typeof AuthenticatedinventoryStockBatchesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/approvals': {
+      id: '/_authenticated/(inventory)/stock/approvals'
+      path: '/approvals'
+      fullPath: '/stock/approvals'
+      preLoaderRoute: typeof AuthenticatedinventoryStockApprovalsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(inventory)/inventory/reception-batches': {
@@ -3009,13 +3149,20 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
   )
 
 interface AuthenticatedinventoryStockRouteChildren {
+  AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
+  AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
+  AuthenticatedinventoryStockDashboardRoute: typeof AuthenticatedinventoryStockDashboardRoute
   AuthenticatedinventoryStockEntriesRoute: typeof AuthenticatedinventoryStockEntriesRoute
+  AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
   AuthenticatedinventoryStockInventoryRoute: typeof AuthenticatedinventoryStockInventoryRoute
   AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRoute
+  AuthenticatedinventoryStockQuickStockRoute: typeof AuthenticatedinventoryStockQuickStockRoute
   AuthenticatedinventoryStockReceptionRoute: typeof AuthenticatedinventoryStockReceptionRoute
+  AuthenticatedinventoryStockReorderSuggestionsRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   AuthenticatedinventoryStockReportsRoute: typeof AuthenticatedinventoryStockReportsRoute
   AuthenticatedinventoryStockStockRoute: typeof AuthenticatedinventoryStockStockRoute
+  AuthenticatedinventoryStockStockTakeRoute: typeof AuthenticatedinventoryStockStockTakeRoute
   AuthenticatedinventoryStockSuppliersRoute: typeof AuthenticatedinventoryStockSuppliersRoute
   AuthenticatedinventoryStockWarehousesRoute: typeof AuthenticatedinventoryStockWarehousesRoute
   AuthenticatedinventoryStockIndexRoute: typeof AuthenticatedinventoryStockIndexRoute
@@ -3023,20 +3170,34 @@ interface AuthenticatedinventoryStockRouteChildren {
 
 const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRouteChildren =
   {
+    AuthenticatedinventoryStockApprovalsRoute:
+      AuthenticatedinventoryStockApprovalsRoute,
+    AuthenticatedinventoryStockBatchesRoute:
+      AuthenticatedinventoryStockBatchesRoute,
+    AuthenticatedinventoryStockDashboardRoute:
+      AuthenticatedinventoryStockDashboardRoute,
     AuthenticatedinventoryStockEntriesRoute:
       AuthenticatedinventoryStockEntriesRoute,
+    AuthenticatedinventoryStockExpiryAlertsRoute:
+      AuthenticatedinventoryStockExpiryAlertsRoute,
     AuthenticatedinventoryStockGroupsRoute:
       AuthenticatedinventoryStockGroupsRoute,
     AuthenticatedinventoryStockInventoryRoute:
       AuthenticatedinventoryStockInventoryRoute,
     AuthenticatedinventoryStockItemsRoute:
       AuthenticatedinventoryStockItemsRoute,
+    AuthenticatedinventoryStockQuickStockRoute:
+      AuthenticatedinventoryStockQuickStockRoute,
     AuthenticatedinventoryStockReceptionRoute:
       AuthenticatedinventoryStockReceptionRoute,
+    AuthenticatedinventoryStockReorderSuggestionsRoute:
+      AuthenticatedinventoryStockReorderSuggestionsRoute,
     AuthenticatedinventoryStockReportsRoute:
       AuthenticatedinventoryStockReportsRoute,
     AuthenticatedinventoryStockStockRoute:
       AuthenticatedinventoryStockStockRoute,
+    AuthenticatedinventoryStockStockTakeRoute:
+      AuthenticatedinventoryStockStockTakeRoute,
     AuthenticatedinventoryStockSuppliersRoute:
       AuthenticatedinventoryStockSuppliersRoute,
     AuthenticatedinventoryStockWarehousesRoute:

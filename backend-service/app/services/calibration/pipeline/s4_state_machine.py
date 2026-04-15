@@ -1,4 +1,4 @@
-"""Generic crop phenology state machine driven by ``protocole_phenologique``.
+"""Generic crop phenology state machine driven by ``stades_bbch`` + ``phases_config``.
 
 Processes daily weather + satellite data chronologically and transitions
 between phenological phases based on GDD, temperature, precipitation, and
@@ -9,7 +9,7 @@ Architecture
 The state machine is designed to be **data-driven and crop-agnostic**:
 
 - ``load_phase_definitions`` reads structured exit conditions from
-  ``protocole_phenologique.phases`` and ``condition_evaluator.evaluate``
+  ``stades_bbch`` GDD ranges + ``phases_config`` exit conditions, evaluated via ``condition_evaluator.evaluate``
   drives all transitions, so adding a new crop only requires updating
   its referential JSON (no code changes).
 - GDD formula parameters (tbase, tupper) come from ``referential_utils.get_gdd_tbase_tupper``.
@@ -19,7 +19,7 @@ The state machine is designed to be **data-driven and crop-agnostic**:
 Public API
 ----------
 - ``run_state_machine`` — generic entry point for any crop with
-  ``protocole_phenologique``.  Accepts ``crop_type`` explicitly.
+  ``stades_bbch`` + ``phases_config``.  Accepts ``crop_type`` explicitly.
 - ``run_olive_state_machine`` — backward-compatible alias for ``run_state_machine``.
 - ``map_timelines_to_step4output`` — convert ``SeasonTimeline`` list to
   ``Step4Output``, using per-season ``PhaseTransition.gdd_at_entry`` for
@@ -60,12 +60,18 @@ from enum import Enum
 
 from ..support.condition_evaluator import evaluate
 from ..support.gdd_service import compute_daily_gdd, estimate_chill_hours
+from ..support.formula_evaluator import compute_preliminary_signals
+from ..types import WeatherRowAccessor
 
 logger = logging.getLogger(__name__)
 
 
 class OlivePhase(Enum):
-    """Phenological phases for olive (Olea europaea L.)."""
+    """Legacy enum — kept for backward compatibility only.
+
+    The state machine now uses plain strings from the referential.
+    New code should use phase name strings directly.
+    """
 
     DORMANCE = "DORMANCE"
     DEBOURREMENT = "DEBOURREMENT"
@@ -79,7 +85,7 @@ class OlivePhase(Enum):
 class PhaseTransition:
     """A single phase period with its start/end dates and metadata."""
 
-    phase: OlivePhase
+    phase: str  # Phase name from referential (e.g. "DORMANCE", "FLORAISON")
     start_date: date
     end_date: date | None = None
     gdd_at_entry: float = 0.0
@@ -136,17 +142,15 @@ def compute_daily_signals(
     for ``tmax_30j_pct``.  Defaults to 30 °C (olive referential stress
     condition threshold).
     """
-    tmax = float(weather_day.get("temp_max") or weather_day.get("temperature_max") or 0.0)
-    tmin = float(weather_day.get("temp_min") or weather_day.get("temperature_min") or 0.0)
-    precip = float(weather_day.get("precip") or weather_day.get("precipitation_sum") or 0.0)
+    wd = WeatherRowAccessor(weather_day)
+    tmax = wd.temp_max
+    tmin = wd.temp_min
+    precip = wd.precipitation
 
     tmoy = (tmax + tmin) / 2.0
     gdd_jour = compute_daily_gdd(tmax, tmin, tbase, tupper)
 
-    precip_30j = sum(
-        float(w.get("precip") or w.get("precipitation_sum") or 0.0)
-        for w in weather_history_30d
-    )
+    precip_30j = sum(WeatherRowAccessor(w).precipitation for w in weather_history_30d)
 
     hot_days = sum(
         1 for w in weather_history_30d
@@ -217,19 +221,9 @@ class PhaseDefinition:
     entry_when: dict | None   # condition for entering this phase
 
 
-# Mapping from BBCH phase_kc (8 fine-grained) → state machine OlivePhase (6 coarse).
-# This bridges the referential's dynamic BBCH stages to the state machine's internal
-# representation.  Adding a new crop only requires its stades_bbch in the referential.
-_BBCH_TO_STATE_PHASE: dict[str, OlivePhase] = {
-    "repos": OlivePhase.DORMANCE,
-    "debourrement": OlivePhase.DEBOURREMENT,
-    "croissance": OlivePhase.DEBOURREMENT,  # merged with debourrement
-    "floraison": OlivePhase.FLORAISON,
-    "nouaison": OlivePhase.NOUAISON,
-    "grossissement": OlivePhase.STRESS_ESTIVAL,  # merged: fruit fill → summer stress
-    "maturation": OlivePhase.STRESS_ESTIVAL,  # merged: ripening → summer stress
-    "post_recolte": OlivePhase.REPRISE_AUTOMNALE,
-}
+def _phase_cycle_order_from_defs(phase_defs: list[PhaseDefinition]) -> list[str]:
+    """Derive phase cycle order from the definitions list — referential is the source of truth."""
+    return [pd.name for pd in phase_defs]
 
 
 # ---------------------------------------------------------------------------
@@ -337,64 +331,104 @@ _DEFAULT_STREAK_DEFINITIONS: dict[str, dict] = {
 
 
 def load_phase_definitions(reference_data: dict | None) -> list[PhaseDefinition]:
-    """Load phase definitions from referential ``protocole_phenologique.phases``.
+    """Build phase definitions from ``stades_bbch`` + ``phases_config``.
 
-    The NEW format uses phase names as keys (DORMANCE, DEBOURREMENT, etc.)
-    with structured ``exit`` arrays, ``skip_when``, and ``entry.when``.
+    Single source of truth:
+    - ``stades_bbch``: phase order (``phase_kc``), GDD thresholds (``gdd_cumul``),
+      cycle months (``mois``).
+    - ``phases_config``: non-GDD exit conditions (satellite, streaks, weather),
+      skip logic, reset actions.
 
-    If phases have old PHASE_N keys with string conditions, logs a warning
-    and returns empty list — the caller should use ``_DEFAULT_PHASE_DEFINITIONS``.
+    GDD transition threshold = upper bound of current phase's ``gdd_cumul`` range
+    from ``stades_bbch``.  Non-GDD conditions from ``phases_config.exit_conditions``
+    are ANDed with the GDD threshold to form the full exit rule.
+
+    Falls back to ``_DEFAULT_PHASE_DEFINITIONS`` if ``stades_bbch`` is absent.
     """
     if not reference_data:
         return []
 
-    proto = reference_data.get("protocole_phenologique")
-    if not isinstance(proto, dict):
+    stades = reference_data.get("stades_bbch")
+    if not isinstance(stades, list) or not stades:
         return []
 
-    phases = proto.get("phases")
-    if not isinstance(phases, dict):
-        return []
+    phases_config = reference_data.get("phases_config")
+    if not isinstance(phases_config, dict):
+        phases_config = {}
 
-    # Detect old format: keys like PHASE_0, PHASE_1, etc.
-    has_old_keys = any(k.startswith("PHASE_") for k in phases if k != "_note")
-    # Detect new format: keys like DORMANCE, DEBOURREMENT, etc.
-    known_phase_names = {p.value for p in OlivePhase}
-    has_new_keys = any(k in known_phase_names for k in phases)
-
-    if has_old_keys and not has_new_keys:
-        logger.warning(
-            "Referential uses legacy PHASE_N keys — falling back to defaults. "
-            "Migrate to structured conditions (DORMANCE, DEBOURREMENT, etc.)."
-        )
-        return []
-
-    if not has_new_keys:
-        return []
-
-    definitions: list[PhaseDefinition] = []
-    # Iterate in canonical order
-    for phase_enum in OlivePhase:
-        phase_name = phase_enum.value
-        phase_data = phases.get(phase_name)
-        if not isinstance(phase_data, dict):
+    # 1. Extract phase order + max GDD per phase from stades_bbch
+    phase_order: list[str] = []
+    phase_gdd_upper: dict[str, float] = {}
+    for stade in stades:
+        pk = str(stade.get("phase_kc", "")).lower()
+        if not pk:
             continue
+        if pk not in phase_gdd_upper:
+            phase_order.append(pk)
+        gdd_range = stade.get("gdd_cumul")
+        if isinstance(gdd_range, list) and len(gdd_range) >= 2:
+            phase_gdd_upper[pk] = float(gdd_range[1])
 
-        exits = phase_data.get("exit", [])
-        if not isinstance(exits, list):
-            exits = []
+    if not phase_order:
+        return []
 
-        skip_when = phase_data.get("skip_when")
-        entry_block = phase_data.get("entry", {})
-        entry_when = entry_block.get("when") if isinstance(entry_block, dict) else None
+    # 2. Build PhaseDefinition for each phase
+    definitions: list[PhaseDefinition] = []
+    for i, pk in enumerate(phase_order):
+        cfg = phases_config.get(pk, {})
+        if not isinstance(cfg, dict):
+            cfg = {}
+
+        state_key = cfg.get("state_key", pk.upper())
+        next_pk = phase_order[(i + 1) % len(phase_order)]
+        next_cfg = phases_config.get(next_pk, {})
+        next_state_key = next_cfg.get("state_key", next_pk.upper()) if isinstance(next_cfg, dict) else next_pk.upper()
+
+        # Build exit condition: GDD threshold AND any extra conditions
+        gdd_upper = phase_gdd_upper.get(pk)
+        extra_conditions = cfg.get("exit_conditions", [])
+        on_exit = cfg.get("on_exit")
+
+        # First phase (dormancy): no GDD threshold, use only exit_conditions
+        if i == 0:
+            if extra_conditions:
+                when_clause: dict = {"and": list(extra_conditions)} if len(extra_conditions) > 1 else extra_conditions[0]
+            else:
+                when_clause = {"var": "chill_satisfied", "eq": True}
+        else:
+            # GDD threshold from stades_bbch + extra conditions
+            conditions: list[dict] = []
+            if gdd_upper is not None:
+                conditions.append({"var": "GDD_cumul", "gte": gdd_upper})
+            conditions.extend(extra_conditions)
+
+            if len(conditions) == 1:
+                when_clause = conditions[0]
+            elif conditions:
+                when_clause = {"and": conditions}
+            else:
+                when_clause = {"var": "GDD_cumul", "gte": gdd_upper or 9999}
+
+        exit_rule: dict = {
+            "target": next_state_key,
+            "when": when_clause,
+            "confidence": "MODEREE",
+        }
+        if on_exit:
+            exit_rule["on_enter"] = on_exit  # on_enter = actions when entering next phase
 
         definitions.append(PhaseDefinition(
-            name=phase_name,
-            exits=exits,
-            skip_when=skip_when,
-            entry_when=entry_when,
+            name=state_key,
+            exits=[exit_rule],
+            skip_when=cfg.get("skip_when"),
+            entry_when=None,
         ))
 
+    logger.info(
+        "Built %d phase definitions from stades_bbch: %s",
+        len(definitions),
+        " → ".join(d.name for d in definitions),
+    )
     return definitions
 
 
@@ -402,26 +436,17 @@ def extract_phase_config(
     reference_data: dict | None,
     maturity_phase: str | None = None,
 ) -> PhaseConfig:
-    """Build PhaseConfig from a crop referential JSON.
+    """Build PhaseConfig from ``stades_bbch`` + ``phases_config``.
 
-    Extracts only chill configuration and active_phases.  Phase transition
-    thresholds are now on ``PhaseDefinition.exits`` and evaluated via
-    ``condition_evaluator``.
+    Extracts chill months (from stades_bbch repos phase) and active_phases
+    (from protocole_phenologique.phases_par_maturite).
     """
     cfg = PhaseConfig()
     if not reference_data:
         return cfg
 
-    proto = reference_data.get("protocole_phenologique")
-    if not isinstance(proto, dict):
-        return cfg
-
-    phases = proto.get("phases")
-    if not isinstance(phases, dict):
-        return cfg
-
-    # Detect dormancy phase — check both new and old format keys
-    has_dormancy = phases.get("DORMANCE") is not None or phases.get("PHASE_0") is not None
+    phases_config = reference_data.get("phases_config", {})
+    has_dormancy = isinstance(phases_config, dict) and "repos" in phases_config
 
     # Chill months: derived from stades_bbch entries with phase_kc == "repos".
     # Expanded by one neighbouring month each side for transitional accumulation.
@@ -448,31 +473,67 @@ def extract_phase_config(
     else:
         cfg.chill_months = frozenset()  # no dormancy phase → chill never applies
 
-    # Active phases per maturity stage, driven by BBCH phase_kc names.
-    if maturity_phase:
+    # Active phases per maturity stage — phase names come from referential directly.
+    proto = reference_data.get("protocole_phenologique", {})
+    if maturity_phase and isinstance(proto, dict):
         maturite_map = proto.get("phases_par_maturite")
         if isinstance(maturite_map, dict):
             phase_key = maturity_phase.lower()
             active_bbch = maturite_map.get(phase_key)
             if isinstance(active_bbch, list) and active_bbch:
-                active_state_phases: set[str] = set()
-                for bbch_name in active_bbch:
-                    mapped = _BBCH_TO_STATE_PHASE.get(str(bbch_name).lower())
-                    if mapped:
-                        active_state_phases.add(mapped.value)
+                # Phase names in the referential are the state machine phase names
+                active_state_phases = frozenset(
+                    str(name).upper() for name in active_bbch
+                )
                 if active_state_phases:
-                    cfg.active_phases = frozenset(active_state_phases)
+                    cfg.active_phases = active_state_phases
 
     return cfg
+
+
+def _resolve_variety_code(variety: str, reference_data: dict | None) -> str | None:
+    """Resolve a variety display name to its referential code.
+
+    Handles: exact code match, exact name match, case-insensitive name match.
+    """
+    if not reference_data:
+        return None
+    varietes = reference_data.get("varietes")
+    if not isinstance(varietes, list):
+        return None
+    variety_lower = variety.strip().lower()
+    for v in varietes:
+        if not isinstance(v, dict):
+            continue
+        code = v.get("code", "")
+        nom = v.get("nom", "")
+        # Exact match on code
+        if variety == code or variety_lower == code.lower():
+            return code
+        # Exact match on nom
+        if variety_lower == nom.strip().lower():
+            return code
+        # Fuzzy match: strip last char for French/Spanish suffix differences
+        # (Arbequine/Arbequina, Koroneïki/Koroneiki)
+        nom_lower = nom.strip().lower()
+        if len(variety_lower) >= 4 and len(nom_lower) >= 4:
+            if variety_lower[:-1] == nom_lower[:-1]:
+                return code
+            # Prefix match (Picholine → Picholine Marocaine)
+            if nom_lower.startswith(variety_lower) or variety_lower.startswith(nom_lower):
+                return code
+    return None
 
 
 def resolve_chill_threshold(
     variety: str | None,
     gdd_ref: dict | None,
+    reference_data: dict | None = None,
 ) -> int:
     """Extract variety-specific chill threshold from referential GDD config.
 
-    Uses the **lower bound** of ``seuils_chill_units_par_variete[variety]``.
+    Looks up by variety code (from ``seuils_chill_units_par_variete``).
+    Resolves variety display name → code via ``varietes`` array.
     Falls back to 150 if variety or referential is missing.
     """
     if not gdd_ref or not variety:
@@ -480,9 +541,19 @@ def resolve_chill_threshold(
     seuils = gdd_ref.get("seuils_chill_units_par_variete")
     if not isinstance(seuils, dict):
         return _DEFAULT_CHILL_THRESHOLD
+
+    # Try direct lookup (variety is already a code)
     entry = seuils.get(variety)
     if isinstance(entry, (list, tuple)) and len(entry) >= 1:
-        return int(entry[0])  # lower bound
+        return int(entry[0])
+
+    # Resolve name → code
+    code = _resolve_variety_code(variety, reference_data)
+    if code:
+        entry = seuils.get(code)
+        if isinstance(entry, (list, tuple)) and len(entry) >= 1:
+            return int(entry[0])
+
     return _DEFAULT_CHILL_THRESHOLD
 
 
@@ -491,13 +562,9 @@ def resolve_chill_threshold(
 # ---------------------------------------------------------------------------
 
 
-_PHASE_CYCLE_ORDER: list[OlivePhase] = [
-    OlivePhase.DORMANCE,
-    OlivePhase.DEBOURREMENT,
-    OlivePhase.FLORAISON,
-    OlivePhase.NOUAISON,
-    OlivePhase.STRESS_ESTIVAL,
-    OlivePhase.REPRISE_AUTOMNALE,
+_DEFAULT_PHASE_CYCLE_ORDER: list[str] = [
+    "DORMANCE", "DEBOURREMENT", "FLORAISON", "NOUAISON",
+    "STRESS_ESTIVAL", "REPRISE_AUTOMNALE",
 ]
 
 
@@ -523,6 +590,7 @@ class CropPhaseStateMachine:
         config: PhaseConfig | None = None,
         phase_definitions: list[PhaseDefinition] | None = None,
         streak_definitions: dict[str, dict] | None = None,
+        preliminary_formulas: dict[str, str] | None = None,
     ) -> None:
         self.tmoy_q25 = tmoy_q25
         self.cfg = config or PhaseConfig(chill_threshold=chill_threshold)
@@ -533,6 +601,16 @@ class CropPhaseStateMachine:
         self.phases_by_name: dict[str, PhaseDefinition] = {
             pd.name: pd for pd in phase_defs
         }
+        self.phase_order: list[str] = _phase_cycle_order_from_defs(phase_defs)
+
+        # Referential formulas (calculs_preliminaires)
+        self.preliminary_formulas: dict[str, str] = preliminary_formulas or {}
+
+        # Peak/min tracking for derived signals (reset each cycle)
+        self.ndvi_peak: float = 0.0
+        self.nirv_peak: float = 0.0
+        self.nirv_min_hist: float = float("inf")
+        self.nirv_max_hist: float = float("-inf")
 
         # Streak definitions and counters
         self.streak_definitions: dict[str, dict] = (
@@ -549,28 +627,32 @@ class CropPhaseStateMachine:
 
         self.transitions: list[PhaseTransition] = []
 
-        # Determine initial phase: skip dormancy if warm climate
-        dormance_def = self.phases_by_name.get("DORMANCE")
+        # First and second phase names from definitions
+        first_phase = self.phase_order[0] if self.phase_order else "DORMANCE"
+        second_phase = self.phase_order[1] if len(self.phase_order) > 1 else first_phase
+
+        # Determine initial phase: skip first phase if warm climate
+        first_def = self.phases_by_name.get(first_phase)
         should_skip = skip_dormancy
-        if not should_skip and dormance_def and dormance_def.skip_when:
+        if not should_skip and first_def and first_def.skip_when:
             skip_ctx = {"Tmoy_Q25": tmoy_q25}
-            should_skip = evaluate(dormance_def.skip_when, skip_ctx)
+            should_skip = evaluate(first_def.skip_when, skip_ctx)
 
         if should_skip:
-            self.current_phase = OlivePhase.DEBOURREMENT
+            self.current_phase = second_phase
             self.chill_satisfied = True
             self.transitions.append(PhaseTransition(
-                phase=OlivePhase.DEBOURREMENT,
-                start_date=date(2000, 1, 1),  # placeholder, overwritten on first process_day
+                phase=second_phase,
+                start_date=date(2000, 1, 1),
                 gdd_at_entry=0.0,
                 confidence="MODEREE",
             ))
             self._phase_start_set = False
         else:
-            self.current_phase = OlivePhase.DORMANCE
+            self.current_phase = first_phase
             self.transitions.append(PhaseTransition(
-                phase=OlivePhase.DORMANCE,
-                start_date=date(2000, 1, 1),  # placeholder
+                phase=first_phase,
+                start_date=date(2000, 1, 1),
                 gdd_at_entry=0.0,
                 confidence="ELEVEE",
             ))
@@ -591,8 +673,8 @@ class CropPhaseStateMachine:
             if not self.chill_satisfied and self.chill_cumul >= self.chill_threshold:
                 self.chill_satisfied = True
 
-        # GDD accumulation (for all phases except DORMANCE, which resets on exit)
-        if self.current_phase != OlivePhase.DORMANCE:
+        # GDD accumulation (for all phases except the first/dormancy phase)
+        if self.current_phase != self.phase_order[0]:
             self.gdd_cumul += signals.gdd_jour
 
         # Update streaks (referential-driven)
@@ -614,13 +696,23 @@ class CropPhaseStateMachine:
         context = self._build_context(signals)
 
         # Evaluate exit conditions for current phase
-        phase_def = self.phases_by_name.get(self.current_phase.value)
+        phase_def = self.phases_by_name.get(self.current_phase)
         if phase_def:
             for exit_rule in phase_def.exits:
-                if evaluate(exit_rule["when"], context):
-                    target_name = exit_rule["target"]
+                matched = evaluate(exit_rule["when"], context)
+                # Debug: log exit condition evaluation
+                if signals.current_date.day == 1:  # log once per month to avoid spam
+                    logger.debug(
+                        "[%s] phase=%s → %s | match=%s | GDD=%.1f chill=%.0f Tmoy=%.1f NDVI=%s streaks=%s",
+                        signals.current_date, self.current_phase,
+                        exit_rule["target"], matched,
+                        self.gdd_cumul, self.chill_cumul, signals.tmoy,
+                        f"{signals.ndvi:.3f}" if signals.ndvi is not None else "—",
+                        {k: v for k, v in self.streak_counters.items() if v > 0},
+                    )
+                if matched:
+                    target_phase = exit_rule["target"]
                     confidence = exit_rule.get("confidence", "MODEREE")
-                    target_phase = OlivePhase(target_name)
 
                     # Handle on_enter actions (e.g., reset GDD)
                     on_enter = exit_rule.get("on_enter", {})
@@ -629,10 +721,12 @@ class CropPhaseStateMachine:
                             if var == "GDD_cumul":
                                 self.gdd_cumul = 0.0
 
-                    # Reset chill when entering DORMANCE
-                    if target_name == "DORMANCE":
+                    # Reset chill and peaks when entering first phase (dormancy)
+                    if target_phase == self.phase_order[0]:
                         self.chill_cumul = 0.0
                         self.chill_satisfied = False
+                        self.ndvi_peak = 0.0
+                        self.nirv_peak = 0.0
 
                     # Reset all streak counters on transition (each phase
                     # evaluates its own exit conditions from a clean slate).
@@ -643,7 +737,19 @@ class CropPhaseStateMachine:
                     break
 
     def _build_context(self, signals: DailySignals) -> dict:
-        """Build the full context dict for condition evaluation."""
+        """Build the full context dict for condition evaluation.
+
+        Includes raw weather, satellite derivatives, accumulations, streaks,
+        and computed preliminary signals from the referential.
+        """
+        # Update peak/min tracking
+        if signals.ndvi is not None:
+            self.ndvi_peak = max(self.ndvi_peak, signals.ndvi)
+        if signals.nirv is not None:
+            self.nirv_peak = max(self.nirv_peak, signals.nirv)
+            self.nirv_min_hist = min(self.nirv_min_hist, signals.nirv)
+            self.nirv_max_hist = max(self.nirv_max_hist, signals.nirv)
+
         ctx: dict = {
             # Weather
             "Tmoy": signals.tmoy,
@@ -658,6 +764,11 @@ class CropPhaseStateMachine:
             "GDD_cumul": self.gdd_cumul,
             "chill_satisfied": self.chill_satisfied,
             "chill_cumul": self.chill_cumul,
+            # Peak/cycle tracking (for calculs_preliminaires)
+            "NDVI_pic_cycle": self.ndvi_peak,
+            "NIRv_pic_cycle": self.nirv_peak,
+            "NIRvP_min_hist": self.nirv_min_hist if self.nirv_min_hist != float("inf") else 0.0,
+            "NIRvP_max_hist": self.nirv_max_hist if self.nirv_max_hist != float("-inf") else 1.0,
         }
         # Satellite derivatives
         if signals.d_nirv_dt is not None:
@@ -666,15 +777,27 @@ class CropPhaseStateMachine:
             ctx["d_ndvi_dt"] = signals.d_ndvi_dt
         if signals.nirv is not None:
             ctx["NIRv"] = signals.nirv
+            ctx["NIRvP"] = signals.nirv  # alias for formulas
+            ctx["NIRv_actuel"] = signals.nirv
         if signals.ndvi is not None:
             ctx["NDVI"] = signals.ndvi
+            ctx["NDVI_actuel"] = signals.ndvi
+
+        # GDD formula params (used by calculs_preliminaires GDD_jour formula)
+        ctx["Tbase"] = getattr(self, '_gdd_tbase', 7.5)
+        ctx["Tplafond"] = getattr(self, '_gdd_tupper', 30.0)
 
         # Streak counters
         ctx.update(self.streak_counters)
 
+        # Compute referential calculs_preliminaires formulas
+        if self.preliminary_formulas:
+            derived = compute_preliminary_signals(self.preliminary_formulas, ctx)
+            ctx.update(derived)
+
         return ctx
 
-    def _resolve_target_phase(self, requested: OlivePhase) -> tuple[OlivePhase, str]:
+    def _resolve_target_phase(self, requested: str) -> tuple[str, str]:
         """Resolve the actual target phase, skipping inactive phases.
 
         When ``active_phases`` is set in the config, any phase not in the set
@@ -682,27 +805,35 @@ class CropPhaseStateMachine:
         order.  Returns (resolved_phase, confidence_adjustment).
         """
         active = self.cfg.active_phases
-        if active is None or requested.value in active:
+        if active is None or requested in active:
             return requested, ""
 
         # Find the next active phase after the requested one in cycle order
         try:
-            idx = _PHASE_CYCLE_ORDER.index(requested)
+            idx = self.phase_order.index(requested)
         except ValueError:
             return requested, ""
 
-        for i in range(1, len(_PHASE_CYCLE_ORDER)):
-            candidate = _PHASE_CYCLE_ORDER[(idx + i) % len(_PHASE_CYCLE_ORDER)]
-            if candidate.value in active:
+        for i in range(1, len(self.phase_order)):
+            candidate = self.phase_order[(idx + i) % len(self.phase_order)]
+            if candidate in active:
                 return candidate, "FAIBLE"
         return requested, ""
 
-    def _transition_to(self, new_phase: OlivePhase, signals: DailySignals,
+    def _transition_to(self, new_phase: str, signals: DailySignals,
                        confidence: str = "MODEREE") -> None:
         """Record a phase transition, skipping phases not in active_phases."""
         resolved, conf_override = self._resolve_target_phase(new_phase)
         if conf_override:
             confidence = conf_override
+
+        logger.info(
+            "TRANSITION [%s] %s → %s | GDD=%.1f chill=%.0f/%s Tmoy=%.1f",
+            signals.current_date, self.current_phase, resolved,
+            self.gdd_cumul, self.chill_cumul,
+            "satisfied" if self.chill_satisfied else "pending",
+            signals.tmoy,
+        )
 
         # Close current phase
         if self.transitions:
@@ -736,9 +867,8 @@ def _compute_tmoy_q25(weather_days: list[dict]) -> float:
     import numpy as np
     tmoys = []
     for w in weather_days:
-        tmax = float(w.get("temp_max") or w.get("temperature_max") or 0.0)
-        tmin = float(w.get("temp_min") or w.get("temperature_min") or 0.0)
-        tmoys.append((tmax + tmin) / 2.0)
+        wd = WeatherRowAccessor(w)
+        tmoys.append(wd.temp_mean)
     if not tmoys:
         return 10.0
     return float(np.percentile(tmoys, 25))
@@ -765,35 +895,46 @@ def run_state_machine(
     reference_data: dict | None = None,
     maturity_phase: str | None = None,
 ) -> list[SeasonTimeline]:
-    """Run the phenology state machine for any crop with a ``protocole_phenologique``.
+    """Run the referential-driven phenology state machine for any crop.
 
-    Generic entry point for GDD-driven phenology detection.  All thresholds —
-    GDD formula parameters (tbase, tupper), phase transition conditions, chill
-    requirements — are sourced from ``reference_data`` (the crop referential JSON).
-    The function does **not** contain any crop-specific hardcoding; adding a new
-    crop requires only its referential JSON to define ``protocole_phenologique``.
+    Single source of truth architecture:
+    - ``stades_bbch``: phase order (``phase_kc``), GDD thresholds (``gdd_cumul``),
+      cycle months (``mois``).
+    - ``phases_config``: non-GDD exit conditions, skip logic, reset actions.
+    - ``signaux.streaks``: streak definitions for condition evaluation.
+    - ``protocole_phenologique.calculs_preliminaires``: derived signal formulas.
+
+    No crop-specific hardcoding. Adding a new crop = adding its referential JSON.
 
     Process
     -------
-    1. Read GDD formula params from referential (``get_gdd_tbase_tupper``).
-    2. Extract phase transition thresholds from ``protocole_phenologique.phases``
-       (``extract_phase_config``).
-    3. Determine agronomic cycle start/end from ``stades_bbch`` cycle months.
-    4. Group daily weather by cycle year.
-    5. For each cycle year with ≥ 120 days of data, run ``OlivePhaseStateMachine``
-       and collect a ``SeasonTimeline``.
+    1. Extract ``PhaseConfig`` (chill months from stades_bbch repos phase,
+       active phases from ``protocole_phenologique.phases_par_maturite``).
+    2. Resolve variety-specific chill threshold from ``gdd.seuils_chill_units_par_variete``.
+    3. Build ``PhaseDefinition`` list from ``stades_bbch`` GDD ranges +
+       ``phases_config`` exit conditions.  GDD threshold = upper bound of
+       each phase's ``gdd_cumul`` range.  Non-GDD conditions ANDed with it.
+    4. Load ``calculs_preliminaires`` formulas — evaluated daily via
+       ``FormulaEvaluator`` and injected into condition context.
+    5. Read GDD params (tbase, tupper) from ``gdd``.
+    6. Determine cycle boundaries from ``stades_bbch`` month ranges.
+    7. Group daily weather by cycle year.
+    8. For each cycle year with ≥ 120 days, run ``CropPhaseStateMachine``.
+    9. Collect ``SeasonTimeline`` per cycle.
 
     Args:
-        weather_days: Daily weather records (temp_max, temp_min, precip required).
-        nirv_series: NIRv satellite series as ``[{"date": "YYYY-MM-DD", "value": float}]``.
-        ndvi_series: NDVI satellite series (same format as nirv_series).
-        crop_type: Canonical crop type key matching ``CROP_TYPE_TO_REFERENTIAL_JSON``.
-                   Defaults to "olivier" for backward compatibility.
-        variety: Variety name for variety-specific chill thresholds (olive only).
-        reference_data: Parsed referential JSON dict.  All thresholds are sourced
-                        from here; pass ``None`` to fall back to olive defaults.
-        maturity_phase: Tree maturity phase (``JUVENILE``, ``ENTREE_PRODUCTION``, etc.).
-                        Juvenile trees skip fruiting phases (NOUAISON, STRESS_ESTIVAL).
+        weather_days: Daily weather records (temp_max/temperature_max,
+                      temp_min/temperature_min, precip/precipitation_sum).
+                      Field aliases handled by ``WeatherRowAccessor``.
+        nirv_series: NIRv satellite series ``[{"date": "YYYY-MM-DD", "value": float}]``.
+        ndvi_series: NDVI satellite series (same format).
+        crop_type: Canonical crop type key (e.g. ``"olivier"``, ``"agrumes"``).
+        variety: Variety name for variety-specific chill thresholds.
+        reference_data: Parsed referential JSON dict.  Pass ``None`` to fall
+                        back to built-in olive defaults.
+        maturity_phase: Tree maturity phase (``JUVENILE``, ``PLEINE_PRODUCTION``,
+                        etc.).  Controls which phases are active — juvenile trees
+                        may skip fruiting phases if ``phases_par_maturite`` defines it.
 
     Returns:
         List of ``SeasonTimeline`` objects, one per complete agronomic cycle year.
@@ -804,7 +945,7 @@ def run_state_machine(
     # All thresholds from referential — no crop-specific hardcoding below this line.
     cfg = extract_phase_config(reference_data, maturity_phase=maturity_phase)
     gdd_ref = reference_data.get("gdd") if reference_data else None
-    cfg.chill_threshold = resolve_chill_threshold(variety, gdd_ref)
+    cfg.chill_threshold = resolve_chill_threshold(variety, gdd_ref, reference_data)
 
     # Load structured phase definitions from referential (or use defaults)
     phase_defs = load_phase_definitions(reference_data)
@@ -864,6 +1005,20 @@ def run_state_machine(
             continue
 
         cycle_tmoy_q25 = _compute_tmoy_q25(year_weather)
+        logger.info(
+            "CYCLE %d: %d weather days, Tmoy_Q25=%.1f, skip_dormancy=%s",
+            year, len(year_weather), cycle_tmoy_q25,
+            "yes" if cycle_tmoy_q25 >= 15 else "no",
+        )
+
+        # Load calculs_preliminaires formulas from referential
+        prelim_formulas: dict[str, str] = {}
+        if reference_data:
+            proto = reference_data.get("protocole_phenologique")
+            if isinstance(proto, dict):
+                raw = proto.get("calculs_preliminaires", {})
+                if isinstance(raw, dict):
+                    prelim_formulas = {k: v for k, v in raw.items() if isinstance(v, str)}
 
         # Create state machine for this year
         machine = CropPhaseStateMachine(
@@ -871,7 +1026,10 @@ def run_state_machine(
             config=cfg,
             phase_definitions=phase_defs,
             streak_definitions=streak_defs,
+            preliminary_formulas=prelim_formulas,
         )
+        machine._gdd_tbase = gdd_tbase
+        machine._gdd_tupper = gdd_tupper
 
         # Process each day
         prev_nirv: float | None = None
@@ -951,7 +1109,7 @@ import numpy as np
 from statistics import pstdev
 
 
-def _find_transition(transitions: list[PhaseTransition], phase: OlivePhase) -> PhaseTransition | None:
+def _find_transition(transitions: list[PhaseTransition], phase: str) -> PhaseTransition | None:
     for t in transitions:
         if t.phase == phase:
             return t
@@ -960,7 +1118,7 @@ def _find_transition(transitions: list[PhaseTransition], phase: OlivePhase) -> P
 
 def _find_transition_after(
     transitions: list[PhaseTransition],
-    phase: OlivePhase,
+    phase: str,
     after_date: date,
 ) -> PhaseTransition | None:
     for t in transitions:
@@ -986,9 +1144,9 @@ def _extract_phenology_dates(
       PHASE_2→3 transition     →  decline_start
       PHASE_0 return           →  dormancy_entry
     """
-    debourrement = _find_transition(transitions, OlivePhase.DEBOURREMENT)
-    floraison = _find_transition(transitions, OlivePhase.FLORAISON)
-    nouaison = _find_transition(transitions, OlivePhase.NOUAISON)
+    debourrement = _find_transition(transitions, "DEBOURREMENT")
+    floraison = _find_transition(transitions, "FLORAISON")
+    nouaison = _find_transition(transitions, "NOUAISON")
 
     if not debourrement:
         return None
@@ -1005,7 +1163,7 @@ def _extract_phenology_dates(
 
     dormance_return = _find_transition_after(
         transitions,
-        OlivePhase.DORMANCE,
+        "DORMANCE",
         dormancy_exit,
     )
     dormancy_entry = dormance_return.start_date if dormance_return else None
@@ -1061,21 +1219,21 @@ def _gdd_at_stage_from_transitions(
     - decline_start  → NOUAISON entry
     - dormancy_entry → second DORMANCE entry (after the active season)
     """
-    if stage in ("dormancy_exit", "plateau_start", "peak", "decline_start"):
-        phase_map = {
-            "dormancy_exit": OlivePhase.DEBOURREMENT,
-            "plateau_start": OlivePhase.FLORAISON,
-            "peak": OlivePhase.FLORAISON,
-            "decline_start": OlivePhase.NOUAISON,
-        }
+    phase_map = {
+        "dormancy_exit": "DEBOURREMENT",
+        "plateau_start": "FLORAISON",
+        "peak": "FLORAISON",
+        "decline_start": "NOUAISON",
+    }
+    if stage in phase_map:
         t = _find_transition(transitions, phase_map[stage])
         return t.gdd_at_entry if t else None
 
     if stage == "dormancy_entry":
-        debourrement = _find_transition(transitions, OlivePhase.DEBOURREMENT)
+        debourrement = _find_transition(transitions, "DEBOURREMENT")
         if debourrement:
             dormance_return = _find_transition_after(
-                transitions, OlivePhase.DORMANCE, debourrement.start_date
+                transitions, "DORMANCE", debourrement.start_date
             )
             return dormance_return.gdd_at_entry if dormance_return else None
     return None
@@ -1127,7 +1285,7 @@ def map_timelines_to_step4output(
                     "year": tl.year,
                     "transitions": [
                         {
-                            "phase": t.phase.value,
+                            "phase": t.phase if isinstance(t.phase, str) else t.phase.value,
                             "start_date": t.start_date.isoformat(),
                             "end_date": t.end_date.isoformat() if t.end_date else None,
                             "gdd_at_entry": t.gdd_at_entry,
@@ -1226,7 +1384,7 @@ def map_timelines_to_step4output(
             "year": tl.year,
             "transitions": [
                 {
-                    "phase": t.phase.value,
+                    "phase": t.phase if isinstance(t.phase, str) else t.phase.value,
                     "start_date": t.start_date.isoformat(),
                     "end_date": t.end_date.isoformat() if t.end_date else None,
                     "gdd_at_entry": t.gdd_at_entry,

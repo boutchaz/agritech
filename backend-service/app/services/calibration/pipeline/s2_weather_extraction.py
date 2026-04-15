@@ -1,45 +1,22 @@
 from __future__ import annotations
 
-import math
 from collections import defaultdict
 from datetime import date
 
 from ..referential_utils import get_weather_thresholds
-
-from ..types import ExtremeEvent, MonthlyWeatherAggregate, Step2Output, WeatherDay
-
-
-def _to_float(value: object, default: float = 0.0) -> float:
-    if isinstance(value, (int, float)):
-        return float(value)
-    return default
+from ..support.gdd_service import estimate_chill_hours
+from ..types import (
+    ExtremeEvent,
+    MonthlyWeatherAggregate,
+    Step2Output,
+    WeatherDay,
+    WeatherRowAccessor,
+)
 
 
 # Moroccan Mediterranean climate — season boundaries for drought detection
 _DRY_SEASON_MONTHS = {6, 7, 8, 9}
 _TRANSITION_MONTHS = {4, 5, 10}
-
-
-def _drought_threshold(month: int, crop_type: str) -> int:
-    """Drought streak (days) required to flag ``prolonged_drought``.
-
-    Morocco has a pronounced dry season (Jun-Sep) where 30+ rainless days are
-    normal.  Using a fixed 30-day threshold produces ~10 false positives per
-    parcel.  Season-aware thresholds eliminate most false alarms while still
-    catching genuinely anomalous dry spells.
-
-    TODO: Read these thresholds from referentiel seuils_meteo.secheresse
-    instead of hardcoding. Each crop's referentiel (DATA_OLIVIER, DATA_AGRUMES,
-    etc.) should define its own climate thresholds via a ``seuils_meteo`` section.
-    """
-    if crop_type == "palmier_dattier":
-        # Saharan / Errachidia climate — much drier baseline
-        return 90 if month in _DRY_SEASON_MONTHS else 45
-    if month in _DRY_SEASON_MONTHS:
-        return 60
-    if month in _TRANSITION_MONTHS:
-        return 30
-    return 20  # rainy season (Nov-Mar)
 
 
 def _drought_threshold_from_config(
@@ -49,31 +26,11 @@ def _drought_threshold_from_config(
     reference_data: dict[str, object] | None = None,
 ) -> int:
     config = get_weather_thresholds(crop_type, reference_data)
-    if crop_type == "palmier_dattier":
-        if month in _DRY_SEASON_MONTHS:
-            return config.drought_days_dry_season
-        return config.drought_days_rainy_season
     if month in _DRY_SEASON_MONTHS:
         return config.drought_days_dry_season
     if month in _TRANSITION_MONTHS:
         return config.drought_days_transition
     return config.drought_days_rainy_season
-
-
-def _estimate_chill_hours(temp_min: float, temp_max: float) -> float:
-    """Sinusoidal model: simulate 24 hourly temperatures, count hours < 7.2 °C."""
-    if temp_min >= 7.2:
-        return 0.0
-    if temp_max <= 0:
-        return 0.0
-    midpoint = (temp_min + temp_max) / 2.0
-    amplitude = (temp_max - temp_min) / 2.0
-    count = 0
-    for hour in range(24):
-        hourly = midpoint + amplitude * math.sin(((hour - 9) / 24) * 2 * math.pi)
-        if hourly < 7.2:
-            count += 1
-    return float(count)
 
 
 def extract_weather_history(
@@ -108,12 +65,13 @@ def extract_weather_history(
     ordered_rows = sorted(weather_data, key=lambda row: str(row.get("date", "")))
 
     for raw in ordered_rows:
-        current_date = date.fromisoformat(str(raw.get("date")))
-        temp_min = _to_float(raw.get("temp_min") or raw.get("temperature_min"))
-        temp_max = _to_float(raw.get("temp_max") or raw.get("temperature_max"))
-        precip = _to_float(raw.get("precip") or raw.get("precipitation_sum"))
-        et0 = _to_float(raw.get("et0") or raw.get("et0_fao_evapotranspiration"))
-        wind = _to_float(raw.get("wind_speed_max"))
+        w = WeatherRowAccessor(raw)
+        current_date = w.parsed_date
+        temp_min = w.temp_min
+        temp_max = w.temp_max
+        precip = w.precipitation
+        et0 = w.et0 or 0.0
+        wind = w.wind_speed_max or 0.0
 
         daily_rows.append(
             WeatherDay(
@@ -178,7 +136,7 @@ def extract_weather_history(
 
     chill_hours = round(
         sum(
-            _estimate_chill_hours(day.temp_min, day.temp_max)
+            estimate_chill_hours(day.temp_max, day.temp_min)
             for day in daily_rows
             if day.date.month in {11, 12, 1, 2}
         ),

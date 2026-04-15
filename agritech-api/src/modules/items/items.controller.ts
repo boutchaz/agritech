@@ -184,6 +184,16 @@ export class ItemsController {
     return this.itemsService.findDeletedItems(organizationId, filters);
   }
 
+  @Get('by-barcode/:barcode')
+  @ApiOperation({ summary: 'Find an item or variant by barcode' })
+  @ApiParam({ name: 'barcode', description: 'Item or variant barcode' })
+  @ApiResponse({ status: 200, description: 'Barcode match retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'No item found with barcode' })
+  async findByBarcode(@Req() req: any, @Param('barcode') barcode: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.findByBarcode(barcode, organizationId);
+  }
+
   // =====================================================
   // STOCK LEVELS & FARM INTEGRATION ENDPOINTS
   // =====================================================

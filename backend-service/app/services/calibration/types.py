@@ -4,7 +4,80 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any, Literal
 
+import math
+
 from pydantic import BaseModel, Field, model_validator
+
+
+class WeatherRowAccessor:
+    """Single source of truth for reading weather row dicts.
+
+    Weather rows come from different sources (Open-Meteo, DB, NestJS) with
+    inconsistent field names.  This class normalizes the access pattern so
+    every consumer reads fields the same way.
+    """
+
+    __slots__ = ("_row",)
+
+    def __init__(self, row: dict[str, Any]) -> None:
+        self._row = row
+
+    # --- temperatures ---
+    @property
+    def temp_min(self) -> float:
+        v = self._row.get("temp_min") or self._row.get("temperature_min")
+        return float(v) if v is not None else 0.0
+
+    @property
+    def temp_max(self) -> float:
+        v = self._row.get("temp_max") or self._row.get("temperature_max")
+        return float(v) if v is not None else 0.0
+
+    @property
+    def temp_mean(self) -> float:
+        v = self._row.get("temperature_mean") or self._row.get("temp_mean")
+        if v is not None:
+            return float(v)
+        return (self.temp_min + self.temp_max) / 2.0
+
+    # --- other fields ---
+    @property
+    def precipitation(self) -> float:
+        v = self._row.get("precip") or self._row.get("precipitation_sum")
+        return float(v) if v is not None else 0.0
+
+    @property
+    def et0(self) -> float | None:
+        v = self._row.get("et0") or self._row.get("et0_fao_evapotranspiration")
+        return float(v) if v is not None else None
+
+    @property
+    def wind_speed_max(self) -> float | None:
+        v = self._row.get("wind_speed_max")
+        return float(v) if v is not None else None
+
+    @property
+    def date_str(self) -> str:
+        return str(self._row.get("date", ""))
+
+    @property
+    def parsed_date(self) -> date:
+        return date.fromisoformat(self.date_str)
+
+    @property
+    def raw(self) -> dict[str, Any]:
+        return self._row
+
+    @staticmethod
+    def to_float(value: Any, default: float = 0.0) -> float:
+        """Safe float conversion — handles None, NaN, non-numeric."""
+        if value is None:
+            return default
+        try:
+            f = float(value)
+            return f if math.isfinite(f) else default
+        except (ValueError, TypeError):
+            return default
 
 
 class MaturityPhase(str, Enum):
@@ -51,6 +124,11 @@ class IndexTimePoint(BaseModel):
     value: float
     outlier: bool = False
     interpolated: bool = False
+
+    @property
+    def is_observed(self) -> bool:
+        """True if this point is real data (not interpolated, not an outlier)."""
+        return not self.interpolated and not self.outlier
 
 
 class PercentileSet(BaseModel):
@@ -228,10 +306,19 @@ class Step6Output(BaseModel):
     alternance: AlternanceInfo | None = None
 
 
+class NutritionalZones(BaseModel):
+    """GCI-based nutritional zoning — chlorophyll/nitrogen status map."""
+    zones_geojson: GeoJsonFeatureCollection
+    zone_summary: list[ZoneSummary]
+    spatial_pattern_type: str
+    index_used: str = "GCI"
+
+
 class Step7Output(BaseModel):
     zones_geojson: GeoJsonFeatureCollection
     zone_summary: list[ZoneSummary]
     spatial_pattern_type: str
+    nutritional_zones: NutritionalZones | None = None
 
 
 class Step8Output(BaseModel):

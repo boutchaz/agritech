@@ -4,8 +4,7 @@ import { Logger } from '@nestjs/common';
 
 const logger = new Logger('CropReferenceLoader');
 
-let cache: Map<string, Record<string, unknown>> | null = null;
-let moteurConfigCache: Record<string, unknown> | null = null;
+// No caching — always read from disk. Referentials change during dev.
 
 const REFERENTIALS_SEARCH_PATHS = [
   // Production Docker image: copied next to dist/
@@ -92,16 +91,15 @@ async function loadAllFromDb(
 }
 
 /**
- * Get a crop reference by type. Tries in-memory cache first, then disk, then DB.
- * For synchronous callers that can't await, use getLocalCropReference (disk-only).
+ * Get a crop reference by type. Always reads from disk — no caching.
+ * Referentials may change during development; caching causes stale data.
+ * Disk reads are fast enough (JSON parse of ~50KB files).
  */
 export function getLocalCropReference(
   cropType: string,
 ): Record<string, unknown> | null {
-  if (!cache) {
-    cache = loadAllFromDisk();
-  }
-  return cache.get(cropType.toLowerCase()) ?? null;
+  const all = loadAllFromDisk();
+  return all.get(cropType.toLowerCase()) ?? null;
 }
 
 /**
@@ -112,57 +110,50 @@ export async function getCropReference(
   cropType: string,
   supabaseAdmin: { from: (table: string) => any },
 ): Promise<Record<string, unknown> | null> {
-  // Try in-memory cache / disk first
   const local = getLocalCropReference(cropType);
   if (local) return local;
 
   // Fall back to DB
   const dbMap = await loadAllFromDb(supabaseAdmin);
-  // Merge DB results into cache so subsequent sync calls hit cache
-  for (const [key, value] of dbMap) {
-    cache?.set(key, value);
-  }
-
-  return cache?.get(cropType.toLowerCase()) ?? null;
-}
-
-export function reloadCropReferences(): void {
-  cache = null;
+  return dbMap.get(cropType.toLowerCase()) ?? null;
 }
 
 /**
- * Load and cache MOTEUR_CONFIG.json — culture-agnostic engine configuration.
+ * @deprecated No-op — caching removed. Kept for call-site compatibility.
+ */
+export function reloadCropReferences(): void {
+  // no-op
+}
+
+/**
+ * Load MOTEUR_CONFIG.json — culture-agnostic engine configuration.
+ * Always reads from disk (no caching).
  */
 export function getMoteurConfig(): Record<string, unknown> | null {
-  if (moteurConfigCache) {
-    return moteurConfigCache;
-  }
-
   const dir = discoverReferentialsDir();
   if (!dir) {
-    logger.warn('No referentials/ directory found for MOTEUR_CONFIG.json');
     return null;
   }
 
   const configPath = path.join(dir, 'MOTEUR_CONFIG.json');
   if (!fs.existsSync(configPath)) {
-    logger.warn(`MOTEUR_CONFIG.json not found at ${configPath}`);
     return null;
   }
 
   try {
     const raw = fs.readFileSync(configPath, 'utf-8');
-    moteurConfigCache = JSON.parse(raw) as Record<string, unknown>;
-    logger.log('Loaded MOTEUR_CONFIG.json');
-    return moteurConfigCache;
+    return JSON.parse(raw) as Record<string, unknown>;
   } catch (err) {
     logger.error(`Failed to parse MOTEUR_CONFIG.json: ${(err as Error).message}`);
     return null;
   }
 }
 
+/**
+ * @deprecated No-op — caching removed.
+ */
 export function reloadMoteurConfig(): void {
-  moteurConfigCache = null;
+  // no-op
 }
 
 export async function getMineralExportsFromDb(

@@ -458,6 +458,46 @@ export class ItemsService {
     return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
+  async findByBarcode(barcode: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('*, item:items(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (variantError) {
+      this.logger.error(`Failed to fetch barcode variant: ${variantError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode variant: ${variantError.message}`);
+    }
+
+    if (variant) {
+      return { type: 'variant', variant, item: variant.item };
+    }
+
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('*, variants:product_variants(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (itemError) {
+      this.logger.error(`Failed to fetch barcode item: ${itemError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode item: ${itemError.message}`);
+    }
+
+    if (item) {
+      return { type: 'item', item };
+    }
+
+    throw new NotFoundException(`No item found with barcode: ${barcode}`);
+  }
+
   // =====================================================
   // PRODUCT VARIANTS
   // =====================================================
@@ -530,9 +570,10 @@ export class ItemsService {
 
     const { error } = await supabase
       .from('product_variants')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete product variant: ${error.message}`);
@@ -609,7 +650,8 @@ export class ItemsService {
       const nextSeq = maxSeq + 1;
       return `${prefix}-${year}-${nextSeq.toString().padStart(5, '0')}`;
     } catch (error) {
-      this.logger.error(`Item code generation error: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Item code generation error: ${err.message}`);
       throw error;
     }
   }

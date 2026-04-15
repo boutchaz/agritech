@@ -147,8 +147,9 @@ export class CalibrationReviewAdapter {
     const healthTotal = this.asNumber(healthScoreObj.total, 0);
     const healthMatch = HEALTH_LABELS.find((h) => healthTotal >= h.min) ?? HEALTH_LABELS[HEALTH_LABELS.length - 1];
 
-    // Confidence score
-    const confidenceNormalized = this.asNumber(confidence.normalized_score, 0);
+    // Confidence score (pipeline uses 0–1; legacy snapshots may already use 0–100)
+    const confidenceRaw = this.asNumber(confidence.normalized_score, 0);
+    const confidenceNormalized = this.confidenceNormalizedToPercent(confidenceRaw);
     const confidenceMatch = CONFIDENCE_LEVELS.find((c) => confidenceNormalized >= c.min) ?? CONFIDENCE_LEVELS[CONFIDENCE_LEVELS.length - 1];
 
     // Yield potential
@@ -191,6 +192,10 @@ export class CalibrationReviewAdapter {
     };
   }
 
+  /**
+   * Build summary narrative (template-based fallback).
+   * AI enrichment happens in calibration.service.ts via aiReportsService.generateCalibrationSummary().
+   */
   private buildSummaryNarrative(
     healthScore: number,
     healthLabel: HealthLabel,
@@ -202,7 +207,6 @@ export class CalibrationReviewAdapter {
   ): string {
     const parts: string[] = [];
 
-    // Health sentence
     const healthDescriptions: Record<HealthLabel, string> = {
       excellent: `La parcelle affiche un excellent état de santé (${healthScore}/100)`,
       bon: `La parcelle est en bon état général (${healthScore}/100)`,
@@ -212,12 +216,10 @@ export class CalibrationReviewAdapter {
     };
     parts.push(healthDescriptions[healthLabel] + ".");
 
-    // Yield sentence
     if (yieldRange) {
       parts.push(`Le potentiel de rendement estimé se situe entre ${yieldRange.min} et ${yieldRange.max} ${yieldRange.unit}.`);
     }
 
-    // Strengths
     if (strengths.length > 0) {
       const strengthNames = strengths.map((s) => s.component.toLowerCase());
       if (strengthNames.length === 1) {
@@ -227,7 +229,6 @@ export class CalibrationReviewAdapter {
       }
     }
 
-    // Concerns
     if (concerns.length > 0) {
       const critiques = concerns.filter((c) => c.severity === "critique");
       const vigilances = concerns.filter((c) => c.severity === "vigilance");
@@ -241,7 +242,6 @@ export class CalibrationReviewAdapter {
       }
     }
 
-    // Confidence caveat
     const confCaveats: Record<ConfidenceLevel, string> = {
       eleve: "",
       moyen: "Le score de confiance est modéré — une vérification terrain est conseillée.",
@@ -801,7 +801,9 @@ export class CalibrationReviewAdapter {
   private buildBlockD(input: CalibrationSnapshotInput): BlockDAmeliorer {
     const output = this.getOutput(input);
     const confidence = this.asRecord(output.confidence);
-    const currentConfidence = Math.round(this.asNumber(confidence.normalized_score, 0));
+    const currentConfidence = this.confidenceNormalizedToPercent(
+      this.asNumber(confidence.normalized_score, 0),
+    );
     const inputs = this.asRecord(input.inputs);
 
     const available: AvailableDataItem[] = [];
@@ -950,6 +952,18 @@ export class CalibrationReviewAdapter {
     if (stepName === "step4") return this.asRecord(output.phenology);
 
     return step;
+  }
+
+  /**
+   * Same scale rule as calibration.service when persisting: pipeline `normalized_score` is 0–1;
+   * older payloads may already store 0–100.
+   */
+  private confidenceNormalizedToPercent(raw: number): number {
+    if (!Number.isFinite(raw) || raw < 0) {
+      return 0;
+    }
+    const scaled = raw <= 1 ? raw * 100 : raw;
+    return Math.round(scaled);
   }
 
   private asRecord(value: unknown): JsonRecord {

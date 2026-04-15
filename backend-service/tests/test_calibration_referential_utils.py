@@ -283,6 +283,26 @@ def test_get_calibration_capabilities_defaults_and_override() -> None:
     assert override.min_observed_images == 12
 
 
+def test_get_calibration_capabilities_subtype_override() -> None:
+    caps = get_calibration_capabilities(
+        "olivier",
+        {
+            "capacites_calibrage": {
+                "supported": True,
+                "phenology_mode": "state_machine",
+                "required_indices": ["NDVI", "NIRv", "NDMI", "NDRE"],
+                "subtypes": {
+                    "traditionnel": {
+                        "required_indices": ["NDVI", "MSAVI2", "NDMI", "NDRE"],
+                    }
+                },
+            }
+        },
+        subtype="traditionnel",
+    )
+    assert caps.required_indices == ("NDVI", "MSAVI2", "NDMI", "NDRE")
+
+
 def test_parse_olive_stades_bbch_gdd_context_baseline_and_caps() -> None:
     ref = {
         "stades_bbch": [

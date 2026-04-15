@@ -826,7 +826,6 @@ describe('Calibration V2 integration', () => {
           shortwave_radiation_sum: 16,
           precipitation_sum: reading.precip,
           et0_fao_evapotranspiration: reading.et0,
-          gdd_olivier: null,
           chill_hours: 0,
         };
       }),

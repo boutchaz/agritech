@@ -23,7 +23,8 @@ import { detectPhaseAgeFromReferentiel } from "./phase-age-detector";
  * Max lookback days — must stay within FastAPI weather endpoint limit (365*3 = 1095 days).
  * We use 1090 to leave a small buffer.
  */
-export const MAX_LOOKBACK_DAYS = 1090;
+// 3 full cycles (Dec→Nov) + buffer = ~40 months ≈ 1280 days
+export const MAX_LOOKBACK_DAYS = 1280;
 
 export const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 
@@ -47,72 +48,90 @@ export { CALIBRATION_SATELLITE_INDICES };
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Calibration satellite lookback depth depends on tree phase from referentiel.
+ * Calibration lookback aligned to agronomic cycle start month.
  *
- * | Phase              | Lookback                  |
- * |--------------------|---------------------------|
- * | pleine_production  | 36 months                 |
- * | senescence         | 36 months                 |
- * | entree_production  | 24 months                 |
- * | juvenile           | 12 months                 |
- * | No planting year   | 24 months (default)       |
+ * The state machine needs **complete cycles** (Dec→Nov for olive).
+ * Lookback anchors to the cycle start month, not the run date, so
+ * every returned date range contains N full cycles.
  *
- * Phase thresholds come from the crop referentiel (e.g. olive: juvenile < 5y,
- * entree_production < 10y) via detectPhaseAgeFromReferentiel.
+ * | Phase              | Complete cycles needed |
+ * |--------------------|-----------------------|
+ * | juvenile           | 1                     |
+ * | entree_production  | 2                     |
+ * | pleine_production  | 3                     |
+ * | senescence         | 3                     |
+ * | unknown / default  | 2                     |
  *
- * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
- * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
+ * Cycle start month is read from ``stades_bbch[0].mois[0]`` in the
+ * referential (Dec for all current crops).
  */
+
+const MONTH_ABBR_TO_NUM: Record<string, number> = {
+  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+function getCycleStartMonth(ref: Record<string, unknown> | null): number {
+  if (!ref) return 12; // default Dec
+  const stades = ref.stades_bbch;
+  if (!Array.isArray(stades) || stades.length === 0) return 12;
+  const firstStade = stades[0] as Record<string, unknown>;
+  const mois = firstStade?.mois;
+  if (Array.isArray(mois) && mois.length > 0) {
+    return MONTH_ABBR_TO_NUM[String(mois[0])] ?? 12;
+  }
+  return 12;
+}
+
+function cyclesNeededForPhase(phase: string): number {
+  switch (phase) {
+    case 'juvenile':
+      return 1;
+    case 'pleine_production':
+    case 'senescence':
+    case 'maturite_avancee':
+      return 3;
+    case 'entree_production':
+    default:
+      return 2;
+  }
+}
+
 export function getCalibrationLookbackDate(
   plantingYear: number | null,
   cropType?: string | null,
   system?: string | null,
 ): string {
   const now = new Date();
+  const ref = cropType ? getLocalCropReference(cropType) : null;
+  const cycleStartMonth = getCycleStartMonth(ref);
 
-  let start: Date;
-
-  if (plantingYear != null) {
+  // Resolve maturity phase
+  let phase = 'unknown';
+  if (plantingYear != null && cropType) {
     const ageAns = now.getFullYear() - plantingYear;
-
-    // Resolve phase from referentiel if crop data is available
-    let phase: string;
-    if (cropType) {
-      const ref = getLocalCropReference(cropType);
-      phase = ref
-        ? detectPhaseAgeFromReferentiel(ageAns, system ?? 'intensif', ref)
-        : 'unknown';
-    } else {
-      phase = 'unknown';
+    if (ref) {
+      phase = detectPhaseAgeFromReferentiel(ageAns, system ?? 'intensif', ref);
     }
-
-    if (phase === 'pleine_production' || phase === 'senescence') {
-      // Mature trees: 36 months
-      start = new Date();
-      start.setMonth(start.getMonth() - 36);
-    } else if (phase === 'juvenile') {
-      // Young trees: recent season only (rolling 12 months)
-      start = new Date();
-      start.setMonth(start.getMonth() - 12);
-    } else {
-      // entree_production or unknown: 24 months
-      start = new Date();
-      start.setMonth(start.getMonth() - 24);
-    }
-  } else {
-    // No planting year: default 24 months
-    start = new Date();
-    start.setMonth(start.getMonth() - 24);
   }
+
+  const cycles = cyclesNeededForPhase(phase);
+
+  // Find the most recent cycle start month before today (UTC to avoid TZ drift)
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1; // 1-indexed
+  const cycleYear = nowMonth >= cycleStartMonth ? nowYear : nowYear - 1;
+
+  // Go back N full cycles from the most recent cycle start
+  const startYear = cycleYear - cycles;
+  const startStr = `${startYear}-${String(cycleStartMonth).padStart(2, "0")}-01`;
 
   // Clamp: never exceed MAX_LOOKBACK_DAYS from today
   const maxStart = new Date();
   maxStart.setDate(maxStart.getDate() - MAX_LOOKBACK_DAYS);
-  if (start < maxStart) {
-    start = maxStart;
-  }
+  const maxStartStr = maxStart.toISOString().split("T")[0];
 
-  return start.toISOString().split("T")[0];
+  return startStr < maxStartStr ? maxStartStr : startStr;
 }
 
 export function resolveCalibratingRecoveryPhase(profileSnapshot: unknown): AiPhase {
@@ -672,6 +691,7 @@ export class CalibrationDataService {
 
   async fetchWeatherRows(
     parcel: ParcelContext,
+    sinceDate?: string,
   ): Promise<WeatherDailyRow[]> {
     if (!parcel.boundary.length) {
       throw new BadRequestException(
@@ -685,14 +705,14 @@ export class CalibrationDataService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
 
     const { data, error } = await supabase
       .from("weather_daily_data")
       .select("*")
       .eq("latitude", roundedLatitude)
       .eq("longitude", roundedLongitude)
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true });
 
     if (error) {
@@ -708,6 +728,7 @@ export class CalibrationDataService {
     parcel: ParcelContext,
     organizationId: string,
     authToken?: string,
+    sinceDate?: string,
   ): Promise<void> {
     if (!parcel.boundary.length) {
       return;
@@ -718,7 +739,7 @@ export class CalibrationDataService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const startDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
+    const startDate = sinceDate ?? getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const endDate = new Date().toISOString().split("T")[0];
 
     const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
@@ -803,6 +824,14 @@ export class CalibrationDataService {
   async fetchCropReferenceData(
     cropType: string,
   ): Promise<Record<string, unknown>> {
+    // Disk first — JSON files are the source of truth for referentials.
+    // Edits to DATA_*.json take effect immediately without DB sync.
+    const localRef = getLocalCropReference(cropType);
+    if (localRef) {
+      return localRef;
+    }
+
+    // Fallback to DB (production without bundled files, or Docker)
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from("crop_ai_references")
@@ -818,20 +847,12 @@ export class CalibrationDataService {
 
     if (error) {
       this.logger.warn(
-        `DB crop reference lookup failed for "${cropType}": ${error.message}, falling back to local JSON`,
+        `DB crop reference lookup failed for "${cropType}": ${error.message}`,
       );
-    }
-
-    const localRef = getLocalCropReference(cropType);
-    if (localRef) {
-      this.logger.log(
-        `Using bundled JSON reference for "${cropType}"`,
-      );
-      return localRef;
     }
 
     this.logger.warn(
-      `No crop reference found for "${cropType}" (DB or local)`,
+      `No crop reference found for "${cropType}" (disk or DB)`,
     );
     return {};
   }

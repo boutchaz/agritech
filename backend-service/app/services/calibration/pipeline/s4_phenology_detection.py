@@ -58,7 +58,7 @@ def detect_phenology(
 def _filter_observed(satellite_data: Step1Output) -> Step1Output:
     """Return a copy of satellite_data with outlier/interpolated points removed."""
     filtered = {
-        name: [p for p in points if not p.interpolated and not p.outlier]
+        name: [p for p in points if p.is_observed]
         for name, points in satellite_data.index_time_series.items()
     }
     return satellite_data.model_copy(update={"index_time_series": filtered})

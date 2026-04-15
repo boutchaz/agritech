@@ -6591,8 +6591,6 @@ export class DemoDataService {
         soil_moisture_0_7cm: Math.max(soilMoisture, 0.11),
         soil_moisture_7_28cm: Math.max(Number((soilMoisture + 0.03).toFixed(4)), 0.14),
         source: "open-meteo-archive",
-        gdd_olivier: Math.max(temperatureMean - 10, 0),
-        gdd_agrumes: Math.max(temperatureMean - 12, 0),
         chill_hours: cycle < 10 ? 4 + (cycle % 3) : 0,
       });
 

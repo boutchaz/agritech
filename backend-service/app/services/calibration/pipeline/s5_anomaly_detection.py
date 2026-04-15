@@ -43,7 +43,7 @@ def detect_anomalies(
 
     for index, points in satellite.index_time_series.items():
         observed_points = [
-            point for point in points if not point.interpolated and not point.outlier
+            point for point in points if point.is_observed
         ]
         if len(observed_points) < 6:
             continue

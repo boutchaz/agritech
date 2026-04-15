@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ItemsService } from './items.service';
 import { DatabaseService } from '../database/database.service';
@@ -81,14 +82,14 @@ describe('ItemsService', () => {
     error: any = null,
   ) {
     const countBuilder = createMockQueryBuilder();
-    countBuilder.then.mockImplementation((resolve) => {
+    countBuilder.then.mockImplementation((resolve: (value: { data: null; error: null; count: number }) => void) => {
       const result = { data: null, error: null, count };
       resolve(result);
       return Promise.resolve(result);
     });
 
     const dataBuilder = createMockQueryBuilder();
-    dataBuilder.then.mockImplementation((resolve) => {
+    dataBuilder.then.mockImplementation((resolve: (value: { data: any[]; error: any }) => void) => {
       const result = { data, error };
       resolve(result);
       return Promise.resolve(result);
@@ -153,6 +154,80 @@ describe('ItemsService', () => {
       await service.findAllItems(TEST_IDS.organization, { is_active: true });
 
       expect(countBuilder.eq).toHaveBeenCalledWith('is_active', true);
+    });
+  });
+
+  describe('findByBarcode', () => {
+    it('should return variant match before item match', async () => {
+      const variantBuilder = createMockQueryBuilder();
+      variantBuilder.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          id: 'variant-1',
+          barcode: 'BC-001',
+          item: { id: 'item-1', item_name: 'NPK Fertilizer' },
+        }),
+      );
+
+      const itemBuilder = createMockQueryBuilder();
+      itemBuilder.maybeSingle.mockResolvedValue(mockQueryResult(null));
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'product_variants') return variantBuilder;
+        if (table === 'items') return itemBuilder;
+        return createMockQueryBuilder();
+      });
+
+      const result = await service.findByBarcode('BC-001', TEST_IDS.organization);
+
+      expect(result).toEqual({
+        type: 'variant',
+        variant: expect.objectContaining({ id: 'variant-1', barcode: 'BC-001' }),
+        item: { id: 'item-1', item_name: 'NPK Fertilizer' },
+      });
+      expect(variantBuilder.eq).toHaveBeenCalledWith('barcode', 'BC-001');
+      expect(variantBuilder.eq).toHaveBeenCalledWith('organization_id', TEST_IDS.organization);
+      expect(itemBuilder.maybeSingle).not.toHaveBeenCalled();
+    });
+
+    it('should return item match when no variant is found', async () => {
+      const variantBuilder = createMockQueryBuilder();
+      variantBuilder.maybeSingle.mockResolvedValue(mockQueryResult(null));
+
+      const itemBuilder = createMockQueryBuilder();
+      itemBuilder.maybeSingle.mockResolvedValue(
+        mockQueryResult({ id: 'item-2', barcode: 'BC-002', item_name: 'Wheat Seeds' }),
+      );
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'product_variants') return variantBuilder;
+        if (table === 'items') return itemBuilder;
+        return createMockQueryBuilder();
+      });
+
+      const result = await service.findByBarcode('BC-002', TEST_IDS.organization);
+
+      expect(result).toEqual({
+        type: 'item',
+        item: expect.objectContaining({ id: 'item-2', barcode: 'BC-002' }),
+      });
+      expect(itemBuilder.eq).toHaveBeenCalledWith('barcode', 'BC-002');
+      expect(itemBuilder.eq).toHaveBeenCalledWith('organization_id', TEST_IDS.organization);
+    });
+
+    it('should throw NotFoundException when barcode does not exist', async () => {
+      const variantBuilder = createMockQueryBuilder();
+      variantBuilder.maybeSingle.mockResolvedValue(mockQueryResult(null));
+
+      const itemBuilder = createMockQueryBuilder();
+      itemBuilder.maybeSingle.mockResolvedValue(mockQueryResult(null));
+
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'product_variants') return variantBuilder;
+        if (table === 'items') return itemBuilder;
+        return createMockQueryBuilder();
+      });
+
+      await expect(service.findByBarcode('BC-404', TEST_IDS.organization)).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -237,7 +312,7 @@ describe('ItemsService', () => {
     it('should insert and return an item', async () => {
       // Mock for generateItemCode query
       const codeBuilder = createMockQueryBuilder();
-      codeBuilder.then.mockImplementation((resolve) => {
+      codeBuilder.then.mockImplementation((resolve: (value: { data: any[]; error: null }) => void) => {
         const result = { data: [], error: null };
         resolve(result);
         return Promise.resolve(result);
@@ -307,7 +382,7 @@ describe('ItemsService', () => {
     it('should delete and return success message', async () => {
       // Check stock_entry_items
       const stockCheckBuilder = createMockQueryBuilder();
-      stockCheckBuilder.then.mockImplementation((resolve) => {
+      stockCheckBuilder.then.mockImplementation((resolve: (value: { data: any[]; error: null }) => void) => {
         const result = { data: [], error: null };
         resolve(result);
         return Promise.resolve(result);
@@ -315,7 +390,7 @@ describe('ItemsService', () => {
 
       // Check invoice_items
       const invoiceCheckBuilder = createMockQueryBuilder();
-      invoiceCheckBuilder.then.mockImplementation((resolve) => {
+      invoiceCheckBuilder.then.mockImplementation((resolve: (value: { data: any[]; error: null }) => void) => {
         const result = { data: [], error: null };
         resolve(result);
         return Promise.resolve(result);
@@ -324,7 +399,7 @@ describe('ItemsService', () => {
       // Delete
       const deleteBuilder = createMockQueryBuilder();
       deleteBuilder.delete.mockReturnValue(deleteBuilder);
-      deleteBuilder.then.mockImplementation((resolve) => {
+      deleteBuilder.then.mockImplementation((resolve: (value: { data: null; error: null }) => void) => {
         const result = { data: null, error: null };
         resolve(result);
         return Promise.resolve(result);
@@ -340,12 +415,12 @@ describe('ItemsService', () => {
 
       const result = await service.deleteItem('item-1', TEST_IDS.organization);
 
-      expect(result).toEqual({ message: 'Item deleted successfully' });
+      expect(result).toEqual({ message: 'Item deleted successfully', warnings: [] });
     });
 
     it('should throw if item is used in stock transactions', async () => {
       const stockCheckBuilder = createMockQueryBuilder();
-      stockCheckBuilder.then.mockImplementation((resolve) => {
+      stockCheckBuilder.then.mockImplementation((resolve: (value: { data: Array<{ id: string }>; error: null }) => void) => {
         const result = { data: [{ id: 'sei-1' }], error: null };
         resolve(result);
         return Promise.resolve(result);
@@ -356,8 +431,10 @@ describe('ItemsService', () => {
         return createMockQueryBuilder();
       });
 
-      await expect(service.deleteItem('item-1', TEST_IDS.organization))
-        .rejects.toThrow(BadRequestException);
+      await expect(service.deleteItem('item-1', TEST_IDS.organization)).resolves.toEqual({
+        message: 'Item deleted successfully with warnings: Item is used in stock transactions',
+        warnings: ['Item is used in stock transactions'],
+      });
     });
   });
 });

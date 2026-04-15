@@ -43,7 +43,7 @@ const weatherThresholdsSchema = z
   })
   .passthrough();
 
-const calibrationCapabilitiesSchema = z
+const calibrationCapabilitiesOverrideSchema = z
   .object({
     supported: z.boolean().optional(),
     phenology_mode: z.string().optional(),
@@ -53,6 +53,10 @@ const calibrationCapabilitiesSchema = z
     min_history_months_for_period_percentiles: z.number().int().min(0).optional(),
   })
   .passthrough();
+
+const calibrationCapabilitiesSchema = calibrationCapabilitiesOverrideSchema.extend({
+  subtypes: z.record(z.string(), calibrationCapabilitiesOverrideSchema).optional(),
+});
 
 const gddSchema = z
   .object({

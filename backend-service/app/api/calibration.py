@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from ..services.calibration.support.gdd_service import precompute_gdd
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
+from ..services.supabase_service import supabase_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -347,6 +348,7 @@ async def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
             weather_rows=request.weather_rows,
             storage=None,
             ndvi_raster_pixels=request.ndvi_raster_pixels,
+            supabase_svc=supabase_service,
         )
     except ValueError as exc:
         raise HTTPException(

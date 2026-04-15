@@ -15,7 +15,7 @@ interface ZoneMapProps {
   boundary?: number[][];
 }
 
-type ColorScale = 'vigor' | 'stress' | 'ndmi';
+type ColorScale = 'vigor' | 'gci' | 'ndmi';
 
 const ZONE_DESCRIPTIONS: Record<string, string> = {
   A: 'très vigoureuse, vert foncé',
@@ -38,16 +38,16 @@ const COLOR_SCALES: Record<ColorScale, { label: string; colors: [number, number,
       [69, 117, 180],   // blue (high)
     ],
   },
-  stress: {
-    label: 'Stress hydrique (NDMI)',
+  gci: {
+    label: 'Nutritionnel (GCI)',
     colors: [
-      [165, 0, 38],
-      [215, 48, 39],
-      [244, 109, 67],
-      [253, 174, 97],
-      [254, 224, 139],
-      [171, 217, 233],
-      [69, 117, 180],
+      [165, 0, 38],     // deep red (severe deficiency)
+      [215, 48, 39],    // red
+      [244, 109, 67],   // orange-red
+      [253, 174, 97],   // orange
+      [254, 224, 139],  // yellow
+      [144, 190, 109],  // light green
+      [39, 136, 69],    // dark green (well-nourished)
     ],
   },
   ndmi: {

@@ -198,6 +198,16 @@ describe('CalibrationReviewAdapter', () => {
       expect(result.block_a.confidence_level).toBe('moyen'); // 50-75 range
     });
 
+    it('scales 0–1 pipeline normalized_score to percent for level and score', () => {
+      const input = buildSnapshotInput();
+      (input.output as { confidence: { normalized_score: number } }).confidence.normalized_score =
+        0.6364;
+      const result = adapter.transform(input);
+      expect(result.block_a.confidence_score).toBe(64);
+      expect(result.block_a.confidence_level).toBe('moyen');
+      expect(result.block_d.current_confidence).toBe(64);
+    });
+
     it('returns yield range with min and max', () => {
       const result = adapter.transform(buildSnapshotInput());
       expect(result.block_a.yield_range).toBeDefined();

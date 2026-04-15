@@ -828,7 +828,7 @@ export class CalibrationService {
 
     const [satelliteImages, initialWeatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
       this.dataService.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
-      this.dataService.fetchWeatherRows(parcel),
+      this.dataService.fetchWeatherRows(parcel, calibrationDataStart),
       this.dataService.fetchAnalyses(parcelId),
       this.dataService.fetchHarvestRecords(parcelId),
       this.dataService.fetchCropReferenceData(parcel.cropType),
@@ -838,8 +838,8 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(1, "weather_sync", "Synchronisation des données météo...");
-      await this.dataService.syncWeatherData(parcel, organizationId, authToken);
-      weatherRows = await this.dataService.fetchWeatherRows(parcel);
+      await this.dataService.syncWeatherData(parcel, organizationId, authToken, calibrationDataStart);
+      weatherRows = await this.dataService.fetchWeatherRows(parcel, calibrationDataStart);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
       );
@@ -1156,7 +1156,7 @@ export class CalibrationService {
       referenceData,
     ] = await Promise.all([
       this.dataService.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
-      this.dataService.fetchWeatherRows(parcel),
+      this.dataService.fetchWeatherRows(parcel, calibrationDataStart),
       this.dataService.fetchAnalyses(parcelId),
       this.dataService.fetchHarvestRecords(parcelId),
       this.dataService.fetchCropReferenceData(parcel.cropType),
@@ -1216,8 +1216,8 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(2, "weather_sync", "Synchronisation des données météo...");
-      await this.dataService.syncWeatherData(parcel, organizationId, authToken);
-      weatherRows = await this.dataService.fetchWeatherRows(parcel);
+      await this.dataService.syncWeatherData(parcel, organizationId, authToken, calibrationDataStart);
+      weatherRows = await this.dataService.fetchWeatherRows(parcel, calibrationDataStart);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
       );

@@ -1054,6 +1054,8 @@
       "cropCategory": "فئة المحصول",
       "cropType": "نوع المحصول",
       "variety": "الصنف",
+      "agromindSupported": "مدعوم من AgromindIA",
+      "agromindVarietySupported": "صنف مرجعي في AgromindIA",
       "plantingSystem": "نظام الزراعة",
       "spacing": "التباعد",
       "spacingPlaceholder": "مثال: 4×1.5",

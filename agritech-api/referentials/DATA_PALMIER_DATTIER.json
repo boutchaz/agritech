@@ -65,14 +65,46 @@
   },
   "capacites_calibrage": {
     "supported": true,
-    "phenology_mode": "legacy",
-    "required_indices": [
-      "NDVI",
-      "NDMI"
-    ],
+    "phenology_mode": "state_machine",
+    "subtypes": {
+      "traditionnel": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      }
+    },
     "min_observed_images": 10,
     "min_history_days": 120,
-    "min_history_months_for_period_percentiles": 24
+    "min_history_months_for_period_percentiles": 24,
+    "required_indices": [
+      "NDVI",
+      "NIRv",
+      "NDMI",
+      "NDRE",
+      "EVI",
+      "MSAVI",
+      "MSI",
+      "GCI"
+    ]
   },
   "caracteristiques_generales": {
     "type": "monocotyledone_arborescente",

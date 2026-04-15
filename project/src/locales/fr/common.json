@@ -1065,6 +1065,8 @@
       "cropCategory": "Catégorie de culture",
       "cropType": "Type de culture",
       "variety": "Variété",
+      "agromindSupported": "Supporté par AgromindIA",
+      "agromindVarietySupported": "Variété référencée AgromindIA",
       "plantingSystem": "Système de plantation",
       "spacing": "Espacement",
       "spacingPlaceholder": "Ex: 4x1.5",

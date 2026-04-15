@@ -44,30 +44,21 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 /**
- * Canonical 8-stage phase_kc order (olive agronomic cycle from stades_bbch).
- * This is the ONLY display order — all dashboard components use this.
+ * Extract unique phase names from timelines in order of first appearance.
+ * Phases come from the referential — no hardcoded list.
  */
-const CANONICAL_PHASES: string[] = [
-  'repos', 'debourrement', 'croissance', 'floraison',
-  'nouaison', 'grossissement', 'maturation', 'post_recolte',
-];
-
-/**
- * Map 6-phase state machine names → canonical phase_kc names.
- * Allows dashboard to normalize any format to the 8-stage display.
- */
-const PHASE_TO_CANONICAL: Record<string, string> = {
-  // 6-phase → 8-phase mapping
-  DORMANCE: 'repos',
-  DEBOURREMENT: 'debourrement',
-  FLORAISON: 'floraison',
-  NOUAISON: 'nouaison',
-  STRESS_ESTIVAL: 'grossissement', // summer stress ≈ fruit growth period
-  REPRISE_AUTOMNALE: 'post_recolte', // autumn recovery ≈ post-harvest
-};
-
-function toCanonicalPhase(phase: string): string {
-  return PHASE_TO_CANONICAL[phase] ?? phase;
+function extractPhasesFromTimelines(timelines: SeasonTimelineEntry[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const tl of timelines) {
+    for (const t of tl.transitions) {
+      if (t.phase && !seen.has(t.phase)) {
+        seen.add(t.phase);
+        ordered.push(t.phase);
+      }
+    }
+  }
+  return ordered;
 }
 
 
@@ -118,55 +109,68 @@ function isCompleteCycle(timeline: SeasonTimelineEntry): boolean {
 // ── Phase Summary Cards ──
 
 function PhaseSummaryCards({ timelines }: { timelines: SeasonTimelineEntry[] }) {
-  const summaries = useMemo(() => {
+  const { phases, yearlyData } = useMemo(() => {
     const validTimelines = timelines.filter(isCompleteCycle);
     const source = validTimelines.length > 0 ? validTimelines : timelines;
+    const phaseList = extractPhasesFromTimelines(source);
 
-    // Accumulate GDD per canonical phase
-    const acc = new Map<string, { gddSum: number; count: number }>();
-    for (const timeline of source) {
-      for (const transition of timeline.transitions) {
-        if (!transition.phase || !transition.start_date) continue;
-        const canonical = toCanonicalPhase(transition.phase);
-        const current = acc.get(canonical) ?? { gddSum: 0, count: 0 };
-        current.gddSum += transition.gdd_at_entry;
-        current.count += 1;
-        acc.set(canonical, current);
+    // Build per-year GDD data: { year → { phase → gdd } }
+    const byYear: Record<number, Record<string, number>> = {};
+    for (const tl of source) {
+      const yearPhases: Record<string, number> = {};
+      for (const t of tl.transitions) {
+        if (t.phase && t.start_date) {
+          yearPhases[t.phase] = t.gdd_at_entry;
+        }
       }
+      byYear[tl.year] = yearPhases;
     }
 
-    // Always show all 8 canonical phases
-    return CANONICAL_PHASES.map((phase) => {
-      const data = acc.get(phase);
-      return {
-        phase,
-        gddAvg: data && data.count > 0 ? data.gddSum / data.count : 0,
-        validCycles: data?.count ?? 0,
-      };
-    });
+    return { phases: phaseList, yearlyData: byYear };
   }, [timelines]);
 
-  if (summaries.length === 0) return null;
+  const years = Object.keys(yearlyData).map(Number).sort();
+  if (phases.length === 0 || years.length === 0) return null;
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
-      {summaries.map((summary) => (
-        <div
-          key={summary.phase}
-          className="flex flex-col items-center p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-w-[150px]"
-        >
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 text-center">
-            {formatPhaseLabel(summary.phase)}
-          </span>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {summary.validCycles > 0 ? summary.gddAvg.toFixed(1) : '—'}
-          </span>
-          <div className="flex gap-3 mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-            <span>GDD moyen entrée</span>
-            <span>{summary.validCycles} cycle{summary.validCycles !== 1 ? 's' : ''}</span>
-          </div>
-        </div>
-      ))}
+    <div className="overflow-x-auto pb-2">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 dark:text-gray-400">
+              Cycle
+            </th>
+            {phases.map((phase) => (
+              <th key={phase} className="text-center py-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                {formatPhaseLabel(phase)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {years.map((year) => (
+            <tr key={year} className="border-b border-gray-100 dark:border-gray-800">
+              <td className="py-2 px-3 font-medium text-gray-700 dark:text-gray-300 text-xs">
+                {year}–{year + 1}
+              </td>
+              {phases.map((phase) => {
+                const gdd = yearlyData[year]?.[phase];
+                return (
+                  <td key={phase} className="text-center py-2 px-2">
+                    {gdd !== undefined ? (
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {Math.round(gdd)}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-600">—</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -181,21 +185,20 @@ function TimelineBar({ timeline }: { timeline: SeasonTimelineEntry }) {
         const start = dateToMonthPosition(t.start_date);
         const end = t.end_date ? dateToMonthPosition(t.end_date) : start + 1;
         const width = Math.max(end - start, 0.3);
-        const canonical = toCanonicalPhase(t.phase);
         return {
-          phase: canonical,
+          phase: t.phase,
           left: (start / 12) * 100,
           width: (width / 12) * 100,
-          color: getPhaseColor(canonical),
-          label: formatPhaseLabel(canonical),
+          color: getPhaseColor(t.phase),
+          label: formatPhaseLabel(t.phase),
         };
       });
   }, [timeline.transitions]);
 
   return (
     <div className="flex items-center gap-3">
-      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-12 text-right shrink-0">
-        {timeline.year}
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 w-20 text-right shrink-0">
+        {timeline.year}–{timeline.year + 1}
       </span>
       <div className="relative flex-1 h-6 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
         {segments.map((seg, i) => (
@@ -231,7 +234,7 @@ function PhaseMetricsTable({ timelines }: { timelines: SeasonTimelineEntry[] }) 
     for (const tl of source) {
       for (const transition of tl.transitions) {
         if (!transition.phase || !transition.start_date) continue;
-        const canonical = toCanonicalPhase(transition.phase);
+        const canonical = transition.phase;
         const current = byPhase.get(canonical) ?? { gddSum: 0, count: 0, confidenceCount: {} };
         current.gddSum += transition.gdd_at_entry;
         current.count += 1;
@@ -241,8 +244,9 @@ function PhaseMetricsTable({ timelines }: { timelines: SeasonTimelineEntry[] }) 
       }
     }
 
-    // Always show all 8 canonical phases
-    return CANONICAL_PHASES.map((phase) => {
+    // Show phases from actual data (referential-driven)
+    const phases = extractPhasesFromTimelines(source);
+    return phases.map((phase) => {
       const item = byPhase.get(phase);
       const dominantConfidence = item
         ? Object.entries(item.confidenceCount).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'MODEREE'
@@ -359,7 +363,7 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
 
           {/* Month header */}
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12" />
+            <div className="w-20" />
             <div className="flex-1 flex">
               {MONTHS.map((m) => (
                 <span key={m} className="flex-1 text-center text-[10px] text-gray-400 dark:text-gray-500">
@@ -369,16 +373,19 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
             </div>
           </div>
 
-          {/* Year bars */}
+          {/* Cycle bars — filtered same as table */}
           <div className="space-y-2">
-            {data.timelines.map((tl) => (
+            {(data.timelines.filter(isCompleteCycle).length > 0
+              ? data.timelines.filter(isCompleteCycle)
+              : data.timelines
+            ).map((tl) => (
               <TimelineBar key={tl.year} timeline={tl} />
             ))}
           </div>
 
-          {/* Legend — always shows all 8 canonical phases */}
+          {/* Legend — shows phases from actual data */}
           <div className="flex flex-wrap gap-3 mt-3">
-            {CANONICAL_PHASES.map((phase) => (
+            {extractPhasesFromTimelines(data.timelines).map((phase) => (
                 <div key={phase} className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getPhaseColor(phase) }} />
                   <span className="text-[10px] text-gray-500 dark:text-gray-400">

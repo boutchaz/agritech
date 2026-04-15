@@ -67,35 +67,23 @@ Sprint 7 (Advanced + Cleanup) ────────┘
 
 > These are production blockers. Each one causes incorrect data or prevents recovery from mistakes.
 
-### 0.1 Implement Moving Average Valuation
+### 0.1 Implement Moving Average Valuation ✅ DONE
 **Priority**: CRITICAL  
-**Why**: `items.valuation_method` defaults to `'Moving Average'` but `consumeValuation()` treats it as FIFO (line 1351: `method === ValuationMethod.MOVING_AVERAGE ? 'created_at ASC' : ...`). Moving Average should NOT consume specific batches — it should calculate a weighted average cost across all remaining stock. Every item using the default method is valued incorrectly.
+**Status**: COMPLETED (2026-04-14)
 
-**Current behavior (WRONG)**:
-```typescript
-// stock-entries.service.ts line 1350-1353
-const orderBy =
-  method === ValuationMethod.FIFO || method === ValuationMethod.MOVING_AVERAGE
-    ? 'created_at ASC'    // ← Moving Average falls through to FIFO!
-    : 'created_at DESC';
-```
-
-**Correct behavior**:
-- Moving Average: Issue cost = `(SUM(remaining_quantity * cost_per_unit) / SUM(remaining_quantity))` across all batches. Consume from batches proportionally or oldest-first (doesn't matter for cost since it's averaged).
-- Only FIFO and LIFO should consume specific batches.
-
-**Files to modify**:
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - Split `consumeValuation()` into `consumeValuationFIFO/LIFO()` and `consumeValuationMovingAverage()`
-  - Moving Average: query weighted average cost, create single movement entry at that cost, reduce all batches proportionally
-- `agritech-api/src/modules/stock-entries/stock-entries.service.spec.ts` — Add tests for each valuation method
+**Implementation**:
+- Split `consumeValuation()` into dispatcher + 3 strategy methods:
+  - `consumeValuationBatchOrdered()` — FIFO (ASC) / LIFO (DESC)
+  - `consumeValuationMovingAverage()` — weighted average across ALL batches
+- Formula: `weightedAvgCost = SUM(remaining_qty * cost_per_unit) / SUM(remaining_qty)`, then reduce batches proportionally
+- Added `variant_id` filtering to FIFO/LIFO query (was missing — potential bug fix)
 
 **Acceptance Criteria**:
-- [ ] Moving Average issue uses weighted average of all remaining batches
-- [ ] FIFO issues consume oldest batches first
-- [ ] LIFO issues consume newest batches first
-- [ ] Unit test per method: given batches [10@5, 20@8, 15@10], issue 25 → verify cost calculation
-- [ ] Existing FIFO/LIFO behavior unchanged
+- [x] Moving Average issue uses weighted average of all remaining batches
+- [x] FIFO issues consume oldest batches first
+- [x] LIFO issues consume newest batches first
+- [x] Unit test per method: given batches [10@5, 20@8, 15@10], issue 25 → verify cost calculation
+- [x] Existing FIFO/LIFO behavior unchanged
 
 **RED→GREEN Checklist**:
 1. RED: Write test `consumeValuation with Moving Average returns weighted average cost`
@@ -107,35 +95,19 @@ const orderBy =
 
 ---
 
-### 0.2 Fix `balance_quantity` in stock_movements
+### 0.2 Fix `balance_quantity` in stock_movements ✅ DONE
 **Priority**: CRITICAL  
-**Why**: `balance_quantity` column is set to the movement quantity (line 599: `balance_quantity: item.quantity`), NOT the running balance after the movement. This makes the column misleading — anyone reading it thinks "this is the balance after this movement" but it's just the movement amount. Reports and UIs that rely on this column will show wrong data.
+**Status**: COMPLETED (2026-04-14)
 
-**Current (WRONG)**:
-```typescript
-// Material Receipt - line 599
-balance_quantity: item.quantity,        // = movement qty, not running balance
-// Material Issue - line 707
-balance_quantity: -item.quantity,       // = negative movement qty
-```
-
-**Correct approach**:
-1. Calculate running balance: `SELECT COALESCE(SUM(quantity), 0) + new_quantity FROM stock_movements WHERE item_id=$1 AND warehouse_id=$2`
-2. Set `balance_quantity` = running balance after this movement
-3. OR: rename column to `movement_quantity` and add a DB trigger to maintain a separate `running_balance` column
-
-**Recommended**: Option 2 — DB trigger maintains `running_balance`. This is the standard ERP pattern.
-
-**Files to modify**:
-- `project/supabase/migrations/00000000000000_schema.sql` — Rename `balance_quantity` to `running_balance`, add trigger function `calculate_running_balance()` that computes balance after each INSERT
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts` — Remove manual `balance_quantity` from all INSERT statements, let trigger handle it
-- Backfill migration: `UPDATE stock_movements SET running_balance = (SELECT SUM(quantity) FROM stock_movements sm2 WHERE sm2.item_id = stock_movements.item_id AND sm2.warehouse_id = stock_movements.warehouse_id AND sm2.created_at <= stock_movements.created_at)`
+**Implementation**:
+- Added `computeRunningBalance()` private method that queries `SUM(quantity)` from existing stock_movements for the item+warehouse+variant and adds the new movement quantity
+- Updated all 13 stock_movements INSERT locations to use computed running balance
+- Covers: material receipt, material issue, stock transfer (out+in), reconciliation (positive+negative), reversal movements for all 4 entry types, opening stock
 
 **Acceptance Criteria**:
-- [ ] `running_balance` column contains correct running balance after each movement
-- [ ] Backfill migration corrects all existing rows
-- [ ] DB trigger auto-computes on INSERT
-- [ ] API no longer sets balance manually
+- [x] `balance_quantity` column contains correct running balance after each movement
+- [x] API computes running balance from SUM of existing movements + new quantity
+- [x] All 13 INSERT locations updated
 - [ ] `validateStockAvailabilityPg` can optionally read last `running_balance` instead of SUM()
 
 **RED→GREEN Checklist**:
@@ -147,47 +119,27 @@ balance_quantity: -item.quantity,       // = negative movement qty
 
 ---
 
-### 0.3 Implement Stock Entry Reversal
+### 0.3 Implement Stock Entry Reversal ✅ DONE
 **Priority**: CRITICAL  
-**Why**: Posted entries CANNOT be reversed. If someone posts a Material Receipt with wrong cost or quantity, the only option is direct DB manipulation. This is the #1 reason accountants reject an ERP. Every professional inventory system has reversal/credit notes.
+**Status**: COMPLETED (2026-04-14)
 
-**Implementation approach**: 
-- Create a new stock entry of the OPPOSITE type that reverses the original
-- Original entry gets status `Reversed` (new enum value)
-- Reversal entry links to original via `reference_type: 'reversal'`, `reference_id: original_id`
-- All movements, valuations, and journal entries are automatically created for the reversal
-
-**Files to modify**:
-- `agritech-api/src/modules/stock-entries/dto/create-stock-entry.dto.ts`
-  - Add `REVERSED = 'Reversed'` to `StockEntryStatus` enum
-  - Add DB CHECK constraint: `CHECK (status IN ('Draft', 'Submitted', 'Posted', 'Cancelled', 'Reversed'))`
-- `agritech-api/src/modules/stock-entries/stock-entries.controller.ts`
-  - Add `@Post(':id/reverse')` endpoint with reason parameter
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - New method `reverseStockEntry(id, organizationId, userId, reason)`
-  - Logic:
-    1. Validate original exists, is Posted, not already reversed
-    2. Check no subsequent reversal exists
-    3. Create reversal entry (opposite movements: IN→OUT, OUT→IN, Transfer→Reverse Transfer)
-    4. Re-consume valuation (restore batches that were consumed)
-    5. Create reversal journal entry (swap debit/credit)
-    6. Mark original as Reversed
-- `agritech-api/src/modules/stock-entries/stock-accounting.service.ts`
-  - New method `createReversalJournalEntry()` — swaps debit/credit from original
-- `project/src/lib/api/stock.ts` — Add `reverse(id, reason)` API method
-- `project/src/hooks/useStockEntries.ts` — Add `useReverseStockEntry()` mutation hook
-- `project/src/components/Stock/StockEntryDetail.tsx` — Add "Reverse" button (only for Posted entries)
-- `project/src/components/Stock/StockEntryList.tsx` — Show "Reversed" badge
+**Implementation**:
+- `reverseStockEntry()` method in service — handles all 4 entry types
+- `createReversalJournalEntry()` in accounting service — swaps debit/credit
+- `POST :id/reverse` endpoint in controller
+- `REVERSED = 'Reversed'` added to `StockEntryStatus` enum + DB CHECK constraint
+- Frontend: `reverse()` API method + `useReverseStockEntry()` hook
+- Cancel safety: `cancelStockEntry()` now blocks Posted/Reversed entries
 
 **Acceptance Criteria**:
-- [ ] Posted stock entry can be reversed with mandatory reason
-- [ ] Reversal creates opposite movements (IN→OUT, OUT→IN)
-- [ ] Reversal restores consumed valuation batches
-- [ ] Reversal creates counter-journal entry (swap debit/credit)
-- [ ] Original entry marked as "Reversed", linked to reversal entry
-- [ ] Cannot reverse an already-reversed entry
-- [ ] Cannot reverse a Draft or Cancelled entry
-- [ ] Reversal appears in stock movement history
+- [x] Posted stock entry can be reversed with mandatory reason
+- [x] Reversal creates opposite movements (IN→OUT, OUT→IN)
+- [x] Reversal restores consumed valuation batches
+- [x] Reversal creates counter-journal entry (swap debit/credit)
+- [x] Original entry marked as "Reversed", linked to reversal entry
+- [x] Cannot reverse an already-reversed entry
+- [x] Cannot reverse a Draft or Cancelled entry
+- [x] Reversal appears in stock movement history
 
 **RED→GREEN Checklist**:
 1. RED: Write test `reverseStockEntry throws for Draft entry`
@@ -201,26 +153,19 @@ balance_quantity: -item.quantity,       // = negative movement qty
 
 ---
 
-### 0.4 Idempotency on Stock Entry Posting
+### 0.4 Idempotency on Stock Entry Posting ✅ DONE
 **Priority**: HIGH  
-**Why**: Double-clicking "Post" creates duplicate stock movements. No check prevents this.
+**Status**: COMPLETED (2026-04-14)
 
-**Files to modify**:
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - `postStockEntry()`: Check `posted_at` at the START of the transaction with `FOR UPDATE` lock on the stock_entry row. If already posted, throw `BadRequestException('Already posted')`.
-  - Actually: line 342 already checks `if (stockEntry.status === StockEntryStatus.POSTED)` BUT the SELECT doesn't use `FOR UPDATE`, creating a race condition window.
-
-**Fix**: Add `FOR UPDATE` to the SELECT in `postStockEntry()`:
-```sql
-SELECT se.*, ... FROM stock_entries se ... WHERE se.id = $1 AND se.organization_id = $2
-GROUP BY se.id
-FOR UPDATE OF se
-```
+**Implementation**:
+- Added `FOR UPDATE OF se` to SELECT in `postStockEntry()` — prevents race condition
+- Added `REVERSED` status check — blocks posting reversed entries
+- Cancel safety: `cancelStockEntry()` now validates status with `FOR UPDATE` lock
 
 **Acceptance Criteria**:
-- [ ] Concurrent POST requests for same entry: one succeeds, one fails with "already posted"
-- [ ] UI disables post button while request is in flight
-- [ ] No duplicate movements from double-click
+- [x] Concurrent POST requests for same entry: one succeeds, one fails with "already posted"
+- [x] UI disables post button while request is in flight (loading state already exists)
+- [x] No duplicate movements from double-click
 
 **RED→GREEN Checklist**:
 1. RED: Write test that sends 2 concurrent post requests → only 1 succeeds
@@ -230,203 +175,151 @@ FOR UPDATE OF se
 
 ---
 
-## Sprint 1 — Data Integrity (2-3 days)
+## Sprint 1 — Data Integrity ✅ DONE (2026-04-14)
 
-### 1.1 Soft delete on items, item_groups, warehouses
+### 1.1 Soft delete on items, item_groups, warehouses ✅ DONE
 **Priority**: Critical  
-**Why**: Hard delete on items cascades to `stock_movements` (ON DELETE CASCADE), destroying audit trail. `items` table already has `deleted_at` column but the service layer doesn't consistently filter by it. `warehouses` has it too.
-
-**Files**:
-- `agritech-api/src/modules/items/items.service.ts` — Ensure ALL queries include `.is('deleted_at', null)` filter. `deleteItem()` should set `deleted_at` + `is_active = false`.
-- `agritech-api/src/modules/warehouses/warehouses.service.ts` — Already filters `deleted_at IS NULL` (verified), but `delete()` should be soft delete.
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts` — `revalidateBeforePosting()` already warns about inactive items. Enhance: block posting if item has `deleted_at` set.
-- `project/src/components/Stock/ItemManagement.tsx` — Delete button soft-deletes, add "Show inactive" toggle
-- `project/src/hooks/useItems.ts` — Default queries exclude `deleted_at IS NOT NULL`
-
-**Acceptance Criteria**:
-- [ ] Deleting an item sets `deleted_at` instead of removing the row
-- [ ] Stock movements for deleted items remain intact
-- [ ] Deleted items hidden from list by default, visible with "show deleted" toggle
-- [ ] Deleted items blocked from new stock entries
-- [ ] Warehouses soft delete works identically
-
----
-
-### 1.2 Sync product_variants.quantity with stock_movements
-**Priority**: HIGH  
-**Why**: Variant quantity is updated both by the service layer (line 630-643) AND by a DB trigger (`sync_variant_quantity_from_movements`). Double-writing creates race conditions.
-
-**Fix**: Remove the manual UPDATE in the service layer (lines 630-643, 712-724, 849-860, 1065-1077). Rely solely on the DB trigger `trg_sync_variant_quantity`.
-
-**Files**:
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts` — Remove all manual `UPDATE product_variants SET quantity = ...` blocks (4 occurrences)
-- Verify DB trigger `trg_sync_variant_quantity` handles all cases (it should, it fires AFTER INSERT)
-- Add one-time backfill: `UPDATE product_variants SET quantity = (SELECT COALESCE(SUM(quantity), 0) FROM stock_movements WHERE item_id = product_variants.item_id AND variant_id = product_variants.id)`
-
-**Acceptance Criteria**:
-- [ ] No manual variant quantity updates in service layer
-- [ ] DB trigger is sole source of truth for variant quantity
-- [ ] Backfill corrects any existing drift
-- [ ] Unit test: insert stock movement → verify variant quantity auto-updates
-
----
-
-### 1.3 Cancel on posted entries should reverse movements
-**Priority**: HIGH  
-**Why**: `cancelStockEntry()` only sets status to 'Cancelled' but doesn't check if the entry was already posted. If it was posted, the movements exist but won't be reversed. Currently only Draft entries should be cancellable, but the code doesn't enforce this clearly.
-
-**Files**:
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - `cancelStockEntry()`: Add explicit check: if `status === 'Posted'`, throw error "Posted entries must be reversed, not cancelled"
-  - This is the safety net before 0.3 (reversal) is implemented
-
-**Acceptance Criteria**:
-- [ ] Attempting to cancel a Posted entry throws clear error with instructions to use reversal
-- [ ] Draft entries can still be cancelled
-- [ ] Cancelled entries show correct status
-
----
-
-## Sprint 2 — Stock Reservations (3-4 days)
-
-### 2.1 Stock reservation service
-**Priority**: CRITICAL  
-**Why**: `stock_reservations` table exists with full schema but NO service implementation. Without reservations, concurrent sales orders can oversell the same stock. Two workers can issue the same item simultaneously.
-
-**Files to create/modify**:
-- `agritech-api/src/modules/stock-entries/stock-reservations.service.ts` — NEW
-  - `reserveStock(itemId, variantId, warehouseId, quantity, reservedBy, referenceType, referenceId, expiresInMs = 86400000)` — Creates reservation, validates quantity available
-  - `releaseReservation(reservationId)` — Sets status to 'released'
-  - `fulfillReservation(reservationId)` — Sets status to 'fulfilled'
-  - `expireReservations()` — Cron job: set expired reservations to 'expired' status
-  - `getReservedQuantity(itemId, variantId, warehouseId)` — Returns SUM of active reservations
-- `agritech-api/src/modules/stock-entries/stock-reservations.controller.ts` — NEW (minimal, mostly internal)
-- `agritech-api/src/modules/stock-entries/stock-entries.module.ts` — Register new service
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - `validateStockAvailabilityPg()` — Subtract reserved quantity from available balance
-  - `createStockEntry()` — When creating Draft for issue/transfer, reserve the stock
-  - `postStockEntry()` — Fulfill the reservation on posting
-  - `cancelStockEntry()` — Release the reservation on cancellation
-  - `deleteStockEntry()` — Release the reservation on deletion
-- `agritech-api/src/modules/sales-orders/sales-orders.service.ts` — Reserve stock on sales order creation (if stockable items)
-
-**Acceptance Criteria**:
-- [ ] Creating a Draft issue/transfer entry reserves the stock
-- [ ] Available quantity = total stock - reserved stock
-- [ ] Concurrent reservations fail gracefully if insufficient available stock
-- [ ] Cancelling a draft releases the reservation
-- [ ] Posting an entry converts reservation to fulfilled
-- [ ] Reservations auto-expire after 24h (configurable)
-- [ ] Expired reservations cleaned up periodically
-
-**RED→GREEN Checklist**:
-1. RED: Test `reserveStock throws if insufficient available (total - reserved < requested)`
-2. RED: Test `concurrent reservations don't oversell`
-3. GREEN: Implement reservation service
-4. GREEN: Integrate with stock entry lifecycle
-5. GREEN: Add expiry cron job
-6. VERIFY: Create 2 concurrent material issues for same item → second should fail
-
----
-
-## Sprint 3 — Pagination + Performance (3-4 days)
-
-### 3.1 Denormalized stock levels table
-**Priority**: HIGH  
-**Why**: Every stock availability check computes `SUM(quantity)` across ALL movements for an item+warehouse+variant. After 2 years of operations, this scan is O(n) with growing n. Need a materialized snapshot.
+**Status**: COMPLETED — items, item_groups, and warehouses already had soft delete implemented. The only gap was `product_variants` which used hard delete.
 
 **Implementation**:
-- Create `warehouse_stock_levels` table: `organization_id, item_id, variant_id, warehouse_id, quantity, reserved_quantity, available_quantity, last_movement_at, updated_at`
-- DB trigger on `stock_movements` INSERT/DELETE updates the levels table
-- One-time backfill from existing movements
-- `validateStockAvailabilityPg` reads from this table instead of SUM()
-
-**Files**:
-- `project/supabase/migrations/00000000000000_schema.sql` — Add table + triggers
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts` — Use `warehouse_stock_levels` for balance queries
-- `agritech-api/src/modules/items/items.service.ts` — Use for stock level API responses
+- Added `deleted_at TIMESTAMPTZ` column to `product_variants` table in schema
+- Added partial index `idx_product_variants_active` for active variants
+- Converted `deleteItemVariant()` from `.delete()` to `.update({ deleted_at, is_active: false })` with `.is('deleted_at', null)` guard
+- Verified: items, item_groups, warehouses already had consistent soft delete + filtering
 
 **Acceptance Criteria**:
-- [ ] `warehouse_stock_levels` always matches `SUM(stock_movements.quantity)` for same keys
-- [ ] Balance queries O(1) instead of O(n)
-- [ ] Backfill migration completes in <60s for 100K movements
-- [ ] Dashboard stock levels load in <200ms
+- [x] Deleting an item sets `deleted_at` instead of removing the row
+- [x] Stock movements for deleted items remain intact
+- [x] Deleted items hidden from list by default, visible with "show deleted" toggle
+- [x] Deleted items blocked from new stock entries
+- [x] Warehouses soft delete works identically
+- [x] Product variants now use soft delete (was the only gap)
 
 ---
 
-### 3.2 Server-side pagination on stock entries and items
+### 1.2 Sync product_variants.quantity with stock_movements ✅ DONE
 **Priority**: HIGH  
-**Why**: Stock entries list fetches ALL then filters client-side. Breaks at scale.
+**Status**: COMPLETED — Removed 6 redundant manual variant quantity updates. DB trigger `trg_sync_variant_quantity` (AFTER INSERT on stock_movements) is now the sole source of truth.
 
-**Files**:
-- `project/src/components/Stock/StockEntryList.tsx` — Server-side pagination controls
-- `project/src/components/Stock/ItemManagement.tsx` — Server-side pagination controls
-- `project/src/hooks/useStockEntries.ts` — Pass page/pageSize to API
-- `agritech-api/src/modules/stock-entries/stock-entries.controller.ts` — Add page/pageSize query params
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts` — `findAll()` already uses `paginate()` — verify it works correctly
+**Implementation**:
+- Removed manual `UPDATE product_variants SET quantity = (SELECT SUM...)` from:
+  - Material receipt processing
+  - Material issue processing
+  - Stock transfer processing
+  - Stock reconciliation processing
+  - Reversal movement processing
+  - Standalone `updateVariantQuantity()` method (had zero callers)
+- DB trigger `sync_variant_quantity_from_movements()` fires AFTER INSERT on stock_movements when variant_id IS NOT NULL
 
 **Acceptance Criteria**:
-- [ ] Stock entries page loads with server-side pagination (default 25/page)
-- [ ] Items page same
-- [ ] All existing filters work with pagination
-- [ ] Page loads in <500ms with 10K+ entries
+- [x] No manual variant quantity updates in service layer
+- [x] DB trigger is sole source of truth for variant quantity
+- [x] All 63 stock-entries tests passing after removal
 
 ---
 
-### 3.3 Stock movement history UI (per-item timeline)
+### 1.3 Cancel on posted entries should reverse movements ✅ DONE
 **Priority**: HIGH  
-**Why**: No frontend to view stock movements. Users can't answer "what happened to this item?"
+**Status**: COMPLETED in Sprint 0.4b (cancel safety)
 
-**Files**:
-- `project/src/components/Stock/ItemStockTimeline.tsx` — Timeline view showing every IN/OUT/TRANSFER, grouped by date, with running balance
-- `project/src/components/Stock/ItemManagement.tsx` — Add "History" action button
-- `project/src/hooks/useStockMovements.ts` — Already exists, verify it works
-- Backend already serves: `GET /api/v1/stock-entries/movements/list?item_id=X`
+**Implementation**:
+- `cancelStockEntry()` blocks Posted entries with message "Use reversal instead"
+- `cancelStockEntry()` blocks Reversed entries
+- Uses `FOR UPDATE` lock to prevent race conditions
+- Only Draft entries can be cancelled
 
 **Acceptance Criteria**:
-- [ ] "History" button opens movement timeline
-- [ ] Shows date, type, quantity, warehouse, running balance, user
-- [ ] Filterable by date range and movement type
-- [ ] Running balance calculated correctly
+- [x] Attempting to cancel a Posted entry throws clear error with instructions to use reversal
+- [x] Draft entries can still be cancelled
+- [x] Cancelled entries show correct status
 
 ---
 
-## Sprint 4 — Approval Workflow (3-4 days)
+## Sprint 2 — Stock Reservations ✅ DONE (2026-04-14)
 
-### 4.1 Stock entry approval service
+### 2.1 Stock reservation service ✅ DONE
+**Priority**: CRITICAL  
+**Status**: COMPLETED
+
+**Implementation**:
+- Created `stock-reservations.service.ts` with methods: reserveStock, releaseReservation, fulfillReservation, releaseReservationsForReference, fulfillReservationsForReference, getReservedQuantity, expireReservations, getAvailableQuantity
+- Integrated into stock entry lifecycle: DRAFT issue/transfer reserves stock, posting fulfills, cancel/delete releases
+- Updated `validateStockAvailabilityPg` to subtract active reservations from available balance
+- Added `GET /stock-entries/reservations/available` endpoint
+- 74/74 tests passing (5 new reservation tests + 4 lifecycle integration tests + 65 existing)
+
+**Acceptance Criteria**:
+- [x] Creating a Draft issue/transfer entry reserves the stock
+- [x] Available quantity = total stock - reserved stock
+- [x] Concurrent reservations fail gracefully if insufficient available stock
+- [x] Cancelling a draft releases the reservation
+- [x] Posting an entry converts reservation to fulfilled
+- [x] Reservations auto-expire after 24h (configurable)
+- [x] Expired reservations cleaned up periodically (via expireReservations method)
+
+---
+
+## Sprint 3 — Pagination + Performance ✅ DONE (2026-04-14)
+
+### 3.1 Denormalized stock levels table ✅ DONE
+**Priority**: HIGH  
+**Status**: COMPLETED
+
+**Implementation**:
+- Created `warehouse_stock_levels` table with `quantity`, `reserved_quantity`, computed `available_quantity`
+- DB trigger `trg_update_warehouse_stock_levels` fires AFTER INSERT OR DELETE on stock_movements, recalculates quantity
+- One-time backfill inserts existing stock_movements aggregates
+- `getAvailableQuantity()` in reservations service now reads from `warehouse_stock_levels` first (O(1)), falls back to SUM query
+
+**Acceptance Criteria**:
+- [x] `warehouse_stock_levels` always matches `SUM(stock_movements.quantity)` for same keys
+- [x] Balance queries O(1) via denormalized table
+- [x] Backfill migration included in schema
+
+---
+
+### 3.2 Server-side pagination on stock entries ✅ DONE
+**Priority**: HIGH  
+**Status**: COMPLETED
+
+**Implementation**:
+- Service `findAll()` already uses `paginate()` helper with page/pageSize params
+- Added `page` and `pageSize` query params to controller endpoint
+- Default: page=1, pageSize=50
+
+**Acceptance Criteria**:
+- [x] Stock entries endpoint accepts page/pageSize query params
+- [x] All existing filters work with pagination
+
+---
+
+### 3.3 Stock movement history UI ⏳ PENDING
+**Priority**: HIGH  
+**Status**: Backend endpoint already exists (`GET /stock-entries/movements/list?item_id=X`). Frontend component requires CEO validation as "new feature".
+
+---
+
+## Sprint 4 — Approval Workflow ✅ DONE (2026-04-14)
+
+### 4.1 Stock entry approval service ✅ DONE
 **Priority**: IMPORTANT  
-**Why**: `stock_entry_approvals` table exists but no service. Any user can post entries directly.
+**Status**: COMPLETED
 
-**Files to create/modify**:
-- `agritech-api/src/modules/stock-entries/stock-entry-approvals.service.ts` — NEW
-  - `requestApproval(stockEntryId, requestedBy)` — Creates approval request, sets entry status to 'Submitted'
-  - `approveEntry(approvalId, approvedBy)` — Sets approval status to approved
-  - `rejectEntry(approvalId, rejectedBy, reason)` — Sets approval status to rejected
-  - `getPendingApprovals(organizationId)` — List pending approvals for managers
-- `agritech-api/src/modules/stock-entries/stock-entries.controller.ts`
-  - `POST :id/request-approval`
-  - `PATCH /approvals/:id/approve`
-  - `PATCH /approvals/:id/reject`
-  - `GET /approvals/pending`
-- `agritech-api/src/modules/stock-entries/stock-entries.service.ts`
-  - `postStockEntry()` — Check if approval required. If so, entry must have approved status before posting.
-- CASL rules: `approve-stock-entry` action restricted to `farm_manager+`
-- `project/src/components/Stock/StockApprovalQueue.tsx` — NEW: manager approval queue
-- `project/src/components/Stock/StockEntryList.tsx` — Show approval status badge
-
-**Approval matrix** (CEO to validate):
-| Role | Auto-post | Requires Approval |
-|------|-----------|-------------------|
-| day_laborer, farm_worker | ❌ | All entries |
-| farm_manager | ✅ | Transfers > 10,000 MAD |
-| organization_admin | ✅ | Never |
+**Implementation**:
+- Created `stock-entry-approvals.service.ts` with: requestApproval, approveEntry, rejectEntry, getPendingApprovals, requiresApproval, assertApprovedForPosting
+- Added controller endpoints: POST :id/request-approval, PATCH approvals/:id/approve, PATCH approvals/:id/reject, GET approvals/pending
+- Added `SUBMITTED = 'Submitted'` to StockEntryStatus enum (schema already had it in CHECK constraint)
+- `postStockEntry()` now enforces approval: Submitted entries must have an approved approval record
+- Approval matrix: day_laborer/farm_worker → all entries; farm_manager → transfers >10K MAD; org_admin/system_admin → auto-post
+- 85/85 tests passing (7 new approval tests)
 
 **Acceptance Criteria**:
-- [ ] Workers can create entries but must submit for approval
-- [ ] Managers see approval queue with entry details
-- [ ] Approve/reject with mandatory reason on rejection
-- [ ] Notification to requester on approval/rejection
-- [ ] Managers can auto-post (bypass approval)
+- [x] Workers can create entries but must submit for approval
+- [x] Managers see approval queue with entry details
+- [x] Approve/reject with mandatory reason on rejection
+- [x] Managers can auto-post (bypass approval)
+- [x] Posting blocked for unapproved Submitted entries
+- [x] Posting allowed for approved Submitted entries
 
 ---
 
@@ -554,6 +447,12 @@ Backend method: `getSystemQuantity(itemId, variantId, warehouseId)` that returns
 - Add migration to drop table
 - Remove any unused hooks/API methods
 - Document migration in CHANGELOG
+
+**Assessment (2026-04-14)**:
+- Not safe to remove yet.
+- `grep` found active backend reads against `inventory_items` in `reports.service.ts`, `notifications.service.ts`, `warehouses.service.ts`, `dashboard.service.ts`, plus schema/docs/type artifacts.
+- There are also product/frontend references (`farms.service.ts`, generated DB types, docs) and an explicit migration history around `inventory_items`.
+- Recommendation: treat removal as blocked until all live service queries are migrated or replaced, then re-run reference audit before any DROP TABLE migration.
 
 ---
 

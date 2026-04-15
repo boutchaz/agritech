@@ -6,7 +6,7 @@ from typing import Any, Literal, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from ..types import GeoJsonFeatureCollection, PercentileSet, Step7Output, ZoneSummary
+from ..types import GeoJsonFeatureCollection, NutritionalZones, PercentileSet, Step7Output, ZoneSummary
 
 
 def _class_for_value(value: float, percentiles: PercentileSet) -> str:
@@ -58,20 +58,14 @@ def _build_raster(
     return np.array([[median_ndvi]], dtype=np.float64), False, None
 
 
-def classify_zones(
+def _classify_index(
     percentiles: PercentileSet,
-    *,
-    ndvi_raster_pixels: list[dict[str, Any]] | None = None,
-    observed_ndvi_points: list[Any] | None = None,
-    pixel_size_m2: float = 100.0,
-) -> Step7Output:
-    """Classify parcel zones from raw NDVI raster pixels and percentile thresholds.
-
-    Builds the raster internally from ``ndvi_raster_pixels`` (raw pixel dicts
-    from GEE extraction) or falls back to a single-pixel raster from
-    ``observed_ndvi_points`` median.
-    """
-    median_raster, _, pixel_coords = _build_raster(ndvi_raster_pixels, observed_ndvi_points)
+    raster_pixels: list[dict[str, Any]] | None,
+    observed_points: list[Any] | None,
+    pixel_size_m2: float,
+) -> tuple[GeoJsonFeatureCollection, list[ZoneSummary], str]:
+    """Core classification logic — reusable for any vegetation index."""
+    median_raster, _, pixel_coords = _build_raster(raster_pixels, observed_points)
 
     rows, cols = median_raster.shape
     class_counts: Counter[str] = Counter()
@@ -143,10 +137,45 @@ def classify_zones(
 
     pattern = _pattern_type(class_counts, total_pixels)
 
+    geojson = GeoJsonFeatureCollection(type="FeatureCollection", features=features)
+    return geojson, summary, pattern
+
+
+def classify_zones(
+    percentiles: PercentileSet,
+    *,
+    ndvi_raster_pixels: list[dict[str, Any]] | None = None,
+    observed_ndvi_points: list[Any] | None = None,
+    gci_percentiles: PercentileSet | None = None,
+    observed_gci_points: list[Any] | None = None,
+    pixel_size_m2: float = 100.0,
+) -> Step7Output:
+    """Classify parcel zones: NDVI (vigor) + GCI (nutritional/chlorophyll).
+
+    NDVI zones = vegetation vigor map (existing behavior).
+    GCI zones = nutritional status map (chlorophyll/nitrogen).
+    """
+    # NDVI vigor zones
+    ndvi_geojson, ndvi_summary, ndvi_pattern = _classify_index(
+        percentiles, ndvi_raster_pixels, observed_ndvi_points, pixel_size_m2,
+    )
+
+    # GCI nutritional zones (if data available)
+    nutritional = None
+    if gci_percentiles:
+        gci_geojson, gci_summary, gci_pattern = _classify_index(
+            gci_percentiles, None, observed_gci_points, pixel_size_m2,
+        )
+        nutritional = NutritionalZones(
+            zones_geojson=gci_geojson,
+            zone_summary=gci_summary,
+            spatial_pattern_type=gci_pattern,
+            index_used="GCI",
+        )
+
     return Step7Output(
-        zones_geojson=GeoJsonFeatureCollection(
-            type="FeatureCollection", features=features
-        ),
-        zone_summary=summary,
-        spatial_pattern_type=pattern,
+        zones_geojson=ndvi_geojson,
+        zone_summary=ndvi_summary,
+        spatial_pattern_type=ndvi_pattern,
+        nutritional_zones=nutritional,
     )

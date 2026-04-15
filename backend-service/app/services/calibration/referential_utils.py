@@ -536,40 +536,67 @@ def get_satellite_thresholds_from_referential(
 def get_calibration_capabilities(
     crop_type: str,
     reference_data: dict[str, Any] | None = None,
+    subtype: str | None = None,
 ) -> CalibrationCapabilities:
+    """Read calibration capabilities from referential — no hardcoded defaults.
+
+    Resolution order for each field:
+    1. ``capacites_calibrage.subtypes[subtype]`` (if subtype provided)
+    2. ``capacites_calibrage`` (top-level)
+    3. Minimal fallback (only if referential completely missing)
+    """
     data = (
         reference_data
         if isinstance(reference_data, dict) and reference_data
         else _load_referential_data_from_file(crop_type)
     )
-    defaults = CalibrationCapabilities(
+
+    # Minimal fallback — only used if no referential exists at all
+    _FALLBACK = CalibrationCapabilities(
         supported=True,
-        phenology_mode="state_machine" if crop_type == "olivier" else "legacy",
-        required_indices=("NDVI", "NIRv", "NDMI", "NDRE"),
+        phenology_mode="state_machine",
+        required_indices=("NDVI",),
         min_observed_images=10,
         min_history_days=120,
         min_history_months_for_period_percentiles=24,
     )
+
     if not isinstance(data, dict):
-        return defaults
+        return _FALLBACK
     raw = data.get("capacites_calibrage")
     if not isinstance(raw, dict):
-        return defaults
-    required_indices = raw.get("required_indices")
+        return _FALLBACK
+
+    # Start with top-level capacites_calibrage values
+    resolved: dict[str, Any] = dict(raw)
+
+    # Override with subtype-specific values if provided
+    subtype_key = subtype.strip().lower() if isinstance(subtype, str) else ""
+    if subtype_key:
+        by_subtype = raw.get("subtypes") or raw.get("sous_types") or raw.get("by_subtype")
+        if isinstance(by_subtype, dict):
+            subtype_cfg = by_subtype.get(subtype_key)
+            if subtype_cfg is None:
+                for k, v in by_subtype.items():
+                    if isinstance(k, str) and k.strip().lower() == subtype_key:
+                        subtype_cfg = v
+                        break
+            if isinstance(subtype_cfg, dict):
+                resolved.update(subtype_cfg)
+
+    # All values come from referential — fallback only for truly missing fields
+    required_indices = resolved.get("required_indices")
     return CalibrationCapabilities(
-        supported=bool(raw.get("supported", defaults.supported)),
-        phenology_mode=str(raw.get("phenology_mode", defaults.phenology_mode)),
+        supported=bool(resolved.get("supported", True)),
+        phenology_mode=str(resolved.get("phenology_mode", "state_machine")),
         required_indices=tuple(required_indices)
         if isinstance(required_indices, list)
         and all(isinstance(item, str) for item in required_indices)
-        else defaults.required_indices,
-        min_observed_images=int(raw.get("min_observed_images", defaults.min_observed_images)),
-        min_history_days=int(raw.get("min_history_days", defaults.min_history_days)),
+        else _FALLBACK.required_indices,
+        min_observed_images=int(resolved.get("min_observed_images", 10)),
+        min_history_days=int(resolved.get("min_history_days", 120)),
         min_history_months_for_period_percentiles=int(
-            raw.get(
-                "min_history_months_for_period_percentiles",
-                defaults.min_history_months_for_period_percentiles,
-            )
+            resolved.get("min_history_months_for_period_percentiles", 24)
         ),
     )
 

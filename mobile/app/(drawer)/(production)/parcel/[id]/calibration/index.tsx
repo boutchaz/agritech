@@ -18,7 +18,6 @@ import PageHeader from '@/components/PageHeader';
 import { Button, Card, LoadingState } from '@/components/ui';
 import {
   PhaseBanner,
-  ExecutiveSummary,
   NutritionOptionSelector,
   CalibrationHistoryList,
   ValidationPanel,
@@ -43,7 +42,7 @@ export default function CalibrationScreen() {
 
   // Queries
   const { data: statusData, isLoading: statusLoading, refetch: refetchStatus } = useCalibrationStatus(parcelId);
-  const { data: reportData, isLoading: reportLoading, refetch: refetchReport } = useCalibrationReport(parcelId);
+  const { isLoading: reportLoading, refetch: refetchReport } = useCalibrationReport(parcelId);
   const { data: historyData, isLoading: historyLoading, refetch: refetchHistory } = useCalibrationHistory(parcelId);
   const { data: readinessData, isLoading: readinessLoading, refetch: refetchReadiness } = useCalibrationReadiness(parcelId);
   const { data: nutritionData, refetch: refetchNutrition } = useNutritionSuggestion(parcelId);
@@ -98,7 +97,6 @@ export default function CalibrationScreen() {
   }
 
   const phase = statusData?.status as string || 'unknown';
-  const report = reportData?.report?.output;
   const confidenceScore = statusData?.confidence_score;
 
   return (
@@ -134,16 +132,6 @@ export default function CalibrationScreen() {
             <Text style={[styles.calibratingSubtext, { color: themeColors.textSecondary }]}>{t('calibration.calibratingDesc')}</Text>
           </View>
         </Card>
-      )}
-
-      {/* Executive Summary */}
-      {report && (
-        <ExecutiveSummary
-          healthScore={report.step8?.health_score}
-          confidenceScore={report.confidence}
-          maturityPhase={report.maturity_phase}
-          yieldPotential={report.step6?.yield_potential}
-        />
       )}
 
       {/* Nutrition Option Selector */}

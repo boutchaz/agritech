@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS subscription_pricing_config (
 
 ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "service_role_only" ON subscription_pricing_config;
 CREATE POLICY "service_role_only" ON subscription_pricing_config
   FOR ALL USING (auth.role() = 'service_role');
 

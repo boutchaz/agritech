@@ -521,14 +521,9 @@ test.describe('Calibration V2 Page', () => {
     await page.getByRole('button', { name: 'Start Calibration' }).click();
     await expect(page.getByRole('button', { name: 'Starting...' })).toBeVisible();
 
-    await expect(page.getByRole('button', { name: 'Executive Summary' })).toBeVisible();
     await expect(page.getByText('72').first()).toBeVisible();
     await expect(page.getByText('63%').first()).toBeVisible();
-    await expect(page.getByText('Full Production')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Detailed Analysis' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Detected Anomalies (0)' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Recommendations/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Calibration Improvement' })).toBeVisible();
+    await expect(page.getByTestId('calibration-run-inputs-panel')).toBeVisible();
 
     await expect(page.getByText('Awaiting Validation')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Validate & Activate' })).toBeVisible();
@@ -569,7 +564,7 @@ test.describe('Calibration V2 Page', () => {
     await waitForLoadingComplete(page);
 
     await expect(page.getByText('Calibration Active')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Executive Summary' })).toBeVisible();
+    await expect(page.getByTestId('calibration-run-inputs-panel')).toBeVisible();
     await expect(page.getByTestId('calibration-open-full-recalibration')).toBeVisible();
   });
 
@@ -657,22 +652,6 @@ test.describe('Calibration V2 Page', () => {
     await expect(page.getByText('72').first()).toBeVisible();
   });
 
-  test('should display recommendations section with content', async ({ authenticatedPage: page }) => {
-    await seedOrganization(page);
-    await mockCalibrationRoutes(page, 'active');
-
-    await page.goto(`/parcels/${parcelId}/ai/calibration`);
-    await waitForLoadingComplete(page);
-
-    const recommendationsButton = page.getByRole('button', { name: /Recommendations/ });
-    await expect(recommendationsButton).toBeVisible();
-
-    await recommendationsButton.click();
-
-    await expect(page.getByText('Nutritional indices suggest potential deficiency.')).toBeVisible();
-    await expect(page.getByText('nutrition')).toBeVisible();
-  });
-
   test('should show data quality warnings when flags are present', async ({ authenticatedPage: page }) => {
     await seedOrganization(page);
 
@@ -749,93 +728,6 @@ test.describe('Calibration V2 Page', () => {
     await waitForLoadingComplete(page);
 
     await expect(page.getByText('Limited Satellite Data')).toBeVisible();
-
-    await page.getByRole('button', { name: 'Detailed Analysis' }).click();
-    await expect(page.getByText('This crop is evergreen')).toBeVisible();
-  });
-
-  test('should display alternance badge for olivier parcels', async ({ authenticatedPage: page }) => {
-    await seedOrganization(page);
-
-    const outputWithAlternance = {
-      ...mockCalibrationOutput,
-      step6: {
-        ...mockCalibrationOutput.step6,
-        alternance: {
-          detected: true,
-          current_year_type: 'on' as const,
-          confidence: 0.85,
-          yearly_means: { 2023: 0.52, 2024: 0.61, 2025: 0.49 },
-        },
-      },
-    };
-
-    await page.route('**/api/v1/**', async (route) => {
-      const request = route.request();
-      const url = new URL(request.url());
-      const pathname = url.pathname;
-      const method = request.method();
-
-      if (pathname === `/api/v1/parcels/${parcelId}` && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ ...baseParcel, ai_phase: 'active' }),
-        });
-        return;
-      }
-
-      if (pathname === `/api/v1/parcels/${parcelId}/calibration` && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(createCalibrationRecord('completed')),
-        });
-        return;
-      }
-
-      if (pathname === `/api/v1/parcels/${parcelId}/calibration/report` && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            calibration: createCalibrationRecord('completed'),
-            report: { version: 'v2', output: outputWithAlternance, validation: { validated: true, validated_at: now } },
-          }),
-        });
-        return;
-      }
-
-      if (pathname === `/api/v1/parcels/${parcelId}/calibration/history` && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-        return;
-      }
-
-      if (pathname === `/api/v1/parcels/${parcelId}/ai/diagnostics` && method === 'GET') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify([]),
-        });
-        return;
-      }
-
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      });
-    });
-
-    await page.goto(`/parcels/${parcelId}/ai/calibration`);
-    await waitForLoadingComplete(page);
-
-    await expect(page.getByText(/Alternance detected/)).toBeVisible();
-    await expect(page.getByText(/ON year/)).toBeVisible();
-    await expect(page.getByText(/85%/)).toBeVisible();
+    await expect(page.getByTestId('calibration-report')).toBeVisible();
   });
 });

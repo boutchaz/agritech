@@ -12,6 +12,7 @@ from ..referential_utils import (
     get_gdd_tbase_tupper,
     parse_olive_stades_bbch_gdd_context,
 )
+from ..types import WeatherRowAccessor
 
 # Snapshot of thresholds from referential JSON (or fallbacks) at import — for callers
 # that expect dicts. Prefer :func:`get_gdd_tbase_tupper` when ``reference_data`` is available.
@@ -187,8 +188,9 @@ def compute_olive_gdd_two_phase(
         copied = dict(row)
         d = _parse_row_date(copied)
 
-        tmax = float(copied.get("temperature_max") or copied.get("temp_max") or 0.0)
-        tmin = float(copied.get("temperature_min") or copied.get("temp_min") or 0.0)
+        w = WeatherRowAccessor(copied)
+        tmax = w.temp_max
+        tmin = w.temp_min
 
         # Always compute chill hours for the record.
         ch = estimate_chill_hours(tmax, tmin)
@@ -342,11 +344,10 @@ def precompute_gdd_rows(
             result_rows.append(copied)
             continue
 
-        tmax = float(copied.get("temperature_max") or copied.get("temp_max") or 0.0)
-        tmin = float(copied.get("temperature_min") or copied.get("temp_min") or 0.0)
+        w = WeatherRowAccessor(copied)
 
-        copied[column] = round(compute_daily_gdd(tmax, tmin, tbase, tupper), 4)
-        copied["chill_hours"] = round(estimate_chill_hours(tmax, tmin), 4)
+        copied[column] = round(compute_daily_gdd(w.temp_max, w.temp_min, tbase, tupper), 4)
+        copied["chill_hours"] = round(estimate_chill_hours(w.temp_max, w.temp_min), 4)
         updated += 1
         result_rows.append(copied)
 

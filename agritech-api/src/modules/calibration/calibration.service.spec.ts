@@ -388,7 +388,6 @@ describe('CalibrationService', () => {
         shortwave_radiation_sum: 14,
         precipitation_sum: 1,
         et0_fao_evapotranspiration: 1.8,
-        gdd_olivier: null,
         chill_hours: null,
       },
     ]);

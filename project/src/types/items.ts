@@ -181,6 +181,7 @@ export interface ItemWithDetails extends Item {
   unit_conversions: ItemUnitConversion[];
   current_stock?: number;
   current_warehouse_id?: string;
+  variantId?: string;
 }
 
 // =====================================================
