@@ -140,14 +140,11 @@ export class AiQuotaService {
   }
 
   /**
-   * Check if the org can make an AI request and consume one slot.
+   * Check if the org can make an AI request (does NOT increment counter).
    */
-  async checkAndConsume(
+  async checkQuota(
     organizationId: string,
-    userId: string,
-    feature: AiFeature,
   ): Promise<QuotaCheckResult> {
-    // Check if org has BYOK
     const isByok = await this.checkByok(organizationId);
     if (isByok) {
       return { allowed: true, provider: 'byok', isByok: true };
@@ -155,12 +152,10 @@ export class AiQuotaService {
 
     const quota = await this.getOrCreateQuota(organizationId);
 
-    // Enterprise = unlimited
     if (quota.monthly_limit === UNLIMITED) {
       return { allowed: true, provider: 'zai', isByok: false };
     }
 
-    // Check limit
     if (quota.current_count >= quota.monthly_limit) {
       return {
         allowed: false,
@@ -173,7 +168,19 @@ export class AiQuotaService {
       };
     }
 
-    // Increment count
+    return { allowed: true, provider: 'zai', isByok: false };
+  }
+
+  /**
+   * Increment the quota counter by one. Call AFTER a successful AI response.
+   */
+  async consumeOne(organizationId: string): Promise<void> {
+    const isByok = await this.checkByok(organizationId);
+    if (isByok) return;
+
+    const quota = await this.getOrCreateQuota(organizationId);
+    if (quota.monthly_limit === UNLIMITED) return;
+
     const supabase = this.databaseService.getAdminClient();
     await supabase
       .from('ai_quotas')
@@ -182,8 +189,22 @@ export class AiQuotaService {
         updated_at: new Date().toISOString(),
       })
       .eq('id', quota.id);
+  }
 
-    return { allowed: true, provider: 'zai', isByok: false };
+  /**
+   * @deprecated Use checkQuota() + consumeOne() for proper failure handling.
+   * Check if the org can make an AI request and consume one slot.
+   */
+  async checkAndConsume(
+    organizationId: string,
+    _userId: string,
+    _feature: AiFeature,
+  ): Promise<QuotaCheckResult> {
+    const result = await this.checkQuota(organizationId);
+    if (result.allowed) {
+      await this.consumeOne(organizationId);
+    }
+    return result;
   }
 
   /**

@@ -397,12 +397,8 @@ export class AIReportsService {
     },
   ): Promise<string | null> {
     try {
-      // 1. Quota check
-      const quotaResult = await this.aiQuotaService.checkAndConsume(
-        organizationId,
-        userId,
-        'calibration',
-      );
+      // 1. Quota check (consume after successful generation)
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
       if (!quotaResult.allowed) {
         this.logger.warn(`Calibration summary skipped — quota exceeded for org ${organizationId}`);
         return null;
@@ -451,7 +447,8 @@ export class AIReportsService {
         },
       });
 
-      // 5. Log usage (fire-and-forget)
+      // 5. Consume quota + log usage (fire-and-forget, only on success)
+      this.aiQuotaService.consumeOne(organizationId).catch(() => {});
       this.aiQuotaService.logUsage(
         organizationId,
         userId,

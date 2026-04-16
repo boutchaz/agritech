@@ -85,7 +85,7 @@ export function ResponsiveList<T>({
         )}
       >
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-slate-900 dark:text-slate-100">
             {renderTableHeader && (
               <thead className="bg-gray-50 dark:bg-gray-900">
                 {renderTableHeader}

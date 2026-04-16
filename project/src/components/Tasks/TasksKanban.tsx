@@ -132,12 +132,12 @@ function KanbanSkeleton() {
         <Skeleton className="h-8 w-48 mb-1" />
         <Skeleton className="h-4 w-80" />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 -mx-1 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
         {KANBAN_COLUMNS.map((status) => (
           <div
             key={status}
             className={cn(
-              'flex flex-col bg-gray-50 dark:bg-gray-900/50 rounded-lg border-t-4 min-h-[400px]',
+              'flex min-h-0 flex-col max-sm:max-h-[min(72vh,34rem)] max-sm:min-h-[min(52vh,20rem)] max-sm:w-[min(88vw,20rem)] max-sm:shrink-0 max-sm:snap-start rounded-lg border-t-4 bg-gray-50 dark:bg-gray-900/50 sm:max-h-none sm:w-auto sm:min-h-[320px] lg:min-h-[400px]',
               COLUMN_BORDER_COLORS[status],
             )}
           >
@@ -388,7 +388,9 @@ function KanbanColumn({ status, tasks, lang, t, onSelectTask, isDropTarget, isIn
   return (
     <div
       className={cn(
-        'flex flex-col bg-gray-50 dark:bg-gray-900/50 rounded-lg border-t-4 min-h-[400px] transition-colors',
+        'flex min-h-0 flex-col rounded-lg border-t-4 bg-gray-50 transition-colors dark:bg-gray-900/50',
+        'max-sm:max-h-[min(72vh,34rem)] max-sm:min-h-[min(52vh,20rem)] max-sm:w-[min(88vw,20rem)] max-sm:shrink-0 max-sm:snap-start',
+        'sm:max-h-none sm:w-auto sm:min-h-[320px] lg:min-h-[400px]',
         COLUMN_BORDER_COLORS[status],
         isDropTarget && !isInvalidDrop && 'bg-blue-50/50 dark:bg-blue-900/10 ring-2 ring-blue-300 dark:ring-blue-700',
         isInvalidDrop && 'bg-red-50/50 dark:bg-red-900/10 ring-2 ring-red-300 dark:ring-red-700',
@@ -408,23 +410,25 @@ function KanbanColumn({ status, tasks, lang, t, onSelectTask, isDropTarget, isIn
         </span>
       </div>
 
-      {/* Scrollable task list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      {/* Scrollable task list (min-h-0 so max-sm column max-height can constrain scroll) */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-2">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-gray-400 dark:text-gray-500">
+            <div className="flex min-h-[5rem] flex-1 flex-col items-center justify-center px-2 py-4 text-sm text-gray-400 dark:text-gray-500 sm:min-h-[7rem]">
               {t('tasks.kanbanEmpty')}
             </div>
           ) : (
-            tasks.map((task) => (
-              <SortableTaskCard
-                key={task.id}
-                task={task}
-                lang={lang}
-                t={t}
-                onSelect={onSelectTask}
-              />
-            ))
+            <div className="space-y-2">
+              {tasks.map((task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  lang={lang}
+                  t={t}
+                  onSelect={onSelectTask}
+                />
+              ))}
+            </div>
           )}
         </SortableContext>
       </div>
@@ -615,7 +619,7 @@ const TasksKanban = ({ organizationId, onSelectTask }: TasksKanbanProps) => {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2 -mx-1 scroll-smooth sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0 lg:grid-cols-4">
           {KANBAN_COLUMNS.map((status) => {
             const isDropTarget = overColumnStatus === status && activeTaskId !== null;
             const activeTaskStatus = activeTask?.status;

@@ -16,6 +16,9 @@ import type {
   AnnualCampaignBilanResponse,
   PartialRecalibrationDto,
   NutritionOption,
+  CalibrationDraftResponse,
+  CalibrationReviewView,
+  AnnualMissingTaskResolution,
 } from '@/types/calibration';
 
 const BASE_URL = '/parcels';
@@ -150,5 +153,73 @@ export const calibrationApi = {
       `${BASE_URL}/${parcelId}/calibration/annual/start`,
       dto,
     );
+  },
+
+  // Annual Recalibration - Snooze
+  async snoozeAnnualReminder(
+    parcelId: string,
+    days: number,
+  ): Promise<{ snoozed_until: string }> {
+    return api.post<{ snoozed_until: string }>(
+      `${BASE_URL}/${parcelId}/calibration/annual/snooze`,
+      { days },
+    );
+  },
+
+  // Annual Recalibration - Resolve missing tasks
+  async resolveAnnualMissingTasks(
+    parcelId: string,
+    resolutions: AnnualMissingTaskResolution[],
+  ): Promise<{ reviewed_at: string; resolutions: AnnualMissingTaskResolution[] }> {
+    return api.post(
+      `${BASE_URL}/${parcelId}/calibration/annual/missing-tasks/resolve`,
+      { resolutions },
+    );
+  },
+
+  // Draft - Get
+  async getDraft(parcelId: string): Promise<CalibrationDraftResponse | null> {
+    return api.get<CalibrationDraftResponse | null>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+    );
+  },
+
+  // Draft - Save
+  async saveDraft(
+    parcelId: string,
+    dto: { current_step: number; form_data: Record<string, unknown> },
+  ): Promise<CalibrationDraftResponse> {
+    return api.post<CalibrationDraftResponse>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+      { ...dto, _method: 'PUT' },
+    );
+  },
+
+  // Draft - Delete
+  async deleteDraft(parcelId: string): Promise<{ success: boolean }> {
+    return api.delete<{ success: boolean }>(
+      `${BASE_URL}/${parcelId}/calibration/draft`,
+    );
+  },
+
+  // Review - Get full review
+  async getCalibrationReview(parcelId: string): Promise<CalibrationReviewView | null> {
+    return api.get<CalibrationReviewView | null>(
+      `${BASE_URL}/${parcelId}/calibration/review`,
+    );
+  },
+
+  // Export
+  async exportCalibration(
+    calibrationId: string,
+    format: 'json' | 'csv' | 'zip',
+  ): Promise<Blob> {
+    const response = await fetch(
+      `${BASE_URL}/calibrations/${calibrationId}/export?format=${format}`,
+    );
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+    return response.blob();
   },
 };

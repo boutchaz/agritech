@@ -9,7 +9,10 @@ type CalibrationReportResponse,
 type CalibrationStatusRecord,
 type NutritionConfirmationResponse,
 type NutritionSuggestionResponse,
-type PartialRecalibrationDto, } from "@/lib/api/calibration-output";
+type PartialRecalibrationDto,
+type CalibrationPercentilesResponse,
+type CalibrationZonesResponse,
+type IrrigationRecommendationResponse, } from "@/lib/api/calibration-output";
 import { queryKeys } from "@/lib/query-keys";
 import type { NutritionOption } from "@/types/calibration-output";
 import { useCalibrationSocket } from "./useCalibrationSocket";
@@ -335,5 +338,62 @@ export function useCalibrationPhase(parcelId: string) {
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 30 * 1000,
+  });
+}
+
+export function useCalibrationPercentiles(parcelId: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.calibration.percentiles(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<CalibrationPercentilesResponse> => {
+      if (!currentOrganization?.id) {
+        throw new Error("No organization selected");
+      }
+      return calibrationApi.getCalibrationPercentiles(
+        parcelId,
+        currentOrganization.id,
+      );
+    },
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCalibrationZones(parcelId: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.calibration.zones(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<CalibrationZonesResponse> => {
+      if (!currentOrganization?.id) {
+        throw new Error("No organization selected");
+      }
+      return calibrationApi.getCalibrationZones(
+        parcelId,
+        currentOrganization.id,
+      );
+    },
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useIrrigationRecommendation(parcelId: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: queryKeys.calibration.irrigation(parcelId, currentOrganization?.id),
+    queryFn: async (): Promise<IrrigationRecommendationResponse> => {
+      if (!currentOrganization?.id) {
+        throw new Error("No organization selected");
+      }
+      return calibrationApi.getIrrigationRecommendation(
+        parcelId,
+        currentOrganization.id,
+      );
+    },
+    enabled: !!parcelId && !!currentOrganization?.id,
+    staleTime: 30 * 60 * 1000,
   });
 }

@@ -29,6 +29,7 @@
       "byFarm": "Par Ferme/Entrepôt",
       "addStock": "Ajouter du Stock",
       "viewItem": "Voir l'Article",
+      "viewItemAria": "Voir l'article {{name}}",
       "viewAll": "Voir les {{count}} articles en stock faible",
       "allOptimal": "Tous les niveaux de stock sont optimaux"
     },

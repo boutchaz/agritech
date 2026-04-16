@@ -68,10 +68,7 @@ interface TaskStatCardProps {
   footer?: React.ReactNode;
 }
 
-/**
- * Decorative icons are absolutely positioned inside an overflow-hidden card so narrow
- * `lg:grid-cols-7` cells cannot push icons into adjacent columns (flex + shrink-0 could bleed).
- */
+/** Stat tiles in a dense `lg:grid-cols-7` row: keep icon in-flow so it never clips past the card. */
 function TaskStatCard({
   borderClass,
   labelClass,
@@ -85,28 +82,30 @@ function TaskStatCard({
   return (
     <div
       className={cn(
-        'relative isolate min-w-0 overflow-hidden rounded-lg border-l-4 bg-white p-2 shadow dark:bg-gray-800 sm:p-4',
+        'min-w-0 overflow-hidden rounded-lg border-l-4 bg-white p-2 shadow dark:bg-gray-800 sm:p-4',
         borderClass,
       )}
     >
-      <div className="relative min-w-0 pr-8 sm:pr-10">
-        <div className="relative z-[1] min-w-0">
-          <p className={cn('truncate text-xs uppercase tracking-wide', labelClass)}>{label}</p>
-          <div className={cn('truncate text-xl font-bold sm:text-2xl lg:text-xl xl:text-2xl', valueClass)}>
-            {value}
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1">
+            <p className={cn('truncate text-xs uppercase tracking-wide', labelClass)}>{label}</p>
+            <div className={cn('truncate text-xl font-bold sm:text-2xl lg:text-lg xl:text-2xl', valueClass)}>
+              {value}
+            </div>
+          </div>
+          <div
+            className={cn(
+              'pointer-events-none flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md sm:h-8 sm:w-8 sm:rounded-lg',
+              iconBgClass,
+            )}
+            aria-hidden
+          >
+            {icon}
           </div>
         </div>
-        <div
-          className={cn(
-            'pointer-events-none absolute right-0 top-1/2 z-0 hidden h-8 w-8 -translate-y-1/2 items-center justify-center overflow-hidden rounded-lg sm:flex',
-            iconBgClass,
-          )}
-          aria-hidden
-        >
-          {icon}
-        </div>
+        {footer}
       </div>
-      {footer}
     </div>
   );
 }
@@ -1027,7 +1026,7 @@ const TasksList = ({
                 {t('tasks.dueDate', 'Due date')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                {t('common.actions', 'Actions')}
+                {t('common.actionsColumn', 'Actions')}
               </th>
             </tr>
           )}

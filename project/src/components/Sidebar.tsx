@@ -233,6 +233,9 @@ const Sidebar = ({
     getInitialSectionState([
       "/accounting",
       "/accounting/accounts",
+      "/accounting/fiscal-years",
+      "/accounting/cost-centers",
+      "/accounting/account-mappings",
       "/accounting/invoices",
       "/accounting/payments",
       "/accounting/journal",
@@ -1354,6 +1357,21 @@ const Sidebar = ({
                         isActive={currentPath === "/accounting/accounts"}
                       />
                       <PopoverNavItem onNavigate={handleNavigation}
+                        path="/accounting/fiscal-years"
+                        label={t("nav.fiscalYears", "Fiscal Years")}
+                        isActive={currentPath === "/accounting/fiscal-years"}
+                      />
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/accounting/cost-centers"
+                        label={t("nav.costCenters", "Cost Centers")}
+                        isActive={currentPath === "/accounting/cost-centers"}
+                      />
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/accounting/account-mappings"
+                        label={t("nav.accountMappings", "Account Mappings")}
+                        isActive={currentPath === "/accounting/account-mappings"}
+                      />
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/accounting/invoices"
                         label={t("nav.invoices")}
                         isActive={currentPath === "/accounting/invoices"}
@@ -1423,6 +1441,39 @@ const Sidebar = ({
                           }
                         >
                           {renderText(t("nav.chartOfAccounts"))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/accounting/fiscal-years",
+                          )}
+                          onClick={(e) =>
+                            handleNavigation("/accounting/fiscal-years", e)
+                          }
+                        >
+                          {renderText(t("nav.fiscalYears", "Fiscal Years"))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/accounting/cost-centers",
+                          )}
+                          onClick={(e) =>
+                            handleNavigation("/accounting/cost-centers", e)
+                          }
+                        >
+                          {renderText(t("nav.costCenters", "Cost Centers"))}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/accounting/account-mappings",
+                          )}
+                          onClick={(e) =>
+                            handleNavigation("/accounting/account-mappings", e)
+                          }
+                        >
+                          {renderText(t("nav.accountMappings", "Account Mappings"))}
                         </Button>
                         <Button
                           variant="ghost"

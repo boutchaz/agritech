@@ -22,6 +22,8 @@ import {
 import { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganizationGuard } from "../../common/guards/organization.guard";
+import { PoliciesGuard } from "../casl/policies.guard";
+import { CanReadParcels } from "../casl/permissions.decorator";
 import { CalibrationService } from "./calibration.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
@@ -37,7 +39,8 @@ import {
 @ApiTags("calibration")
 @ApiBearerAuth()
 @Controller("parcels/:parcelId/calibration")
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@CanReadParcels()
 export class CalibrationController {
   constructor(
     private readonly calibrationService: CalibrationService,

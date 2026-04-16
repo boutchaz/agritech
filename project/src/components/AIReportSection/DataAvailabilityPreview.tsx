@@ -48,23 +48,25 @@ const DataSourceRow = ({
   onAction,
 }: DataSourceRowProps) => {
   return (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center space-x-3">
-        <div className={`p-1.5 rounded-lg ${available ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div
+          className={`shrink-0 rounded-lg p-1.5 ${available ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}
+        >
           {icon}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {label}
           </span>
           {optional && !available && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+            <span className="text-xs text-gray-400 italic dark:text-gray-500">
               ({optionalLabel})
             </span>
           )}
         </div>
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex shrink-0 items-center gap-2">
         {detail && (
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {detail}

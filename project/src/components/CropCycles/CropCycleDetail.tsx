@@ -658,7 +658,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                      <div className="col-span-1">{t('common.unit', 'Unit')}</div>
                      <div className="col-span-1">{t('common.grade', 'Grade')}</div>
                      <div className="col-span-1">{t('common.notes', 'Notes')}</div>
-                     <div className="col-span-1 text-right">{t('common.actions', 'Actions')}</div>
+                     <div className="col-span-1 text-right">{t('common.actionsColumn', 'Actions')}</div>
                   </div>
                   <div className="divide-y">
                      {harvestEvents.map((harvest) => (

@@ -383,7 +383,7 @@ export function WorkUnitManagement() {
       <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.form.nameAr')}</TableHead>
       <TableHead className="py-3 px-4 text-left font-medium">{t('workUnits.stats.active')}</TableHead>
       <TableHead className="py-3 px-4 text-left font-medium">Usage</TableHead>
-      <TableHead className="py-3 px-4 text-right font-medium">{t('common.actions', 'Actions')}</TableHead>
+      <TableHead className="py-3 px-4 text-right font-medium">{t('common.actionsColumn', 'Actions')}</TableHead>
     </TableRow>
   );
 

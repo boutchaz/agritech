@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { useTranslation } from 'react-i18next';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
@@ -68,7 +69,7 @@ interface PasswordChangeData {
 
 type TabId = 'profile' | 'preferences' | 'security';
 
-const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar', 'es']);
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
 
 /** Radix Select throws if value is not among SelectItems; API/i18n may send e.g. en-US */
 function normalizeProfileLanguage(lang: string | undefined, i18nFallback: string): string {
@@ -158,7 +159,6 @@ const AccountSettings = () => {
     { value: 'fr', label: 'Français' },
     { value: 'en', label: 'English' },
     { value: 'ar', label: 'العربية' },
-    { value: 'es', label: 'Español' },
   ];
 
   // Load profile data
@@ -212,8 +212,8 @@ const AccountSettings = () => {
 
     setProfile({ ...profile, language: newLanguage });
 
-    // Immediately change i18n language
-    await i18n.changeLanguage(newLanguage);
+    // Load bundles then switch language
+    await loadLanguage(newLanguage);
 
     // Set document direction for RTL languages
     if (isRTLLocale(newLanguage)) {

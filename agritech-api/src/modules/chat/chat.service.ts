@@ -225,9 +225,9 @@ export class ChatService implements OnModuleInit {
     const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
     this.zaiProvider.setApiKey(apiKey);
 
-    // Check AI quota before generating
+    // Check AI quota before generating (consume after success)
     try {
-      const quotaResult = await this.aiQuotaService.checkAndConsume(organizationId, userId, 'chat');
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
       if (!quotaResult.allowed) {
         throw new BadRequestException({
           message: 'AI quota exceeded',
@@ -284,7 +284,8 @@ export class ChatService implements OnModuleInit {
         `(org: ${organizationId}, user: ${userId}, model: ${response.model})`,
       );
 
-      // Log AI usage (fire-and-forget)
+      // Consume quota + log usage only after successful response
+      this.aiQuotaService.consumeOne(organizationId).catch(() => {});
       this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', response.model, response.tokensUsed, false).catch(() => {});
 
       const { cleanText, suggestions } = this.finalizeAssistantContent(response.content);
@@ -359,9 +360,9 @@ export class ChatService implements OnModuleInit {
     const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
     this.zaiProvider.setApiKey(apiKey);
 
-    // Check AI quota before streaming
+    // Check AI quota before streaming (consume after success in onComplete)
     try {
-      const quotaResult = await this.aiQuotaService.checkAndConsume(organizationId, userId, 'chat');
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
       if (!quotaResult.allowed) {
         callbacks.onError(new Error(
           JSON.stringify({
@@ -400,6 +401,8 @@ export class ChatService implements OnModuleInit {
       onComplete: async (meta?: { tokensUsed?: number }) => {
         const { cleanText, suggestions } = this.finalizeAssistantContent(fullResponse);
 
+        // Consume quota + log only on successful completion
+        this.aiQuotaService.consumeOne(organizationId).catch(() => {});
         this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', model, meta?.tokensUsed ?? null, false).catch(() => {});
 
         if (shouldSaveHistory) {

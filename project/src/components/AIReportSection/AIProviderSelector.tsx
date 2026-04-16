@@ -56,7 +56,7 @@ export const AIProviderSelector = ({
       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
         Fournisseur IA
       </label>
-      <div className="grid auto-rows-fr grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {displayProviders.map((provider) => {
           const isSelected = selectedProvider === provider.provider;
           const isAvailable = provider.available;
@@ -72,7 +72,7 @@ export const AIProviderSelector = ({
               disabled={disabled || !isAvailable}
               className={cn(
                 // Button defaults include h-10 + whitespace-nowrap — breaks multi-line grid cards
-                'relative flex h-auto min-h-0 w-full items-start justify-start gap-3 whitespace-normal rounded-xl border-2 p-4 text-left align-top font-normal shadow-none hover:bg-transparent [&_svg]:h-6 [&_svg]:w-6 [&_svg]:shrink-0',
+                'relative flex h-auto min-h-0 w-full items-start justify-start gap-3 whitespace-normal rounded-xl border-2 p-4 text-left font-normal shadow-none hover:bg-transparent [&_svg]:!h-6 [&_svg]:!w-6 [&_svg]:shrink-0',
                 isSelected &&
                   'border-emerald-500 bg-emerald-50 dark:border-emerald-500/80 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/40',
                 isAvailable &&

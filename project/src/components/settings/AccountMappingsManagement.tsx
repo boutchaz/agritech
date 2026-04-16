@@ -445,7 +445,7 @@ export function AccountMappingsManagement() {
         header={
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {t('accountMappings.title', 'Account Mappings')}
               </h2>
               <p className="text-muted-foreground">

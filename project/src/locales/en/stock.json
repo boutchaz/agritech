@@ -29,6 +29,7 @@
       "byFarm": "By Farm/Warehouse",
       "addStock": "Add Stock",
       "viewItem": "View Item",
+      "viewItemAria": "View item {{name}}",
       "viewAll": "View all {{count}} low stock items",
       "allOptimal": "All stock levels are optimal"
     },

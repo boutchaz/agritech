@@ -2,13 +2,13 @@ import { createFileRoute } from '@tanstack/react-router';
 import { FiscalYearManagement } from '@/components/settings/FiscalYearManagement';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 
-function FiscalYearsSettingsPage() {
+function FiscalYearsPage() {
   return <FiscalYearManagement />;
 }
 
-export const Route = createFileRoute('/_authenticated/(settings)/settings/fiscal-years')({
+export const Route = createFileRoute('/_authenticated/(accounting)/accounting/fiscal-years')({
   component: withRouteProtection(
-    FiscalYearsSettingsPage,
+    FiscalYearsPage,
     'manage',
     'FiscalYear'
   ),

@@ -280,7 +280,7 @@ function PaymentsPage() {
                     <TableHead>{t('payments.period', 'Période')}</TableHead>
                     <TableHead>{t('payments.amount', 'Montant')}</TableHead>
                     <TableHead>{t('payments.status.label', 'Statut')}</TableHead>
-                    <TableHead>{t('common.actions', 'Actions')}</TableHead>
+                    <TableHead>{t('common.actionsColumn', 'Actions')}</TableHead>
                   </TableRow>
                 }
                 renderTable={(payment) => (

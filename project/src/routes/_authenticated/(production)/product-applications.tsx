@@ -372,7 +372,7 @@ function ProductApplicationsPage() {
                     <TableHead>{t('productApplications.quantity', 'Quantité')}</TableHead>
                     <TableHead>{t('productApplications.area', 'Surface')}</TableHead>
                     <TableHead>{t('productApplications.cost', 'Coût')}</TableHead>
-                    <TableHead className="w-[60px]">{t('common.actions', 'Actions')}</TableHead>
+                    <TableHead className="w-[60px]">{t('common.actionsColumn', 'Actions')}</TableHead>
                   </TableRow>
                 }
                 renderTable={(app: ProductApplication) => (

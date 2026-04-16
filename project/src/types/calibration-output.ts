@@ -90,6 +90,17 @@ export interface CalibrationZonesResponse {
   distribution: Record<string, number>;
 }
 
+export interface IrrigationRecommendationResponse {
+  kc: number;
+  kc_min: number | null;
+  kc_max: number | null;
+  et0: number;
+  etc: number;
+  recommended_volume_m3_per_ha: number;
+  crop_type: string;
+  phenological_stage: string;
+}
+
 export interface HealthScore {
   total: number;
   components: {

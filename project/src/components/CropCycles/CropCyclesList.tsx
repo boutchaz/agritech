@@ -996,7 +996,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps) {
                 {t("cropCycles.table.pnl", "P&L")}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {t("common.actions", "Actions")}
+                {t("common.actionsColumn", "Actions")}
               </th>
             </tr>
           }

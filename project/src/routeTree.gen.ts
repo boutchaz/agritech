@@ -89,16 +89,13 @@ import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
-import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
-import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
 import { Route as AuthenticatedsettingsSettingsBillingRouteImport } from './routes/_authenticated/(settings)/settings.billing'
 import { Route as AuthenticatedsettingsSettingsAiRouteImport } from './routes/_authenticated/(settings)/settings.ai'
-import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
 import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
 import { Route as AuthenticatedproductionProductionSoilAnalysisRouteImport } from './routes/_authenticated/(production)/production/soil-analysis'
 import { Route as AuthenticatedproductionProductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/production/satellite-analysis'
@@ -137,13 +134,16 @@ import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from '.
 import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './routes/_authenticated/(accounting)/accounting/journal'
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
+import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
+import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
 import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
 import { Route as AuthenticatedaccountingAccountingAgedReceivablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-receivables'
 import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-payables'
 import { Route as AuthenticatedaccountingAccountingAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/accounts'
+import { Route as AuthenticatedaccountingAccountingAccountMappingsRouteImport } from './routes/_authenticated/(accounting)/accounting/account-mappings'
 import { Route as AuthenticatedworkforceWorkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.index'
 import { Route as AuthenticatedproductionParcelsParcelIdIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.index'
 import { Route as AuthenticatedinventoryStockItemsIndexRouteImport } from './routes/_authenticated/(inventory)/stock/items.index'
@@ -628,12 +628,6 @@ const AuthenticatedsettingsSettingsLegalRoute =
     path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsFiscalYearsRoute =
-  AuthenticatedsettingsSettingsFiscalYearsRouteImport.update({
-    id: '/fiscal-years',
-    path: '/fiscal-years',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
 const AuthenticatedsettingsSettingsFilesRoute =
   AuthenticatedsettingsSettingsFilesRouteImport.update({
     id: '/files',
@@ -658,12 +652,6 @@ const AuthenticatedsettingsSettingsDangerZoneRoute =
     path: '/danger-zone',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsCostCentersRoute =
-  AuthenticatedsettingsSettingsCostCentersRouteImport.update({
-    id: '/cost-centers',
-    path: '/cost-centers',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
 const AuthenticatedsettingsSettingsBiologicalAssetsRoute =
   AuthenticatedsettingsSettingsBiologicalAssetsRouteImport.update({
     id: '/biological-assets',
@@ -680,12 +668,6 @@ const AuthenticatedsettingsSettingsAiRoute =
   AuthenticatedsettingsSettingsAiRouteImport.update({
     id: '/ai',
     path: '/ai',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
-const AuthenticatedsettingsSettingsAccountMappingsRoute =
-  AuthenticatedsettingsSettingsAccountMappingsRouteImport.update({
-    id: '/account-mappings',
-    path: '/account-mappings',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsAccountRoute =
@@ -916,10 +898,22 @@ const AuthenticatedaccountingAccountingGeneralLedgerRoute =
     path: '/general-ledger',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingFiscalYearsRoute =
+  AuthenticatedaccountingAccountingFiscalYearsRouteImport.update({
+    id: '/fiscal-years',
+    path: '/fiscal-years',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCustomersRoute =
   AuthenticatedaccountingAccountingCustomersRouteImport.update({
     id: '/customers',
     path: '/customers',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingCostCentersRoute =
+  AuthenticatedaccountingAccountingCostCentersRouteImport.update({
+    id: '/cost-centers',
+    path: '/cost-centers',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingCashFlowRoute =
@@ -956,6 +950,12 @@ const AuthenticatedaccountingAccountingAccountsRoute =
   AuthenticatedaccountingAccountingAccountsRouteImport.update({
     id: '/accounts',
     path: '/accounts',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingAccountMappingsRoute =
+  AuthenticatedaccountingAccountingAccountMappingsRouteImport.update({
+    id: '/account-mappings',
+    path: '/account-mappings',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedworkforceWorkforceTasksIndexRoute =
@@ -1173,13 +1173,16 @@ export interface FileRoutesByFullPath {
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -1218,16 +1221,13 @@ export interface FileRoutesByFullPath {
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
@@ -1330,13 +1330,16 @@ export interface FileRoutesByTo {
   '/onboarding': typeof publicOnboardingIndexRoute
   '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -1374,16 +1377,13 @@ export interface FileRoutesByTo {
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
@@ -1490,13 +1490,16 @@ export interface FileRoutesById {
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/_authenticated/(accounting)/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/_authenticated/(accounting)/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -1535,16 +1538,13 @@ export interface FileRoutesById {
   '/_authenticated/(production)/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/_authenticated/(production)/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/_authenticated/(settings)/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/_authenticated/(settings)/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
@@ -1654,13 +1654,16 @@ export interface FileRouteTypes {
     | '/onboarding/'
     | '/compliance/'
     | '/pest-alerts/'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
@@ -1699,16 +1702,13 @@ export interface FileRouteTypes {
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
     | '/settings/ai'
     | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
@@ -1811,13 +1811,16 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/compliance'
     | '/pest-alerts'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
@@ -1855,16 +1858,13 @@ export interface FileRouteTypes {
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
     | '/settings/ai'
     | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
@@ -1970,13 +1970,16 @@ export interface FileRouteTypes {
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
+    | '/_authenticated/(accounting)/accounting/account-mappings'
     | '/_authenticated/(accounting)/accounting/accounts'
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
     | '/_authenticated/(accounting)/accounting/balance-sheet'
     | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
+    | '/_authenticated/(accounting)/accounting/cost-centers'
     | '/_authenticated/(accounting)/accounting/customers'
+    | '/_authenticated/(accounting)/accounting/fiscal-years'
     | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
     | '/_authenticated/(accounting)/accounting/journal'
@@ -2015,16 +2018,13 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/production/satellite-analysis'
     | '/_authenticated/(production)/production/soil-analysis'
     | '/_authenticated/(settings)/settings/account'
-    | '/_authenticated/(settings)/settings/account-mappings'
     | '/_authenticated/(settings)/settings/ai'
     | '/_authenticated/(settings)/settings/billing'
     | '/_authenticated/(settings)/settings/biological-assets'
-    | '/_authenticated/(settings)/settings/cost-centers'
     | '/_authenticated/(settings)/settings/danger-zone'
     | '/_authenticated/(settings)/settings/dashboard'
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
-    | '/_authenticated/(settings)/settings/fiscal-years'
     | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/organization'
@@ -2656,13 +2656,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/fiscal-years': {
-      id: '/_authenticated/(settings)/settings/fiscal-years'
-      path: '/fiscal-years'
-      fullPath: '/settings/fiscal-years'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
     '/_authenticated/(settings)/settings/files': {
       id: '/_authenticated/(settings)/settings/files'
       path: '/files'
@@ -2691,13 +2684,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsDangerZoneRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/cost-centers': {
-      id: '/_authenticated/(settings)/settings/cost-centers'
-      path: '/cost-centers'
-      fullPath: '/settings/cost-centers'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsCostCentersRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
     '/_authenticated/(settings)/settings/biological-assets': {
       id: '/_authenticated/(settings)/settings/biological-assets'
       path: '/biological-assets'
@@ -2717,13 +2703,6 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/settings/ai'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsAiRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
-    '/_authenticated/(settings)/settings/account-mappings': {
-      id: '/_authenticated/(settings)/settings/account-mappings'
-      path: '/account-mappings'
-      fullPath: '/settings/account-mappings'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/account': {
@@ -2992,11 +2971,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/fiscal-years': {
+      id: '/_authenticated/(accounting)/accounting/fiscal-years'
+      path: '/fiscal-years'
+      fullPath: '/accounting/fiscal-years'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/customers': {
       id: '/_authenticated/(accounting)/accounting/customers'
       path: '/customers'
       fullPath: '/accounting/customers'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/cost-centers': {
+      id: '/_authenticated/(accounting)/accounting/cost-centers'
+      path: '/cost-centers'
+      fullPath: '/accounting/cost-centers'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingCostCentersRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/cash-flow': {
@@ -3039,6 +3032,13 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/accounting/accounts'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/account-mappings': {
+      id: '/_authenticated/(accounting)/accounting/account-mappings'
+      path: '/account-mappings'
+      fullPath: '/accounting/account-mappings'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(workforce)/workforce/tasks/': {
@@ -3227,13 +3227,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedaccountingAccountingRouteChildren {
+  AuthenticatedaccountingAccountingAccountMappingsRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   AuthenticatedaccountingAccountingAccountsRoute: typeof AuthenticatedaccountingAccountingAccountsRoute
   AuthenticatedaccountingAccountingAgedPayablesRoute: typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   AuthenticatedaccountingAccountingAgedReceivablesRoute: typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
+  AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
+  AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
   AuthenticatedaccountingAccountingJournalRoute: typeof AuthenticatedaccountingAccountingJournalRoute
@@ -3250,6 +3253,8 @@ interface AuthenticatedaccountingAccountingRouteChildren {
 
 const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAccountingRouteChildren =
   {
+    AuthenticatedaccountingAccountingAccountMappingsRoute:
+      AuthenticatedaccountingAccountingAccountMappingsRoute,
     AuthenticatedaccountingAccountingAccountsRoute:
       AuthenticatedaccountingAccountingAccountsRoute,
     AuthenticatedaccountingAccountingAgedPayablesRoute:
@@ -3262,8 +3267,12 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingBankAccountsRoute,
     AuthenticatedaccountingAccountingCashFlowRoute:
       AuthenticatedaccountingAccountingCashFlowRoute,
+    AuthenticatedaccountingAccountingCostCentersRoute:
+      AuthenticatedaccountingAccountingCostCentersRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
+    AuthenticatedaccountingAccountingFiscalYearsRoute:
+      AuthenticatedaccountingAccountingFiscalYearsRoute,
     AuthenticatedaccountingAccountingGeneralLedgerRoute:
       AuthenticatedaccountingAccountingGeneralLedgerRoute,
     AuthenticatedaccountingAccountingInvoicesRoute:
@@ -3537,16 +3546,13 @@ const AuthenticatedproductionParcelsRouteWithChildren =
 
 interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
-  AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   AuthenticatedsettingsSettingsAiRoute: typeof AuthenticatedsettingsSettingsAiRoute
   AuthenticatedsettingsSettingsBillingRoute: typeof AuthenticatedsettingsSettingsBillingRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
-  AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
@@ -3562,15 +3568,11 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
   {
     AuthenticatedsettingsSettingsAccountRoute:
       AuthenticatedsettingsSettingsAccountRoute,
-    AuthenticatedsettingsSettingsAccountMappingsRoute:
-      AuthenticatedsettingsSettingsAccountMappingsRoute,
     AuthenticatedsettingsSettingsAiRoute: AuthenticatedsettingsSettingsAiRoute,
     AuthenticatedsettingsSettingsBillingRoute:
       AuthenticatedsettingsSettingsBillingRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:
       AuthenticatedsettingsSettingsBiologicalAssetsRoute,
-    AuthenticatedsettingsSettingsCostCentersRoute:
-      AuthenticatedsettingsSettingsCostCentersRoute,
     AuthenticatedsettingsSettingsDangerZoneRoute:
       AuthenticatedsettingsSettingsDangerZoneRoute,
     AuthenticatedsettingsSettingsDashboardRoute:
@@ -3579,8 +3581,6 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsDocumentsRoute,
     AuthenticatedsettingsSettingsFilesRoute:
       AuthenticatedsettingsSettingsFilesRoute,
-    AuthenticatedsettingsSettingsFiscalYearsRoute:
-      AuthenticatedsettingsSettingsFiscalYearsRoute,
     AuthenticatedsettingsSettingsLegalRoute:
       AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
