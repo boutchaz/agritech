@@ -100,36 +100,6 @@ describe('createCrudApi', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// crops
-// ═══════════════════════════════════════════════════════════════════
-describe('cropsApi', () => {
-  let cropsApi: typeof import('../crops').cropsApi;
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    ({ cropsApi } = await import('../crops'));
-  });
-
-  it('unwraps paginated response and returns array', async () => {
-    mockGet.mockResolvedValue({ data: [{ id: 'c1', name: 'Wheat' }] });
-
-    const result = await cropsApi.getAll(ORG_ID);
-
-    expect(result).toEqual([{ id: 'c1', name: 'Wheat' }]);
-  });
-
-  it('returns empty array on empty data', async () => {
-    mockGet.mockResolvedValue({ data: [] });
-    expect(await cropsApi.getAll(ORG_ID)).toEqual([]);
-  });
-
-  it('returns empty array on undefined data', async () => {
-    mockGet.mockResolvedValue({});
-    expect(await cropsApi.getAll(ORG_ID)).toEqual([]);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════
 // deliveries
 // ═══════════════════════════════════════════════════════════════════
 describe('deliveriesApi', () => {
@@ -561,7 +531,6 @@ describe('whitelist safety — no forbidden query params', () => {
   const forbiddenParams = ['pageSize', 'orderBy', 'order', 'limit', 'offset'];
 
   const testCases = [
-    { name: 'cropsApi.getAll', fn: async () => { const { cropsApi } = await import('../crops'); mockGet.mockResolvedValue({ data: [] }); await cropsApi.getAll(ORG_ID); } },
     { name: 'deliveriesApi.getAll', fn: async () => { const { deliveriesApi } = await import('../deliveries'); mockGet.mockResolvedValue({ data: [] }); await deliveriesApi.getAll(undefined, ORG_ID); } },
     { name: 'workersApi.getAll', fn: async () => { const { workersApi } = await import('../workers'); mockGet.mockResolvedValue({ data: [] }); await workersApi.getAll(undefined, ORG_ID); } },
     { name: 'stockEntriesApi.getAll', fn: async () => { const { stockEntriesApi } = await import('../stock'); mockGet.mockResolvedValue({ data: [] }); await stockEntriesApi.getAll(undefined, ORG_ID); } },

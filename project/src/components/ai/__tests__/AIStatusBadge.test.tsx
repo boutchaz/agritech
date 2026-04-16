@@ -26,7 +26,7 @@ describe('AIStatusBadge', () => {
   });
 
   it('renders calibration status correctly', () => {
-    render(<AIStatusBadge status="calibration" />);
+    render(<AIStatusBadge status="calibrating" />);
     const badge = screen.getByText('Calibrating');
     expect(badge).toBeDefined();
     expect(badge.className).toContain('bg-blue-100');
@@ -53,16 +53,16 @@ describe('AIStatusBadge', () => {
     expect(badge.className).toContain('bg-red-100');
   });
 
-  it('renders paused status correctly', () => {
-    render(<AIStatusBadge status="paused" />);
-    const badge = screen.getByText('Paused');
+  it('renders archived status correctly', () => {
+    render(<AIStatusBadge status="archived" />);
+    const badge = screen.getByText('Archived');
     expect(badge).toBeDefined();
-    expect(badge.className).toContain('bg-orange-100');
+    expect(badge.className).toContain('bg-gray-100');
   });
 
-  it('renders disabled status correctly', () => {
-    render(<AIStatusBadge status="disabled" />);
-    const badge = screen.getByText('Disabled');
+  it('renders awaiting_data status correctly', () => {
+    render(<AIStatusBadge status="awaiting_data" />);
+    const badge = screen.getByText('Awaiting Data');
     expect(badge).toBeDefined();
     expect(badge.className).toContain('bg-gray-100');
   });

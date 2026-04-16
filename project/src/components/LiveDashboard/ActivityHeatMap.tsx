@@ -207,6 +207,19 @@ const ActivityHeatMap = ({
     return () => ro.disconnect();
   }, []);
 
+  // Leaflet often needs an explicit resize after container visibility/position changes
+  // (e.g. when switching to fullscreen). This is in addition to the ResizeObserver
+  // because the layout transition may happen slightly after React renders.
+  useEffect(() => {
+    const invalidate = () => leafletMapRef.current?.invalidateSize();
+    const raf = requestAnimationFrame(invalidate);
+    const timeout = window.setTimeout(invalidate, 550); // match transition-all duration-500
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(timeout);
+    };
+  }, [isFullscreen]);
+
   // Stats
   const activeFarmsCount = useMemo(() => new Set(data.filter(p => !p.isIdle && p.farmId).map(p => p.farmId)).size, [data]);
   const totalFarmsCount = useMemo(() => new Set(data.filter(p => p.farmId).map(p => p.farmId)).size, [data]);
@@ -226,7 +239,9 @@ const ActivityHeatMap = ({
     <div className={cn(
       "transition-all duration-500",
       isFullscreen
-        ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-900 flex flex-col'
+        // Use viewport units so `fixed` behaves as expected even if an ancestor
+        // creates a new containing block (e.g. via transforms/animations).
+        ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen min-h-0'
         : 'group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-emerald-500/5'
     )}>
       {/* Header */}
@@ -304,7 +319,10 @@ const ActivityHeatMap = ({
       {/* Map Content */}
       <div
         ref={mapShellRef}
-        className={cn("relative overflow-hidden", isFullscreen ? "flex-1 min-h-0" : "h-[500px]")}
+        className={cn(
+          "relative overflow-hidden",
+          isFullscreen ? "flex-1 min-h-0 w-full" : "h-[500px]"
+        )}
       >
         <MapContainer
           ref={leafletMapRef}

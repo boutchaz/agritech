@@ -403,10 +403,65 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
       if (ri >= 0 && ri < nRows && ci >= 0 && ci < nCols) grid[ri * nCols + ci] = p.value;
     });
 
+    // The canvas renderer keeps `NaN` samples fully transparent.
+    // When the source grid has sparse gaps (common with rounded lat/lon -> indices),
+    // those transparent pixels show up as thin straight seams.
+    //
+    // We fill all NaN holes using a nearest-neighbor propagation:
+    // - multi-source BFS from every finite grid cell
+    // - first reach for a NaN cell wins (nearest by Manhattan distance)
+    const fillNaNsWithNearestBfs = (source: Float32Array, rows: number, cols: number) => {
+      const filled = new Float32Array(source);
+      const idxOf = (r: number, c: number) => r * cols + c;
+      const isFiniteVal = (v: number) => Number.isFinite(v) && !Number.isNaN(v);
+
+      const total = rows * cols;
+      const visited = new Uint8Array(total);
+      const queue = new Int32Array(total);
+      let head = 0;
+      let tail = 0;
+
+      for (let idx = 0; idx < total; idx++) {
+        if (isFiniteVal(filled[idx])) {
+          visited[idx] = 1;
+          queue[tail++] = idx;
+        }
+      }
+
+      // If the whole grid is NaN, leave it as-is (nothing we can do).
+      if (tail === 0) return filled;
+
+      while (head < tail) {
+        const idx = queue[head++];
+        const r = Math.floor(idx / cols);
+        const c = idx - r * cols;
+        const v = filled[idx];
+
+        // 4-neighborhood is enough and avoids diagonal artifacts.
+        const neighbors: number[] = [
+          r > 0 ? idxOf(r - 1, c) : -1,
+          r + 1 < rows ? idxOf(r + 1, c) : -1,
+          c > 0 ? idxOf(r, c - 1) : -1,
+          c + 1 < cols ? idxOf(r, c + 1) : -1,
+        ];
+
+        for (const nIdx of neighbors) {
+          if (nIdx < 0 || visited[nIdx]) continue;
+          visited[nIdx] = 1;
+          filled[nIdx] = v;
+          queue[tail++] = nIdx;
+        }
+      }
+
+      return filled;
+    };
+
+    const gridFilled = fillNaNsWithNearestBfs(grid, nRows, nCols);
+
     const aoiPolygon = data.aoi_boundary?.length
       ? data.aoi_boundary as [number, number][]
       : boundary;
-    const dataUrl = buildHeatmapCanvas(grid, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiPolygon);
+    const dataUrl = buildHeatmapCanvas(gridFilled, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiPolygon);
     const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
     overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
     overlayRef.current.addTo(map);
@@ -899,7 +954,7 @@ const LeafletHeatmapViewer = ({
 
             {/* Heatmap Layer — switches by renderMode, clipped to boundary */}
             {renderMode === 'grid' && (
-              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={true} boundary={clipBoundary} />
+              <GridHeatmapLayer key="grid-heatmap" data={data} selectedIndex={selectedIndex} colorPalette={colorPalette} valueDisplay={valueDisplay} showBorders={false} boundary={clipBoundary} />
             )}
             {renderMode === 'smooth' && (
               <SmoothHeatmapLayer key="smooth-heatmap" data={data} colorPalette={colorPalette} valueDisplay={valueDisplay} showIsolines={showIsolines} boundary={clipBoundary} />

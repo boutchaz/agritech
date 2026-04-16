@@ -2,6 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useAIPlan, useAIPlanInterventions, useExecuteAIPlanIntervention, useRegenerateAIPlan } from '../useAIPlan';
 import { aiPlanApi } from '../../lib/api/ai-plan';
 
+vi.mock('@/i18n/config', () => ({
+  default: {
+    language: 'en',
+    t: (key: string) => key,
+  },
+}));
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+}));
+
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn(),

@@ -19,6 +19,7 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
     expect(screen.getByPlaceholderText(/Ask about your farm/)).toBeInTheDocument();
@@ -36,6 +37,7 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
     fireEvent.keyDown(screen.getByPlaceholderText(/Ask about your farm/), { key: 'Enter' });
@@ -52,6 +54,7 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
     const sendBtn = screen.getByRole('button');

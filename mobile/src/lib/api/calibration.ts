@@ -189,9 +189,9 @@ export const calibrationApi = {
     parcelId: string,
     dto: { current_step: number; form_data: Record<string, unknown> },
   ): Promise<CalibrationDraftResponse> {
-    return api.post<CalibrationDraftResponse>(
+    return api.put<CalibrationDraftResponse>(
       `${BASE_URL}/${parcelId}/calibration/draft`,
-      { ...dto, _method: 'PUT' },
+      dto,
     );
   },
 
@@ -209,17 +209,12 @@ export const calibrationApi = {
     );
   },
 
-  // Export
   async exportCalibration(
     calibrationId: string,
     format: 'json' | 'csv' | 'zip',
   ): Promise<Blob> {
-    const response = await fetch(
-      `${BASE_URL}/calibrations/${calibrationId}/export?format=${format}`,
+    return api.downloadBlob(
+      `/calibrations/${calibrationId}/export?format=${format}`,
     );
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
-    return response.blob();
   },
 };
