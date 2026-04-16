@@ -457,7 +457,7 @@ export function AccountMappingsManagement() {
                 <Download className="h-4 w-4 mr-2" />
                 {t('accountMappings.initializeDefaults', 'Initialize Defaults')}
               </Button>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button type="button" variant="default" onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('accountMappings.addNew', 'Add Mapping')}
               </Button>

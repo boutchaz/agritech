@@ -30,7 +30,7 @@ function QualityControlPage() {
         title={t('production.qualityControl.title')}
         subtitle={t('production.qualityControl.subtitle')}
         actions={
-          <Button onClick={() => setFormOpen(true)}>
+          <Button type="button" variant="default" onClick={() => setFormOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             {t('production.qualityControl.newInspection', 'New Inspection')}
           </Button>
