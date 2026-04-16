@@ -388,7 +388,8 @@ const Sidebar = ({
         "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30",
       isActive &&
         isCollapsed &&
-        "md:bg-emerald-600 md:text-white md:shadow-lg md:shadow-emerald-200/80 dark:md:shadow-emerald-900/25 md:hover:bg-emerald-600 md:hover:text-white dark:md:bg-emerald-600 dark:md:hover:bg-emerald-600",
+        // Ghost Button uses !text-slate-900 — need !important on md so icon + label stay white on emerald
+        "md:bg-emerald-600 md:!text-white [&_svg]:md:!text-white dark:md:!text-white dark:[&_svg]:md:!text-white md:shadow-lg md:shadow-emerald-200/80 dark:md:shadow-emerald-900/25 md:hover:bg-emerald-600 md:hover:!text-white md:hover:[&_svg]:!text-white dark:md:bg-emerald-600 dark:md:hover:bg-emerald-600",
       additionalClasses,
     );
   };
