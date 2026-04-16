@@ -305,6 +305,7 @@ export function useAllocatePayment() {
       queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+      queryClient.invalidateQueries({ queryKey: ['bank_accounts'] });
     },
   });
 }

@@ -1,13 +1,12 @@
 import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2 } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
@@ -96,6 +95,42 @@ export const InvoiceDetailDialog = ({
 
   const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
   const canSubmit = invoice && invoice.status === 'draft';
+  const canCancel = invoice && (invoice.status === 'submitted' || invoice.status === 'overdue' || invoice.status === 'partially_paid');
+
+  const handleCancelInvoice = () => {
+    if (!invoiceId || !invoice) return;
+    showConfirm(
+      t('invoices.cancel.confirmTitle', 'Void this invoice?'),
+      async () => {
+        try {
+          const result = await updateInvoiceStatus.mutateAsync({
+            invoice_id: invoiceId,
+            status: 'cancelled',
+            remarks: invoice.remarks || undefined,
+          });
+          const reversalId = (result as { reversal_entry_id?: string } | undefined)?.reversal_entry_id;
+          toast.success(
+            reversalId
+              ? t('invoices.cancel.successWithReversal', `Invoice voided. Reversing journal entry created.`)
+              : t('invoices.cancel.success', 'Invoice voided successfully'),
+          );
+          queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+          queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+          queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+        } catch (err) {
+          console.error('Error cancelling invoice:', err);
+          toast.error(err instanceof Error ? err.message : t('invoices.cancel.error', 'Failed to void invoice'));
+        }
+      },
+      {
+        variant: 'destructive',
+        description: t(
+          'invoices.cancel.confirmDescription',
+          'Voiding a posted invoice will create a reversing journal entry in the General Ledger. This cannot be undone.',
+        ),
+      },
+    );
+  };
 
   const handleSubmitInvoice = async () => {
     if (!invoiceId || !invoice) return;
@@ -402,6 +437,20 @@ export const InvoiceDetailDialog = ({
                   )}
                   {t('invoices.actions.sendEmail', 'Send Email')}
                 </Button>
+                {canCancel && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancelInvoice}
+                    disabled={updateInvoiceStatus.isPending}
+                  >
+                    {updateInvoiceStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Ban className="h-4 w-4 mr-2" />
+                    )}
+                    {t('invoices.cancel.button', 'Void / Cancel')}
+                  </Button>
+                )}
               </div>
             </DialogFooter>
           </div>
