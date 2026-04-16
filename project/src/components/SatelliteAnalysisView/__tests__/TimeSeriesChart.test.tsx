@@ -162,7 +162,7 @@ describe('TimeSeriesChart', () => {
 
       // Check that the component renders without crashing
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
 
@@ -182,7 +182,7 @@ describe('TimeSeriesChart', () => {
 
       // Check that the component renders with NIRvP
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
 
       // The index selector should show NIRvP
@@ -204,7 +204,7 @@ describe('TimeSeriesChart', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
 
       // The index selector should show TCARI_OSAVI
@@ -310,7 +310,7 @@ describe('TimeSeriesChart', () => {
       )
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
 
@@ -328,7 +328,7 @@ describe('TimeSeriesChart', () => {
         { wrapper }
       )
 
-      const syncButton = await screen.findByRole('button', { name: /récupérer/i })
+      const syncButton = await screen.findByRole('button', { name: /fetchFromSatellite|Satellite/i })
       expect(syncButton).toBeInTheDocument()
 
       // Clicking the button should work (even if disabled, the click doesn't throw)
@@ -355,7 +355,7 @@ describe('TimeSeriesChart', () => {
 
       // Component should render without crashing during loading
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
 
@@ -374,7 +374,7 @@ describe('TimeSeriesChart', () => {
 
       // Should render without errors even with empty data
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
 
@@ -395,7 +395,7 @@ describe('TimeSeriesChart', () => {
 
       // Should render without crashing on error
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
   })
@@ -414,7 +414,7 @@ describe('TimeSeriesChart', () => {
 
       // Should render without crashing
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /récupérer/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })).toBeInTheDocument()
       })
     })
   })

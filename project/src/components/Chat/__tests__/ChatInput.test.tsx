@@ -23,7 +23,7 @@ describe('ChatInput', () => {
       />
     );
     expect(screen.getByPlaceholderText(/Ask about your farm/)).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(1);
   });
 
   it('calls onSend on Enter key', () => {

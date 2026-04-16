@@ -176,7 +176,7 @@ describe('TimeSeriesChart end_date always today', () => {
     fireEvent.change(endDateInput, { target: { value: '2026-03-15' } })
 
     // Click sync button
-    const syncButton = screen.getByRole('button', { name: /récupérer/i })
+    const syncButton = screen.getByRole('button', { name: /fetchFromSatellite|Satellite/i })
     await user.click(syncButton)
 
     // Assert startTimeSeriesSync was called with today, not the manually entered date
