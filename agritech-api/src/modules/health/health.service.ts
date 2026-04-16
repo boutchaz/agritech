@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as os from 'os';
+import * as v8 from 'v8';
 import { DatabaseService } from '../database/database.service';
 
 export type ServiceStatus = 'up' | 'down' | 'degraded';
@@ -124,10 +125,17 @@ export class HealthService {
     const heapUsedMb = Math.round(mem.heapUsed / 1024 / 1024);
     const heapTotalMb = Math.round(mem.heapTotal / 1024 / 1024);
     const rssMb = Math.round(mem.rss / 1024 / 1024);
-    const heapPercent = Math.round((mem.heapUsed / mem.heapTotal) * 100);
+
+    // heapUsed / heapTotal is a trap: V8 GCs near the top, so a healthy app
+    // sits at 85-95% routinely. Use heapUsed against the hard heap limit
+    // (--max-old-space-size or V8 default) to detect actual pressure.
+    // Fall back to heapTotal-based ratio when the hard cap is unknown.
+    const heapLimitBytes = (v8.getHeapStatistics?.()?.heap_size_limit as number | undefined) ?? mem.heapTotal;
+    const heapLimitMb = Math.round(heapLimitBytes / 1024 / 1024);
+    const heapUsedPercent = Math.round((mem.heapUsed / heapLimitBytes) * 100);
 
     const status: ServiceStatus =
-      heapPercent > 90 ? 'down' : heapPercent > 85 ? 'degraded' : 'up';
+      heapUsedPercent > 95 ? 'down' : heapUsedPercent > 90 ? 'degraded' : 'up';
 
     return {
       status,
@@ -135,8 +143,9 @@ export class HealthService {
       details: {
         heapUsedMb,
         heapTotalMb,
+        heapLimitMb,
         rssMb,
-        heapPercent,
+        heapUsedPercent,
       },
     };
   }
