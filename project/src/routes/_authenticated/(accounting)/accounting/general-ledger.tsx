@@ -1,4 +1,4 @@
-import {  useState  } from "react";
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,8 +33,30 @@ const AppContent = () => {
   const { data: trialBalanceReport, isLoading: isLoadingAccounts } = useTrialBalance(today);
   const accounts = trialBalanceReport?.accounts ?? [];
 
+  // Auto-select the most-active account (first with non-zero balance) when nothing
+  // has been explicitly selected. Derived — no effect needed.
+  const autoSelectedAccountId = useMemo(() => {
+    if (!accounts.length) return '';
+    const firstWithBalance = accounts.find(
+      (a) => Number(a.total_debit ?? 0) !== 0 || Number(a.total_credit ?? 0) !== 0,
+    );
+    return (firstWithBalance ?? accounts[0]).account_id;
+  }, [accounts]);
+
+  const effectiveAccountId = selectedAccountId || autoSelectedAccountId;
+
+  // Shortcut buttons for common accounts (Cash, A/R, A/P)
+  const quickAccounts = useMemo(() => {
+    const byPrefix = (prefix: string) => accounts.find((a) => a.account_code?.startsWith(prefix));
+    return {
+      cash: byPrefix('51') || byPrefix('10'), // CGNC 514/516 or IFRS 10xx
+      ar: byPrefix('342') || byPrefix('11'),
+      ap: byPrefix('441') || byPrefix('20'),
+    };
+  }, [accounts]);
+
   const { data: report, isLoading, error } = useGeneralLedger(
-    selectedAccountId || undefined,
+    effectiveAccountId || undefined,
     startDate || undefined,
     endDate || undefined
   );
@@ -64,7 +86,7 @@ const AppContent = () => {
       <div className="p-6 space-y-6">
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[250px]">
                 <Label htmlFor="account_select" className="flex items-center gap-2 mb-2">
@@ -73,7 +95,7 @@ const AppContent = () => {
                 </Label>
                 <NativeSelect
                   id="account_select"
-                  value={selectedAccountId}
+                  value={effectiveAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
                   disabled={isLoadingAccounts}
                 >
@@ -135,6 +157,42 @@ const AppContent = () => {
                 {t('reportsModule.generalLedger.exportCsv', 'Export CSV')}
               </Button>
             </div>
+
+            {/* Quick-jump shortcuts for common accounts */}
+            {(quickAccounts.cash || quickAccounts.ar || quickAccounts.ap) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
+                  {t('reportsModule.generalLedger.quickJump', 'Quick jump:')}
+                </span>
+                {quickAccounts.cash && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.cash.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.cash!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.cash', 'Cash / Bank')}
+                  </Button>
+                )}
+                {quickAccounts.ar && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.ar.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.ar!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.ar', 'Receivables')}
+                  </Button>
+                )}
+                {quickAccounts.ap && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.ap.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.ap!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.ap', 'Payables')}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
