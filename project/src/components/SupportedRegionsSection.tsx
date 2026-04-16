@@ -126,7 +126,7 @@ const SupportedRegionsSection = ({ className }: SupportedRegionsSectionProps) =>
                     <span className="text-muted-foreground text-sm leading-relaxed">
                       {regionCountries.map((c) =>
                         c.country_code === 'MA'
-                          ? `${c.country_name} (incl. Western Sahara)`
+                          ? `${c.country_name}`
                           : c.country_name,
                       ).join(', ')}
                     </span>

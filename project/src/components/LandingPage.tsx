@@ -255,12 +255,12 @@ const LandingPage = () => {
           </a>
 
 
-          <nav className="hidden md:flex gap-8">
+          <nav className="hidden lg:flex gap-6 xl:gap-8">
             {(['modules', 'how-it-works', 'faq'] as const).map((id) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`bg-transparent border-none font-semibold text-[0.95rem] cursor-pointer transition-all duration-300 ${
+                className={`bg-transparent border-none font-semibold text-[0.9rem] xl:text-[0.95rem] cursor-pointer transition-all duration-300 whitespace-nowrap ${
                   scrolled ? 'text-foreground/80 hover:text-primary' : 'text-white/80 hover:text-white'
                 }`}
               >
@@ -269,7 +269,7 @@ const LandingPage = () => {
             ))}
             <Link
               to="/blog"
-              className={`font-semibold text-[0.95rem] transition-all duration-300 ${
+              className={`font-semibold text-[0.9rem] xl:text-[0.95rem] transition-all duration-300 whitespace-nowrap ${
                 scrolled ? 'text-foreground/80 hover:text-primary' : 'text-white/80 hover:text-white'
               }`}
             >
@@ -277,11 +277,11 @@ const LandingPage = () => {
             </Link>
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4">
             <LanguageSwitcher />
             <Link
               to="/login"
-              className={`inline-block px-4 py-2 rounded-xl font-semibold text-[0.95rem] transition-all duration-300 ${
+              className={`inline-block px-3 xl:px-4 py-2 rounded-xl font-semibold text-[0.9rem] xl:text-[0.95rem] transition-all duration-300 whitespace-nowrap ${
                 scrolled
                   ? 'text-foreground hover:text-primary'
                   : 'text-white/90 hover:text-white'
@@ -291,7 +291,7 @@ const LandingPage = () => {
             </Link>
             <button
               onClick={() => scrollTo('contact')}
-              className="inline-block px-5 py-2.5 rounded-xl font-bold text-[0.95rem] bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="inline-block px-4 xl:px-5 py-2.5 rounded-xl font-bold text-[0.9rem] xl:text-[0.95rem] bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer whitespace-nowrap"
             >
               {t('landing.hero.ctaDemo', 'Commencer')}
             </button>
@@ -299,7 +299,7 @@ const LandingPage = () => {
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-2"
+            className="lg:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Menu"
           >
@@ -314,7 +314,7 @@ const LandingPage = () => {
       {/* Full-screen mobile menu — fixed overlay so content below is not visible / misaligned */}
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[1001] flex md:hidden flex-col bg-[#111] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-0 z-[1001] flex lg:hidden flex-col bg-[#111] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           role="dialog"
           aria-modal="true"
           aria-label={t('landing.nav.menuAria')}
