@@ -69,7 +69,9 @@ const ParcelOverview = () => {
                 {t('parcels.index.noSatelliteDataDesc')}
               </p>
               <Link
-                to={`/parcels/${parcelId}/satellite`}
+                to="/parcels/$parcelId/satellite"
+                params={{ parcelId }}
+                search={{ farmId: undefined }}
                 className="inline-flex items-center gap-2 mt-2 text-sm font-medium text-amber-800 dark:text-amber-200 hover:underline"
               >
                 <Satellite className="h-4 w-4" />
