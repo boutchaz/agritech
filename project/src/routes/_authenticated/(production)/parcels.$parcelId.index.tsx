@@ -13,10 +13,11 @@ import { DetailPageSkeleton } from '@/components/ui/page-skeletons'
 const ParcelOverview = () => {
   const { t } = useTranslation();
   const { parcelId } = Route.useParams();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const { data: parcel, isLoading: isLoadingParcel } = useParcelById(parcelId);
   const { data: indices, isLoading: _isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
-  
+
   // Memoize filters to prevent unnecessary refetches
   const parcelFilters = useMemo(() => ({ parcel_id: parcelId }), [parcelId]);
   const { data: parcelTasks, isLoading: isLoadingTasks } = useTasks(organizationId || '', parcelFilters);

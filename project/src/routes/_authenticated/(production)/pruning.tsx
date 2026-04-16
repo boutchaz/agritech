@@ -16,7 +16,8 @@ export const Route = createFileRoute('/_authenticated/(production)/pruning')({
 
 function Pruning() {
   const { t } = useTranslation();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const [searchTerm, setSearchTerm] = useState('');
 
   // Use existing tasks API - filter for pruning tasks
