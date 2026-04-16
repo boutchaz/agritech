@@ -208,7 +208,7 @@ describe('TimeSeriesChart', () => {
       })
 
       // The index selector should show TCARI_OSAVI
-      expect(screen.getByRole('button', { name: /TCARI_OSAVI/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /TCARI.*OSAVI/i })).toBeInTheDocument()
     })
   })
 
@@ -227,7 +227,7 @@ describe('TimeSeriesChart', () => {
 
       // Wait for the index selector button
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /NIRv/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^NIRv$/i })).toBeInTheDocument()
       })
     })
 
@@ -246,11 +246,11 @@ describe('TimeSeriesChart', () => {
 
       // Wait for the index selector button
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /NIRv/i })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^NIRv$/i })).toBeInTheDocument()
       })
 
       // The index selector button shows the selected index
-      const selectorButton = screen.getByRole('button', { name: /NIRv/i })
+      const selectorButton = screen.getByRole('button', { name: /^NIRv$/i })
 
       // Clicking should not throw
       await user.click(selectorButton)

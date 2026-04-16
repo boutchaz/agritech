@@ -8,6 +8,7 @@ vi.mock('lucide-react', () => ({
   AlertTriangle: () => <div data-testid="icon-alert-triangle" />,
   Clock: () => <div data-testid="icon-clock" />,
   XCircle: () => <div data-testid="icon-x-circle" />,
+  Archive: () => <div data-testid="icon-archive" />,
 }));
 
 describe('AIStatusBadge', () => {
@@ -57,7 +58,7 @@ describe('AIStatusBadge', () => {
     render(<AIStatusBadge status="archived" />);
     const badge = screen.getByText('Archived');
     expect(badge).toBeDefined();
-    expect(badge.className).toContain('bg-gray-100');
+    expect(badge.closest('span')!.className).toContain('bg-gray-100');
   });
 
   it('renders awaiting_data status correctly', () => {

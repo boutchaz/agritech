@@ -164,9 +164,11 @@ describe('Loading state', () => {
 // ─── Table view ─────────────────────────────────────────────────────────
 
 describe('Table view', () => {
-  it('renders all column headers with proper translation keys', () => {
+  it('renders all column headers with proper translation keys', async () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
+
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
 
     const allText = document.body.textContent || '';
     expect(allText).toContain('items.itemGroup.code');
@@ -186,17 +188,21 @@ describe('Table view', () => {
     expect(screen.getByText('All fertilizer products')).toBeDefined();
   });
 
-  it('shows "root group" badge for groups without parent', () => {
+  it('shows "root group" badge for groups without parent', async () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
+
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
 
     const allText = document.body.textContent || '';
     expect(allText).toContain('items.itemGroup.mainGroup');
   });
 
-  it('shows parent group name for child groups', () => {
+  it('shows parent group name for child groups', async () => {
     setGroups([rootGroup, childGroup]);
     render(<ItemGroupsManagement />);
+
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
 
     const allFertilizers = screen.getAllByText('Fertilizers');
     expect(allFertilizers.length).toBeGreaterThanOrEqual(2);
@@ -327,13 +333,13 @@ describe('Tree view', () => {
 // ─── View mode toggle ───────────────────────────────────────────────────
 
 describe('View mode toggle', () => {
-  it('defaults to table view', () => {
+  it('defaults to tree view', () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
 
-    const tableBtn = screen.getByRole('button', { name: /items\.itemGroup\.tableView/i });
-    expect(tableBtn).toBeDefined();
-    expect(tableBtn.getAttribute('class')).not.toContain('ghost');
+    const treeBtn = screen.getByRole('button', { name: /items\.itemGroup\.treeView/i });
+    expect(treeBtn).toBeDefined();
+    expect(treeBtn.getAttribute('class')).not.toContain('ghost');
   });
 
   it('toggles between table and tree', async () => {
@@ -376,7 +382,7 @@ describe('Create dialog', () => {
 
     const allButtons = screen.getAllByRole('button');
     const editBtn = allButtons.find(
-      (btn) => btn.querySelector('.lucide-pencil, [data-lucide="pencil"]') || (btn.closest('td, div') && btn.querySelector('svg'))
+      (btn) => btn.querySelector('.lucide-pencil')
     );
 
     if (editBtn) {

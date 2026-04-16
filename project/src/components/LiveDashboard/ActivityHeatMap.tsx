@@ -342,7 +342,7 @@ const ActivityHeatMap = ({
 
         {/* Empty state overlay */}
         {data.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-[1000] pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-20 pointer-events-none">
             <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-[2.5rem] shadow-2xl border border-slate-100 dark:border-slate-700 px-10 py-8 text-center max-w-sm">
               <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-3xl w-fit mx-auto mb-4 border border-slate-100 dark:border-slate-800">
                 <MapIcon className="h-10 w-10 text-slate-300 dark:text-slate-600" />
@@ -358,7 +358,7 @@ const ActivityHeatMap = ({
         {data.length > 0 && (
           <>
             {/* Legend Overlay */}
-            <div className="absolute bottom-6 left-6 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-5 z-[1000] min-w-[200px]">
+            <div className="absolute bottom-6 left-6 z-20 min-w-[200px] rounded-3xl border border-slate-100 bg-white/80 p-5 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-800/80">
               <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Legend</h4>
               <div className="space-y-3">
                 {presentTypes.map(type => (
@@ -380,7 +380,7 @@ const ActivityHeatMap = ({
             </div>
 
             {/* Live Stats Overlay */}
-            <div className="absolute top-6 right-6 flex flex-col gap-3 z-[1000]">
+            <div className="absolute right-4 top-4 z-20 flex flex-col gap-3 sm:right-6 sm:top-6">
               <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 p-4 min-w-[160px]">
                 <p className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1">Active Assets</p>
                 <div className="flex items-baseline gap-1">

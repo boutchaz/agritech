@@ -17,6 +17,7 @@ import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
 import { isRTLLocale } from '../lib/is-rtl-locale'
+import { loadLanguage } from '@/i18n/config'
 import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 import { NotificationRealtimeBridge } from '@/components/NotificationRealtimeBridge';
@@ -85,10 +86,10 @@ function AuthenticatedLayout() {
 
   // Sync language from DB profile on load (overrides localStorage if DB has a value)
   useEffect(() => {
-    if (profile?.language && profile.language !== i18n.language) {
-      i18n.changeLanguage(profile.language)
+    if (profile?.language) {
+      loadLanguage(profile.language)
     }
-  }, [profile?.language, i18n])
+  }, [profile?.language])
 
   // Toggle dark mode and persist to DB + localStorage
   const handleThemeToggle = useCallback(() => {

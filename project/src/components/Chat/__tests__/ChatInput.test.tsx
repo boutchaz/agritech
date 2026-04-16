@@ -57,7 +57,7 @@ describe('ChatInput', () => {
         onImageChange={vi.fn()}
       />
     );
-    const sendBtn = screen.getByRole('button');
+    const sendBtn = screen.getAllByRole('button').at(-1)!; // Send button is always last
     expect(sendBtn).toBeDisabled();
   });
 });
