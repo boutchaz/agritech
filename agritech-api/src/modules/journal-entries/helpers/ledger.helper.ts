@@ -77,6 +77,11 @@ const toNumber = (value: unknown): number => {
 const roundCurrency = (value: number): number =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
+const normalizeExchangeRate = (rate: unknown): number => {
+  const n = toNumber(rate);
+  return n > 0 ? n : 1;
+};
+
 /**
  * Build journal lines for an invoice
  *
@@ -94,10 +99,12 @@ export function buildInvoiceLedgerLines(
   invoice: InvoiceRecord,
   entryId: string,
   accounts: InvoiceLedgerAccounts,
+  exchangeRate: number = 1,
 ): LedgerLine[] {
   const lines: LedgerLine[] = [];
-  const taxTotal = roundCurrency(toNumber(invoice.tax_total));
-  const grandTotal = roundCurrency(toNumber(invoice.grand_total));
+  const fx = normalizeExchangeRate(exchangeRate);
+  const taxTotal = roundCurrency(toNumber(invoice.tax_total) * fx);
+  const grandTotal = roundCurrency(toNumber(invoice.grand_total) * fx);
 
   if (invoice.invoice_type === 'sales') {
     // Validate required accounts
@@ -122,7 +129,7 @@ export function buildInvoiceLedgerLines(
         throw new Error(`Invoice item ${item.id} missing revenue account. Set account_id on the item or configure a default revenue account mapping.`);
       }
 
-      const amount = roundCurrency(toNumber(item.amount));
+      const amount = roundCurrency(toNumber(item.amount) * fx);
       if (amount === 0) return;
 
       lines.push({
@@ -172,7 +179,7 @@ export function buildInvoiceLedgerLines(
         throw new Error(`Invoice item ${item.id} missing expense account. Set account_id on the item or configure a default expense account mapping.`);
       }
 
-      const amount = roundCurrency(toNumber(item.amount));
+      const amount = roundCurrency(toNumber(item.amount) * fx);
       if (amount === 0) return;
 
       lines.push({
@@ -237,12 +244,14 @@ export function buildPaymentLedgerLines(
   payment: PaymentRecord,
   entryId: string,
   accounts: PaymentLedgerAccounts,
+  exchangeRate: number = 1,
 ): LedgerLine[] {
   if (!accounts.cashAccountId) {
     throw new Error('Missing cash/bank ledger account');
   }
 
-  const amount = roundCurrency(toNumber(payment.amount));
+  const fx = normalizeExchangeRate(exchangeRate);
+  const amount = roundCurrency(toNumber(payment.amount) * fx);
   if (amount <= 0) {
     throw new Error('Payment amount must be greater than zero');
   }

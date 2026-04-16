@@ -13,7 +13,6 @@ import {
     PaymentType,
     SortDirection,
 } from './dto';
-import { buildPaymentLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
 export class PaymentsService {
@@ -124,6 +123,9 @@ export class PaymentsService {
                 throw new BadRequestException('Only draft payments can be allocated');
             }
 
+            // Block posting to closed fiscal periods
+            await this.accountingAutomationService.assertPeriodOpen(organizationId, payment.payment_date);
+
             // Validate total allocation equals payment amount
             const totalAllocated = dto.allocations.reduce((sum, alloc) => sum + alloc.amount, 0);
             const paymentAmount = Number(payment.amount);
@@ -138,7 +140,7 @@ export class PaymentsService {
             const invoiceIds = dto.allocations.map(a => a.invoice_id);
             const { data: invoices, error: invoicesError } = await supabaseClient
                 .from('invoices')
-                .select('id, invoice_type, outstanding_amount, status')
+                .select('id, invoice_number, invoice_type, outstanding_amount, status')
                 .in('id', invoiceIds)
                 .eq('organization_id', organizationId);
 
@@ -248,48 +250,62 @@ export class PaymentsService {
                 );
                 const journalEntryId = jeResult.rows[0].id;
 
-                // 4. Build and validate journal lines
-                const journalLines = buildPaymentLedgerLines(
-                    {
-                        id: payment.id,
-                        payment_number: payment.payment_number,
-                        payment_type: payment.payment_type,
-                        payment_method: payment.payment_method,
-                        payment_date: payment.payment_date,
-                        amount: totalAllocated,
-                        party_name: payment.party_name,
-                        bank_account_id: payment.bank_account_id,
-                    },
-                    journalEntryId,
-                    {
-                        cashAccountId: cashLedgerAccountId,
-                        accountsReceivableId: receivableAccountId,
-                        accountsPayableId: payableAccountId,
-                    }
+                // 4. Build journal lines: one cash line (aggregate) + one counter-party line per allocated invoice.
+                // Each counter-party line links to its invoice via reference_type/reference_id for sub-ledger reconciliation.
+                const fx = Number(payment.exchange_rate ?? 1) || 1;
+                const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+                const isReceive = payment.payment_type === PaymentType.RECEIVE;
+                const counterAccountId = isReceive ? receivableAccountId : payableAccountId;
+
+                const cashAmount = round2(totalAllocated * fx);
+                const cashDescription = `Payment ${isReceive ? 'received' : 'made'} via ${payment.payment_method}`;
+
+                // Insert cash/bank line
+                await pgClient.query(
+                    `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [
+                        journalEntryId,
+                        cashLedgerAccountId,
+                        cashDescription,
+                        isReceive ? cashAmount : 0,
+                        isReceive ? 0 : cashAmount,
+                    ],
                 );
 
-                const totalDebit = journalLines.reduce((sum, line) => sum + line.debit, 0);
-                const totalCredit = journalLines.reduce((sum, line) => sum + line.credit, 0);
+                let counterTotal = 0;
+                for (const alloc of dto.allocations) {
+                    const inv = invoices.find(i => i.id === alloc.invoice_id);
+                    const lineAmount = round2(alloc.amount * fx);
+                    counterTotal += lineAmount;
+                    const desc = `${isReceive ? 'From' : 'To'} ${payment.party_name} — invoice ${inv?.invoice_number ?? alloc.invoice_id}`;
 
-                if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-                    throw new BadRequestException(
-                        `Payment journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`
-                    );
-                }
-
-                // 5. Insert journal items
-                for (const line of journalLines) {
                     await pgClient.query(
-                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id)
-                         VALUES ($1, $2, $3, $4, $5, $6)`,
-                        [line.journal_entry_id, line.account_id, line.description || null, line.debit, line.credit, line.cost_center_id || null],
+                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, reference_type, reference_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [
+                            journalEntryId,
+                            counterAccountId,
+                            desc,
+                            isReceive ? 0 : lineAmount,
+                            isReceive ? lineAmount : 0,
+                            'invoice',
+                            alloc.invoice_id,
+                        ],
                     );
                 }
 
-                // 6. Post journal entry
+                // Double-entry validation after per-invoice splitting (rounding can accumulate)
+                if (Math.abs(cashAmount - round2(counterTotal)) >= 0.01) {
+                    throw new BadRequestException(
+                        `Payment journal entry not balanced after per-invoice split: cash=${cashAmount}, counter=${counterTotal}`,
+                    );
+                }
+
+                // 6. Post journal entry (set explicit totals — no DB trigger)
                 await pgClient.query(
-                    `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2 WHERE id = $3`,
-                    [userId, now, journalEntryId],
+                    `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+                    [userId, now, cashAmount, cashAmount, journalEntryId],
                 );
 
                 // 7. Update payment status to submitted and link journal entry
@@ -297,6 +313,17 @@ export class PaymentsService {
                     `UPDATE accounting_payments SET status = 'submitted', journal_entry_id = $1, updated_at = $2 WHERE id = $3`,
                     [journalEntryId, now, paymentId],
                 );
+
+                // 8. Update bank account current_balance (receive adds, pay subtracts)
+                if (payment.bank_account_id) {
+                    const delta = payment.payment_type === PaymentType.RECEIVE ? totalAllocated : -totalAllocated;
+                    await pgClient.query(
+                        `UPDATE bank_accounts
+                         SET current_balance = COALESCE(current_balance, 0) + $1, updated_at = $2
+                         WHERE id = $3 AND organization_id = $4`,
+                        [delta, now, payment.bank_account_id, organizationId],
+                    );
+                }
 
                 return { journalEntryId };
             });

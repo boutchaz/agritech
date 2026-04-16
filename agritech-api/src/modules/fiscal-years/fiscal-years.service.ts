@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
 import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';
@@ -270,5 +270,37 @@ export class FiscalYearsService {
     // Fallback: return active fiscal year
     const active = await this.getActive(organizationId);
     return active?.id || null;
+  }
+
+  /**
+   * Throw if the fiscal year covering the given date is closed.
+   * Soft-allows dates that fall outside any configured fiscal year
+   * (orgs that have not yet set up accounting periods can still post).
+   */
+  async assertPeriodOpen(organizationId: string, date: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('fiscal_years')
+      .select('id, name, status')
+      .eq('organization_id', organizationId)
+      .lte('start_date', date)
+      .gte('end_date', date)
+      .limit(1);
+
+    if (error) {
+      throw new BadRequestException(`Failed to check fiscal year status: ${error.message}`);
+    }
+
+    if (!data || data.length === 0) {
+      // No fiscal year covers this date — soft-allow (org has not configured accounting periods)
+      return;
+    }
+
+    const fy = data[0];
+    if (fy.status === 'closed') {
+      throw new BadRequestException(
+        `Cannot post to closed fiscal year "${fy.name}" (date: ${date}). Reopen the fiscal year or choose a date in an open period.`,
+      );
+    }
   }
 }

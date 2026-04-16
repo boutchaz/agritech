@@ -31,6 +31,7 @@ export class AccountingAutomationService {
     createdBy: string,
     parcelId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -172,6 +173,7 @@ export class AccountingAutomationService {
     createdBy: string,
     parcelId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -313,6 +315,15 @@ export class AccountingAutomationService {
   }
 
   /**
+   * Delegates to FiscalYearsService. Throws if the fiscal year covering
+   * the date is closed. Safe to call from any service that posts to GL.
+   */
+  async assertPeriodOpen(organizationId: string, date: Date | string): Promise<void> {
+    const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    await this.fiscalYearsService.assertPeriodOpen(organizationId, dateStr);
+  }
+
+  /**
    * Get account ID by mapping type and key
    * Replaces function: get_account_id_by_mapping()
    */
@@ -392,7 +403,7 @@ export class AccountingAutomationService {
    * Replaces function: generate_journal_entry_number()
    */
   private async generateJournalEntryNumber(
-    supabase: SupabaseClient,
+    _supabase: SupabaseClient,
     organizationId: string,
   ): Promise<string> {
     try {
@@ -419,6 +430,7 @@ export class AccountingAutomationService {
     createdBy: string,
     farmId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -568,6 +580,122 @@ export class AccountingAutomationService {
 
     this.logger.log(`Journal entry created for worker payment ${paymentId}: ${entryNumber}`);
     return journalEntry;
+  }
+
+  /**
+   * Create a reversing journal entry for a previously posted entry.
+   * Swaps debit/credit on every line and posts it. Used for invoice voids,
+   * harvest edit/delete, and any other case where a posted entry must be undone
+   * without mutating the original (preserves audit trail).
+   *
+   * Throws if the original is not posted, or if a reversal already exists.
+   */
+  async createReversalEntry(
+    organizationId: string,
+    originalEntryId: string,
+    userId: string,
+    reason: string,
+    reversalDate?: Date,
+  ): Promise<{ reversalEntryId: string; reversalNumber: string }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: original, error: originalError } = await supabase
+      .from('journal_entries')
+      .select('id, entry_number, status, reference_type, reference_number, reference_id')
+      .eq('id', originalEntryId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (originalError || !original) {
+      throw new BadRequestException(`Original journal entry not found: ${originalError?.message ?? 'no row'}`);
+    }
+
+    if (original.status !== 'posted') {
+      throw new BadRequestException(`Only posted journal entries can be reversed (got status: ${original.status})`);
+    }
+
+    // Idempotency: refuse to create a second reversal for the same entry
+    const { data: existingReversal } = await supabase
+      .from('journal_entries')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('reference_type', 'Reversal')
+      .eq('reference_id', originalEntryId)
+      .maybeSingle();
+
+    if (existingReversal) {
+      throw new BadRequestException(`Reversal already exists for journal entry ${original.entry_number}`);
+    }
+
+    const effectiveDate = (reversalDate ?? new Date()).toISOString().split('T')[0];
+    await this.assertPeriodOpen(organizationId, effectiveDate);
+    const reversalNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+    const now = new Date().toISOString();
+
+    const result = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+      // Lock original to prevent concurrent reversal
+      const lockRes = await pgClient.query(
+        `SELECT status FROM journal_entries WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [originalEntryId, organizationId],
+      );
+      if (lockRes.rowCount === 0) {
+        throw new BadRequestException('Original journal entry not found');
+      }
+      if (lockRes.rows[0].status !== 'posted') {
+        throw new BadRequestException('Original journal entry is no longer posted');
+      }
+
+      const jeRes = await pgClient.query(
+        `INSERT INTO journal_entries (organization_id, entry_number, entry_date, entry_type, description, reference_type, reference_number, reference_id, remarks, created_by, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [
+          organizationId,
+          reversalNumber,
+          effectiveDate,
+          JournalEntryType.ADJUSTMENT,
+          `Reversal of ${original.entry_number}: ${reason}`,
+          'Reversal',
+          original.entry_number,
+          originalEntryId,
+          reason,
+          userId,
+          'draft',
+        ],
+      );
+      const reversalId = jeRes.rows[0].id;
+
+      // Copy items with debit/credit swapped
+      const copyRes = await pgClient.query(
+        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id, farm_id, parcel_id)
+         SELECT $1, account_id, COALESCE('Reversal: ' || description, 'Reversal'), credit, debit, cost_center_id, farm_id, parcel_id
+         FROM journal_items WHERE journal_entry_id = $2
+         RETURNING debit, credit`,
+        [reversalId, originalEntryId],
+      );
+
+      if (copyRes.rowCount === 0) {
+        throw new BadRequestException('Original journal entry has no items to reverse');
+      }
+
+      const totalDebit = copyRes.rows.reduce((s: number, r: any) => s + Number(r.debit || 0), 0);
+      const totalCredit = copyRes.rows.reduce((s: number, r: any) => s + Number(r.credit || 0), 0);
+
+      if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+        throw new BadRequestException(
+          `Reversal entry not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+        );
+      }
+
+      await pgClient.query(
+        `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+        [userId, now, totalDebit, totalCredit, reversalId],
+      );
+
+      return { reversalEntryId: reversalId };
+    });
+
+    this.logger.log(`Reversal entry ${reversalNumber} created for ${original.entry_number} (reason: ${reason})`);
+    return { reversalEntryId: result.reversalEntryId, reversalNumber };
   }
 
   /**

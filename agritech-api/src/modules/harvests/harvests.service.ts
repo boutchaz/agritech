@@ -254,6 +254,36 @@ export class HarvestsService {
 
     if (error) throw new Error(`Failed to create harvest: ${error.message}`);
 
+    // Create journal entry for harvest revenue FIRST — if it fails, compensate by deleting the harvest
+    // to keep books consistent with record-of-truth. Reception batch + notifications are best-effort
+    // (they don't affect GL).
+    if (estimatedRevenue > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          harvest.id,
+          'harvest',
+          estimatedRevenue,
+          new Date(createHarvestDto.harvest_date),
+          `Harvest: ${createHarvestDto.crop_id || 'unknown crop'}`,
+          userId,
+          createHarvestDto.parcel_id,
+        );
+        this.logger.log(`Journal entry created for harvest ${harvest.id} with revenue ${estimatedRevenue}`);
+      } catch (journalError) {
+        const err = journalError as Error;
+        // Compensating action: delete the harvest so books + harvest table stay consistent
+        await client.from('harvest_records').delete().eq('id', harvest.id);
+        this.logger.error(
+          `Journal entry failed for harvest ${harvest.id}; harvest rolled back: ${err.message}`,
+          err.stack,
+        );
+        throw new BadRequestException(
+          `Harvest not created: journal entry failed — ${err.message}`,
+        );
+      }
+    }
+
     // Automatically create a reception batch for this harvest
     try {
       // Get default warehouse (reception center) for the organization
@@ -286,30 +316,9 @@ export class HarvestsService {
         this.logger.warn(`No reception center warehouse found for organization ${organizationId}. Reception batch not created.`);
       }
     } catch (receptionError) {
-      // Log error but don't fail the harvest creation
-      this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${receptionError.message}`, receptionError.stack);
-    }
-
-    // Create journal entry for harvest revenue
-    if (estimatedRevenue > 0) {
-      try {
-        await this.accountingAutomationService.createJournalEntryFromRevenue(
-          organizationId,
-          harvest.id,
-          'harvest',
-          estimatedRevenue,
-          new Date(createHarvestDto.harvest_date),
-          `Harvest: ${createHarvestDto.crop_id || 'unknown crop'}`,
-          userId,
-          createHarvestDto.parcel_id,
-        );
-        this.logger.log(`Journal entry created for harvest ${harvest.id} with revenue ${estimatedRevenue}`);
-      } catch (journalError) {
-        this.logger.error(
-          `Failed to create journal entry for harvest ${harvest.id}: ${journalError.message}`,
-          journalError.stack,
-        );
-      }
+      const err = receptionError as Error;
+      // Log error but don't fail the harvest creation (GL already succeeded; reception batch is ancillary)
+      this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${err.message}`, err.stack);
     }
 
     // Track first harvest recorded milestone
@@ -362,7 +371,8 @@ export class HarvestsService {
         );
       }
     } catch (notifError) {
-      this.logger.warn(`Failed to send harvest notification: ${notifError.message}`);
+      const err = notifError as Error;
+      this.logger.warn(`Failed to send harvest notification: ${err.message}`);
     }
 
     return harvest;
@@ -372,28 +382,48 @@ export class HarvestsService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    const { data: existing } = await client
+    const { data: current } = await client
       .from('harvest_records')
-      .select('id')
+      .select('id, quantity, expected_price_per_unit, estimated_revenue, parcel_id, harvest_date, crop_id, lot_number')
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
 
-    if (!existing) throw new NotFoundException('Harvest not found');
+    if (!current) throw new NotFoundException('Harvest not found');
 
     // Recompute estimated_revenue if quantity or expected_price_per_unit changed
     const updateData: Record<string, unknown> = { ...updateHarvestDto };
-    if (updateHarvestDto.quantity !== undefined || updateHarvestDto.expected_price_per_unit !== undefined) {
-      // Fetch current values to merge with partial updates
-      const { data: current } = await client
-        .from('harvest_records')
-        .select('quantity, expected_price_per_unit')
-        .eq('id', harvestId)
-        .single();
+    let newRevenue: number | null = null;
+    const oldRevenue = Number(current.estimated_revenue) || 0;
 
-      const qty = Number(updateHarvestDto.quantity ?? current?.quantity) || 0;
-      const price = Number(updateHarvestDto.expected_price_per_unit ?? current?.expected_price_per_unit) || 0;
-      updateData.estimated_revenue = Math.round(qty * price * 100) / 100;
+    if (updateHarvestDto.quantity !== undefined || updateHarvestDto.expected_price_per_unit !== undefined) {
+      const qty = Number(updateHarvestDto.quantity ?? current.quantity) || 0;
+      const price = Number(updateHarvestDto.expected_price_per_unit ?? current.expected_price_per_unit) || 0;
+      newRevenue = Math.round(qty * price * 100) / 100;
+      updateData.estimated_revenue = newRevenue;
+    }
+
+    // If revenue changed and a posted revenue journal entry exists, reverse it and post a new one
+    const revenueChanged = newRevenue !== null && Math.abs(newRevenue - oldRevenue) >= 0.01;
+
+    if (revenueChanged) {
+      const { data: existingJe } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('reference_type', 'revenue')
+        .eq('reference_id', harvestId)
+        .eq('status', 'posted')
+        .maybeSingle();
+
+      if (existingJe?.id) {
+        await this.accountingAutomationService.createReversalEntry(
+          organizationId,
+          existingJe.id,
+          userId,
+          `Harvest ${current.lot_number} update — revenue changed from ${oldRevenue} to ${newRevenue}`,
+        );
+      }
     }
 
     const { data, error } = await client
@@ -404,6 +434,33 @@ export class HarvestsService {
       .single();
 
     if (error) throw new Error(`Failed to update harvest: ${error.message}`);
+
+    // Post new journal entry for updated revenue (non-zero only)
+    if (revenueChanged && newRevenue !== null && newRevenue > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          harvestId,
+          'harvest',
+          newRevenue,
+          new Date(current.harvest_date),
+          `Harvest (updated): ${current.crop_id || 'unknown crop'}`,
+          userId,
+          current.parcel_id,
+        );
+        this.logger.log(`Journal entry re-posted for harvest ${harvestId} at new revenue ${newRevenue}`);
+      } catch (journalError) {
+        const err = journalError as Error;
+        this.logger.error(
+          `Failed to re-post journal entry for harvest ${harvestId} after update: ${err.message}`,
+          err.stack,
+        );
+        throw new BadRequestException(
+          `Harvest updated but new journal entry failed: ${err.message}. Original entry was reversed; please re-post manually.`,
+        );
+      }
+    }
+
     return data;
   }
 
@@ -413,12 +470,31 @@ export class HarvestsService {
     const client = this.databaseService.getAdminClient();
     const { data: existing } = await client
       .from('harvest_records')
-      .select('id')
+      .select('id, lot_number')
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
 
     if (!existing) throw new NotFoundException('Harvest not found');
+
+    // If a posted revenue journal entry exists, reverse it before deleting the harvest
+    const { data: existingJe } = await client
+      .from('journal_entries')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('reference_type', 'revenue')
+      .eq('reference_id', harvestId)
+      .eq('status', 'posted')
+      .maybeSingle();
+
+    if (existingJe?.id) {
+      await this.accountingAutomationService.createReversalEntry(
+        organizationId,
+        existingJe.id,
+        userId,
+        `Deletion of harvest ${existing.lot_number}`,
+      );
+    }
 
     const { error } = await client
       .from('harvest_records')
@@ -610,8 +686,9 @@ export class HarvestsService {
         },
       };
     } catch (journalError) {
+      const err = journalError as Error;
       // Log the error but don't fail the entire sale
-      this.logger.error(`Failed to create journal entry for harvest sale ${harvestId}: ${journalError.message}`, journalError.stack);
+      this.logger.error(`Failed to create journal entry for harvest sale ${harvestId}: ${err.message}`, err.stack);
 
       // Return success but indicate journal entry issue
       return {
@@ -621,7 +698,7 @@ export class HarvestsService {
           harvest_id: harvestId,
           invoice_number: invoiceNumber,
           total_revenue: totalRevenue,
-          error: journalError.message,
+          error: err.message,
         },
       };
     }
