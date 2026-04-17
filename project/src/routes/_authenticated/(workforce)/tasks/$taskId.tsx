@@ -19,7 +19,13 @@ import {
   Loader2,
   Lock,
   Wallet,
+  Eye,
+  EyeOff,
+  Check,
+  Trash2,
+  X as XIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import {
   useTask,
@@ -28,6 +34,12 @@ import {
   useTaskTimeLogs,
   useIsTaskBlocked,
   useTaskDependencies,
+  useTaskWatchers,
+  useFollowTask,
+  useUnfollowTask,
+  useUpdateTaskComment,
+  useDeleteTaskComment,
+  useResolveTaskComment,
 } from '@/hooks/useTasks';
 import { useTaskAssignments } from '@/hooks/useTaskAssignments';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
@@ -137,6 +149,19 @@ function TaskDetailPage() {
   const { data: timeLogs = [] } = useTaskTimeLogs(taskId);
   const { data: blockedStatus } = useIsTaskBlocked(taskId);
   const { data: dependencies } = useTaskDependencies(taskId);
+  const { data: watchers = [] } = useTaskWatchers(taskId);
+  const followTask = useFollowTask();
+  const unfollowTask = useUnfollowTask();
+  const updateComment = useUpdateTaskComment();
+  const deleteComment = useDeleteTaskComment();
+  const resolveComment = useResolveTaskComment();
+
+  const currentUserId = profile?.id;
+  const isWatching = !!watchers.find((w) => w.user_id === currentUserId);
+
+  // Comment editing state — inline editor per comment
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
 
   // Running cost summary — live roll-up of hours and piece-work earnings
   const costSummary = useMemo(() => {
@@ -487,6 +512,65 @@ function TaskDetailPage() {
     navigate({ to: '/tasks', search: { editTaskId: task.id } });
   };
 
+  const handleToggleWatch = async () => {
+    if (!taskId) return;
+    try {
+      if (isWatching) {
+        await unfollowTask.mutateAsync(taskId);
+        toast.success(t('tasks.watch.unfollowed', 'You are no longer watching this task'));
+      } else {
+        await followTask.mutateAsync(taskId);
+        toast.success(t('tasks.watch.followed', "You'll be notified of activity on this task"));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.watch.failed', 'Failed to update watch status'));
+    }
+  };
+
+  const handleStartEditComment = (commentId: string, currentText: string) => {
+    setEditingCommentId(commentId);
+    setEditDraft(currentText);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditDraft('');
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!taskId || !editDraft.trim()) return;
+    try {
+      await updateComment.mutateAsync({ taskId, commentId, comment: editDraft });
+      toast.success(t('tasks.comments.updated', 'Comment updated'));
+      handleCancelEditComment();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.updateFailed', 'Failed to update comment'));
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!taskId) return;
+    if (!confirm(t('tasks.comments.deleteConfirm', 'Delete this comment?'))) return;
+    try {
+      await deleteComment.mutateAsync({ taskId, commentId });
+      toast.success(t('tasks.comments.deleted', 'Comment deleted'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.deleteFailed', 'Failed to delete comment'));
+    }
+  };
+
+  const handleToggleResolve = async (commentId: string, currentlyResolved: boolean) => {
+    if (!taskId) return;
+    try {
+      await resolveComment.mutateAsync({ taskId, commentId, resolved: !currentlyResolved });
+      toast.success(currentlyResolved
+        ? t('tasks.comments.reopened', 'Comment reopened')
+        : t('tasks.comments.resolved', 'Comment resolved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.resolveFailed', 'Failed to update comment'));
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Back + Header */}
@@ -527,10 +611,31 @@ function TaskDetailPage() {
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleEditTask} className="flex-shrink-0">
-          <Edit className="w-4 h-4 mr-2" />
-          {t('common.edit', 'Edit')}
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant={isWatching ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleToggleWatch}
+            disabled={followTask.isPending || unfollowTask.isPending}
+            title={isWatching
+              ? t('tasks.watch.unfollow', 'Unfollow this task')
+              : t('tasks.watch.follow', 'Follow this task to get notified of activity')}
+          >
+            {isWatching ? <Eye className="w-4 h-4 sm:mr-2" /> : <EyeOff className="w-4 h-4 sm:mr-2" />}
+            <span className="hidden sm:inline">
+              {isWatching
+                ? t('tasks.watch.watching', 'Watching')
+                : t('tasks.watch.watch', 'Watch')}
+            </span>
+            {watchers.length > 0 && (
+              <span className="ml-1 text-xs opacity-70">· {watchers.length}</span>
+            )}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleEditTask}>
+            <Edit className="w-4 h-4 mr-2" />
+            {t('common.edit', 'Edit')}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -1091,29 +1196,100 @@ function TaskDetailPage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment: TaskComment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDistance(new Date(comment.created_at), new Date(), {
-                            addSuffix: true,
-                            locale: getLocale(),
-                          })}
-                        </span>
+                {comments.map((comment) => {
+                  const anyComment = comment as TaskComment & {
+                    edited_at?: string | null;
+                    resolved_at?: string | null;
+                    resolved_by?: string | null;
+                  };
+                  const isOwn = anyComment.user_id === currentUserId;
+                  const isEditing = editingCommentId === comment.id;
+                  const isIssue = comment.type === 'issue';
+                  const isResolved = !!anyComment.resolved_at;
+                  return (
+                    <div key={comment.id} className={`flex gap-3 rounded-lg p-2 ${isResolved ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''} ${isIssue && !isResolved ? 'bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800' : ''}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isIssue ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                        {isIssue ? (
+                          <AlertCircle className="w-4 h-4 text-amber-600" />
+                        ) : (
+                          <User className="w-4 h-4 text-blue-600" />
+                        )}
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <CommentDisplay comment={comment.comment} />
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatDistance(new Date(comment.created_at), new Date(), {
+                              addSuffix: true,
+                              locale: getLocale(),
+                            })}
+                          </span>
+                          {anyComment.edited_at && (
+                            <span className="text-xs italic text-gray-400">· {t('tasks.comments.edited', 'edited')}</span>
+                          )}
+                          {isIssue && !isResolved && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-medium">
+                              {t('tasks.comments.open', 'Open')}
+                            </span>
+                          )}
+                          {isResolved && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-200 font-medium">
+                              {t('tasks.comments.resolved', 'Resolved')}
+                            </span>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editDraft}
+                              onChange={(e) => setEditDraft(e.target.value)}
+                              rows={3}
+                              className="text-sm"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" onClick={() => handleSaveEditComment(comment.id)} disabled={updateComment.isPending || !editDraft.trim()}>
+                                <Check className="w-3 h-3 mr-1" />
+                                {t('common.save', 'Save')}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={handleCancelEditComment}>
+                                <XIcon className="w-3 h-3 mr-1" />
+                                {t('common.cancel', 'Cancel')}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              <CommentDisplay comment={comment.comment} />
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {isIssue && (
+                                <Button size="sm" variant="ghost" onClick={() => handleToggleResolve(comment.id, isResolved)} className="h-7 px-2 text-xs">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  {isResolved ? t('tasks.comments.reopen', 'Reopen') : t('tasks.comments.resolve', 'Resolve')}
+                                </Button>
+                              )}
+                              {isOwn && (
+                                <>
+                                  <Button size="sm" variant="ghost" onClick={() => handleStartEditComment(comment.id, comment.comment)} className="h-7 px-2 text-xs">
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    {t('common.edit', 'Edit')}
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    {t('common.delete', 'Delete')}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

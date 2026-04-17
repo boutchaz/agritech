@@ -155,9 +155,53 @@ export const tasksApi = {
   async addComment(
     organizationId: string,
     taskId: string,
-    data: { comment: string; worker_id?: string },
+    data: { comment: string; worker_id?: string; type?: string },
   ): Promise<TaskComment> {
     return apiClient.post<TaskComment>(`/api/v1/tasks/${taskId}/comments`, data, {}, organizationId);
+  },
+
+  async updateComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    data: { comment: string },
+  ): Promise<TaskComment> {
+    return apiClient.patch<TaskComment>(`/api/v1/tasks/${taskId}/comments/${commentId}`, data, {}, organizationId);
+  },
+
+  async deleteComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+  ): Promise<{ success: boolean }> {
+    return apiClient.delete<{ success: boolean }>(`/api/v1/tasks/${taskId}/comments/${commentId}`, {}, organizationId);
+  },
+
+  async resolveComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    resolved: boolean,
+  ): Promise<TaskComment> {
+    return apiClient.patch<TaskComment>(`/api/v1/tasks/${taskId}/comments/${commentId}/resolve`, { resolved }, {}, organizationId);
+  },
+
+  // Watchers API
+  async getWatchers(organizationId: string, taskId: string): Promise<Array<{
+    id: string;
+    user_id: string;
+    created_at: string;
+    user_profile?: { id: string; first_name?: string; last_name?: string; email?: string };
+  }>> {
+    return apiClient.get(`/api/v1/tasks/${taskId}/watchers`, {}, organizationId);
+  },
+
+  async followTask(organizationId: string, taskId: string): Promise<{ id: string; task_id: string; user_id: string }> {
+    return apiClient.post(`/api/v1/tasks/${taskId}/watchers`, {}, {}, organizationId);
+  },
+
+  async unfollowTask(organizationId: string, taskId: string): Promise<{ success: boolean }> {
+    return apiClient.delete(`/api/v1/tasks/${taskId}/watchers`, {}, organizationId);
   },
 
   async getTimeLogs(organizationId: string, taskId: string): Promise<TaskTimeLog[]> {
@@ -176,6 +220,8 @@ export const tasksApi = {
   async clockOut(organizationId: string, timeLogId: string, data: {
     break_duration?: number;
     notes?: string;
+    units_completed?: number;
+    photo_url?: string;
   }): Promise<TaskClockOutResponse> {
     return apiClient.patch<TaskClockOutResponse>(`/api/v1/tasks/time-logs/${timeLogId}/clock-out`, data, {}, organizationId);
   },

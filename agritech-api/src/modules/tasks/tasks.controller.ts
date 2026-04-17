@@ -406,6 +406,72 @@ export class TasksController {
     return this.tasksService.addComment(req.user.id, organizationId, taskId, createCommentDto);
   }
 
+  @Patch(':taskId/comments/:commentId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Edit a comment (author only)' })
+  async updateTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: { comment?: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.updateComment(req.user.id, organizationId, taskId, commentId, body);
+  }
+
+  @Delete(':taskId/comments/:commentId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Delete a comment (author or admin)' })
+  async deleteTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.deleteComment(req.user.id, organizationId, taskId, commentId);
+  }
+
+  @Patch(':taskId/comments/:commentId/resolve')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Mark a comment (typically an issue) as resolved or reopen it' })
+  async resolveTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: { resolved?: boolean },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.resolveComment(req.user.id, organizationId, taskId, commentId, body.resolved ?? true);
+  }
+
+  // =====================================================
+  // TASK WATCHERS
+  // =====================================================
+
+  @Get(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Get all watchers for a task' })
+  async getTaskWatchers(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getWatchers(organizationId, taskId);
+  }
+
+  @Post(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Follow a task — any org member can watch' })
+  async followTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addWatcher(req.user.id, organizationId, taskId);
+  }
+
+  @Delete(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Unfollow a task' })
+  async unfollowTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.removeWatcher(req.user.id, organizationId, taskId);
+  }
+
   // =====================================================
   // TASK TIME LOGS
   // =====================================================

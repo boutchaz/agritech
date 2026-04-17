@@ -299,7 +299,7 @@ export function useAddTaskComment() {
 
   return useMutation({
     mutationFn: async (
-      comment: Omit<TaskComment, "id" | "created_at" | "updated_at">,
+      comment: Omit<TaskComment, "id" | "created_at" | "updated_at"> & { type?: string },
     ) => {
       if (!currentOrganization) {
         throw new Error("No organization selected");
@@ -308,6 +308,7 @@ export function useAddTaskComment() {
       return tasksApi.addComment(currentOrganization.id, comment.task_id, {
         comment: comment.comment,
         worker_id: comment.worker_id,
+        type: comment.type,
       });
     },
     onSuccess: (data) => {
@@ -317,6 +318,92 @@ export function useAddTaskComment() {
       queryClient.invalidateQueries({
         queryKey: ["task", currentOrganization?.id, data.task_id],
       });
+    },
+  });
+}
+
+export function useUpdateTaskComment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, commentId, comment }: { taskId: string; commentId: string; comment: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.updateComment(currentOrganization.id, taskId, commentId, { comment });
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
+    },
+  });
+}
+
+export function useDeleteTaskComment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, commentId }: { taskId: string; commentId: string }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.deleteComment(currentOrganization.id, taskId, commentId);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
+    },
+  });
+}
+
+export function useResolveTaskComment() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ taskId, commentId, resolved }: { taskId: string; commentId: string; resolved: boolean }) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.resolveComment(currentOrganization.id, taskId, commentId, resolved);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
+    },
+  });
+}
+
+// =====================================================
+// WATCHERS HOOKS
+// =====================================================
+
+export function useTaskWatchers(taskId: string | null) {
+  const { currentOrganization } = useAuth();
+  return useQuery({
+    queryKey: ['task-watchers', currentOrganization?.id, taskId],
+    queryFn: () => tasksApi.getWatchers(currentOrganization!.id, taskId!),
+    enabled: !!currentOrganization?.id && !!taskId,
+  });
+}
+
+export function useFollowTask() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.followTask(currentOrganization.id, taskId);
+    },
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: ['task-watchers', currentOrganization?.id, taskId] });
+    },
+  });
+}
+
+export function useUnfollowTask() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      if (!currentOrganization) throw new Error('No organization selected');
+      return tasksApi.unfollowTask(currentOrganization.id, taskId);
+    },
+    onSuccess: (_data, taskId) => {
+      queryClient.invalidateQueries({ queryKey: ['task-watchers', currentOrganization?.id, taskId] });
     },
   });
 }

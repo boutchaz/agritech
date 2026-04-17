@@ -2358,18 +2358,57 @@ CREATE TABLE IF NOT EXISTS task_comments (
   comment TEXT NOT NULL,
   type TEXT DEFAULT 'comment',
   attachments JSONB,
+  edited_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (type IN ('comment', 'status_update', 'completion_note', 'issue'))
 );
 
+-- Idempotent ALTERs so pre-existing databases pick up new columns without a reset
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS resolved_by UUID REFERENCES auth.users(id);
+
 CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_comments_user ON task_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_comments_unresolved ON task_comments(task_id) WHERE type = 'issue' AND resolved_at IS NULL;
 
 -- Explicit FK to user_profiles so PostgREST can resolve the join
 ALTER TABLE task_comments
   ADD CONSTRAINT task_comments_user_profile_fkey
   FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
+
+-- Task Watchers — users who want update notifications for a task they're not assigned to
+CREATE TABLE IF NOT EXISTS task_watchers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_watchers_task ON task_watchers(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_watchers_user ON task_watchers(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_watchers_org ON task_watchers(organization_id);
+
+-- Task Mentions — persistent record of @mentions in comments for notifications and analytics
+CREATE TABLE IF NOT EXISTS task_mentions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES task_comments(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  mentioned_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  mentioned_worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (mentioned_user_id IS NOT NULL OR mentioned_worker_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_mentions_comment ON task_mentions(comment_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_task ON task_mentions(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_mentioned_user ON task_mentions(mentioned_user_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_mentioned_worker ON task_mentions(mentioned_worker_id);
 
 -- Task Time Logs
 CREATE TABLE IF NOT EXISTS task_time_logs (
@@ -2380,12 +2419,18 @@ CREATE TABLE IF NOT EXISTS task_time_logs (
   end_time TIMESTAMPTZ,
   break_duration INTEGER DEFAULT 0,
   total_hours NUMERIC DEFAULT 0, -- computed in service layer
+  units_completed NUMERIC, -- per-worker piece-work count at this clock-out
   notes TEXT,
+  photo_url TEXT, -- evidence photo uploaded on clock-out
   location_lat NUMERIC,
   location_lng NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Idempotent ALTERs for existing databases
+ALTER TABLE task_time_logs ADD COLUMN IF NOT EXISTS units_completed NUMERIC;
+ALTER TABLE task_time_logs ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_task_time_logs_task ON task_time_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_time_logs_worker ON task_time_logs(worker_id);
@@ -5300,6 +5345,8 @@ ALTER TABLE IF EXISTS task_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_time_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_equipment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_watchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_mentions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS work_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS metayage_settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_records ENABLE ROW LEVEL SECURITY;
@@ -15264,6 +15311,57 @@ CREATE POLICY "org_delete_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+-- Task Watchers policies (any org member can watch/unwatch, must be themselves)
+DROP POLICY IF EXISTS "org_read_task_watchers" ON task_watchers;
+CREATE POLICY "org_read_task_watchers" ON task_watchers
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_task_watchers" ON task_watchers;
+CREATE POLICY "org_write_task_watchers" ON task_watchers
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    user_id = auth.uid() AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_watchers" ON task_watchers;
+CREATE POLICY "org_delete_task_watchers" ON task_watchers
+  FOR DELETE USING (
+    user_id = auth.uid() AND is_organization_member(organization_id)
+  );
+
+-- Task Mentions policies (readable by org members; inserted by the comment author)
+DROP POLICY IF EXISTS "org_read_task_mentions" ON task_mentions;
+CREATE POLICY "org_read_task_mentions" ON task_mentions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_mentions" ON task_mentions;
+CREATE POLICY "org_write_task_mentions" ON task_mentions
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_mentions" ON task_mentions;
+CREATE POLICY "org_delete_task_mentions" ON task_mentions
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
         AND is_organization_member(tasks.organization_id)
     )
   );
