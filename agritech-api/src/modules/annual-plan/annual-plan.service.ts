@@ -165,6 +165,62 @@ const MONTH_KEY_TO_NUMBER: Record<string, number> = {
   dec: 12,
 };
 
+/**
+ * Normalize any common month spelling (English, French, 3-letter, case-insensitive,
+ * accents stripped) into the canonical short-French key used by MONTH_KEY_TO_NUMBER.
+ * Returns null for anything that can't be identified as a month.
+ *
+ * Handles: "Jan", "jan", "JAN", "Janvier", "January",
+ *          "Feb", "fev", "fév", "février", "february",
+ *          "Aug", "aou", "août", "aout", "aoü", etc.
+ */
+function canonicalMonthKey(rawKey: string): string | null {
+  if (!rawKey) return null;
+  const normalized = rawKey
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .trim();
+
+  if (normalized in MONTH_KEY_TO_NUMBER) return normalized;
+
+  // Accept common English/French aliases
+  const aliases: Record<string, string> = {
+    jan: 'jan', janvier: 'jan', january: 'jan',
+    feb: 'fev', fev: 'fev', fevrier: 'fev', february: 'fev',
+    mar: 'mar', mars: 'mar', march: 'mar',
+    apr: 'avr', avr: 'avr', avril: 'avr', april: 'avr',
+    may: 'mai', mai: 'mai',
+    jun: 'juin', juin: 'juin', june: 'juin',
+    jul: 'juil', juil: 'juil', juillet: 'juil', july: 'juil',
+    aug: 'aout', aou: 'aout', aout: 'aout', august: 'aout',
+    sep: 'sept', sept: 'sept', septembre: 'sept', september: 'sept',
+    oct: 'oct', octobre: 'oct', october: 'oct',
+    nov: 'nov', novembre: 'nov', november: 'nov',
+    dec: 'dec', decembre: 'dec', december: 'dec',
+  };
+  return aliases[normalized] ?? null;
+}
+
+/**
+ * Turn an arbitrary month-keyed object into one whose keys are the canonical
+ * short-French codes. Supports referentials authored in English ("Jan", "Feb")
+ * or French ("Janvier", "fevrier"), with or without accents.
+ */
+function normalizeMonthlyObjectKeys(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    const canonical = canonicalMonthKey(k);
+    if (canonical) {
+      out[canonical] = v;
+    }
+  }
+  return out;
+}
+
 const MONTH_NUMBER_TO_LABEL: Record<number, string> = {
   1: 'Janvier',
   2: 'Fevrier',
@@ -1138,15 +1194,22 @@ export class AnnualPlanService {
     for (const candidateKey of candidateKeys) {
       const candidate = planAnnual[candidateKey];
       if (this.hasMonthKeys(candidate)) {
-        return candidate;
+        // Normalize to canonical short-French keys so downstream extraction
+        // stops caring whether the file was authored in English ("Jan") or
+        // French ("Janvier").
+        return normalizeMonthlyObjectKeys(candidate as Record<string, unknown>);
       }
     }
 
     if (this.hasMonthKeys(planAnnual)) {
-      return planAnnual;
+      return normalizeMonthlyObjectKeys(planAnnual as unknown as Record<string, unknown>);
     }
 
-    throw new NotFoundException('No monthly annual plan calendar found in crop reference data');
+    throw new NotFoundException(
+      'No monthly annual plan calendar found in crop reference data. ' +
+        'Expected plan_annuel.calendrier_type_intensif (or calendrier_type / calendrier) ' +
+        'with one entry per month (Jan..Dec or janvier..decembre, accent-insensitive).',
+    );
   }
 
   private extractMonthComponents(rawMonth: unknown): Record<string, MonthlyPlanValue> {
@@ -1330,7 +1393,17 @@ export class AnnualPlanService {
       return false;
     }
 
-    return Object.keys(MONTH_KEY_TO_NUMBER).every((monthKey) => monthKey in value);
+    // Accept any object whose keys canonicalize to all 12 months — English
+    // ("Jan".."Dec"), French ("janvier".."decembre"), or mixed. Case and
+    // accents are ignored.
+    const canonicalKeys = new Set<string>();
+    for (const rawKey of Object.keys(value)) {
+      const canonical = canonicalMonthKey(rawKey);
+      if (canonical) canonicalKeys.add(canonical);
+    }
+    return Object.keys(MONTH_KEY_TO_NUMBER).every((monthKey) =>
+      canonicalKeys.has(monthKey),
+    );
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {
