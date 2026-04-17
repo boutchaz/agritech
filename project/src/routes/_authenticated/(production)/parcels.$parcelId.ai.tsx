@@ -2,6 +2,8 @@ import { createFileRoute, Link, Outlet, useMatchRoute } from '@tanstack/react-ro
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
+import { useParcelPhase } from '@/hooks/useParcelPhase'
+import { ParcelPhaseStepper } from '@/components/ai/ParcelPhaseStepper'
 import {
   BrainCircuit,
   AlertTriangle,
@@ -88,6 +90,7 @@ const ParcelAILayout = () => {
   const { t } = useTranslation('ai')
   const { parcelId } = Route.useParams();
   const { data: parcel, isLoading } = useParcelById(parcelId);
+  const phaseState = useParcelPhase(parcelId);
   const matchRoute = useMatchRoute();
 
   if (isLoading) {
@@ -161,6 +164,10 @@ const ParcelAILayout = () => {
 
   return (
     <div className="space-y-6">
+      {(phaseState.isBusy || phaseState.phase === 'ready_calibration' || phaseState.phase === 'calibrated') && (
+        <ParcelPhaseStepper parcelId={parcelId} phaseState={phaseState} />
+      )}
+
       <div className="border-b border-gray-200 dark:border-gray-700">
         <nav className="flex gap-1 overflow-x-auto" aria-label="AI tabs">
           {tabs.map((tab) => {

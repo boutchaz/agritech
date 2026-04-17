@@ -666,9 +666,10 @@ const TimeSeriesChart = ({
                 variant="outline"
                 className="shrink-0 border-indigo-300 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-600 dark:text-indigo-200 dark:hover:bg-indigo-950/60"
                 onClick={triggerFullSync}
-                disabled={isSyncingAll}
+                disabled={isSyncingAll || aiPhase === 'awaiting_data'}
+                title={aiPhase === 'awaiting_data' ? t('timeSeries.calibration.alreadyRunning', 'Synchronisation déjà en cours. Patientez.') : undefined}
               >
-                {isSyncingAll ? (
+                {isSyncingAll || aiPhase === 'awaiting_data' ? (
                   <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t('timeSeries.calibration.syncing', 'Syncing...')}</>
                 ) : (
                   <><Satellite className="w-3.5 h-3.5 mr-1.5" />{t('timeSeries.calibration.syncAll', 'Sync & Calibrate')}</>
