@@ -6514,6 +6514,7 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
   budget_estimate_dh DECIMAL(10,2),
   verifications JSONB,               -- fractionnement_ok, doses_plausibles, etc.
   plan_summary TEXT,
+  plan_data JSONB,                   -- raw reference payload + AI aggregate enrichment
 
   -- Validation
   validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
@@ -6531,6 +6532,12 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
 COMMENT ON TABLE annual_plans IS 'V2 annual plan: deterministic 10-step assembly from calibration + referentiel';
 COMMENT ON COLUMN annual_plans.monthly_calendar IS 'Structured monthly breakdown: NPK, formes_engrais, microelements, biostimulants, phyto, irrigation, travaux';
 COMMENT ON COLUMN annual_plans.nutrition_option IS 'Auto-determined nutrition option: A (full data), B (incomplete data), C (salinity)';
+COMMENT ON COLUMN annual_plans.plan_data IS 'Raw reference payload (plan_data.source) + AI-aggregate enrichment overlayed by enrichPlanFromAI';
+
+-- Idempotent ALTERs so pre-existing databases pick up new column without a reset.
+-- Required: annual-plan.service writes plan_data on create and again after AI
+-- enrichment; without this column PostgREST returns PGRST204 / schema cache error.
+ALTER TABLE public.annual_plans ADD COLUMN IF NOT EXISTS plan_data JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
