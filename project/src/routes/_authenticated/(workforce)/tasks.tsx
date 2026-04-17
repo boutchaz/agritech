@@ -55,16 +55,26 @@ function TasksLayout() {
 
   return (
     <>
-      {!isTaskDetailPage && (
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: CheckSquare, label: t('nav.tasks'), isActive: true }
-          ]}
-          title={t('tasks.title')}
-          subtitle={t('tasks.subtitle')}
-        />
-      )}
+      <ModernPageHeader
+        breadcrumbs={
+          isTaskDetailPage
+            ? [
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+                { icon: CheckSquare, label: t('nav.tasks'), path: '/tasks' },
+                { label: t('tasks.detail.breadcrumb', 'Détail'), isActive: true },
+              ]
+            : [
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+                { icon: CheckSquare, label: t('nav.tasks'), isActive: true },
+              ]
+        }
+        title={isTaskDetailPage ? t('tasks.detail.title', 'Tâche') : t('tasks.title')}
+        subtitle={
+          isTaskDetailPage
+            ? t('tasks.detail.subtitle', 'Suivi et activité de la tâche')
+            : t('tasks.subtitle')
+        }
+      />
 
       <div className="p-3 sm:p-4 lg:p-6">
         {/* Navigation Tabs - hide on task detail page */}
