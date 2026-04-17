@@ -788,6 +788,86 @@ export class AnnualPlanService {
   }
 
   /**
+   * Update ONLY annual_plans.plan_data (doses, harvest forecast, costs…) from
+   * the latest AI annual_plan report, leaving interventions and status
+   * alone. This is the path to call on validated/active plans — users
+   * who've already confirmed their calendar still want the AI aggregate
+   * tiles backfilled without their calendar being wiped.
+   */
+  async enrichPlanDataOnlyFromLatestAIReport(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<AnnualPlanRecord | null> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const aiSections = await this.findLatestAIPlanSections(parcelId);
+    if (!aiSections) {
+      this.logger.warn(
+        `No AI annual_plan report found for parcel ${parcelId}; nothing to enrich`,
+      );
+      return null;
+    }
+
+    // Pick the most recent plan regardless of status.
+    const { data: plan, error: planError } = await supabase
+      .from('annual_plans')
+      .select('*')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (planError) {
+      throw new BadRequestException(
+        `Failed to load annual plan for enrichment: ${planError.message}`,
+      );
+    }
+
+    if (!plan) return null;
+
+    const nextPlanData = {
+      source: 'ai',
+      generated_at:
+        typeof aiSections.generationDate === 'string'
+          ? aiSections.generationDate
+          : new Date().toISOString(),
+      ai_version: aiSections.version ?? null,
+      parameters: this.isRecord(aiSections.parameters) ? aiSections.parameters : null,
+      annualDoses: this.isRecord(aiSections.annualDoses) ? aiSections.annualDoses : null,
+      irrigation: this.isRecord(aiSections.irrigation) ? aiSections.irrigation : null,
+      pruning: this.isRecord(aiSections.pruning) ? aiSections.pruning : null,
+      harvestForecast: this.isRecord(aiSections.harvestForecast)
+        ? aiSections.harvestForecast
+        : null,
+      economicEstimate: this.isRecord(aiSections.economicEstimate)
+        ? aiSections.economicEstimate
+        : null,
+      planSummary: typeof aiSections.planSummary === 'string' ? aiSections.planSummary : null,
+    };
+
+    const { data: updated, error: updateError } = await supabase
+      .from('annual_plans')
+      .update({ plan_data: nextPlanData })
+      .eq('id', plan.id)
+      .eq('organization_id', organizationId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      throw new BadRequestException(
+        `Failed to update plan_data with AI aggregate: ${updateError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `Backfilled plan_data on plan ${plan.id} (status=${plan.status}) from latest AI annual_plan report`,
+    );
+
+    return updated as AnnualPlanRecord;
+  }
+
+  /**
    * Replaces template plan_interventions with AI-generated ones that carry
    * real doses, products, BBCH stages, and application details.
    * Also updates annual_plans.plan_data with AI aggregate data.

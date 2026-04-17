@@ -115,6 +115,18 @@ export const aiPlanApi = {
     return apiClient.post(`${BASE_URL}/${parcelId}/ai/plan/regenerate`, {}, {}, organizationId);
   },
 
+  async enrichPlanDataOnly(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<{ success: boolean; plan?: AIPlan; message?: string }> {
+    return apiClient.post(
+      `${BASE_URL}/${parcelId}/ai/plan/enrich-data`,
+      {},
+      {},
+      organizationId,
+    );
+  },
+
   async generateAIPlanReport(
     parcelId: string,
     organizationId?: string,

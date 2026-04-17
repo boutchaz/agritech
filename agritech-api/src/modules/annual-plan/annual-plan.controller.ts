@@ -171,6 +171,28 @@ export class AnnualPlanController {
     );
   }
 
+  @Post('parcels/:parcelId/ai/plan/enrich-data')
+  @ApiOperation({
+    summary:
+      'Backfill plan_data (doses / harvest / costs) from the latest AI annual_plan report without touching interventions or status',
+  })
+  @ApiResponse({ status: 200, description: 'plan_data enriched' })
+  @ApiResponse({ status: 404, description: 'No plan or no AI report found' })
+  async enrichPlanDataOnly(
+    @Param('parcelId') parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const plan = await this.annualPlanService.enrichPlanDataOnlyFromLatestAIReport(
+      parcelId,
+      organizationId,
+    );
+    if (!plan) {
+      return { success: false, message: 'No AI annual_plan report available yet.' };
+    }
+    return { success: true, plan };
+  }
+
   private getOrganizationId(req: Request): string {
     const requestOrganizationId = (req as Request & { organizationId?: unknown }).organizationId;
     const headerValue = req.headers['x-organization-id'];
