@@ -10,7 +10,7 @@ import {
   type AIPlanSummary,
 } from '../lib/api/ai-plan';
 
-export function useAIPlan(parcelId: string) {
+export function useAIPlan(parcelId: string, options?: { refetchIntervalMs?: number | false }) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -23,6 +23,7 @@ export function useAIPlan(parcelId: string) {
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: options?.refetchIntervalMs ?? false,
   });
 }
 
@@ -42,7 +43,11 @@ export function useAIPlanInterventions(parcelId: string) {
   });
 }
 
-export function useAIPlanSummary(parcelId: string, enabled = true) {
+export function useAIPlanSummary(
+  parcelId: string,
+  enabled = true,
+  options?: { refetchIntervalMs?: number | false },
+) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -55,6 +60,7 @@ export function useAIPlanSummary(parcelId: string, enabled = true) {
     },
     enabled: enabled && !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: options?.refetchIntervalMs ?? false,
   });
 }
 

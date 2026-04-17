@@ -7,7 +7,6 @@ import { ParcelPhaseStepper } from '@/components/ai/ParcelPhaseStepper'
 import {
   BrainCircuit,
   AlertTriangle,
-  Lightbulb,
   Calendar,
   Cloud,
   Settings,
@@ -17,7 +16,7 @@ import { SectionLoader } from '@/components/ui/loader'
 import { cn } from '@/lib/utils'
 
 
-type AITab = 'dashboard' | 'calibration' | 'alerts' | 'recommendations' | 'plan' | 'weather';
+type AITab = 'dashboard' | 'calibration' | 'alerts' | 'plan' | 'weather';
 
 type AIPhase =
   | 'awaiting_data'
@@ -63,7 +62,7 @@ function tabAvailability(phase: AIPhase, tabId: AITab): { locked: boolean; reaso
     };
   }
 
-  if (tabId === 'alerts' || tabId === 'recommendations') {
+  if (tabId === 'alerts') {
     if (isActive) return { locked: false, reason: null };
     if (hasNutritionOption) {
       return {
@@ -106,8 +105,10 @@ const ParcelAILayout = () => {
   const isDashboardActive = !!matchRoute({ to: '/parcels/$parcelId/ai', params: { parcelId } });
   const isCalibrationActive = !!matchRoute({ to: '/parcels/$parcelId/ai/calibration', params: { parcelId } });
   const isAlertsActive = !!matchRoute({ to: '/parcels/$parcelId/ai/alerts', params: { parcelId } });
-  const isRecommendationsActive = !!matchRoute({ to: '/parcels/$parcelId/ai/recommendations', params: { parcelId } });
-  const isPlanActive = !!matchRoute({ to: '/parcels/$parcelId/ai/plan', params: { parcelId } }) || !!matchRoute({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } });
+  const isPlanActive =
+    !!matchRoute({ to: '/parcels/$parcelId/ai/plan', params: { parcelId } }) ||
+    !!matchRoute({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } }) ||
+    !!matchRoute({ to: '/parcels/$parcelId/ai/recommendations', params: { parcelId } });
   const isWeatherActive = !!matchRoute({ to: '/parcels/$parcelId/ai/weather', params: { parcelId } });
 
   const tabs: { id: AITab; to: string; label: string; icon: ReactNode; active: boolean }[] = [
@@ -133,16 +134,9 @@ const ParcelAILayout = () => {
       active: isAlertsActive,
     },
     {
-      id: 'recommendations',
-      to: `/parcels/${parcelId}/ai/recommendations`,
-      label: t('tabs.recommendations'),
-      icon: <Lightbulb className="w-4 h-4" />,
-      active: isRecommendationsActive,
-    },
-    {
       id: 'plan',
-      to: `/parcels/${parcelId}/ai/plan`,
-      label: t('tabs.plan'),
+      to: `/parcels/${parcelId}/ai/plan/summary`,
+      label: t('tabs.saison', 'Saison'),
       icon: <Calendar className="w-4 h-4" />,
       active: isPlanActive,
     },

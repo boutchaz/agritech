@@ -15,7 +15,6 @@ import { useAIPlan } from '@/hooks/useAIPlan';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
 import type { CalibrationHistoryRecord } from '@/lib/api/calibration-output';
 import type {
-  CalibrationOutput,
   CalibrationMaturityPhase,
   NutritionOption,
 } from '@/types/calibration-output';
@@ -36,7 +35,6 @@ import {
   Play,
   AlertCircle,
   Satellite,
-  CloudOff,
   CloudRain,
   CheckCircle2,
   ChevronDown,
@@ -54,7 +52,6 @@ import {
   GitCompareArrows,
   Eye,
   ArrowRight,
-  Lightbulb,
   FileText,
   Sparkles,
 } from 'lucide-react';
@@ -68,7 +65,6 @@ import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationR
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
 import { CalibrationSyntheseBanner } from '@/components/calibration/CalibrationSyntheseBanner';
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
-import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -954,60 +950,55 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {phase === 'active' && (
-        <div className="rounded-xl border border-blue-200 dark:border-blue-800/30 bg-blue-50 dark:bg-blue-900/20 p-4">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="space-y-2">
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">
-                {tAi('calibration.nextStep.title')}
-              </h3>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                {tAi('calibration.nextStep.body')}
-              </p>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
-                  {tAi('calibration.nextStep.chipCalendar')}:{' '}
-                  {annualPlan?.id
-                    ? [annualPlan.status, annualPlan.year].every((v) => v !== undefined && v !== null)
-                      ? `${annualPlanStatusLabel(annualPlan.status)} (${annualPlan.year})`
-                      : tAi('calibration.nextStep.chipCalendarDetail')
-                    : tAi('calibration.nextStep.chipCalendarNotReady')}
-                </span>
-                <span className="rounded-full bg-white/80 dark:bg-blue-950/40 px-2.5 py-1 text-blue-900 dark:text-blue-100">
-                  {tAi('calibration.nextStep.chipTips')}: {aiRecommendations?.length ?? 0}
-                </span>
+      {phase === 'active' && (() => {
+        const saisonReady = !!annualPlan?.id && annualPlan.status !== undefined;
+        return (
+          <div className="rounded-xl border border-blue-200 dark:border-blue-800/30 bg-blue-50 dark:bg-blue-900/20 p-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                  {tAi('calibration.nextStep.title')}
+                </h3>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  {saisonReady
+                    ? tAi('calibration.nextStep.body')
+                    : tAi(
+                        'calibration.nextStep.preparing',
+                        'Votre saison se prépare. Ouvrez-la pour suivre la progression — elle sera prête dans 1 à 2 min.',
+                      )}
+                </p>
+                {saisonReady && (
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    {annualPlan?.status === 'draft'
+                      ? tAi('calibration.nextStep.hintDraft')
+                      : aiRecommendations && aiRecommendations.length > 0
+                        ? tAi('calibration.nextStep.hintTips')
+                        : tAi('calibration.nextStep.hintNoTips')}
+                  </p>
+                )}
               </div>
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                {annualPlan?.status === 'draft'
-                  ? tAi('calibration.nextStep.hintDraft')
-                  : aiRecommendations && aiRecommendations.length > 0
-                    ? tAi('calibration.nextStep.hintTips')
-                    : tAi('calibration.nextStep.hintNoTips')}
-              </p>
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button variant="blue"
-                type="button"
-                onClick={() => navigate({ to: '/parcels/$parcelId/ai/plan/summary', params: { parcelId } })}
-                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-              >
-                <FileText className="h-4 w-4" />
-                {tAi('calibration.nextStep.openCalendar')}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => navigate({ to: '/parcels/$parcelId/ai/recommendations', params: { parcelId } })}
-                className="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-blue-950/30 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-200 transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30"
-              >
-                <Lightbulb className="h-4 w-4" />
-                {tAi('calibration.nextStep.openRecommendations')}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="blue"
+                  type="button"
+                  onClick={() =>
+                    navigate({
+                      to: '/parcels/$parcelId/ai/plan/summary',
+                      params: { parcelId },
+                      search: { farmId: undefined },
+                    })
+                  }
+                  className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+                >
+                  <FileText className="h-4 w-4" />
+                  {tAi('calibration.nextStep.openSaison', 'Ouvrir la Saison')}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {showAnnualRecalibrationWizard && (
         <AnnualRecalibrationWizard
