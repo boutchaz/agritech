@@ -162,9 +162,9 @@
         "nom": "Naveline",
         "type": "Navel",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan"
+          "nov",
+          "dec",
+          "jan"
         ],
         "calibre": "gros",
         "qualite": "excellente",
@@ -175,8 +175,8 @@
         "nom": "Washington Navel",
         "type": "Navel",
         "maturite": [
-          "Dec",
-          "Jan",
+          "dec",
+          "jan",
           "Fev"
         ],
         "calibre": "tres_gros",
@@ -187,9 +187,9 @@
         "nom": "Navelate",
         "type": "Navel",
         "maturite": [
-          "Jan",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "calibre": "gros",
         "qualite": "tres_bonne",
@@ -200,10 +200,10 @@
         "nom": "Salustiana",
         "type": "Blonde",
         "maturite": [
-          "Dec",
-          "Jan",
+          "dec",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "usage": "jus",
         "qualite": "tres_bonne"
@@ -225,7 +225,7 @@
         "nom": "Maroc Late",
         "type": "Blonde",
         "maturite": [
-          "Mar",
+          "mar",
           "Avr",
           "Mai",
           "Juin"
@@ -238,9 +238,9 @@
         "nom": "Sanguinelli",
         "type": "Sanguine",
         "maturite": [
-          "Jan",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "niche": true
       }
@@ -251,9 +251,9 @@
         "nom": "Clémentine Commune",
         "type": "Clementine",
         "maturite": [
-          "Oct",
-          "Nov",
-          "Dec"
+          "oct",
+          "nov",
+          "dec"
         ],
         "pepins": [
           0,
@@ -266,8 +266,8 @@
         "nom": "Nules",
         "type": "Clementine",
         "maturite": [
-          "Nov",
-          "Dec"
+          "nov",
+          "dec"
         ],
         "pepins": [
           0,
@@ -282,7 +282,7 @@
         "type": "Clementine",
         "maturite": [
           "Sept",
-          "Oct"
+          "oct"
         ],
         "tres_precoce": true,
         "conservation": "faible"
@@ -292,9 +292,9 @@
         "nom": "Nour",
         "type": "Clementine",
         "maturite": [
-          "Jan",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "tardive": true,
         "origine": "Maroc"
@@ -304,9 +304,9 @@
         "nom": "Nadorcott/Afourer",
         "type": "Mandarine",
         "maturite": [
-          "Jan",
+          "jan",
           "Fev",
-          "Mar",
+          "mar",
           "Avr"
         ],
         "premium": true,
@@ -318,7 +318,7 @@
         "type": "Tangor",
         "maturite": [
           "Fev",
-          "Mar",
+          "mar",
           "Avr"
         ],
         "pepins": [
@@ -332,9 +332,9 @@
         "nom": "Nova",
         "type": "Mandarine",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan"
+          "nov",
+          "dec",
+          "jan"
         ],
         "arome": "intense"
       }
@@ -351,11 +351,11 @@
         "code": "LISBON",
         "nom": "Lisbon",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
+          "nov",
+          "dec",
+          "jan",
           "Fev",
-          "Mar",
+          "mar",
           "Avr",
           "Mai"
         ],
@@ -367,7 +367,7 @@
         "nom": "Verna",
         "maturite": [
           "Fev",
-          "Mar",
+          "mar",
           "Avr",
           "Mai",
           "Juin",
@@ -380,11 +380,11 @@
         "code": "MEYER",
         "nom": "Meyer",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
+          "nov",
+          "dec",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "acidite": "faible",
         "hybride": true
@@ -396,11 +396,11 @@
         "nom": "Star Ruby",
         "chair": "rouge",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
+          "nov",
+          "dec",
+          "jan",
           "Fev",
-          "Mar"
+          "mar"
         ],
         "gout": "peu_amer",
         "principal": true
@@ -410,11 +410,11 @@
         "nom": "Rio Red",
         "chair": "rouge",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
+          "nov",
+          "dec",
+          "jan",
           "Fev",
-          "Mar",
+          "mar",
           "Avr"
         ],
         "gout": "peu_amer"
@@ -424,11 +424,11 @@
         "nom": "Marsh",
         "chair": "blonde",
         "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
+          "nov",
+          "dec",
+          "jan",
           "Fev",
-          "Mar",
+          "mar",
           "Avr"
         ],
         "gout": "legerement_amer"
@@ -996,8 +996,8 @@
     {
       "nom": "Repos hivernal",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "coef_nirvp": 0.7
     },
@@ -1005,14 +1005,14 @@
       "nom": "Flush printemps",
       "mois": [
         "Fev",
-        "Mar"
+        "mar"
       ],
       "coef_nirvp": 1.0
     },
     {
       "nom": "Floraison",
       "mois": [
-        "Mar",
+        "mar",
         "Avr"
       ],
       "coef_nirvp": 0.95
@@ -1061,24 +1061,24 @@
       "nom": "Véraison",
       "mois": [
         "Sept",
-        "Oct"
+        "oct"
       ],
       "coef_nirvp": 0.9
     },
     {
       "nom": "Maturation",
       "mois": [
-        "Oct",
-        "Nov",
-        "Dec"
+        "oct",
+        "nov",
+        "dec"
       ],
       "coef_nirvp": 0.85
     },
     {
       "nom": "Flush automne",
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "coef_nirvp": 0.9
     }
@@ -2221,8 +2221,8 @@
       "code": "00",
       "nom": "Repos hivernal",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "gdd_cumul": [
         0,
@@ -2235,7 +2235,7 @@
       "code": "01",
       "nom": "Gonflement bourgeons",
       "mois": [
-        "Feb"
+        "feb"
       ],
       "gdd_cumul": [
         50,
@@ -2248,8 +2248,8 @@
       "code": "09",
       "nom": "Pointes vertes",
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "gdd_cumul": [
         150,
@@ -2262,8 +2262,8 @@
       "code": "15",
       "nom": "Pousse printanière",
       "mois": [
-        "Mar",
-        "Apr"
+        "mar",
+        "apr"
       ],
       "gdd_cumul": [
         300,
@@ -2276,7 +2276,7 @@
       "code": "51",
       "nom": "Boutons floraux",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "gdd_cumul": [
         500,
@@ -2289,8 +2289,8 @@
       "code": "60",
       "nom": "Début floraison",
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "gdd_cumul": [
         700,
@@ -2303,7 +2303,7 @@
       "code": "65",
       "nom": "Pleine floraison",
       "mois": [
-        "May"
+        "may"
       ],
       "gdd_cumul": [
         900,
@@ -2316,8 +2316,8 @@
       "code": "69",
       "nom": "Nouaison",
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "gdd_cumul": [
         1100,
@@ -2330,8 +2330,8 @@
       "code": "71",
       "nom": "Chute physiologique",
       "mois": [
-        "Jun",
-        "Jul"
+        "jun",
+        "jul"
       ],
       "gdd_cumul": [
         1400,
@@ -2344,8 +2344,8 @@
       "code": "75",
       "nom": "Grossissement fruit",
       "mois": [
-        "Jul",
-        "Aug"
+        "jul",
+        "aug"
       ],
       "gdd_cumul": [
         1800,
@@ -2358,8 +2358,8 @@
       "code": "79",
       "nom": "Fruit taille finale",
       "mois": [
-        "Sep",
-        "Oct"
+        "sep",
+        "oct"
       ],
       "gdd_cumul": [
         2500,
@@ -2372,8 +2372,8 @@
       "code": "85",
       "nom": "Début coloration",
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "gdd_cumul": [
         3200,
@@ -2386,8 +2386,8 @@
       "code": "89",
       "nom": "Maturité récolte",
       "mois": [
-        "Nov",
-        "Dec"
+        "nov",
+        "dec"
       ],
       "gdd_cumul": [
         3800,
@@ -2400,7 +2400,7 @@
       "code": "92",
       "nom": "Post-récolte",
       "mois": [
-        "Dec"
+        "dec"
       ],
       "gdd_cumul": [
         4200,

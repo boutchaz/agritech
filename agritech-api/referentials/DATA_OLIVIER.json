@@ -6,7 +6,7 @@
     "pays": "Maroc",
     "usage": "LLM_direct_read — no parser needed",
     "conventions": {
-      "mois": "English 3-letter: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
+      "mois": "Lowercase English 3-letter: jan feb mar apr may jun jul aug sep oct nov dec",
       "ranges": "Always [min, max] arrays — never single number when a range exists",
       "doses": "Always {value: number, unit: string} — never freetext",
       "conditions": "Always list of {field, operator, value} objects",
@@ -744,8 +744,8 @@
       "code": "00",
       "nom": "Dormance",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "gdd_cumul": [
         0,
@@ -758,7 +758,7 @@
       "code": "01",
       "nom": "Debut gonflement",
       "mois": [
-        "Feb"
+        "feb"
       ],
       "gdd_cumul": [
         30,
@@ -771,8 +771,8 @@
       "code": "09",
       "nom": "Feuilles emergentes",
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "gdd_cumul": [
         80,
@@ -785,8 +785,8 @@
       "code": "15",
       "nom": "5 paires feuilles",
       "mois": [
-        "Mar",
-        "Apr"
+        "mar",
+        "apr"
       ],
       "gdd_cumul": [
         200,
@@ -799,7 +799,7 @@
       "code": "37",
       "nom": "Allongement avance",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "gdd_cumul": [
         400,
@@ -812,8 +812,8 @@
       "code": "51",
       "nom": "Boutons floraux",
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "gdd_cumul": [
         500,
@@ -826,7 +826,7 @@
       "code": "55",
       "nom": "Boutons separes",
       "mois": [
-        "May"
+        "may"
       ],
       "gdd_cumul": [
         600,
@@ -839,7 +839,7 @@
       "code": "60",
       "nom": "Debut floraison",
       "mois": [
-        "May"
+        "may"
       ],
       "gdd_cumul": [
         800,
@@ -852,7 +852,7 @@
       "code": "65",
       "nom": "Pleine floraison",
       "mois": [
-        "May"
+        "may"
       ],
       "gdd_cumul": [
         900,
@@ -865,7 +865,7 @@
       "code": "69",
       "nom": "Nouaison",
       "mois": [
-        "Jun"
+        "jun"
       ],
       "gdd_cumul": [
         1100,
@@ -878,7 +878,7 @@
       "code": "75",
       "nom": "Fruit 50pct taille",
       "mois": [
-        "Jul"
+        "jul"
       ],
       "gdd_cumul": [
         1400,
@@ -891,8 +891,8 @@
       "code": "79",
       "nom": "Fruit taille finale",
       "mois": [
-        "Aug",
-        "Sep"
+        "aug",
+        "sep"
       ],
       "gdd_cumul": [
         1800,
@@ -905,7 +905,7 @@
       "code": "85",
       "nom": "Veraison avancee",
       "mois": [
-        "Oct"
+        "oct"
       ],
       "gdd_cumul": [
         2400,
@@ -918,8 +918,8 @@
       "code": "89",
       "nom": "Maturite recolte",
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "gdd_cumul": [
         2600,
@@ -932,8 +932,8 @@
       "code": "92",
       "nom": "Post-recolte",
       "mois": [
-        "Nov",
-        "Dec"
+        "nov",
+        "dec"
       ],
       "gdd_cumul": [
         2800,
@@ -1142,8 +1142,8 @@
   "fractionnement_pct": [
     {
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "stade_bbch": [
         "01",
@@ -1155,7 +1155,7 @@
     },
     {
       "mois": [
-        "Apr"
+        "apr"
       ],
       "stade_bbch": [
         "31",
@@ -1167,7 +1167,7 @@
     },
     {
       "mois": [
-        "May"
+        "may"
       ],
       "stade_bbch": [
         "55",
@@ -1179,7 +1179,7 @@
     },
     {
       "mois": [
-        "Jun"
+        "jun"
       ],
       "stade_bbch": [
         "67",
@@ -1191,8 +1191,8 @@
     },
     {
       "mois": [
-        "Jul",
-        "Aug"
+        "jul",
+        "aug"
       ],
       "stade_bbch": [
         "75",
@@ -1204,7 +1204,7 @@
     },
     {
       "mois": [
-        "Sep"
+        "sep"
       ],
       "stade_bbch": [
         "81",
@@ -1216,8 +1216,8 @@
     },
     {
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "stade_bbch": [
         "89",
@@ -1612,8 +1612,8 @@
   "calendrier_biostimulants": [
     {
       "mois": [
-        "Nov",
-        "Dec"
+        "nov",
+        "dec"
       ],
       "applications": [
         {
@@ -1634,8 +1634,8 @@
     },
     {
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "applications": [
         {
@@ -1671,8 +1671,8 @@
     },
     {
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "applications": [
         {
@@ -1693,8 +1693,8 @@
     },
     {
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "applications": [
         {
@@ -1716,7 +1716,7 @@
     },
     {
       "mois": [
-        "Jul"
+        "jul"
       ],
       "applications": [
         {
@@ -1730,8 +1730,8 @@
     },
     {
       "mois": [
-        "Aug",
-        "Sep"
+        "aug",
+        "sep"
       ],
       "applications": [
         {
@@ -2547,10 +2547,10 @@
           "pluie": true
         },
         "mois_risque": [
-          "Oct",
-          "Nov",
-          "Mar",
-          "Apr"
+          "oct",
+          "nov",
+          "mar",
+          "apr"
         ],
         "guerissable": true,
         "traitement": {
@@ -2580,10 +2580,10 @@
           ]
         },
         "mois_risque": [
-          "Oct",
-          "Nov",
-          "Feb",
-          "Mar"
+          "oct",
+          "nov",
+          "feb",
+          "mar"
         ],
         "guerissable": false,
         "traitement": null,
@@ -2602,9 +2602,9 @@
           "humidite": true
         },
         "mois_risque": [
-          "Jan",
-          "Feb",
-          "Mar"
+          "jan",
+          "feb",
+          "mar"
         ],
         "guerissable": true,
         "traitement": {
@@ -2656,9 +2656,9 @@
         "nom": "Cochenille noire",
         "agent": "Saissetia oleae",
         "mois_risque": [
-          "Mar",
-          "Apr",
-          "May"
+          "mar",
+          "apr",
+          "may"
         ],
         "traitement": {
           "produit": "Huile blanche",
@@ -2670,8 +2670,8 @@
             "unite": "L/ha"
           },
           "mois_application": [
-            "Jan",
-            "Feb"
+            "jan",
+            "feb"
           ],
           "conditions_application": {
             "T_min_c": 5,
@@ -2685,8 +2685,8 @@
   "calendrier_phyto": [
     {
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "cible": "oeil_paon",
       "produit": "Cuivre hydroxyde",
@@ -2701,8 +2701,8 @@
     },
     {
       "mois": [
-        "Jan",
-        "Feb"
+        "jan",
+        "feb"
       ],
       "cible": "cochenille",
       "produit": "Huile blanche",
@@ -2720,7 +2720,7 @@
     },
     {
       "mois": [
-        "Mar"
+        "mar"
       ],
       "cible": "oeil_paon",
       "produit": "Cuivre",
@@ -2732,8 +2732,8 @@
     },
     {
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "cible": "mouche",
       "produit": "Deltamethrine",
@@ -2929,84 +2929,84 @@
       "salinite": "si_option_C"
     },
     "calendrier_type_intensif": {
-      "Jan": {
+      "jan": {
         "NPK": null,
         "micro": null,
         "biostim": null,
         "phyto": "huile_blanche",
         "irrigation": "faible"
       },
-      "Feb": {
+      "feb": {
         "NPK": "TSP_fond_N1",
         "micro": "Fe-EDDHA",
         "biostim": "humiques_amines",
         "phyto": null,
         "irrigation": "reprise"
       },
-      "Mar": {
+      "mar": {
         "NPK": "N2",
         "micro": "Zn_Mn_foliaire",
         "biostim": "algues",
         "phyto": "Cu_si_taille",
         "irrigation": "progressive"
       },
-      "Apr": {
+      "apr": {
         "NPK": "N3_K",
         "micro": null,
         "biostim": null,
         "phyto": "Cu_si_pluie",
         "irrigation": "croissante"
       },
-      "May": {
+      "may": {
         "NPK": "K",
         "micro": "B_floraison",
         "biostim": "algues_amines",
         "phyto": "mouche_si_seuil",
         "irrigation": "croissante"
       },
-      "Jun": {
+      "jun": {
         "NPK": "K_N",
         "micro": "Fe-EDDHA",
         "biostim": "humiques",
         "phyto": null,
         "irrigation": "maximum"
       },
-      "Jul": {
+      "jul": {
         "NPK": "K",
         "micro": null,
         "biostim": "algues",
         "phyto": "mouche_si_seuil",
         "irrigation": "maximum"
       },
-      "Aug": {
+      "aug": {
         "NPK": "K_dernier",
         "micro": null,
         "biostim": null,
         "phyto": null,
         "irrigation": "maximum_ou_RDI"
       },
-      "Sep": {
+      "sep": {
         "NPK": null,
         "micro": null,
         "biostim": "humiques",
         "phyto": null,
         "irrigation": "reduction"
       },
-      "Oct": {
+      "oct": {
         "NPK": null,
         "micro": null,
         "biostim": null,
         "phyto": "Cu_oeil_paon",
         "irrigation": "reduction"
       },
-      "Nov": {
+      "nov": {
         "NPK": "N_reconstitution",
         "micro": null,
         "biostim": "humiques_granule",
         "phyto": "Cu_oeil_paon",
         "irrigation": "faible"
       },
-      "Dec": {
+      "dec": {
         "NPK": null,
         "micro": null,
         "biostim": "amines_post_recolte",
@@ -3108,9 +3108,9 @@
     {
       "stade": "repos",
       "mois": [
-        "Dec",
-        "Jan",
-        "Feb"
+        "dec",
+        "jan",
+        "feb"
       ],
       "traditionnel": 0.4,
       "intensif": 0.5,
@@ -3119,7 +3119,7 @@
     {
       "stade": "debourrement",
       "mois": [
-        "Mar"
+        "mar"
       ],
       "traditionnel": 0.45,
       "intensif": 0.55,
@@ -3128,7 +3128,7 @@
     {
       "stade": "croissance",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "traditionnel": 0.5,
       "intensif": 0.6,
@@ -3137,7 +3137,7 @@
     {
       "stade": "floraison",
       "mois": [
-        "May"
+        "may"
       ],
       "traditionnel": 0.55,
       "intensif": 0.65,
@@ -3146,7 +3146,7 @@
     {
       "stade": "nouaison",
       "mois": [
-        "Jun"
+        "jun"
       ],
       "traditionnel": 0.6,
       "intensif": 0.75,
@@ -3155,8 +3155,8 @@
     {
       "stade": "grossissement",
       "mois": [
-        "Jul",
-        "Aug"
+        "jul",
+        "aug"
       ],
       "traditionnel": 0.65,
       "intensif": 0.8,
@@ -3165,8 +3165,8 @@
     {
       "stade": "maturation",
       "mois": [
-        "Sep",
-        "Oct"
+        "sep",
+        "oct"
       ],
       "traditionnel": 0.55,
       "intensif": 0.65,
@@ -3175,7 +3175,7 @@
     {
       "stade": "post_recolte",
       "mois": [
-        "Nov"
+        "nov"
       ],
       "traditionnel": 0.45,
       "intensif": 0.55,
@@ -3256,8 +3256,8 @@
         "mode": "foliaire"
       },
       "stades": [
-        "Mar",
-        "Jun"
+        "mar",
+        "jun"
       ]
     },
     "Zn": {
@@ -3274,7 +3274,7 @@
         "mode": "foliaire"
       },
       "stades": [
-        "Mar"
+        "mar"
       ]
     },
     "Mn": {
@@ -3291,7 +3291,7 @@
         "mode": "foliaire"
       },
       "stades": [
-        "Mar"
+        "mar"
       ]
     },
     "B": {
@@ -3308,7 +3308,7 @@
         "mode": "foliaire"
       },
       "stades": [
-        "May"
+        "may"
       ],
       "si_deficit_heures_froid": "+50% dose floraison"
     },
@@ -3326,8 +3326,8 @@
         "mode": "foliaire"
       },
       "stades": [
-        "Apr",
-        "Jun"
+        "apr",
+        "jun"
       ]
     },
     "note": "Fe, B, Zn, Mn et biostimulants de base sont des composantes OBLIGATOIRES sur sol calcaire — pas des options."
@@ -3348,13 +3348,13 @@
       },
       {
         "stade": "grossissement_II",
-        "mois": "Aug",
+        "mois": "aug",
         "rdi_autorise": true,
         "reduction_max_pct": 30
       },
       {
         "stade": "maturation",
-        "mois": "Sep",
+        "mois": "sep",
         "rdi_autorise": true,
         "reduction_max_pct": 40
       },

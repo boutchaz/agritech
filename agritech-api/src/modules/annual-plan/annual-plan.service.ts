@@ -116,16 +116,22 @@ interface MonthlyPlanDefinition {
   components: Record<string, MonthlyPlanValue>;
 }
 
-/** AI prompt month keys differ from template keys (aou vs aout, sep vs sept, etc.) */
+/**
+ * Canonical month keys used everywhere in this service, referential JSON files,
+ * and AI prompts: lowercase English 3-letter (jan..dec). This matches the
+ * convention documented in DATA_*.json metadata and used by prompt v3.
+ * The canonicalMonthKey() helper below aliases French/English variants back to
+ * this canonical for legacy or user-authored data.
+ */
 const AI_MONTH_KEY_TO_NUMBER: Record<string, number> = {
   jan: 1,
-  fev: 2,
+  feb: 2,
   mar: 3,
-  avr: 4,
-  mai: 5,
+  apr: 4,
+  may: 5,
   jun: 6,
   jul: 7,
-  aou: 8,
+  aug: 8,
   sep: 9,
   oct: 10,
   nov: 11,
@@ -152,27 +158,27 @@ interface AIInterventionJson {
 
 const MONTH_KEY_TO_NUMBER: Record<string, number> = {
   jan: 1,
-  fev: 2,
+  feb: 2,
   mar: 3,
-  avr: 4,
-  mai: 5,
-  juin: 6,
-  juil: 7,
-  aout: 8,
-  sept: 9,
+  apr: 4,
+  may: 5,
+  jun: 6,
+  jul: 7,
+  aug: 8,
+  sep: 9,
   oct: 10,
   nov: 11,
   dec: 12,
 };
 
 /**
- * Normalize any common month spelling (English, French, 3-letter, case-insensitive,
- * accents stripped) into the canonical short-French key used by MONTH_KEY_TO_NUMBER.
- * Returns null for anything that can't be identified as a month.
+ * Normalize any common month spelling (English or French, 3-letter or full
+ * name, case-insensitive, accents stripped) to the canonical lowercase English
+ * 3-letter key used by MONTH_KEY_TO_NUMBER. Returns null for anything that
+ * can't be identified as a month.
  *
- * Handles: "Jan", "jan", "JAN", "Janvier", "January",
- *          "Feb", "fev", "fév", "février", "february",
- *          "Aug", "aou", "août", "aout", "aoü", etc.
+ * Kept as a safety net for legacy data or hand-authored referentials; new
+ * content should already use the canonical form (jan..dec).
  */
 function canonicalMonthKey(rawKey: string): string | null {
   if (!rawKey) return null;
@@ -185,20 +191,25 @@ function canonicalMonthKey(rawKey: string): string | null {
 
   if (normalized in MONTH_KEY_TO_NUMBER) return normalized;
 
-  // Accept common English/French aliases
   const aliases: Record<string, string> = {
-    jan: 'jan', janvier: 'jan', january: 'jan',
-    feb: 'fev', fev: 'fev', fevrier: 'fev', february: 'fev',
-    mar: 'mar', mars: 'mar', march: 'mar',
-    apr: 'avr', avr: 'avr', avril: 'avr', april: 'avr',
-    may: 'mai', mai: 'mai',
-    jun: 'juin', juin: 'juin', june: 'juin',
-    jul: 'juil', juil: 'juil', juillet: 'juil', july: 'juil',
-    aug: 'aout', aou: 'aout', aout: 'aout', august: 'aout',
-    sep: 'sept', sept: 'sept', septembre: 'sept', september: 'sept',
-    oct: 'oct', octobre: 'oct', october: 'oct',
-    nov: 'nov', novembre: 'nov', november: 'nov',
-    dec: 'dec', decembre: 'dec', december: 'dec',
+    // French short + long
+    fev: 'feb', fevrier: 'feb', février: 'feb',
+    avr: 'apr', avril: 'apr',
+    mai: 'may',
+    juin: 'jun',
+    juil: 'jul', juillet: 'jul',
+    aou: 'aug', aout: 'aug', août: 'aug',
+    sept: 'sep', septembre: 'sep',
+    octobre: 'oct',
+    novembre: 'nov',
+    decembre: 'dec', décembre: 'dec',
+    // English long
+    january: 'jan', february: 'feb', march: 'mar', april: 'apr',
+    june: 'jun', july: 'jul', august: 'aug', september: 'sep',
+    october: 'oct', november: 'nov', december: 'dec',
+    // Legacy French-3-letter (pre-formalization)
+    janvier: 'jan',
+    mars: 'mar',
   };
   return aliases[normalized] ?? null;
 }

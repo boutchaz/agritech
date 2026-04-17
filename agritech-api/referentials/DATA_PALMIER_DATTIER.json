@@ -834,9 +834,9 @@
       "code": "00",
       "nom": "Repos hivernal",
       "mois": [
-        "Dec",
-        "Jan",
-        "Feb"
+        "dec",
+        "jan",
+        "feb"
       ],
       "gdd_cumul": [
         0,
@@ -849,8 +849,8 @@
       "code": "07",
       "nom": "Spathe visible",
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "gdd_cumul": [
         30,
@@ -863,7 +863,7 @@
       "code": "51",
       "nom": "Émission inflorescence",
       "mois": [
-        "Mar"
+        "mar"
       ],
       "gdd_cumul": [
         80,
@@ -876,8 +876,8 @@
       "code": "60",
       "nom": "Début pollinisation",
       "mois": [
-        "Mar",
-        "Apr"
+        "mar",
+        "apr"
       ],
       "gdd_cumul": [
         180,
@@ -890,7 +890,7 @@
       "code": "65",
       "nom": "Pleine pollinisation",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "gdd_cumul": [
         350,
@@ -903,8 +903,8 @@
       "code": "69",
       "nom": "Hababouk (nouaison)",
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "gdd_cumul": [
         500,
@@ -917,8 +917,8 @@
       "code": "71",
       "nom": "Kimri (fruit vert)",
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "gdd_cumul": [
         800,
@@ -931,8 +931,8 @@
       "code": "75",
       "nom": "Khalal (fruit jaune)",
       "mois": [
-        "Jun",
-        "Jul"
+        "jun",
+        "jul"
       ],
       "gdd_cumul": [
         1400,
@@ -945,8 +945,8 @@
       "code": "79",
       "nom": "Routab (ramollissement)",
       "mois": [
-        "Jul",
-        "Aug"
+        "jul",
+        "aug"
       ],
       "gdd_cumul": [
         2200,
@@ -959,8 +959,8 @@
       "code": "85",
       "nom": "Tamar début",
       "mois": [
-        "Aug",
-        "Sep"
+        "aug",
+        "sep"
       ],
       "gdd_cumul": [
         3000,
@@ -973,8 +973,8 @@
       "code": "89",
       "nom": "Tamar maturité récolte",
       "mois": [
-        "Sep",
-        "Oct"
+        "sep",
+        "oct"
       ],
       "gdd_cumul": [
         3600,
@@ -987,9 +987,9 @@
       "code": "92",
       "nom": "Post-récolte",
       "mois": [
-        "Oct",
-        "Nov",
-        "Dec"
+        "oct",
+        "nov",
+        "dec"
       ],
       "gdd_cumul": [
         4200,

@@ -205,7 +205,7 @@ Réponds UNIQUEMENT avec un objet JSON valide. Aucun texte avant/après. Aucun m
   },
 
   "calendrier_mensuel": {
-    "Jan": {
+    "jan": {
       "NPK": {"N_kg_ha": 0, "P2O5_kg_ha": 0, "K2O_kg_ha": 0},
       "formes_engrais": [{"element": "string", "produit": "string", "quantite": {"valeur": 0, "unite": "string"}}],
       "microelements": [{"element": "string", "produit": "string", "dose": {"valeur": 0, "unite": "string"}, "mode": "foliaire|fertigation"}],

@@ -1,18 +1,19 @@
 import { z } from 'zod';
 
+// Canonical month keys across referentials + backend: lowercase English 3-letter.
 const monthCodeSchema = z.enum([
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  'jan',
+  'feb',
+  'mar',
+  'apr',
+  'may',
+  'jun',
+  'jul',
+  'aug',
+  'sep',
+  'oct',
+  'nov',
+  'dec',
 ]);
 
 const numberRangeSchema = z.tuple([z.number(), z.number()]);
