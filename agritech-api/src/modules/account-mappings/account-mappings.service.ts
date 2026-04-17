@@ -96,7 +96,7 @@ export class AccountMappingsService {
         .from('account_mappings')
         .select(`
           *,
-          account:accounts!account_mappings_account_id_fkey(
+          account:accounts!account_id(
             id,
             code,
             name,
@@ -145,7 +145,7 @@ export class AccountMappingsService {
         .from('account_mappings')
         .select(`
           *,
-          account:accounts!account_mappings_account_id_fkey(
+          account:accounts!account_id(
             id,
             code,
             name,
@@ -311,7 +311,7 @@ export class AccountMappingsService {
         })
         .select(`
           *,
-          account:accounts!account_mappings_account_id_fkey(
+          account:accounts!account_id(
             id,
             code,
             name,
@@ -393,7 +393,7 @@ export class AccountMappingsService {
         .eq('organization_id', organizationId)
         .select(`
           *,
-          account:accounts!account_mappings_account_id_fkey(
+          account:accounts!account_id(
             id,
             code,
             name,
