@@ -19,13 +19,28 @@ const SubscriptionBanner = () => {
   const isPastDue = subscription.status === 'past_due';
   const isCanceled = subscription.status === 'canceled';
 
-  // Calculate days remaining for trial
+  // Calendar-day remaining, not millisecond ceiling. Previously used
+  // Math.ceil on the raw ms diff, which meant the counter "flipped"
+  // 24h after trial creation hour (e.g. 10:32 → 10:32 the next day),
+  // and stayed on 14 for most of the first calendar day. Compare at
+  // local midnight so the displayed number decrements at midnight like
+  // users expect.
   const daysRemaining = subscription.current_period_end
-    ? Math.ceil(
-        (new Date(subscription.current_period_end).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+    ? (() => {
+        const end = new Date(subscription.current_period_end);
+        const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        const now = new Date();
+        const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return Math.max(0, Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24)));
+      })()
     : 0;
+  const trialEndLabel = subscription.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString(i18n.language, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
   if (!isTrialing && !isPastDue && !isCanceled) return null;
 
@@ -64,14 +79,18 @@ const SubscriptionBanner = () => {
 
           <div className={cn('min-w-0 flex-1', isRTL ? 'text-right' : 'text-left')}>
             {isTrialing && (
-              <p className="text-pretty text-sm font-medium leading-snug text-blue-900 dark:text-blue-100">
+              <p
+                className="text-pretty text-sm font-medium leading-snug text-blue-900 dark:text-blue-100"
+                title={trialEndLabel ?? undefined}
+              >
                 {t('subscriptionBanner.trialPeriod')}{' '}
                 {daysRemaining > 0 ? (
                   <>
                     <span className="font-bold">
                       {daysRemaining} {t('subscriptionBanner.days')}
                     </span>{' '}
-                    {t('subscriptionBanner.remaining')}.
+                    {t('subscriptionBanner.remaining')}
+                    {trialEndLabel ? ` (${trialEndLabel})` : ''}.
                   </>
                 ) : (
                   <span className="font-bold">{t('subscriptionBanner.trialEndingSoon')}</span>
