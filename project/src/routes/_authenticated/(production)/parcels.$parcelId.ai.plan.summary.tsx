@@ -17,6 +17,7 @@ import {
   useAIPlan,
   useAIPlanSummary,
   useEnsureAIPlan,
+  useGenerateAIPlanReport,
   useValidateAIPlan,
 } from '@/hooks/useAIPlan';
 import {
@@ -88,6 +89,7 @@ const AISaisonPage = () => {
 
   const validatePlan = useValidateAIPlan(parcelId);
   const ensurePlan = useEnsureAIPlan(parcelId);
+  const generateAIPlan = useGenerateAIPlanReport(parcelId);
   const { mutate: validateRecommendation, isPending: isValidating } = useValidateAIRecommendation();
   const { mutate: rejectRecommendation, isPending: isRejecting } = useRejectAIRecommendation();
   const { mutate: executeRecommendation, isPending: isExecuting } = useExecuteAIRecommendation();
@@ -103,13 +105,15 @@ const AISaisonPage = () => {
       : 0;
   const statusLabel = annualPlanStatusLabel(effectiveStatus);
 
-  // Generating skeleton — the common case right after the user confirms
-  // their nutrition option. Backend has kicked off plan generation but
-  // nothing is in the DB yet, so rather than showing "zero interventions"
-  // we surface a friendly "in preparation" state that polls itself.
-  const isGenerating = !summary || !planReady;
+  // Only block the whole page when we don't even have a plan record
+  // or a summary yet. Once summary arrives, show the calendar even if
+  // plan_data hasn't been enriched — AI details (doses / harvest /
+  // costs) become a smaller inline banner with its own retry, so a
+  // failed background job doesn't lock the user out of the calendar.
+  const hasSummary = !!summary;
+  const aiEnrichmentMissing = hasSummary && !planReady;
 
-  if (isGenerating) {
+  if (!hasSummary) {
     const showEnsureFallback = summaryError || planError;
     return (
       <div className="space-y-6">
@@ -236,6 +240,52 @@ const AISaisonPage = () => {
             />
           </div>
         </div>
+
+        {aiEnrichmentMissing && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/20">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+              <div className="min-w-0 flex-1 space-y-2">
+                <p className="text-sm font-medium text-amber-950 dark:text-amber-100">
+                  {t(
+                    'saison.aiMissing.title',
+                    'Détails IA non générés (doses, récolte, coûts)',
+                  )}
+                </p>
+                <p className="text-xs text-amber-900/90 dark:text-amber-200/90">
+                  {generateAIPlan.progressStatus === 'idle'
+                    ? t(
+                        'saison.aiMissing.body',
+                        "La génération n'a pas abouti la première fois. Relancez pour obtenir les doses annuelles, la fenêtre de récolte et l'estimation économique.",
+                      )
+                    : t('saison.aiMissing.inProgress', 'Génération en cours — {{percent}}%', {
+                        percent: generateAIPlan.progress,
+                      })}
+                </p>
+                <div>
+                  <Button
+                    variant="green"
+                    type="button"
+                    onClick={() => generateAIPlan.mutate()}
+                    disabled={generateAIPlan.isPending}
+                  >
+                    {generateAIPlan.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t('saison.aiMissing.generating', 'Génération…')}
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        {t('saison.aiMissing.generate', 'Générer les détails IA')}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {planData?.planSummary && (
           <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
