@@ -17,9 +17,18 @@ import {
   Timer,
   Banknote,
   Loader2,
+  Lock,
+  Wallet,
 } from 'lucide-react';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
-import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
+import {
+  useTask,
+  useUpdateTask,
+  useTaskComments,
+  useTaskTimeLogs,
+  useIsTaskBlocked,
+  useTaskDependencies,
+} from '@/hooks/useTasks';
 import { useTaskAssignments } from '@/hooks/useTaskAssignments';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
@@ -123,6 +132,29 @@ function TaskDetailPage() {
 
   // Comments
   const { data: comments = [], isLoading: commentsLoading } = useTaskComments(taskId);
+
+  // Collaboration + worklog data
+  const { data: timeLogs = [] } = useTaskTimeLogs(taskId);
+  const { data: blockedStatus } = useIsTaskBlocked(taskId);
+  const { data: dependencies } = useTaskDependencies(taskId);
+
+  // Running cost summary — live roll-up of hours and piece-work earnings
+  const costSummary = useMemo(() => {
+    const totalHours = timeLogs.reduce((sum, l) => sum + Number(l.total_hours || 0), 0);
+    const unitsCompleted = Number(task?.units_completed ?? 0);
+    const ratePerUnit = Number(task?.rate_per_unit ?? 0);
+    const pieceWorkCost = unitsCompleted * ratePerUnit;
+    const actualCost = Number(task?.actual_cost ?? 0);
+    const estimatedCost = Number(task?.cost_estimate ?? 0);
+    return {
+      totalHours,
+      unitsCompleted,
+      pieceWorkCost,
+      actualCost,
+      estimatedCost,
+      hasAny: totalHours > 0 || unitsCompleted > 0 || actualCost > 0 || estimatedCost > 0,
+    };
+  }, [timeLogs, task?.units_completed, task?.rate_per_unit, task?.actual_cost, task?.cost_estimate]);
 
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
@@ -508,7 +540,84 @@ function TaskDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Blocked-by banner — unresolved dependencies */}
+      {blockedStatus?.blocked && blockedStatus.blockers.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                {t('tasks.blocked.title', 'Blocked by {{count}} unresolved dependency', { count: blockedStatus.blockers.length })}
+              </p>
+              <ul className="mt-2 space-y-1">
+                {blockedStatus.blockers.map((b, i) => (
+                  <li key={b.id ?? i} className="text-sm text-amber-800 dark:text-amber-200">
+                    • {b.title ?? 'Untitled task'}
+                    {b.status ? <span className="ml-2 text-xs italic">({b.status})</span> : null}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                {t('tasks.blocked.hint', 'Complete the blockers above before starting this task.')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Running cost tile — mobile-visible summary (same panel also appears in sidebar on desktop) */}
+      {costSummary.hasAny && (
+        <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4 lg:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+              <Wallet className="w-4 h-4 text-emerald-600" />
+              {t('tasks.cost.title', 'Running cost')}
+            </h4>
+            {costSummary.estimatedCost > 0 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {t('tasks.cost.vs', 'vs {{est}} MAD est.', { est: costSummary.estimatedCost.toLocaleString('fr-FR') })}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.hoursLogged', 'Hours logged')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.totalHours.toFixed(2)}h
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.unitsDone', 'Units done')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.unitsCompleted}
+                {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.pieceWork', 'Piece-work')}
+              </p>
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.actual', 'Actual cost')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 lg:pb-0">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Task Info */}
@@ -1012,6 +1121,89 @@ function TaskDetailPage() {
 
         {/* Sidebar - Actions */}
         <div className="space-y-6">
+          {/* Running cost tile — desktop sidebar variant */}
+          {costSummary.hasAny && (
+            <div className="hidden lg:block bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                {t('tasks.cost.title', 'Running cost')}
+              </h2>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.hoursLogged', 'Hours logged')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">{costSummary.totalHours.toFixed(2)}h</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.unitsDone', 'Units done')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.unitsCompleted}
+                    {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.pieceWork', 'Piece-work')}</dt>
+                  <dd className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.actual', 'Actual')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+                  </dd>
+                </div>
+                {costSummary.estimatedCost > 0 && (
+                  <div className="flex justify-between pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60">
+                    <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.estimated', 'Estimated')}</dt>
+                    <dd className="text-gray-500 dark:text-gray-400">
+                      {costSummary.estimatedCost.toLocaleString('fr-FR')} MAD
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {/* Dependencies compact view — desktop sidebar */}
+          {dependencies && (dependencies.depends_on.length > 0 || dependencies.required_by.length > 0) && (
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <Lock className="w-4 h-4 text-gray-500" />
+                {t('tasks.dependencies.title', 'Dependencies')}
+              </h2>
+              {dependencies.depends_on.length > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.dependsOn', 'Depends on')}
+                  </p>
+                  <ul className="space-y-1 mb-3">
+                    {dependencies.depends_on.map((d) => (
+                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full ${d.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        <span className="truncate">{d.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {dependencies.required_by.length > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.requiredBy', 'Required by')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.required_by.map((d) => (
+                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="truncate">{d.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Assignee — the manager who created/assigned this task */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -1233,6 +1425,71 @@ function TaskDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky mobile action bar — floats at the bottom of the viewport so workers
+          don't have to scroll past description + worklog to reach Clock In / Complete. */}
+      {!showHarvestForm && !showPerUnitForm && (canStart || canPause || canResume || canComplete) && (
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg">
+          <div className="flex items-center gap-2">
+            {canStart && (
+              <Button
+                onClick={handleStartTask}
+                disabled={isActionLoading || blockedStatus?.blocked}
+                className="flex-1 h-12 text-base"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                {t('tasks.start', 'Start')}
+              </Button>
+            )}
+            {canPause && (
+              <Button
+                onClick={handlePauseTask}
+                disabled={isActionLoading}
+                variant="outline"
+                className="flex-1 h-12 text-base"
+              >
+                <Pause className="w-5 h-5 mr-2" />
+                {t('tasks.pause', 'Pause')}
+              </Button>
+            )}
+            {canResume && (
+              <Button
+                onClick={handleResumeTask}
+                disabled={isActionLoading}
+                className="flex-1 h-12 text-base"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                {t('tasks.resume', 'Resume')}
+              </Button>
+            )}
+            {canComplete && (
+              <Button
+                onClick={handleCompleteTask}
+                disabled={isActionLoading}
+                className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isHarvestingTask ? (
+                  <>
+                    <Wheat className="w-5 h-5 mr-2" />
+                    {t('tasks.completeShort', 'Finish')}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    {t('tasks.completeShort', 'Finish')}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          {blockedStatus?.blocked && canStart && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 text-center">
+              <Lock className="w-3 h-3 inline mr-1" />
+              {t('tasks.blocked.hintMobile', 'Waiting on dependencies')}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
