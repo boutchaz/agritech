@@ -254,9 +254,13 @@ export function AccountMappingsManagement() {
     const countryCode = 'MA';
     try {
       const result = await initializeMutation.mutateAsync(countryCode);
-      toast.success(
-        t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count })
-      );
+      // Backend returns a precise message describing what happened (added vs already-existed
+      // vs skipped because chart-of-accounts doesn't include the code). Surface it directly.
+      const message =
+        result.message ||
+        t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count });
+      if (result.count > 0) toast.success(message);
+      else toast.info(message);
     } catch (error: unknown) {
       toast.error((error instanceof Error ? error.message : undefined) || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
     }

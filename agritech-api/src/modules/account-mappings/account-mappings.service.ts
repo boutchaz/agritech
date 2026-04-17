@@ -513,17 +513,6 @@ export class AccountMappingsService {
         countryCode,
       );
 
-      // Check if mappings already exist
-      const { data: existingMappings } = await supabaseClient
-        .from('account_mappings')
-        .select('id')
-        .eq('organization_id', organizationId)
-        .limit(1);
-
-      if (existingMappings && existingMappings.length > 0) {
-        return { message: 'Mappings already initialized', count: 0 };
-      }
-
       // Load org accounts to resolve codes → IDs
       const { data: orgAccounts, error: accountsError } = await supabaseClient
         .from('accounts')
@@ -557,9 +546,26 @@ export class AccountMappingsService {
         );
       }
 
-      // Only create mappings for accounts that exist in the org
-      const rows = defaults
-        .filter((def) => accountCodeToId.has(def.account_code))
+      // Load existing (mapping_type, mapping_key) tuples so we can top up only the missing ones.
+      // Previously the function bailed at the first existing mapping, leaving partial setups stuck.
+      const { data: existingMappings, error: existingError } = await supabaseClient
+        .from('account_mappings')
+        .select('mapping_type, mapping_key')
+        .eq('organization_id', organizationId);
+
+      if (existingError) {
+        throw new BadRequestException(`Failed to load existing mappings: ${existingError.message}`);
+      }
+
+      const existingKeys = new Set(
+        (existingMappings ?? []).map((m) => `${m.mapping_type}::${m.mapping_key}`),
+      );
+
+      // Skip definitions whose account_code is missing from the chart, OR that already exist.
+      const candidates = defaults.filter((def) => accountCodeToId.has(def.account_code));
+      const missingAccountCount = defaults.length - candidates.length;
+      const rows = candidates
+        .filter((def) => !existingKeys.has(`${def.mapping_type}::${def.mapping_key}`))
         .map((def) => ({
           organization_id: organizationId,
           country_code: effectiveCountry,
@@ -575,6 +581,13 @@ export class AccountMappingsService {
         }));
 
       if (rows.length === 0) {
+        // Nothing to add — distinguish "already fully set up" from "nothing matches your chart"
+        if (existingKeys.size > 0) {
+          return {
+            message: `All ${defaults.length - missingAccountCount} applicable default mappings already exist. Nothing to add.`,
+            count: 0,
+          };
+        }
         throw new BadRequestException(
           'None of the default account codes were found in your chart of accounts. Please set up your chart of accounts first (Accounting → Accounts).',
         );
@@ -588,12 +601,15 @@ export class AccountMappingsService {
         throw new BadRequestException(`Failed to initialize mappings: ${insertError.message}`);
       }
 
-      const skipped = defaults.length - rows.length;
-      const message = skipped > 0
-        ? `Initialized ${rows.length} mappings (${skipped} skipped — account codes not found in your chart)`
-        : `Default mappings initialized successfully`;
+      const messageParts = [`Added ${rows.length} default mapping${rows.length === 1 ? '' : 's'}`];
+      if (existingKeys.size > 0) {
+        messageParts.push(`${existingKeys.size} already existed`);
+      }
+      if (missingAccountCount > 0) {
+        messageParts.push(`${missingAccountCount} skipped (account code not in your chart)`);
+      }
 
-      return { message, count: rows.length };
+      return { message: messageParts.join('; '), count: rows.length };
     } catch (error) {
       this.logger.error('Error in initializeDefaultMappings:', error);
       throw error;
