@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { getCropReference } from '../calibration/crop-reference-loader';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 export const ANNUAL_PLAN_STATUSES = [
   'draft',
@@ -919,27 +921,53 @@ export class AnnualPlanService {
   private async findCropReferenceOrThrow(
     cropType: string,
   ): Promise<Record<string, unknown>> {
-    const { data, error } = await this.databaseService
-      .getAdminClient()
-      .from('crop_ai_references')
-      .select('reference_data')
-      .eq('crop_type', cropType)
-      .maybeSingle();
+    // Source-of-truth is now local JSON files under agritech-api/referentials/
+    // (e.g. DATA_OLIVIER.json). The loader falls back to the crop_ai_references
+    // DB table if no file is found — so callers see a file-first, DB-fallback
+    // lookup without caring about the source.
+    const supabaseAdmin = this.databaseService.getAdminClient();
+    const normalized = this.normalizeCropType(cropType);
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to fetch crop AI references: ${error.message}`,
-      );
-    }
+    const reference = await getCropReference(normalized, supabaseAdmin);
 
-    if (!data || !this.hasReferenceData(data)) {
+    if (!reference) {
       throw new BadRequestException(
         `Référentiel agronomique non trouvé pour la culture "${cropType}". ` +
-          `Veuillez configurer le référentiel depuis l'application d'administration.`,
+          `Vérifiez le fichier agritech-api/referentials/DATA_${normalized.toUpperCase()}.json ` +
+          `ou publiez-le depuis l'application d'administration.`,
       );
     }
 
-    return data.reference_data;
+    return reference;
+  }
+
+  /**
+   * Map parcel crop_type values to the referential file key.
+   * Files are named DATA_<KEY>.json (loader lowercases the key internally).
+   * Common aliases are normalized so a parcel stored as "Olive" / "olives"
+   * still resolves to DATA_OLIVIER.json.
+   */
+  private normalizeCropType(cropType: string): string {
+    const trimmed = (cropType || '').trim().toLowerCase();
+    const aliases: Record<string, string> = {
+      olive: 'olivier',
+      olives: 'olivier',
+      olivier: 'olivier',
+      oliviers: 'olivier',
+      avocat: 'avocatier',
+      avocats: 'avocatier',
+      avocatier: 'avocatier',
+      avocatiers: 'avocatier',
+      agrume: 'agrumes',
+      agrumes: 'agrumes',
+      citrus: 'agrumes',
+      palmier: 'palmier_dattier',
+      dattier: 'palmier_dattier',
+      'palmier-dattier': 'palmier_dattier',
+      'palmier dattier': 'palmier_dattier',
+      palmier_dattier: 'palmier_dattier',
+    };
+    return aliases[trimmed] ?? trimmed;
   }
 
   private async findLatestPlan(
@@ -1295,10 +1323,6 @@ export class AnnualPlanService {
 
       return left.description.localeCompare(right.description);
     });
-  }
-
-  private hasReferenceData(data: unknown): data is CropReferenceRow {
-    return this.isRecord(data) && this.isRecord(data.reference_data);
   }
 
   private hasMonthKeys(value: unknown): value is Record<string, unknown> {
