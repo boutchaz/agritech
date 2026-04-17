@@ -1086,7 +1086,7 @@ export class CalibrationService {
         .update(bilingualUpdate)
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
-        .eq("status", "completed");
+        .in("status", ["awaiting_validation", "validated"]);
 
       if (aiUpdateError) {
         this.logger.warn(
@@ -1587,7 +1587,7 @@ export class CalibrationService {
         .update(bilingualUpdate)
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
-        .eq("status", "completed");
+        .in("status", ["awaiting_validation", "validated"]);
 
       if (aiUpdateError) {
         this.logger.warn(

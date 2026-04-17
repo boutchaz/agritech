@@ -786,7 +786,7 @@ export class AnnualRecalibrationService {
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -861,7 +861,7 @@ export class AnnualRecalibrationService {
       .select("health_score")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("created_at", { ascending: true });
 
     if (error) {

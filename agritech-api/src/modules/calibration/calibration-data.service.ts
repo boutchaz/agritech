@@ -867,7 +867,7 @@ export class CalibrationDataService {
       .select("*")
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("completed_at", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(1)

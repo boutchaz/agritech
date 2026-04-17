@@ -1535,27 +1535,29 @@ export class AIReportsService {
     const { data: calibration } = await supabase
       .from('calibrations')
       .select(
-        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!calibration) {
       throw new BadRequestException(
-        'No completed calibration found - recommendations require calibration first',
+        'No validated calibration found - recommendations require calibration first',
       );
     }
 
-    const calibrationData =
-      calibration.calibration_data &&
-      typeof calibration.calibration_data === 'object' &&
-      !Array.isArray(calibration.calibration_data)
-        ? (calibration.calibration_data as Record<string, unknown>)
-        : {};
+    // Schema split: the old monolithic `calibration_data` column is now
+    // `baseline_data` (the "output" blob) + `diagnostic_data` (ai_analysis).
+    // Wrap them back into the legacy shape the extractors expect so we
+    // don't have to rewrite every downstream call site.
+    const calibrationData = this.composeLegacyCalibrationData(
+      calibration.baseline_data,
+      calibration.diagnostic_data,
+    );
     const calibrationOutput = this.extractCalibrationOutput(calibrationData);
     const aiAnalysis = this.extractAiAnalysis(calibrationData);
     const baselinePercentiles = this.extractCalibrationPercentiles(calibrationOutput);
@@ -1694,7 +1696,7 @@ export class AIReportsService {
         calibrationOutput,
         cropType,
         (weatherRows ?? []) as Array<Record<string, unknown>>,
-        calibration.maturity_phase,
+        calibration.phase_age,
       ),
       recentOperations: ((recentTasks ?? []) as Array<Record<string, unknown>>).map((task) => ({
         date:
@@ -1754,27 +1756,25 @@ export class AIReportsService {
     const { data: calibration } = await supabase
       .from('calibrations')
       .select(
-        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!calibration) {
       throw new BadRequestException(
-        'No completed calibration found - annual plan requires calibration first',
+        'No validated calibration found - annual plan requires calibration first',
       );
     }
 
-    const calibrationData =
-      calibration.calibration_data &&
-      typeof calibration.calibration_data === 'object' &&
-      !Array.isArray(calibration.calibration_data)
-        ? (calibration.calibration_data as Record<string, unknown>)
-        : null;
+    const calibrationData = this.composeLegacyCalibrationData(
+      calibration.baseline_data,
+      calibration.diagnostic_data,
+    );
 
     const v2Output =
       calibrationData?.output &&
@@ -1875,8 +1875,8 @@ export class AIReportsService {
       : [];
 
     const maturityPhase =
-      typeof calibration.maturity_phase === 'string' && calibration.maturity_phase.trim()
-        ? calibration.maturity_phase.trim()
+      typeof calibration.phase_age === 'string' && calibration.phase_age.trim()
+        ? calibration.phase_age.trim()
         : typeof v2Output.maturity_phase === 'string' && String(v2Output.maturity_phase).trim()
           ? String(v2Output.maturity_phase).trim()
           : undefined;
@@ -2555,16 +2555,53 @@ export class AIReportsService {
       .getAdminClient()
       .from('calibrations')
       .select(
-        'calibration_data, confidence_score, health_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, confidence_score, health_score, yield_potential_min, yield_potential_max, phase_age',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    return (data as Record<string, unknown> | null) ?? null;
+    if (!data) return null;
+
+    // Back-fill the legacy keys so downstream callers that still read
+    // `calibration_data` / `maturity_phase` keep working.
+    return {
+      ...data,
+      calibration_data: this.composeLegacyCalibrationData(
+        (data as Record<string, unknown>).baseline_data,
+        (data as Record<string, unknown>).diagnostic_data,
+      ),
+      maturity_phase: (data as Record<string, unknown>).phase_age ?? null,
+    };
+  }
+
+  /**
+   * The pre-split schema stored calibration output as a single
+   * `calibration_data` JSONB with shape `{output, ai_analysis}`. After
+   * the split, `baseline_data` holds the output blob and
+   * `diagnostic_data` holds the ai_analysis blob. Everything
+   * downstream still reads the legacy shape, so we rebuild it here
+   * rather than touching ~20 call sites.
+   */
+  private composeLegacyCalibrationData(
+    baselineData: unknown,
+    diagnosticData: unknown,
+  ): Record<string, unknown> {
+    const output =
+      baselineData && typeof baselineData === 'object' && !Array.isArray(baselineData)
+        ? (baselineData as Record<string, unknown>)
+        : null;
+    const aiAnalysis =
+      diagnosticData && typeof diagnosticData === 'object' && !Array.isArray(diagnosticData)
+        ? (diagnosticData as Record<string, unknown>)
+        : null;
+    const composed: Record<string, unknown> = {};
+    if (output) composed.output = output;
+    if (aiAnalysis) composed.ai_analysis = aiAnalysis;
+    return composed;
   }
 
   private async fetchSatelliteSnapshotBeforeDate(
