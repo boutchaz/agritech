@@ -6366,6 +6366,16 @@ CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(par
 CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_status ON public.calibrations(status);
 
+-- Progress tracking: persisted so reload shows current step + % without
+-- relying on the ephemeral socket stream. Also enables the stale guard
+-- that marks zombie runs failed if no update for >5 minutes.
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_step INTEGER;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_total_steps INTEGER;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_step_key TEXT;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_message TEXT;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_percent INTEGER CHECK (progress_percent IS NULL OR (progress_percent BETWEEN 0 AND 100));
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_updated_at TIMESTAMPTZ;
+
 -- AI Diagnostic Sessions (one row per operational AI analysis run)
 CREATE TABLE IF NOT EXISTS public.ai_diagnostic_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

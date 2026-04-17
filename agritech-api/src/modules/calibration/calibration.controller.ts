@@ -117,6 +117,23 @@ export class CalibrationController {
     );
   }
 
+  @Get("progress")
+  @ApiOperation({
+    summary:
+      "Get current calibration run progress (persisted). Returns null when no run is in_progress. Runs the stale-guard that auto-fails zombie runs.",
+  })
+  @ApiResponse({ status: 200, description: "Progress fetched (may be null)" })
+  async getCalibrationProgress(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCurrentCalibrationProgress(
+      parcelId,
+      organizationId,
+    );
+  }
+
   @Get("history")
   @ApiOperation({
     summary: "Get calibration history for a parcel (newest first)",

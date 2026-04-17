@@ -174,6 +174,21 @@ interface ParcelPhaseResponse {
   } | null;
 }
 
+export interface CalibrationProgressResponse {
+  calibration_id: string;
+  status: string;
+  started_at: string | null;
+  progress: {
+    step: number;
+    total_steps: number;
+    step_key: string | null;
+    message: string | null;
+    percent: number;
+    updated_at: string;
+  } | null;
+  stale: boolean;
+}
+
 export const calibrationApi = {
   async startCalibration(
     parcelId: string,
@@ -263,6 +278,17 @@ export const calibrationApi = {
     return apiClient.post<NutritionConfirmationResponse>(
       `${BASE_URL}/${parcelId}/calibration/${calibrationId}/nutrition-option`,
       { option },
+      {},
+      organizationId,
+    );
+  },
+
+  async getCalibrationProgress(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationProgressResponse | null> {
+    return apiClient.get<CalibrationProgressResponse | null>(
+      `${BASE_URL}/${parcelId}/calibration/progress`,
       {},
       organizationId,
     );
