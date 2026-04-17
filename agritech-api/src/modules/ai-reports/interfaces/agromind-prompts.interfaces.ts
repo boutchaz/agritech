@@ -387,4 +387,10 @@ export enum AgromindReportType {
   ANNUAL_PLAN = 'annual_plan',
   /** Phase 2c — Follow-Up: Post-recommendation evaluation */
   FOLLOWUP = 'followup',
+  /**
+   * Phase 3 — Recalibration (F2 partial / F3 complete).
+   * Partial = user-declared change (water source swap, heavy pruning, new analysis...).
+   * Complete = post-campaign annual re-baselining with actual yield.
+   */
+  RECALIBRATION = 'recalibration',
 }

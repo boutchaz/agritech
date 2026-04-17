@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -1199,6 +1200,88 @@ export class AIReportsService {
           userPrompt: buildFollowUpPrompt(followUpData, language),
           parcelName: followUpData.parcel.name,
           dataSnapshot: followUpData,
+        };
+      }
+      case AgromindReportType.RECALIBRATION: {
+        // Recalibration reads the latest completed calibration row for this
+        // parcel — that's where annual-recalibration.service persists the
+        // campaign_bilan, previous_baseline, and current profile_snapshot.
+        const {
+          getLocalCropReference: getRecalRef,
+        } = await import('../../modules/calibration/crop-reference-loader');
+        const {
+          buildRecalibrageSystemPrompt,
+          buildRecalibragePartielUserPrompt,
+          buildRecalibrageCompletUserPrompt,
+        } = await import('../../libs/agromind-ia/prompts/recalibrage.prompt');
+
+        const client = this.databaseService.getAdminClient();
+        const { data: parcelRow } = await client
+          .from('parcels')
+          .select('id, name, crop_type, tree_type')
+          .eq('id', dto.parcel_id)
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+
+        if (!parcelRow) {
+          throw new NotFoundException(
+            `Parcel ${dto.parcel_id} not found for recalibration report`,
+          );
+        }
+
+        const { data: calibrationRow } = await client
+          .from('calibrations')
+          .select(
+            'id, profile_snapshot, campaign_bilan, previous_baseline, mode_calibrage, recalibration_motif, updated_at, confidence_score',
+          )
+          .eq('parcel_id', dto.parcel_id)
+          .eq('organization_id', organizationId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const cropType =
+          (parcelRow as any).crop_type ??
+          (parcelRow as any).tree_type ??
+          'olivier';
+        const referentiel = getRecalRef(cropType) ?? {};
+
+        const mode: 'F2_partiel' | 'F3_complet' =
+          dto.recalibrationMode ?? 'F3_complet';
+
+        // Build the RecalibrageInput shape. The prompts JSON.stringify the
+        // baseline verbatim so keeping a loose shape is fine.
+        const recalibrageInput = {
+          baseline_actuelle:
+            (calibrationRow as any)?.profile_snapshot ?? {},
+          type: mode,
+          ...(mode === 'F2_partiel' && dto.recalibrationChange
+            ? { changement: dto.recalibrationChange }
+            : {}),
+          ...(mode === 'F3_complet'
+            ? {
+                bilan_campagne: (calibrationRow as any)?.campaign_bilan ?? null,
+              }
+            : {}),
+        };
+
+        const systemPrompt = buildRecalibrageSystemPrompt(referentiel as object);
+        const userPrompt =
+          mode === 'F2_partiel'
+            ? buildRecalibragePartielUserPrompt(recalibrageInput as any)
+            : buildRecalibrageCompletUserPrompt(recalibrageInput as any);
+
+        return {
+          reportType,
+          systemPrompt,
+          userPrompt,
+          parcelName: (parcelRow as any).name ?? 'parcel',
+          dataSnapshot: {
+            parcel: parcelRow,
+            calibration: calibrationRow,
+            mode,
+            recalibrageInput,
+          },
         };
       }
       case AgromindReportType.GENERAL:
