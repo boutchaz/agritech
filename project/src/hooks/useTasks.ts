@@ -5,6 +5,7 @@ import {
   keepPreviousData,
 } from "@tanstack/react-query";
 import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
+import { runOrQueue } from "../lib/offlineTaskQueue";
 import { useAuth } from "../hooks/useAuth";
 import type { PaginatedResponse } from "../lib/api/types";
 import type {
@@ -245,21 +246,38 @@ export function useClockIn() {
         throw new Error("No organization selected");
       }
 
-      return tasksApi.clockIn(currentOrganization.id, request.task_id, {
+      const payload = {
         worker_id: request.worker_id,
         location_lat: request.location_lat,
         location_lng: request.location_lng,
         notes: request.notes,
-      });
+      };
+      // If the device is offline, queue the action so the worker's clock-in
+      // isn't lost when 3G drops in the field (rural Morocco).
+      const outcome = await runOrQueue(
+        { kind: 'clock-in', organizationId: currentOrganization.id, taskId: request.task_id, payload },
+        () => tasksApi.clockIn(currentOrganization.id, request.task_id, payload),
+      );
+      if (outcome.status === 'queued') {
+        return { queued: true, taskId: request.task_id } as const;
+      }
+      return outcome.result;
     },
     onSuccess: (data) => {
+      // When queued we don't have a task id on the response shape,
+      // so invalidate broadly in that case.
+      if ('queued' in data) {
+        queryClient.invalidateQueries({ queryKey: ['task-time-logs', data.taskId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        return;
+      }
       queryClient.invalidateQueries({
-        queryKey: ["task", currentOrganization?.id, data.task.id],
+        queryKey: ['task', currentOrganization?.id, data.task.id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["task-time-logs", data.task.id],
+        queryKey: ['task-time-logs', data.task.id],
       });
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }
@@ -269,25 +287,39 @@ export function useClockOut() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async (request: ClockOutRequest) => {
+    mutationFn: async (request: ClockOutRequest & { units_completed?: number; photo_url?: string }) => {
       if (!currentOrganization) {
         throw new Error("No organization selected");
       }
 
-      return tasksApi.clockOut(currentOrganization.id, request.time_log_id, {
+      const payload = {
         break_duration: request.break_duration,
         notes: request.notes,
-      });
+        units_completed: request.units_completed,
+        photo_url: request.photo_url,
+      };
+      const outcome = await runOrQueue(
+        { kind: 'clock-out', organizationId: currentOrganization.id, timeLogId: request.time_log_id, payload },
+        () => tasksApi.clockOut(currentOrganization.id, request.time_log_id, payload),
+      );
+      if (outcome.status === 'queued') {
+        return { queued: true } as const;
+      }
+      return outcome.result;
     },
     onSuccess: (data) => {
+      if ('queued' in data) {
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        return;
+      }
       if (data.task) {
         queryClient.invalidateQueries({
-          queryKey: ["task", currentOrganization?.id, data.task.id],
+          queryKey: ['task', currentOrganization?.id, data.task.id],
         });
         queryClient.invalidateQueries({
-          queryKey: ["task-time-logs", data.task.id],
+          queryKey: ['task-time-logs', data.task.id],
         });
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
       }
     },
   });
@@ -305,18 +337,26 @@ export function useAddTaskComment() {
         throw new Error("No organization selected");
       }
 
-      return tasksApi.addComment(currentOrganization.id, comment.task_id, {
+      const payload = {
         comment: comment.comment,
         worker_id: comment.worker_id,
         type: comment.type,
-      });
+      };
+      const outcome = await runOrQueue(
+        { kind: 'comment', organizationId: currentOrganization.id, taskId: comment.task_id, payload },
+        () => tasksApi.addComment(currentOrganization.id, comment.task_id, payload),
+      );
+      if (outcome.status === 'queued') {
+        return { queued: true, task_id: comment.task_id } as const;
+      }
+      return outcome.result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
-        queryKey: ["task-comments", data.task_id],
+        queryKey: ['task-comments', data.task_id],
       });
       queryClient.invalidateQueries({
-        queryKey: ["task", currentOrganization?.id, data.task_id],
+        queryKey: ['task', currentOrganization?.id, data.task_id],
       });
     },
   });

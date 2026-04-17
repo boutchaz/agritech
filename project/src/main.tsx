@@ -6,8 +6,19 @@ import { routeTree } from './routeTree.gen'
 import { initGA } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
 import { WowIntro } from './components/WowIntro'
+import { wireOfflineQueue } from './lib/offlineTaskQueue'
 import './i18n/config'
 import './index.css'
+
+// Install listeners that replay any queued clock-in/clock-out and comments
+// the moment the browser fires the 'online' event. Safe to run early —
+// idempotent and only touches localStorage on this tab.
+wireOfflineQueue((summary) => {
+  if (summary.sent > 0 || summary.remaining > 0) {
+    // eslint-disable-next-line no-console
+    console.info('[offlineQueue] flushed', summary);
+  }
+});
 
 // Initialize Locator for React DevTools debugging (development only)
 if (import.meta.env.DEV) {

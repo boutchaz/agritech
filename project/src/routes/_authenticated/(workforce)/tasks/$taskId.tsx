@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { subscribeQueue, isOnline as isDeviceOnline } from '@/lib/offlineTaskQueue';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -162,6 +163,22 @@ function TaskDetailPage() {
   // Comment editing state — inline editor per comment
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
+
+  // Offline queue status: online/offline + how many actions waiting to sync
+  const [isOnline, setIsOnline] = useState(isDeviceOnline());
+  const [queuedCount, setQueuedCount] = useState(0);
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    const unsub = subscribeQueue((items) => setQueuedCount(items.length));
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      unsub();
+    };
+  }, []);
 
   // Running cost summary — live roll-up of hours and piece-work earnings
   const costSummary = useMemo(() => {
@@ -642,6 +659,34 @@ function TaskDetailPage() {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+        </div>
+      )}
+
+      {/* Offline / queue status banner — makes it clear to the worker that their
+          clock-in/out still works offline and will sync when the connection returns */}
+      {(!isOnline || queuedCount > 0) && (
+        <div className={`rounded-lg p-3 border flex items-center gap-3 ${
+          !isOnline
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+        }`}>
+          <span className={`inline-block w-2 h-2 rounded-full ${!isOnline ? 'bg-amber-500 animate-pulse' : 'bg-blue-500'}`} />
+          <div className="flex-1 text-sm">
+            {!isOnline ? (
+              <span className="text-amber-800 dark:text-amber-200">
+                {t('tasks.offline.title', "You're offline")}
+                {queuedCount > 0 && (
+                  <span className="ml-1">
+                    · {t('tasks.offline.queued', '{{count}} action waiting to sync', { count: queuedCount })}
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-blue-800 dark:text-blue-200">
+                {t('tasks.offline.syncing', 'Syncing {{count}} pending action...', { count: queuedCount })}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
