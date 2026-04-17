@@ -6,6 +6,11 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { getCropReference } from '../calibration/crop-reference-loader';
+import {
+  PlanDataSchema,
+  type PlanData,
+  serializeJsonb,
+} from '../calibration/calibration-jsonb.schemas';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 export const ANNUAL_PLAN_STATUSES = [
@@ -826,25 +831,32 @@ export class AnnualPlanService {
 
     if (!plan) return null;
 
-    const nextPlanData = {
-      source: 'ai',
-      generated_at:
-        typeof aiSections.generationDate === 'string'
-          ? aiSections.generationDate
-          : new Date().toISOString(),
-      ai_version: aiSections.version ?? null,
-      parameters: this.isRecord(aiSections.parameters) ? aiSections.parameters : null,
-      annualDoses: this.isRecord(aiSections.annualDoses) ? aiSections.annualDoses : null,
-      irrigation: this.isRecord(aiSections.irrigation) ? aiSections.irrigation : null,
-      pruning: this.isRecord(aiSections.pruning) ? aiSections.pruning : null,
-      harvestForecast: this.isRecord(aiSections.harvestForecast)
-        ? aiSections.harvestForecast
-        : null,
-      economicEstimate: this.isRecord(aiSections.economicEstimate)
-        ? aiSections.economicEstimate
-        : null,
-      planSummary: typeof aiSections.planSummary === 'string' ? aiSections.planSummary : null,
-    };
+    const nextPlanData = serializeJsonb(
+      PlanDataSchema,
+      {
+        source: 'ai',
+        generated_at:
+          typeof aiSections.generationDate === 'string'
+            ? aiSections.generationDate
+            : new Date().toISOString(),
+        ai_version: aiSections.version ?? null,
+        parameters: this.isRecord(aiSections.parameters) ? aiSections.parameters : null,
+        annualDoses: this.isRecord(aiSections.annualDoses)
+          ? (aiSections.annualDoses as PlanData['annualDoses'])
+          : null,
+        irrigation: this.isRecord(aiSections.irrigation) ? aiSections.irrigation : null,
+        pruning: this.isRecord(aiSections.pruning) ? aiSections.pruning : null,
+        harvestForecast: this.isRecord(aiSections.harvestForecast)
+          ? (aiSections.harvestForecast as PlanData['harvestForecast'])
+          : null,
+        economicEstimate: this.isRecord(aiSections.economicEstimate)
+          ? (aiSections.economicEstimate as PlanData['economicEstimate'])
+          : null,
+        planSummary:
+          typeof aiSections.planSummary === 'string' ? aiSections.planSummary : null,
+      },
+      `annual_plans.plan_data (parcel=${parcelId})`,
+    );
 
     const { data: updated, error: updateError } = await supabase
       .from('annual_plans')
@@ -941,24 +953,35 @@ export class AnnualPlanService {
     }
 
     // Update plan_data with AI aggregate data
-    const { error: updateError } = await supabase
-      .from('annual_plans')
-      .update({
-        plan_data: {
-          source: 'ai',
-          generated_at: typeof aiPlanJson.generationDate === 'string'
+    const enrichedPlanData = serializeJsonb(
+      PlanDataSchema,
+      {
+        source: 'ai',
+        generated_at:
+          typeof aiPlanJson.generationDate === 'string'
             ? aiPlanJson.generationDate
             : new Date().toISOString(),
-          ai_version: aiPlanJson.version ?? null,
-          parameters: this.isRecord(aiPlanJson.parameters) ? aiPlanJson.parameters : null,
-          annualDoses: this.isRecord(aiPlanJson.annualDoses) ? aiPlanJson.annualDoses : null,
-          irrigation: this.isRecord(aiPlanJson.irrigation) ? aiPlanJson.irrigation : null,
-          pruning: this.isRecord(aiPlanJson.pruning) ? aiPlanJson.pruning : null,
-          harvestForecast: this.isRecord(aiPlanJson.harvestForecast) ? aiPlanJson.harvestForecast : null,
-          economicEstimate: this.isRecord(aiPlanJson.economicEstimate) ? aiPlanJson.economicEstimate : null,
-          planSummary: typeof aiPlanJson.planSummary === 'string' ? aiPlanJson.planSummary : null,
-        },
-      })
+        ai_version: aiPlanJson.version ?? null,
+        parameters: this.isRecord(aiPlanJson.parameters) ? aiPlanJson.parameters : null,
+        annualDoses: this.isRecord(aiPlanJson.annualDoses)
+          ? (aiPlanJson.annualDoses as PlanData['annualDoses'])
+          : null,
+        irrigation: this.isRecord(aiPlanJson.irrigation) ? aiPlanJson.irrigation : null,
+        pruning: this.isRecord(aiPlanJson.pruning) ? aiPlanJson.pruning : null,
+        harvestForecast: this.isRecord(aiPlanJson.harvestForecast)
+          ? (aiPlanJson.harvestForecast as PlanData['harvestForecast'])
+          : null,
+        economicEstimate: this.isRecord(aiPlanJson.economicEstimate)
+          ? (aiPlanJson.economicEstimate as PlanData['economicEstimate'])
+          : null,
+        planSummary:
+          typeof aiPlanJson.planSummary === 'string' ? aiPlanJson.planSummary : null,
+      },
+      `annual_plans.plan_data (plan=${annualPlanId})`,
+    );
+    const { error: updateError } = await supabase
+      .from('annual_plans')
+      .update({ plan_data: enrichedPlanData })
       .eq('id', annualPlanId)
       .eq('organization_id', organizationId);
 

@@ -37,6 +37,12 @@ import {
 import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
 import { AIProviderType } from '../organization-ai-settings/dto';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
+import {
+  BaselineDataSchema,
+  DiagnosticDataSchema,
+  baselineToLegacyOutput,
+  parseJsonb,
+} from '../calibration/calibration-jsonb.schemas';
 
 @Injectable()
 export class AIReportsService {
@@ -2579,28 +2585,28 @@ export class AIReportsService {
   }
 
   /**
-   * The pre-split schema stored calibration output as a single
-   * `calibration_data` JSONB with shape `{output, ai_analysis}`. After
-   * the split, `baseline_data` holds the output blob and
-   * `diagnostic_data` holds the ai_analysis blob. Everything
-   * downstream still reads the legacy shape, so we rebuild it here
-   * rather than touching ~20 call sites.
+   * Typed adapter between the post-split columns (baseline_data,
+   * diagnostic_data) and the legacy `{output: {step3,step4,step7,…},
+   * ai_analysis: …}` shape the ~20 downstream extractors were built
+   * against. parseJsonb validates the stored blob at the boundary so a
+   * silently-drifted column is caught in logs instead of producing an
+   * empty report.
    */
   private composeLegacyCalibrationData(
     baselineData: unknown,
     diagnosticData: unknown,
   ): Record<string, unknown> {
-    const output =
-      baselineData && typeof baselineData === 'object' && !Array.isArray(baselineData)
-        ? (baselineData as Record<string, unknown>)
-        : null;
-    const aiAnalysis =
-      diagnosticData && typeof diagnosticData === 'object' && !Array.isArray(diagnosticData)
-        ? (diagnosticData as Record<string, unknown>)
-        : null;
-    const composed: Record<string, unknown> = {};
-    if (output) composed.output = output;
-    if (aiAnalysis) composed.ai_analysis = aiAnalysis;
+    const baseline = parseJsonb(BaselineDataSchema, baselineData, 'calibrations.baseline_data');
+    const diagnostic = parseJsonb(
+      DiagnosticDataSchema,
+      diagnosticData,
+      'calibrations.diagnostic_data',
+    );
+
+    const composed: Record<string, unknown> = {
+      output: baselineToLegacyOutput(baseline),
+    };
+    if (diagnostic) composed.ai_analysis = diagnostic;
     return composed;
   }
 
