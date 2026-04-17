@@ -7,10 +7,15 @@ import {
   Calendar,
   Check,
   ChevronRight,
+  ClipboardList,
   Cloud,
   Compass,
+  FlaskConical,
+  Flower,
   Leaf,
   Lightbulb,
+  MapPin,
+  Satellite,
   Settings,
   Sparkles,
   TrendingDown,
@@ -83,6 +88,75 @@ function trendIcon(trend: string) {
     return <TrendingDown className="w-4 h-4 text-rose-600 dark:text-rose-400" aria-hidden />;
   }
   return <Minus className="w-4 h-4 text-slate-500" aria-hidden />;
+}
+
+function normalizeScore(raw: number | null | undefined): number | null {
+  if (raw == null || !Number.isFinite(raw)) return null;
+  return Math.round(raw <= 1 ? raw * 100 : raw);
+}
+
+// Derive a 0–100 "parcel health" score from the AI scenario code so a
+// farmer sees one number instead of a letter. Falls back to confidence
+// when no scenario is available (pre-activation).
+function scenarioToStateScore(code: string | null | undefined): number | null {
+  if (!code) return null;
+  switch (code.toUpperCase()) {
+    case 'H': return 85;
+    case 'G': return 72;
+    case 'F': return 64;
+    case 'E': return 55;
+    case 'D': return 45;
+    case 'C': return 40;
+    case 'B': return 28;
+    case 'A': return 18;
+    default: return null;
+  }
+}
+
+function stateScoreLabel(score: number | null, t: (k: string, d?: string) => string): string {
+  if (score == null) return t('compass.scores.stateUnknown', '—');
+  if (score >= 75) return t('compass.scores.stateGood', 'Bon');
+  if (score >= 55) return t('compass.scores.stateVigilance', 'Vigilance');
+  return t('compass.scores.stateAlert', 'Alerte');
+}
+
+function ScoreTile({
+  label,
+  value,
+  unit,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  hint?: string;
+  tone?: 'good' | 'warn' | 'bad' | 'info' | 'neutral';
+}) {
+  const valueClass =
+    tone === 'good'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : tone === 'warn'
+      ? 'text-amber-600 dark:text-amber-400'
+      : tone === 'bad'
+      ? 'text-rose-600 dark:text-rose-400'
+      : tone === 'info'
+      ? 'text-sky-600 dark:text-sky-400'
+      : 'text-slate-900 dark:text-white';
+  return (
+    <div className="rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        {label}
+      </p>
+      <p className={`mt-1 text-2xl font-bold tabular-nums ${valueClass}`}>
+        {value}
+        {unit ? (
+          <span className="ml-1 text-xs font-medium text-slate-500 dark:text-slate-400">{unit}</span>
+        ) : null}
+      </p>
+      {hint ? <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{hint}</p> : null}
+    </div>
+  );
 }
 
 function WorkflowStepper({ parcelId, aiPhase, hasCalibrationData }: { parcelId: string; aiPhase: string | null; hasCalibrationData: boolean }) {
@@ -277,6 +351,26 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
   const phaseKey = compassPhaseKey(aiPhase ?? undefined);
   const phaseText = t(`compass.phases.${phaseKey}`);
 
+  // Hub cockpit scores — one farmer-facing number per dimension.
+  // État (state): derived from scenario code when active; else falls back to confidence.
+  // Confiance: calibration.confidence_score, 0–100.
+  // Rendement cible: parcel.ai_production_target if set, else "—" w/ hint.
+  // Stade: parcel.current_bbch humanized.
+  const confidenceScore = normalizeScore(calibration?.confidence_score ?? null);
+  const stateScore = diagnostics
+    ? scenarioToStateScore(diagnostics.scenario_code) ?? confidenceScore
+    : confidenceScore;
+  const yieldTarget = parcel?.ai_production_target?.trim() || null;
+  const bbch = parcel?.current_bbch?.trim() || null;
+  const identity = {
+    variety: parcel?.variety?.trim() || null,
+    area: parcel?.area != null ? `${Number(parcel.area).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} ${parcel.area_unit || 'ha'}` : null,
+    system: parcel?.planting_system?.trim() || parcel?.irrigation_type?.trim() || null,
+    density: parcel?.density_per_hectare ? `${parcel.density_per_hectare} ${t('compass.identity.treesPerHa', 'trees/ha')}` : null,
+    age: parcel?.planting_year ? `${new Date().getFullYear() - Number(parcel.planting_year)} ${t('compass.identity.years', 'years')}` : null,
+  };
+  const identitySummary = [identity.variety, identity.area, identity.system].filter(Boolean).join(' · ');
+
   if (loadingEssential) {
     return (
       <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 dark:border-slate-700 dark:bg-slate-900/30">
@@ -310,9 +404,14 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
               <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                 {phaseText}
               </p>
-              {(parcel?.crop_type || parcel?.variety) && (
+              {identitySummary && (
                 <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                  {[parcel.crop_type, parcel.variety].filter(Boolean).join(' · ')}
+                  {identitySummary}
+                  {identity.density || identity.age ? (
+                    <span className="ml-1 opacity-75">
+                      · {[identity.density, identity.age].filter(Boolean).join(' · ')}
+                    </span>
+                  ) : null}
                 </p>
               )}
             </div>
@@ -438,6 +537,60 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
         )}
       </section>
 
+      {/* Hub scores — État, Confiance, Rendement cible, Stade.
+          One farmer-facing number per dimension, farmer-first hierarchy. */}
+      <section>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          {t('compass.scores.sectionTitle', 'Vue d\'ensemble')}
+        </h3>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <ScoreTile
+            label={t('compass.scores.state', 'État parcelle')}
+            value={stateScore != null ? String(stateScore) : '—'}
+            unit={stateScore != null ? '/100' : undefined}
+            hint={stateScoreLabel(stateScore, t)}
+            tone={stateScore == null ? 'neutral' : stateScore >= 75 ? 'good' : stateScore >= 55 ? 'warn' : 'bad'}
+          />
+          <ScoreTile
+            label={t('compass.scores.confidence', 'Confiance')}
+            value={confidenceScore != null ? String(confidenceScore) : '—'}
+            unit={confidenceScore != null ? '/100' : undefined}
+            hint={
+              confidenceScore == null
+                ? t('compass.scores.confidenceNone', 'Calibration à venir')
+                : confidenceScore >= 70
+                ? t('compass.scores.confidenceHigh', '⭐⭐⭐ élevée')
+                : confidenceScore >= 40
+                ? t('compass.scores.confidenceMed', '⭐⭐ moyenne')
+                : t('compass.scores.confidenceLow', '⭐ faible')
+            }
+            tone={confidenceScore == null ? 'neutral' : confidenceScore >= 70 ? 'info' : confidenceScore >= 40 ? 'warn' : 'bad'}
+          />
+          <ScoreTile
+            label={t('compass.scores.yieldTarget', 'Rendement cible')}
+            value={yieldTarget ?? '—'}
+            hint={
+              yieldTarget
+                ? t('compass.scores.yieldHint', 'Objectif campagne')
+                : t('compass.scores.yieldNone', 'Défini post calibration')
+            }
+            tone={yieldTarget ? 'warn' : 'neutral'}
+          />
+          <ScoreTile
+            label={t('compass.scores.stage', 'Stade')}
+            value={bbch ? `BBCH ${bbch}` : '—'}
+            hint={
+              bbch
+                ? parcel?.current_gdd_cumulative
+                  ? t('compass.scores.stageGdd', '{{gdd}} °C·j', { gdd: Math.round(Number(parcel.current_gdd_cumulative)) })
+                  : t('compass.scores.stageInProgress', 'En cours')
+                : t('compass.scores.stageNone', 'Phénologie non disponible')
+            }
+            tone={bbch ? 'info' : 'neutral'}
+          />
+        </div>
+      </section>
+
       {/* Workflow stepper */}
       <WorkflowStepper parcelId={parcelId} aiPhase={aiPhase} hasCalibrationData={!calibrationIncomplete && !!calibration} />
 
@@ -503,41 +656,70 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
         </div>
       </section>
 
-      {/* Navigation cards */}
+      {/* Navigation cards — 5-card hub: Identification → Phénologie → Heatmap → Recommandations → Alertes.
+          Also keeps Plan + Weather + Calibration retouch as a secondary row. */}
       <section>
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-          {t('compass.goFurther')}
+          {t('compass.goFurther', 'Explorer la parcelle')}
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Link
+            to="/parcels/$parcelId"
+            params={{ parcelId }}
+            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500/60 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
+          >
+            <ClipboardList className="mb-3 h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.identificationTitle', 'Identification')}
+            </span>
+            <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {t('compass.identificationBody', "Carte d'identité agronomique : variété, surface, système, densité, historique.")}
+            </span>
+            {identity.variety && (
+              <span className="mt-3 inline-flex items-center gap-1 self-start rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <MapPin className="h-3 w-3" aria-hidden />
+                {identity.variety}
+              </span>
+            )}
+          </Link>
+
+          <Link
             to="/parcels/$parcelId/ai/calibration"
             params={{ parcelId }}
-            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-emerald-500/60 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60 dark:hover:border-emerald-500/50"
+            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-pink-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
-            <Settings className="mb-3 h-8 w-8 text-slate-500 transition group-hover:text-emerald-600 dark:text-slate-400" />
-            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.calibrationCardTitle')}</span>
-            <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t('compass.calibrationCardBody')}
+            <Flower className="mb-3 h-8 w-8 text-pink-500" />
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.phenologyTitle', 'Stade phénologique')}
             </span>
+            <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {t('compass.phenologyBody', 'Phase en cours, prévision, consignes IA et produits star de la saison.')}
+            </span>
+            {bbch && (
+              <span className="mt-3 inline-flex items-center gap-1 self-start rounded-full bg-pink-50 px-2 py-0.5 text-[11px] font-medium text-pink-700 dark:bg-pink-950/40 dark:text-pink-300">
+                BBCH {bbch}
+              </span>
+            )}
           </Link>
+
           <Link
-            to="/parcels/$parcelId/ai/alerts"
+            to="/parcels/$parcelId/satellite/heatmap"
             params={{ parcelId }}
-            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-orange-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
+            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
-            <div className="mb-3 flex items-center gap-2">
-              <AlertTriangle className="h-8 w-8 text-orange-500" />
-              {alertCount > 0 && (
-                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-200">
-                  {alertCount}
-                </span>
-              )}
-            </div>
-            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.alertsTitle')}</span>
+            <Satellite className="mb-3 h-8 w-8 text-blue-500" />
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.heatmapTitle', 'Heatmap 4 indices')}
+            </span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t('compass.alertsBody')}
+              {t('compass.heatmapBody', 'Carte parcellaire EVI, GCI, NDMI, NIRv avec synthèse IA contextuelle.')}
+            </span>
+            <span className="mt-3 inline-flex items-center gap-1 self-start rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+              <FlaskConical className="h-3 w-3" aria-hidden />
+              {t('compass.heatmapTag', 'EVI · GCI · NDMI · NIRv')}
             </span>
           </Link>
+
           <Link
             to="/parcels/$parcelId/ai/recommendations"
             params={{ parcelId }}
@@ -551,31 +733,60 @@ export function AICompassDashboard({ parcelId }: AICompassDashboardProps) {
                 </span>
               )}
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.tipsTitle')}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.tipsTitle', 'Recommandations')}
+            </span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t('compass.tipsBody')}
+              {t('compass.tipsBody', 'Actions proposées, cycle de vie 8 états, fiches 6 blocs détaillées.')}
             </span>
           </Link>
+
+          <Link
+            to="/parcels/$parcelId/ai/alerts"
+            params={{ parcelId }}
+            className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-orange-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
+          >
+            <div className="mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-8 w-8 text-orange-500" />
+              {alertCount > 0 && (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-200">
+                  {alertCount}
+                </span>
+              )}
+            </div>
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.alertsTitle', 'Alertes OLI-XX')}
+            </span>
+            <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              {t('compass.alertsBody', "Radar des codes d'alerte, classés par famille et priorité.")}
+            </span>
+          </Link>
+
           <Link
             to="/parcels/$parcelId/ai/plan"
             params={{ parcelId }}
             className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
             <Calendar className="mb-3 h-8 w-8 text-blue-500" />
-            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.calendarCardTitle')}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.calendarCardTitle', 'Plan cultural')}
+            </span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t('compass.calendarCardBody')}
+              {t('compass.calendarCardBody', 'Planification des interventions + suivi exécution.')}
             </span>
           </Link>
+
           <Link
             to="/parcels/$parcelId/ai/weather"
             params={{ parcelId }}
             className="group flex flex-col rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-sky-500/50 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/60"
           >
             <Cloud className="mb-3 h-8 w-8 text-sky-500" />
-            <span className="font-semibold text-slate-900 dark:text-white">{t('compass.weatherCardTitle')}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {t('compass.weatherCardTitle', 'Météo agricole')}
+            </span>
             <span className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-              {t('compass.weatherCardBody')}
+              {t('compass.weatherCardBody', 'Prévisions 7 jours, GDD, risques climatiques.')}
             </span>
           </Link>
         </div>
