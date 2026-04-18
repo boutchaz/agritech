@@ -195,13 +195,15 @@ const HarvestSummaryWidget = () => {
       ) : (
         <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
           <PackageIcon className="h-8 w-8 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.harvests.empty')}
           </p>
           <Button
+            type="button"
+            variant="orange"
             size="sm"
             onClick={handleViewHarvests}
-            className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
+            className="font-bold text-xs uppercase tracking-widest rounded-xl px-4 shadow-sm"
           >
             {t('dashboard.widgets.harvests.record')}
           </Button>

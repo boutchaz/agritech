@@ -358,8 +358,10 @@ const ActivityHeatMap = ({
         {data.length > 0 && (
           <>
             {/* Legend Overlay */}
-            <div className="absolute bottom-6 left-6 z-20 min-w-[200px] rounded-3xl border border-slate-100 bg-white/80 p-5 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-800/80">
-              <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 border-b border-slate-100 dark:border-slate-700 pb-2">Legend</h4>
+            <div className="absolute bottom-6 left-6 z-20 min-w-[200px] rounded-3xl border border-slate-200 bg-white/95 p-5 shadow-2xl backdrop-blur-xl dark:border-slate-600 dark:bg-slate-900/92">
+              <h4 className="text-[10px] font-semibold text-slate-800 dark:text-slate-100 uppercase tracking-[0.2em] mb-4 border-b border-slate-200 dark:border-slate-600 pb-2">
+                Legend
+              </h4>
               <div className="space-y-3">
                 {presentTypes.map(type => (
                   <div key={type} className="flex items-center gap-3 group/item cursor-default">
@@ -367,14 +369,16 @@ const ActivityHeatMap = ({
                       className="w-3.5 h-3.5 rounded-full flex-shrink-0 shadow-sm border-2 border-white dark:border-slate-700 transition-transform group-hover/item:scale-125"
                       style={{ background: ACTIVITY_COLORS[type] ?? '#6b7280' }}
                     />
-                    <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                    <span className="text-[10px] font-medium text-slate-800 dark:text-slate-100 uppercase tracking-widest">
                       {ACTIVITY_LABELS[type] ?? type}
                     </span>
                   </div>
                 ))}
-                <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-50 dark:border-slate-700 opacity-60">
-                  <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 border-dashed border-slate-400 bg-slate-100 dark:bg-slate-900" />
-                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest italic">Idle / Farm</span>
+                <div className="flex items-center gap-3 pt-2 mt-2 border-t border-slate-200 dark:border-slate-600">
+                  <span className="w-3.5 h-3.5 rounded-full flex-shrink-0 border-2 border-dashed border-slate-500 bg-slate-100 dark:border-slate-400 dark:bg-slate-800" />
+                  <span className="text-[10px] font-medium text-slate-700 dark:text-slate-200 uppercase tracking-widest italic">
+                    Idle / Farm
+                  </span>
                 </div>
               </div>
             </div>
