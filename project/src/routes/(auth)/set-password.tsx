@@ -1,6 +1,7 @@
 import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle, Loader2, Leaf, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usersApi } from '@/lib/api/users';
@@ -15,6 +16,7 @@ export const Route = createFileRoute('/(auth)/set-password')({
 });
 
 function SetPasswordPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, profile, refreshUserData } = useAuth();
   const [password, setPassword] = useState('');
@@ -63,17 +65,17 @@ function SetPasswordPage() {
 
     // Validation
     if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+      setError(t('auth.setPasswordPage.errorMinLength', 'Password must be at least 8 characters'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
+      setError(t('auth.setPasswordPage.errorMismatch', 'Passwords do not match'));
       return;
     }
 
     if (passwordStrength === 'weak') {
-      setError('Veuillez choisir un mot de passe plus fort');
+      setError(t('auth.setPasswordPage.errorWeak', 'Please choose a stronger password'));
       return;
     }
 
@@ -105,7 +107,7 @@ function SetPasswordPage() {
       navigate({ to: '/dashboard' });
     } catch (err: unknown) {
       console.error('Error setting password:', err);
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la configuration du mot de passe');
+      setError(err instanceof Error ? err.message : t('auth.setPasswordPage.errorGeneric', 'An error occurred while setting your password'));
     } finally {
       setLoading(false);
     }
@@ -132,10 +134,10 @@ function SetPasswordPage() {
               <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-2xl font-bold text-center">
-              Définir votre mot de passe
+              {t('auth.setPasswordPage.title', 'Set your password')}
             </CardTitle>
             <CardDescription className="text-center">
-              Créez un mot de passe sécurisé pour protéger votre compte
+              {t('auth.setPasswordPage.description', 'Create a secure password to protect your account')}
             </CardDescription>
           </CardHeader>
 
@@ -154,7 +156,7 @@ function SetPasswordPage() {
               {/* Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Nouveau mot de passe
+                  {t('auth.setPasswordPage.newPasswordLabel', 'New password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -162,7 +164,7 @@ function SetPasswordPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Entrez votre mot de passe"
+                    placeholder={t('auth.setPasswordPage.newPasswordPlaceholder', 'Enter your password')}
                     className="pr-12 h-11"
                     required
                   />
@@ -204,32 +206,32 @@ function SetPasswordPage() {
                         }`}
                       >
                         {passwordStrength === 'weak'
-                          ? 'Faible'
+                          ? t('auth.setPasswordPage.strengthWeak', 'Weak')
                           : passwordStrength === 'medium'
-                          ? 'Moyen'
-                          : 'Fort'}
+                          ? t('auth.setPasswordPage.strengthMedium', 'Medium')
+                          : t('auth.setPasswordPage.strengthStrong', 'Strong')}
                       </span>
                     </div>
 
                     {/* Password Requirements */}
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">Exigences :</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('auth.setPasswordPage.requirements', 'Requirements:')}</p>
                       <div className="grid gap-1.5">
                         <div className={`flex items-center gap-2 text-xs ${password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Au moins 8 caractères</span>
+                          <span>{t('auth.setPasswordPage.reqMinLength', 'At least 8 characters')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Lettres majuscules et minuscules</span>
+                          <span>{t('auth.setPasswordPage.reqUpperLower', 'Upper and lower case letters')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/\d/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Au moins un chiffre</span>
+                          <span>{t('auth.setPasswordPage.reqNumber', 'At least one number')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Caractère spécial (optionnel, renforce la sécurité)</span>
+                          <span>{t('auth.setPasswordPage.reqSpecial', 'Special character (optional, strengthens security)')}</span>
                         </div>
                       </div>
                     </div>
@@ -240,7 +242,7 @@ function SetPasswordPage() {
               {/* Confirm Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                  Confirmer le mot de passe
+                  {t('auth.setPasswordPage.confirmPasswordLabel', 'Confirm password')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -248,7 +250,7 @@ function SetPasswordPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirmez votre mot de passe"
+                    placeholder={t('auth.setPasswordPage.confirmPasswordPlaceholder', 'Confirm your password')}
                     className="pr-12 h-11"
                     required
                   />
@@ -267,7 +269,7 @@ function SetPasswordPage() {
                 {confirmPassword && password !== confirmPassword && (
                   <p className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    Les mots de passe ne correspondent pas
+                    {t('auth.setPasswordPage.mismatchInline', 'Passwords do not match')}
                   </p>
                 )}
               </div>
@@ -277,12 +279,12 @@ function SetPasswordPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Configuration en cours...
+                    {t('auth.setPasswordPage.submitting', 'Setting up...')}
                   </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    Définir le mot de passe
+                    {t('auth.setPasswordPage.submitButton', 'Set password')}
                   </>
                 )}
               </Button>
@@ -291,14 +293,14 @@ function SetPasswordPage() {
 
           <CardFooter className="flex justify-center border-t pt-6">
             <p className="text-xs text-muted-foreground text-center">
-              Vous serez redirigé vers le tableau de bord après avoir défini votre mot de passe
+              {t('auth.setPasswordPage.footer', 'You will be redirected to the dashboard after setting your password')}
             </p>
           </CardFooter>
         </Card>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 AgroGina Platform. Tous droits réservés.
+          {t('auth.setPasswordPage.copyright', '© 2024 AgroGina Platform. All rights reserved.')}
         </p>
       </div>
     </div>

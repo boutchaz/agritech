@@ -124,7 +124,8 @@
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse click *)",
       "Bash(npx tsr *)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse console *)",
-      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse restart *)"
+      "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse restart *)",
+      "Bash(git diff *)"
     ],
     "deny": [],
     "ask": []

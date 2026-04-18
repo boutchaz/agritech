@@ -4,12 +4,14 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi, CheckSlugAvailabilityResponse } from '@/lib/api/onboarding';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/(public)/onboarding/organization')({
   component: OrganizationStepComponent,
 });
 
 function OrganizationStepComponent() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const organizationData = useOnboardingStore((state) => state.organizationData);
@@ -48,13 +50,13 @@ function OrganizationStepComponent() {
 
       navigate({ to: '/onboarding/farm' });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue');
       setError(errorMessage);
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
     // Note: Don't reset isSubmitting on success since we navigate away
-  }, [navigate, persistState, setExistingOrgId, organizationData, existingOrgId]);
+  }, [navigate, persistState, setExistingOrgId, organizationData, existingOrgId, t]);
 
   const checkSlugAvailability = useCallback(async (slug: string): Promise<CheckSlugAvailabilityResponse> => {
     return onboardingApi.checkSlugAvailability(slug);

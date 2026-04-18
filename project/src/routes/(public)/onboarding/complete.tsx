@@ -4,12 +4,14 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/(public)/onboarding/complete')({
   component: CompleteStepComponent,
 });
 
 function CompleteStepComponent() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const preferences = useOnboardingStore((state) => state.preferences);
   const profileData = useOnboardingStore((state) => state.profileData);
@@ -33,11 +35,11 @@ function CompleteStepComponent() {
 
       window.location.href = '/';
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue');
       setError(errorMessage);
       setIsLoading(false);
     }
-  }, [preferences, user?.id, clearState]);
+  }, [preferences, user?.id, clearState, t]);
 
   const selectedModulesCount = Object.values(moduleSelection || {}).filter(Boolean).length;
 
