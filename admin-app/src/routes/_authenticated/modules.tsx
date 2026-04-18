@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Package, Plus, Pencil, Trash2, X, GripVertical } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 import clsx from 'clsx';
@@ -21,6 +21,12 @@ interface ModuleTranslation {
   name: string | null;
   description: string | null;
   features: string[] | null;
+}
+
+interface NavigationItem {
+  to: string;
+  label?: string;
+  icon?: string;
 }
 
 interface AdminModule {
@@ -42,6 +48,33 @@ interface AdminModule {
   navigation_items: unknown[];
   features: unknown[];
   module_translations: ModuleTranslation[];
+}
+
+// ─── Normalizers ─────────────────────────────────────────────────────
+
+function normalizeNavItems(raw: unknown[]): NavigationItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item): NavigationItem | null => {
+      if (typeof item === 'string') return { to: item };
+      if (item && typeof item === 'object') {
+        const obj = item as Record<string, unknown>;
+        const to = typeof obj.to === 'string' ? obj.to : null;
+        if (!to) return null;
+        return {
+          to,
+          label: typeof obj.label === 'string' ? obj.label : undefined,
+          icon: typeof obj.icon === 'string' ? obj.icon : undefined,
+        };
+      }
+      return null;
+    })
+    .filter((item): item is NavigationItem => item !== null);
+}
+
+function normalizeWidgetIds(raw: unknown[]): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((w): w is string => typeof w === 'string' && w.length > 0);
 }
 
 // ─── API Hooks ───────────────────────────────────────────────────────
@@ -92,20 +125,25 @@ function useUpsertTranslation() {
 // ─── Schema ──────────────────────────────────────────────────────────
 
 const moduleSchema = z.object({
-  slug: z.string().min(1, 'Required').regex(/^[a-z0-9_-]+$/, 'Lowercase, numbers, hyphens, underscores only'),
-  name: z.string().min(1, 'Required'),
+  slug: z.string().min(1, 'Slug requis').regex(/^[a-z0-9_-]+$/, 'Minuscules, chiffres, tirets uniquement'),
+  name: z.string().min(1, 'Nom requis'),
   icon: z.string().optional(),
   color: z.string().optional(),
   category: z.string().optional(),
-  display_order: z.coerce.number().min(0),
-  price_monthly: z.coerce.number().min(0),
+  display_order: z.coerce.number().min(0, 'Doit être ≥ 0'),
+  price_monthly: z.coerce.number().min(0, 'Doit être ≥ 0'),
   required_plan: z.string().optional(),
   is_required: z.boolean(),
   is_recommended: z.boolean(),
   is_addon_eligible: z.boolean(),
+  is_available: z.boolean(),
 });
 
 type ModuleFormData = z.infer<typeof moduleSchema>;
+const resolver = zodResolver(moduleSchema) as Resolver<ModuleFormData>;
+
+const LOCALES = ['fr', 'en', 'ar'] as const;
+type Locale = (typeof LOCALES)[number];
 
 // ─── Page Component ──────────────────────────────────────────────────
 
@@ -115,6 +153,7 @@ function ModulesPage() {
   const deleteModule = useDeleteModule();
   const [editModule, setEditModule] = useState<AdminModule | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AdminModule | null>(null);
 
   const handleToggle = async (mod: AdminModule) => {
     try {
@@ -125,13 +164,14 @@ function ModulesPage() {
     }
   };
 
-  const handleDelete = async (mod: AdminModule) => {
-    if (!confirm(`Désactiver le module "${mod.name}" ?`)) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteModule.mutateAsync(mod.id);
-      toast.success('Module désactivé');
+      await deleteModule.mutateAsync(deleteTarget.id);
+      toast.success('Module supprimé');
+      setDeleteTarget(null);
     } catch {
-      toast.error('Échec');
+      toast.error('Échec de la suppression');
     }
   };
 
@@ -147,7 +187,7 @@ function ModulesPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium"
         >
           <Plus className="h-4 w-4" />
           Nouveau Module
@@ -157,6 +197,14 @@ function ModulesPage() {
       {isLoading ? (
         <div className="animate-pulse space-y-3">
           {[1, 2, 3].map(i => <div key={i} className="h-16 bg-gray-100 rounded-lg" />)}
+        </div>
+      ) : modules.length === 0 ? (
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-12 text-center">
+          <Package className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+          <p className="text-sm font-medium text-gray-700">Aucun module configuré</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Cliquez sur "Nouveau Module" pour en ajouter un.
+          </p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border overflow-hidden">
@@ -180,12 +228,7 @@ function ModulesPage() {
                 const navCount = Array.isArray(mod.navigation_items) ? mod.navigation_items.length : 0;
                 return (
                   <tr key={mod.id} className="border-b last:border-b-0 hover:bg-gray-50">
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-1 text-gray-400">
-                        <GripVertical className="h-3 w-3" />
-                        {mod.display_order}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 tabular-nums text-gray-500">{mod.display_order}</td>
                     <td className="px-4 py-3 font-mono text-xs">{mod.slug || '—'}</td>
                     <td className="px-4 py-3 font-medium">{frTranslation?.name || mod.name}</td>
                     <td className="px-4 py-3">
@@ -206,9 +249,10 @@ function ModulesPage() {
                       <Switch.Root
                         checked={mod.is_available}
                         onCheckedChange={() => handleToggle(mod)}
+                        aria-label={`Activer ${mod.name}`}
                         className={clsx(
                           'w-9 h-5 rounded-full transition-colors',
-                          mod.is_available ? 'bg-green-500' : 'bg-gray-300',
+                          mod.is_available ? 'bg-emerald-500' : 'bg-gray-300',
                         )}
                       >
                         <Switch.Thumb className={clsx(
@@ -219,10 +263,20 @@ function ModulesPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setEditModule(mod)} className="p-1.5 rounded hover:bg-gray-100" title="Modifier">
+                        <button
+                          onClick={() => setEditModule(mod)}
+                          className="p-1.5 rounded hover:bg-gray-100"
+                          title="Modifier"
+                          aria-label={`Modifier ${mod.name}`}
+                        >
                           <Pencil className="h-4 w-4 text-gray-500" />
                         </button>
-                        <button onClick={() => handleDelete(mod)} className="p-1.5 rounded hover:bg-red-50" title="Désactiver">
+                        <button
+                          onClick={() => setDeleteTarget(mod)}
+                          className="p-1.5 rounded hover:bg-red-50"
+                          title="Supprimer"
+                          aria-label={`Supprimer ${mod.name}`}
+                        >
                           <Trash2 className="h-4 w-4 text-red-400" />
                         </button>
                       </div>
@@ -242,6 +296,42 @@ function ModulesPage() {
           onClose={() => { setEditModule(null); setShowCreate(false); }}
         />
       )}
+
+      {/* Delete confirmation */}
+      <Dialog.Root open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[440px] z-50 p-6">
+            <Dialog.Title className="text-lg font-semibold">Supprimer le module ?</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-gray-600">
+              Cette action est irréversible. Les routes, widgets et traductions associés seront perdus.
+            </Dialog.Description>
+            {deleteTarget && (
+              <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                {deleteTarget.name} <span className="font-mono text-xs text-gray-500">({deleteTarget.slug})</span>
+              </p>
+            )}
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleteModule.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteModule.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Supprimer
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }
@@ -254,66 +344,71 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
   const updateModule = useUpdateModule();
   const upsertTranslation = useUpsertTranslation();
 
-  // General tab form
   const form = useForm<ModuleFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(moduleSchema) as any,
+    resolver,
     defaultValues: {
-      slug: module?.slug || '',
-      name: module?.name || '',
-      icon: module?.icon || '',
-      color: module?.color || '',
-      category: module?.category || '',
-      display_order: module?.display_order || 0,
-      price_monthly: module?.price_monthly || 0,
-      required_plan: module?.required_plan || '',
-      is_required: module?.is_required || false,
-      is_recommended: module?.is_recommended || false,
-      is_addon_eligible: module?.is_addon_eligible || false,
+      slug: module?.slug ?? '',
+      name: module?.name ?? '',
+      icon: module?.icon ?? '',
+      color: module?.color ?? '',
+      category: module?.category ?? '',
+      display_order: module?.display_order ?? 0,
+      price_monthly: module?.price_monthly ?? 0,
+      required_plan: module?.required_plan ?? '',
+      is_required: module?.is_required ?? false,
+      is_recommended: module?.is_recommended ?? false,
+      is_addon_eligible: module?.is_addon_eligible ?? false,
+      is_available: module?.is_available ?? true,
     },
   });
 
-  // Routes & Widgets state
-  const [navItems, setNavItems] = useState<string[]>(() => {
-    if (!module?.navigation_items) return [];
-    return (module.navigation_items as Array<string | { to?: string }>).map(
-      item => typeof item === 'string' ? item : (item.to || ''),
-    ).filter(Boolean);
-  });
-  const [widgets, setWidgets] = useState<string[]>(() => {
-    if (!module?.dashboard_widgets) return [];
-    return (module.dashboard_widgets as string[]).filter(Boolean);
-  });
-  const [newRoute, setNewRoute] = useState('');
+  // Routes & Widgets state — full objects so label/icon round-trip.
+  const [navItems, setNavItems] = useState<NavigationItem[]>(() =>
+    normalizeNavItems(module?.navigation_items ?? []),
+  );
+  const [widgets, setWidgets] = useState<string[]>(() =>
+    normalizeWidgetIds(module?.dashboard_widgets ?? []),
+  );
+  const [newNav, setNewNav] = useState<NavigationItem>({ to: '', label: '', icon: '' });
   const [newWidget, setNewWidget] = useState('');
 
   // Translations state
-  const LOCALES = ['fr', 'en', 'ar'] as const;
-  const [translations, setTranslations] = useState<Record<string, { name: string; description: string; features: string[] }>>(() => {
-    const result: Record<string, { name: string; description: string; features: string[] }> = {};
+  const [translations, setTranslations] = useState<Record<Locale, { name: string; description: string; features: string[] }>>(() => {
+    const result = {} as Record<Locale, { name: string; description: string; features: string[] }>;
     for (const locale of LOCALES) {
       const existing = module?.module_translations?.find(t => t.locale === locale);
       result[locale] = {
-        name: existing?.name || '',
-        description: existing?.description || '',
-        features: existing?.features || [],
+        name: existing?.name ?? '',
+        description: existing?.description ?? '',
+        features: existing?.features ?? [],
       };
     }
     return result;
   });
-  const [newFeature, setNewFeature] = useState<Record<string, string>>({ fr: '', en: '', ar: '' });
+  const [newFeature, setNewFeature] = useState<Record<Locale, string>>({ fr: '', en: '', ar: '' });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleSaveGeneral = async (data: any) => {
+  const translationFilledCount = LOCALES.filter(
+    (l) => translations[l].name.trim().length > 0,
+  ).length;
+
+  const handleSaveGeneral = async (data: ModuleFormData) => {
     try {
+      // Strip empty-string label/icon so we send undefined, not "".
+      const cleanedNavItems = navItems.map((item) => ({
+        to: item.to,
+        ...(item.label ? { label: item.label } : {}),
+        ...(item.icon ? { icon: item.icon } : {}),
+      }));
+
       const payload = {
         ...data,
         required_plan: data.required_plan || null,
-        navigation_items: navItems,
+        category: data.category || null,
+        navigation_items: cleanedNavItems,
         dashboard_widgets: widgets,
       };
 
-      if (isEdit) {
+      if (isEdit && module) {
         await updateModule.mutateAsync({ id: module.id, data: payload });
       } else {
         await createModule.mutateAsync(payload);
@@ -325,8 +420,26 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
     }
   };
 
-  const handleSaveTranslation = async (locale: string) => {
-    if (!module?.id) { toast.error('Enregistrez le module d\'abord'); return; }
+  const handleSaveRoutesWidgets = async () => {
+    if (!module?.id) return;
+    try {
+      const cleanedNavItems = navItems.map((item) => ({
+        to: item.to,
+        ...(item.label ? { label: item.label } : {}),
+        ...(item.icon ? { icon: item.icon } : {}),
+      }));
+      await updateModule.mutateAsync({
+        id: module.id,
+        data: { navigation_items: cleanedNavItems, dashboard_widgets: widgets },
+      });
+      toast.success('Routes & widgets enregistrés');
+    } catch (e) {
+      toast.error(`Erreur: ${e instanceof Error ? e.message : 'Inconnue'}`);
+    }
+  };
+
+  const handleSaveTranslation = async (locale: Locale) => {
+    if (!module?.id) return;
     try {
       await upsertTranslation.mutateAsync({
         moduleId: module.id,
@@ -339,36 +452,77 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
     }
   };
 
-  const inputClass = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500';
+  const addNavItem = () => {
+    const to = newNav.to.trim();
+    if (!to) return;
+    setNavItems([...navItems, {
+      to,
+      ...(newNav.label?.trim() ? { label: newNav.label.trim() } : {}),
+      ...(newNav.icon?.trim() ? { icon: newNav.icon.trim() } : {}),
+    }]);
+    setNewNav({ to: '', label: '', icon: '' });
+  };
+
+  const inputClass = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500';
   const labelClass = 'block text-sm font-medium text-gray-700 mb-1';
+  const errorClass = 'text-xs text-red-500 mt-1';
+
+  const errors = form.formState.errors;
 
   return (
     <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[700px] max-h-[85vh] overflow-y-auto z-50 p-0">
+        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[740px] max-h-[85vh] overflow-y-auto z-50 p-0">
           <div className="flex items-center justify-between px-6 py-4 border-b">
             <Dialog.Title className="text-lg font-semibold">
-              {isEdit ? `Modifier: ${module.name}` : 'Nouveau Module'}
+              {isEdit && module ? `Modifier: ${module.name}` : 'Nouveau Module'}
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="p-1 rounded hover:bg-gray-100"><X className="h-5 w-5" /></button>
+              <button className="p-1 rounded hover:bg-gray-100" aria-label="Fermer"><X className="h-5 w-5" /></button>
             </Dialog.Close>
           </div>
 
           <Tabs.Root defaultValue="general" className="px-6 py-4">
             <Tabs.List className="flex gap-4 border-b mb-4">
-              <Tabs.Trigger value="general" className="pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600">
+              <Tabs.Trigger
+                value="general"
+                className="pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600"
+              >
                 Général
               </Tabs.Trigger>
-              <Tabs.Trigger value="routes" className="pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600">
+              <Tabs.Trigger
+                value="routes"
+                disabled={!isEdit}
+                className={clsx(
+                  'pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600',
+                  !isEdit && 'opacity-40 cursor-not-allowed',
+                )}
+                title={!isEdit ? 'Enregistrez le module d\'abord' : undefined}
+              >
                 Routes & Widgets
               </Tabs.Trigger>
-              {isEdit && (
-                <Tabs.Trigger value="translations" className="pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:text-blue-600">
-                  Traductions
-                </Tabs.Trigger>
-              )}
+              <Tabs.Trigger
+                value="translations"
+                disabled={!isEdit}
+                className={clsx(
+                  'pb-2 text-sm font-medium border-b-2 border-transparent data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 inline-flex items-center gap-2',
+                  !isEdit && 'opacity-40 cursor-not-allowed',
+                )}
+                title={!isEdit ? 'Enregistrez le module d\'abord' : undefined}
+              >
+                Traductions
+                {isEdit && (
+                  <span className={clsx(
+                    'text-xs px-1.5 py-0.5 rounded-full font-medium',
+                    translationFilledCount === LOCALES.length
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : 'bg-amber-100 text-amber-700',
+                  )}>
+                    {translationFilledCount}/{LOCALES.length}
+                  </span>
+                )}
+              </Tabs.Trigger>
             </Tabs.List>
 
             {/* ── General Tab ── */}
@@ -378,11 +532,12 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                   <div>
                     <label className={labelClass}>Slug *</label>
                     <input {...form.register('slug')} className={inputClass} placeholder="compliance" disabled={isEdit} />
-                    {form.formState.errors.slug && <p className="text-xs text-red-500 mt-1">{form.formState.errors.slug.message}</p>}
+                    {errors.slug && <p className={errorClass}>{errors.slug.message}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Nom *</label>
                     <input {...form.register('name')} className={inputClass} placeholder="Conformité" />
+                    {errors.name && <p className={errorClass}>{errors.name.message}</p>}
                   </div>
                 </div>
 
@@ -410,10 +565,12 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                   <div>
                     <label className={labelClass}>Ordre d'affichage</label>
                     <input {...form.register('display_order')} type="number" className={inputClass} />
+                    {errors.display_order && <p className={errorClass}>{errors.display_order.message}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Prix / mois (MAD)</label>
                     <input {...form.register('price_monthly')} type="number" step="0.01" className={inputClass} />
+                    {errors.price_monthly && <p className={errorClass}>{errors.price_monthly.message}</p>}
                   </div>
                   <div>
                     <label className={labelClass}>Plan requis</label>
@@ -426,7 +583,11 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                   </div>
                 </div>
 
-                <div className="flex gap-6 pt-2">
+                <div className="flex flex-wrap gap-6 pt-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" {...form.register('is_available')} className="rounded" />
+                    Actif
+                  </label>
                   <label className="flex items-center gap-2 text-sm">
                     <input type="checkbox" {...form.register('is_required')} className="rounded" />
                     Requis
@@ -442,209 +603,281 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                 </div>
 
                 <div className="flex justify-end pt-4 border-t">
-                  <button type="submit" disabled={createModule.isPending || updateModule.isPending}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-                    {(createModule.isPending || updateModule.isPending) ? 'Enregistrement...' : isEdit ? 'Mettre à jour' : 'Créer'}
+                  <button
+                    type="submit"
+                    disabled={createModule.isPending || updateModule.isPending}
+                    className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {(createModule.isPending || updateModule.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {isEdit ? 'Mettre à jour' : 'Créer'}
                   </button>
                 </div>
               </form>
             </Tabs.Content>
 
             {/* ── Routes & Widgets Tab ── */}
-            <Tabs.Content value="routes">
-              <div className="space-y-6">
-                {/* Navigation Items */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Routes de navigation</h3>
-                  <p className="text-xs text-gray-500 mb-3">Les routes accessibles quand ce module est activé.</p>
-                  <div className="space-y-2">
-                    {navItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <code className="flex-1 bg-gray-50 px-3 py-1.5 rounded text-sm font-mono">{item}</code>
-                        <button onClick={() => setNavItems(navItems.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600">
-                          <X className="h-4 w-4" />
+            {isEdit && (
+              <Tabs.Content value="routes">
+                <div className="space-y-6">
+                  {/* Navigation Items */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Routes de navigation</h3>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Les routes accessibles quand ce module est activé. Le chemin est requis, label et icône sont optionnels.
+                    </p>
+                    <div className="space-y-2">
+                      {navItems.length === 0 && (
+                        <p className="text-xs text-gray-400 italic">Aucune route configurée.</p>
+                      )}
+                      {navItems.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2 rounded-lg border bg-gray-50 p-2">
+                          <div className="flex-1 grid grid-cols-3 gap-2">
+                            <input
+                              value={item.to}
+                              onChange={(e) => {
+                                const next = [...navItems];
+                                next[idx] = { ...next[idx], to: e.target.value };
+                                setNavItems(next);
+                              }}
+                              className="rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                              placeholder="/path"
+                            />
+                            <input
+                              value={item.label ?? ''}
+                              onChange={(e) => {
+                                const next = [...navItems];
+                                next[idx] = { ...next[idx], label: e.target.value };
+                                setNavItems(next);
+                              }}
+                              className="rounded border border-gray-300 px-2 py-1 text-sm"
+                              placeholder="Label"
+                            />
+                            <input
+                              value={item.icon ?? ''}
+                              onChange={(e) => {
+                                const next = [...navItems];
+                                next[idx] = { ...next[idx], icon: e.target.value };
+                                setNavItems(next);
+                              }}
+                              className="rounded border border-gray-300 px-2 py-1 text-sm"
+                              placeholder="Icône (lucide)"
+                            />
+                          </div>
+                          <button
+                            onClick={() => setNavItems(navItems.filter((_, i) => i !== idx))}
+                            className="p-1 text-red-400 hover:text-red-600"
+                            aria-label="Supprimer la route"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex items-start gap-2 rounded-lg border border-dashed border-gray-300 p-2">
+                        <div className="flex-1 grid grid-cols-3 gap-2">
+                          <input
+                            value={newNav.to}
+                            onChange={(e) => setNewNav({ ...newNav, to: e.target.value })}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                            placeholder="/path"
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNavItem(); } }}
+                          />
+                          <input
+                            value={newNav.label ?? ''}
+                            onChange={(e) => setNewNav({ ...newNav, label: e.target.value })}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm"
+                            placeholder="Label"
+                          />
+                          <input
+                            value={newNav.icon ?? ''}
+                            onChange={(e) => setNewNav({ ...newNav, icon: e.target.value })}
+                            className="rounded border border-gray-300 px-2 py-1 text-sm"
+                            placeholder="Icône"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addNavItem}
+                          className="px-3 py-1 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+                          aria-label="Ajouter la route"
+                        >
+                          <Plus className="h-4 w-4" />
                         </button>
                       </div>
-                    ))}
-                    <div className="flex gap-2">
-                      <input
-                        value={newRoute}
-                        onChange={(e) => setNewRoute(e.target.value)}
-                        className={inputClass}
-                        placeholder="/compliance"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newRoute.trim()) {
-                            e.preventDefault();
-                            setNavItems([...navItems, newRoute.trim()]);
-                            setNewRoute('');
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => { if (newRoute.trim()) { setNavItems([...navItems, newRoute.trim()]); setNewRoute(''); } }}
-                        className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Dashboard Widgets */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Widgets du tableau de bord</h3>
-                  <p className="text-xs text-gray-500 mb-3">Identifiants des widgets affichés quand ce module est activé.</p>
-                  <div className="space-y-2">
-                    {widgets.map((w, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <code className="flex-1 bg-gray-50 px-3 py-1.5 rounded text-sm font-mono">{w}</code>
-                        <button onClick={() => setWidgets(widgets.filter((_, i) => i !== idx))} className="p-1 text-red-400 hover:text-red-600">
-                          <X className="h-4 w-4" />
+                  {/* Dashboard Widgets */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Widgets du tableau de bord</h3>
+                    <p className="text-xs text-gray-500 mb-3">Identifiants des widgets affichés quand ce module est activé.</p>
+                    <div className="space-y-2">
+                      {widgets.map((w, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <code className="flex-1 bg-gray-50 px-3 py-1.5 rounded text-sm font-mono">{w}</code>
+                          <button
+                            onClick={() => setWidgets(widgets.filter((_, i) => i !== idx))}
+                            className="p-1 text-red-400 hover:text-red-600"
+                            aria-label="Supprimer le widget"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="flex gap-2">
+                        <input
+                          value={newWidget}
+                          onChange={(e) => setNewWidget(e.target.value)}
+                          className={inputClass}
+                          placeholder="compliance-dashboard"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && newWidget.trim()) {
+                              e.preventDefault();
+                              setWidgets([...widgets, newWidget.trim()]);
+                              setNewWidget('');
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { if (newWidget.trim()) { setWidgets([...widgets, newWidget.trim()]); setNewWidget(''); } }}
+                          className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+                          aria-label="Ajouter le widget"
+                        >
+                          <Plus className="h-4 w-4" />
                         </button>
                       </div>
-                    ))}
-                    <div className="flex gap-2">
-                      <input
-                        value={newWidget}
-                        onChange={(e) => setNewWidget(e.target.value)}
-                        className={inputClass}
-                        placeholder="compliance-dashboard"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newWidget.trim()) {
-                            e.preventDefault();
-                            setWidgets([...widgets, newWidget.trim()]);
-                            setNewWidget('');
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => { if (newWidget.trim()) { setWidgets([...widgets, newWidget.trim()]); setNewWidget(''); } }}
-                        className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end pt-4 border-t">
-                  <button
-                    type="button"
-                    disabled={updateModule.isPending}
-                    onClick={async () => {
-                      if (!module?.id) { toast.error('Enregistrez le module d\'abord'); return; }
-                      try {
-                        await updateModule.mutateAsync({
-                          id: module.id,
-                          data: { navigation_items: navItems, dashboard_widgets: widgets },
-                        });
-                        toast.success('Routes & widgets enregistrés');
-                      } catch { toast.error('Erreur'); }
-                    }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {updateModule.isPending ? 'Enregistrement...' : 'Enregistrer routes & widgets'}
-                  </button>
+                  <div className="flex justify-end pt-4 border-t">
+                    <button
+                      type="button"
+                      disabled={updateModule.isPending}
+                      onClick={handleSaveRoutesWidgets}
+                      className="inline-flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {updateModule.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Enregistrer routes & widgets
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </Tabs.Content>
+              </Tabs.Content>
+            )}
 
             {/* ── Translations Tab ── */}
             {isEdit && (
               <Tabs.Content value="translations">
                 <div className="space-y-6">
-                  {LOCALES.map((locale) => (
-                    <div key={locale} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold uppercase text-gray-600">{locale}</h3>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveTranslation(locale)}
-                          disabled={upsertTranslation.isPending}
-                          className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 disabled:opacity-50"
-                        >
-                          Enregistrer {locale.toUpperCase()}
-                        </button>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className={labelClass}>Nom</label>
-                          <input
-                            value={translations[locale].name}
-                            onChange={(e) => setTranslations(prev => ({
-                              ...prev,
-                              [locale]: { ...prev[locale], name: e.target.value },
-                            }))}
-                            className={inputClass}
-                            dir={locale === 'ar' ? 'rtl' : 'ltr'}
-                          />
+                  {LOCALES.map((locale) => {
+                    const t = translations[locale];
+                    const filled = t.name.trim().length > 0;
+                    return (
+                      <div key={locale} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-sm font-semibold uppercase text-gray-600 inline-flex items-center gap-2">
+                            {locale}
+                            <span className={clsx(
+                              'text-[10px] px-1.5 py-0.5 rounded-full',
+                              filled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+                            )}>
+                              {filled ? 'Rempli' : 'Manquant'}
+                            </span>
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveTranslation(locale)}
+                            disabled={upsertTranslation.isPending}
+                            className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
+                          >
+                            Enregistrer {locale.toUpperCase()}
+                          </button>
                         </div>
-                        <div>
-                          <label className={labelClass}>Description</label>
-                          <textarea
-                            value={translations[locale].description}
-                            onChange={(e) => setTranslations(prev => ({
-                              ...prev,
-                              [locale]: { ...prev[locale], description: e.target.value },
-                            }))}
-                            className={inputClass}
-                            rows={2}
-                            dir={locale === 'ar' ? 'rtl' : 'ltr'}
-                          />
-                        </div>
-                        <div>
-                          <label className={labelClass}>Fonctionnalités</label>
-                          <div className="space-y-1">
-                            {translations[locale].features.map((f, idx) => (
-                              <div key={idx} className="flex items-center gap-2">
-                                <span className="flex-1 text-sm bg-gray-50 px-2 py-1 rounded" dir={locale === 'ar' ? 'rtl' : 'ltr'}>{f}</span>
-                                <button onClick={() => {
-                                  const updated = translations[locale].features.filter((_, i) => i !== idx);
-                                  setTranslations(prev => ({ ...prev, [locale]: { ...prev[locale], features: updated } }));
-                                }} className="text-red-400 hover:text-red-600"><X className="h-3 w-3" /></button>
+                        <div className="space-y-3">
+                          <div>
+                            <label className={labelClass}>Nom</label>
+                            <input
+                              value={t.name}
+                              onChange={(e) => setTranslations(prev => ({
+                                ...prev,
+                                [locale]: { ...prev[locale], name: e.target.value },
+                              }))}
+                              className={inputClass}
+                              dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                            />
+                          </div>
+                          <div>
+                            <label className={labelClass}>Description</label>
+                            <textarea
+                              value={t.description}
+                              onChange={(e) => setTranslations(prev => ({
+                                ...prev,
+                                [locale]: { ...prev[locale], description: e.target.value },
+                              }))}
+                              className={inputClass}
+                              rows={2}
+                              dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                            />
+                          </div>
+                          <div>
+                            <label className={labelClass}>Fonctionnalités</label>
+                            <div className="space-y-1">
+                              {t.features.map((f, idx) => (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <span className="flex-1 text-sm bg-gray-50 px-2 py-1 rounded" dir={locale === 'ar' ? 'rtl' : 'ltr'}>{f}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = t.features.filter((_, i) => i !== idx);
+                                      setTranslations(prev => ({ ...prev, [locale]: { ...prev[locale], features: updated } }));
+                                    }}
+                                    className="text-red-400 hover:text-red-600"
+                                    aria-label="Supprimer la fonctionnalité"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                              <div className="flex gap-2">
+                                <input
+                                  value={newFeature[locale]}
+                                  onChange={(e) => setNewFeature(prev => ({ ...prev, [locale]: e.target.value }))}
+                                  className={inputClass}
+                                  placeholder="Nouvelle fonctionnalité..."
+                                  dir={locale === 'ar' ? 'rtl' : 'ltr'}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && newFeature[locale].trim()) {
+                                      e.preventDefault();
+                                      setTranslations(prev => ({
+                                        ...prev,
+                                        [locale]: { ...prev[locale], features: [...prev[locale].features, newFeature[locale].trim()] },
+                                      }));
+                                      setNewFeature(prev => ({ ...prev, [locale]: '' }));
+                                    }
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (newFeature[locale].trim()) {
+                                      setTranslations(prev => ({
+                                        ...prev,
+                                        [locale]: { ...prev[locale], features: [...prev[locale].features, newFeature[locale].trim()] },
+                                      }));
+                                      setNewFeature(prev => ({ ...prev, [locale]: '' }));
+                                    }
+                                  }}
+                                  className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
+                                  aria-label="Ajouter la fonctionnalité"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </button>
                               </div>
-                            ))}
-                            <div className="flex gap-2">
-                              <input
-                                value={newFeature[locale]}
-                                onChange={(e) => setNewFeature(prev => ({ ...prev, [locale]: e.target.value }))}
-                                className={inputClass}
-                                placeholder="Nouvelle fonctionnalité..."
-                                dir={locale === 'ar' ? 'rtl' : 'ltr'}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && newFeature[locale].trim()) {
-                                    e.preventDefault();
-                                    setTranslations(prev => ({
-                                      ...prev,
-                                      [locale]: { ...prev[locale], features: [...prev[locale].features, newFeature[locale].trim()] },
-                                    }));
-                                    setNewFeature(prev => ({ ...prev, [locale]: '' }));
-                                  }
-                                }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (newFeature[locale].trim()) {
-                                    setTranslations(prev => ({
-                                      ...prev,
-                                      [locale]: { ...prev[locale], features: [...prev[locale].features, newFeature[locale].trim()] },
-                                    }));
-                                    setNewFeature(prev => ({ ...prev, [locale]: '' }));
-                                  }
-                                }}
-                                className="px-3 py-2 bg-gray-100 rounded-lg text-sm hover:bg-gray-200"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </button>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Tabs.Content>
             )}
