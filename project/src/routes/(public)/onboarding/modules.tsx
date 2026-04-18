@@ -3,12 +3,14 @@ import { ModulesStep } from '@/components/onboarding/steps/ModulesStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/(public)/onboarding/modules')({
   component: ModulesStepComponent,
 });
 
 function ModulesStepComponent() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const moduleSelection = useOnboardingStore((state) => state.moduleSelection);
   const selectedPlanType = useOnboardingStore((state) => state.selectedPlanType);
@@ -38,12 +40,12 @@ function ModulesStepComponent() {
 
       navigate({ to: '/onboarding/complete' });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue');
       setError(errorMessage);
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [moduleSelection, navigate, persistState, setCurrentStep]);
+  }, [moduleSelection, navigate, persistState, setCurrentStep, t]);
 
   return (
     <>
