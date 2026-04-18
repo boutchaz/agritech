@@ -24566,3 +24566,248 @@ INSERT INTO supported_countries (country_code, country_name, region, enabled, di
 ON CONFLICT (country_code) DO NOTHING;
 
 
+-- =====================================================
+-- AGRONOMY RAG — Sources, Chunks, Citations
+-- =====================================================
+-- RAG-grounded agronomy assistant for AgromindIA.
+-- Every AI recommendation ships with verifiable citations
+-- from a Moroccan agronomy corpus (FAO, IOC, ORMVA, INRA, etc.).
+
+-- pgvector for dense embedding similarity search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- -----------------------------------------------------
+-- Agronomy Sources (PDFs, fiches techniques, bulletins)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS agronomy_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE, -- NULL = public corpus
+  title TEXT NOT NULL,
+  author TEXT,
+  publisher TEXT,
+  doc_type TEXT CHECK (doc_type IN ('fiche_technique','publication','bulletin','db_calibration','playbook')),
+  language TEXT CHECK (language IN ('fr','ar','en')),
+  region TEXT[],
+  crop_type TEXT[],
+  season TEXT[],
+  published_at DATE,
+  source_url TEXT,
+  storage_path TEXT,      -- path in Supabase Storage bucket "agronomy-corpus"
+  ingested_at TIMESTAMPTZ DEFAULT now(),
+  ingestion_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (ingestion_status IN ('pending','running','ready','failed')),
+  ingestion_error TEXT,
+  chunk_count INTEGER NOT NULL DEFAULT 0,
+  ingested_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
+);
+
+COMMENT ON TABLE agronomy_sources IS 'RAG corpus: agronomic documents (PDFs, fiches techniques, bulletins) indexed for retrieval-augmented generation';
+COMMENT ON COLUMN agronomy_sources.organization_id IS 'NULL = public corpus readable by all; non-null = per-organization playbook';
+COMMENT ON COLUMN agronomy_sources.storage_path IS 'Path in Supabase Storage bucket "agronomy-corpus"';
+
+-- -----------------------------------------------------
+-- Agronomy Chunks (embedded text segments)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS agronomy_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id UUID NOT NULL REFERENCES agronomy_sources(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  page INTEGER,
+  text TEXT NOT NULL,
+  tsv tsvector GENERATED ALWAYS AS (to_tsvector('french', text)) STORED,
+  embedding vector(1024),   -- multilingual-e5-large dimension
+  UNIQUE (source_id, chunk_index)
+);
+
+COMMENT ON TABLE agronomy_chunks IS 'Chunked text segments from agronomy sources with dense embeddings and full-text search';
+COMMENT ON COLUMN agronomy_chunks.embedding IS 'Dense embedding from intfloat/multilingual-e5-large (1024 dimensions)';
+
+-- IVFFlat index for cosine similarity (created after initial data load; lists tuned to sqrt(rows))
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_embedding
+  ON agronomy_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_tsv ON agronomy_chunks USING gin (tsv);
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_source ON agronomy_chunks (source_id);
+CREATE INDEX IF NOT EXISTS idx_agronomy_sources_org ON agronomy_sources (organization_id);
+
+-- -----------------------------------------------------
+-- AI Recommendation Citations (link recommendations → source chunks)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_recommendation_citations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recommendation_id UUID NOT NULL REFERENCES ai_recommendations(id) ON DELETE CASCADE,
+  chunk_id UUID NOT NULL REFERENCES agronomy_chunks(id) ON DELETE CASCADE,
+  excerpt TEXT NOT NULL,
+  source_ordinal INTEGER NOT NULL,
+  UNIQUE (recommendation_id, chunk_id)
+);
+
+COMMENT ON TABLE ai_recommendation_citations IS 'Citations linking AI recommendations to specific agronomy source chunks for traceability';
+COMMENT ON COLUMN ai_recommendation_citations.source_ordinal IS 'Which source number [S#] this citation refers to (1-based, matching the [S1]..[S8] markers in the LLM output)';
+
+CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_recommendation ON ai_recommendation_citations (recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_chunk ON ai_recommendation_citations (chunk_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_rec_citations_unique ON ai_recommendation_citations (recommendation_id, chunk_id);
+
+-- -----------------------------------------------------
+-- RLS Policies
+-- -----------------------------------------------------
+ALTER TABLE agronomy_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agronomy_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_recommendation_citations ENABLE ROW LEVEL SECURITY;
+
+-- Public corpus: readable by any authenticated user
+-- Per-org playbooks: readable only by org members
+CREATE POLICY "agronomy_sources_read" ON agronomy_sources
+  FOR SELECT USING (
+    organization_id IS NULL
+    OR public.is_organization_member(organization_id)
+  );
+
+CREATE POLICY "agronomy_sources_manage" ON agronomy_sources
+  FOR ALL USING (
+    -- system_admin can manage all; org members can manage their own playbooks
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND (
+          r.name = 'system_admin'
+          OR (r.name IN ('organization_admin', 'farm_manager') AND ou.organization_id = agronomy_sources.organization_id)
+        )
+    )
+  );
+
+CREATE POLICY "agronomy_chunks_read" ON agronomy_chunks
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM agronomy_sources s
+      WHERE s.id = agronomy_chunks.source_id
+        AND (s.organization_id IS NULL OR public.is_organization_member(s.organization_id))
+    )
+  );
+
+CREATE POLICY "agronomy_chunks_manage" ON agronomy_chunks
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM agronomy_sources s
+      WHERE s.id = agronomy_chunks.source_id
+        AND (
+          EXISTS (
+            SELECT 1 FROM public.organization_users ou
+            JOIN public.roles r ON r.id = ou.role_id
+            WHERE ou.user_id = auth.uid()
+              AND ou.is_active = true
+              AND (
+                r.name = 'system_admin'
+                OR (r.name IN ('organization_admin', 'farm_manager') AND ou.organization_id = s.organization_id)
+              )
+          )
+        )
+    )
+  );
+
+-- Citations follow the recommendation's org scoping
+CREATE POLICY "agronomy_citations_read" ON ai_recommendation_citations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM ai_recommendations r
+      WHERE r.id = ai_recommendation_citations.recommendation_id
+        AND public.is_organization_member(r.organization_id)
+    )
+  );
+
+CREATE POLICY "agronomy_citations_manage" ON ai_recommendation_citations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM ai_recommendations r
+      WHERE r.id = ai_recommendation_citations.recommendation_id
+        AND public.is_organization_member(r.organization_id)
+    )
+  );
+
+-- -----------------------------------------------------
+-- Storage Bucket: agronomy-corpus
+-- -----------------------------------------------------
+-- Private bucket for agronomic PDFs and documents used by the RAG pipeline.
+-- Read access: any authenticated user (RLS on agronomy_sources handles org scoping).
+-- Upload/manage: system_admin and organization_admin/farm_manager only.
+-- The FastAPI ML sidecar writes here via the service_role key.
+-- -----------------------------------------------------
+
+INSERT INTO storage.buckets (id, name, "public")
+VALUES ('agronomy-corpus', 'agronomy-corpus', false)
+ON CONFLICT (id) DO NOTHING;
+
+-- Any authenticated user can read (org scoping is enforced at the agronomy_sources RLS level,
+-- not at the storage level — the service reads files during ingest/embedding, not end-users directly)
+DROP POLICY IF EXISTS "Authenticated read access for agronomy-corpus" ON storage.objects;
+CREATE POLICY "Authenticated read access for agronomy-corpus"
+  ON storage.objects FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'agronomy-corpus');
+
+DROP POLICY IF EXISTS "System admin upload for agronomy-corpus" ON storage.objects;
+CREATE POLICY "System admin upload for agronomy-corpus"
+  ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'agronomy-corpus'
+    AND EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "System admin update for agronomy-corpus" ON storage.objects;
+CREATE POLICY "System admin update for agronomy-corpus"
+  ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'agronomy-corpus'
+    AND EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    bucket_id = 'agronomy-corpus'
+    AND EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "System admin delete for agronomy-corpus" ON storage.objects;
+CREATE POLICY "System admin delete for agronomy-corpus"
+  ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'agronomy-corpus'
+    AND EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+-- Service role has full access (used by FastAPI ML sidecar for ingest)
+DROP POLICY IF EXISTS "Service role full access for agronomy-corpus" ON storage.objects;
+CREATE POLICY "Service role full access for agronomy-corpus"
+  ON storage.objects FOR ALL
+  TO service_role
+  USING (bucket_id = 'agronomy-corpus')
+  WITH CHECK (bucket_id = 'agronomy-corpus');
+
+

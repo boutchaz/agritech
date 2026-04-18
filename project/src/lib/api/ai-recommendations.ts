@@ -13,6 +13,12 @@ export interface AIRecommendation {
   priority: 'low' | 'medium' | 'high';
   created_at: string;
   updated_at: string;
+  citations?: Array<{
+    excerpt: string;
+    source_title: string;
+    page: number | null;
+    chunk_id: string;
+  }>;
 }
 
 export const aiRecommendationsApi = {

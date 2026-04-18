@@ -91,6 +91,9 @@ export enum Subject {
     INVENTORY = 'Inventory',
     UTILITY = 'Utility',
 
+    // Agronomy RAG
+    AGRONOMY_SOURCE = 'AgronomySource',
+
     // Communication
     CHAT = 'Chat',
 

@@ -17,6 +17,7 @@ from .api import (
     weather,
     sync,
     calibration,
+    agronomy,
 )
 from .core.config import settings
 from .middleware.auth import close_http_client
@@ -72,13 +73,25 @@ app.add_middleware(NormalizePathMiddleware)
 
 @app.on_event("startup")
 async def startup_event():
-    """Log auth config without exposing secrets (length only)."""
+    """Log auth config and eagerly load embedding model."""
     t = (settings.INTERNAL_SERVICE_TOKEN or "").strip()
     _startup_logger.info(
         "INTERNAL_SERVICE_TOKEN: %s (char_length=%s)",
         "loaded" if t else "NOT SET",
         len(t),
     )
+
+    import asyncio
+    from .services.embedding_service import embedding_service
+
+    try:
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, embedding_service.initialize)
+        _startup_logger.info("Embedding model loaded successfully")
+    except Exception as exc:
+        _startup_logger.warning(
+            "Embedding model preload failed (will lazy-load on first request): %s", exc
+        )
 
 
 @app.on_event("shutdown")
@@ -96,6 +109,7 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(weather.router, prefix="/api/weather", tags=["weather"])
 app.include_router(sync.router, prefix="/api/sync", tags=["sync"])
 app.include_router(calibration.router, prefix="/api/calibration", tags=["calibration"])
+app.include_router(agronomy.router, prefix="/api/agronomy", tags=["agronomy"])
 
 
 @app.get("/health")
@@ -122,5 +136,6 @@ async def root():
             "data-processing",
             "weather-data",
             "calibration",
+            "agronomy-rag",
         ],
     }

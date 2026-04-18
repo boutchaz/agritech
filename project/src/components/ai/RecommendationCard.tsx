@@ -1,7 +1,17 @@
 
-import { Check, X, Play } from 'lucide-react';
+import { Check, X, Play, BookOpen } from 'lucide-react';
 import type { AIRecommendation } from '@/lib/api/ai-recommendations';
 import { Button } from '@/components/ui/button';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface RecommendationCardProps {
   recommendation: AIRecommendation;
@@ -22,6 +32,15 @@ export const RecommendationCard = ({
   isRejecting,
   isExecuting,
 }: RecommendationCardProps) => {
+  const { t } = useTranslation();
+  const [activeCitation, setActiveCitation] = useState<{
+    excerpt: string;
+    source_title: string;
+    page: number | null;
+    chunk_id: string;
+  } | null>(null);
+
+  const hasCitations = recommendation.citations && recommendation.citations.length > 0;
   const getPriorityColor = () => {
     switch (recommendation.priority) {
       case 'high': return 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20';
@@ -111,6 +130,66 @@ export const RecommendationCard = ({
             <Play className="w-4 h-4" />
             <span>Execute Action</span>
           </Button>
+        </div>
+      )}
+
+      {hasCitations && (
+        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-1.5 mb-2">
+            <BookOpen className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {t('ai.recommendation.sources', 'Sources')}
+            </span>
+          </div>
+          <Drawer
+            onOpenChange={(open) => { if (!open) setActiveCitation(null); }}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {recommendation.citations!.map((citation) => (
+                <DrawerTrigger key={citation.chunk_id} asChild>
+                  <button
+                    type="button"
+                    onClick={() => setActiveCitation(citation)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <BookOpen className="w-3 h-3" />
+                    <span>{citation.source_title}</span>
+                    {citation.page !== null && <span>, p.{citation.page}</span>}
+                  </button>
+                </DrawerTrigger>
+              ))}
+            </div>
+            <DrawerContent side="right">
+              {activeCitation && (
+                <>
+                  <DrawerHeader>
+                    <DrawerTitle className="text-base">{activeCitation.source_title}</DrawerTitle>
+                    {activeCitation.page !== null && (
+                      <DrawerDescription>
+                        {t('ai.recommendation.page', 'Page {{page}}', { page: activeCitation.page })}
+                      </DrawerDescription>
+                    )}
+                  </DrawerHeader>
+                  <div className="px-6 pb-6">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed italic">
+                        "{activeCitation.excerpt}"
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </DrawerContent>
+          </Drawer>
+        </div>
+      )}
+
+      {!hasCitations && (
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <span className="inline-flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+            {t('ai.recommendation.unverified', 'non vérifié')}
+          </span>
         </div>
       )}
     </div>

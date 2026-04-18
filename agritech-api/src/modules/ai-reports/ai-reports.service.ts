@@ -43,6 +43,8 @@ import {
   baselineToLegacyOutput,
   parseJsonb,
 } from '../calibration/calibration-jsonb.schemas';
+import { AgronomyRagService } from '../agronomy-rag/agronomy-rag.service';
+import type { RetrievedChunk } from '../agronomy-rag/agronomy-rag.schemas';
 
 @Injectable()
 export class AIReportsService {
@@ -60,6 +62,7 @@ export class AIReportsService {
     private readonly aiSettingsService: OrganizationAISettingsService,
     private readonly weatherProvider: WeatherProvider,
     private readonly aiQuotaService: AiQuotaService,
+    private readonly agronomyRagService: AgronomyRagService,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
@@ -124,6 +127,14 @@ export class AIReportsService {
 
     const reportPayload = await this.buildReportPayload(organizationId, dto);
 
+    // RAG: enrich system prompt with retrieved agronomy sources
+    const { enrichedSystemPrompt, ragChunks } = await this.enrichWithRAGSources(
+      reportPayload.systemPrompt,
+      reportPayload.dataSnapshot,
+      reportPayload.reportType,
+      organizationId,
+    );
+
     // 5. Generate AI response
     const config: AIProviderConfig = {
       provider: dto.provider,
@@ -134,7 +145,7 @@ export class AIReportsService {
 
     try {
         const response = await provider.generate({
-        systemPrompt: reportPayload.systemPrompt,
+        systemPrompt: enrichedSystemPrompt,
         userPrompt: reportPayload.userPrompt,
         config,
       });
@@ -153,6 +164,21 @@ export class AIReportsService {
         reportPayload.dataSnapshot,
         reportPayload.reportType,
       );
+
+      // RAG: materialize each LLM recommendation as an ai_recommendations row
+      // and attach per-rec citations scoped to that rec's text.
+      await this.storeReportRecommendations(
+        organizationId,
+        dto.parcel_id,
+        reportSections,
+        reportPayload.dataSnapshot,
+        ragChunks,
+        reportPayload.reportType,
+      ).catch((err) => {
+        this.logger.warn(
+          `Failed to store report recommendations: ${err instanceof Error ? err.message : err}`,
+        );
+      });
 
       return {
         success: true,
@@ -1063,6 +1089,188 @@ export class AIReportsService {
     }
 
     return undefined;
+  }
+
+  private buildRetrievalQueryFromSnapshot(dataSnapshot: unknown, reportType: AgromindReportType): string | null {
+    const snapshot = dataSnapshot as Record<string, unknown> | null;
+    if (!snapshot) return null;
+
+    const parcel = snapshot.parcel as Record<string, unknown> | undefined;
+    const cropType = parcel?.cropType ?? parcel?.treeType ?? 'olivier';
+
+    const parts: string[] = [cropType as string];
+
+    if (reportType === AgromindReportType.RECOMMENDATIONS || reportType === AgromindReportType.ANNUAL_PLAN) {
+      const satelliteHistory = snapshot.satelliteHistory as Record<string, unknown> | undefined;
+      const timeSeries = satelliteHistory?.timeSeries as Record<string, Array<{ date: string; value: number }>> | undefined;
+      if (timeSeries?.NDVI && timeSeries.NDVI.length > 0) {
+        const latest = timeSeries.NDVI[timeSeries.NDVI.length - 1];
+        parts.push(`NDVI ${latest.value.toFixed(3)}`);
+      }
+    }
+
+    if (reportType === AgromindReportType.RECOMMENDATIONS) {
+      parts.push('recommandation fertilisation irrigation traitement');
+    } else if (reportType === AgromindReportType.ANNUAL_PLAN) {
+      parts.push('plan annuel doses calendrier fertilisation');
+    } else if (reportType === AgromindReportType.RECALIBRATION) {
+      parts.push('recalibrage baseline profil parcelle');
+    }
+
+    return parts.join(' ');
+  }
+
+  private async enrichWithRAGSources(
+    systemPrompt: string,
+    dataSnapshot: unknown,
+    reportType: AgromindReportType,
+    organizationId: string,
+  ): Promise<{ enrichedSystemPrompt: string; ragChunks: RetrievedChunk[] }> {
+    const retrievalQuery = this.buildRetrievalQueryFromSnapshot(dataSnapshot, reportType);
+    if (!retrievalQuery) {
+      return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+    }
+
+    try {
+      const chunks = await this.agronomyRagService.retrieveWithRerank(
+        { query: retrievalQuery, limit: 8 },
+        organizationId,
+      );
+
+      if (chunks.length === 0) {
+        return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+      }
+
+      const sourceContext = this.agronomyRagService.buildSourceContext(chunks);
+      const citationInstruction = [
+        '',
+        sourceContext,
+        '',
+        'Règle stricte : chaque recommandation chiffrée DOIT citer ≥1 source via [S#].',
+        'Si aucune source ne justifie, écris "estimation à valider" plutôt que d\'inventer un chiffre.',
+        '',
+      ].join('\n');
+
+      const enrichedSystemPrompt = citationInstruction + systemPrompt;
+
+      return { enrichedSystemPrompt, ragChunks: chunks };
+    } catch (error) {
+      this.logger.warn(
+        `RAG retrieval failed, proceeding without sources: ${error instanceof Error ? error.message : error}`,
+      );
+      return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+    }
+  }
+
+  private async storeReportRecommendations(
+    organizationId: string,
+    parcelId: string,
+    reportSections: Record<string, unknown>,
+    dataSnapshot: unknown,
+    ragChunks: RetrievedChunk[],
+    reportType: AgromindReportType,
+  ): Promise<void> {
+    const recs = Array.isArray(reportSections.recommendations)
+      ? reportSections.recommendations
+      : [];
+    if (recs.length === 0) return;
+
+    const supabase = this.databaseService.getAdminClient();
+
+    const snapshot = (dataSnapshot as Record<string, unknown> | null) ?? {};
+    const parcel = (snapshot.parcel as Record<string, unknown> | undefined) ?? {};
+    const cropType =
+      (typeof parcel.cropType === 'string' && parcel.cropType) ||
+      (typeof parcel.treeType === 'string' && parcel.treeType) ||
+      'unknown';
+
+    const categoryToType: Record<string, string> = {
+      fertilization: 'fertilisation',
+      irrigation: 'irrigation',
+      'pest-control': 'phytosanitary',
+      'plant-health': 'phytosanitary',
+      pruning: 'pruning',
+      'soil-amendment': 'other',
+      soil: 'other',
+      general: 'information',
+    };
+    const priorityMap: Record<string, string> = {
+      high: 'priority',
+      medium: 'vigilance',
+      low: 'info',
+    };
+
+    for (const rec of recs) {
+      if (!rec || typeof rec !== 'object') continue;
+      const r = rec as Record<string, unknown>;
+      const title = typeof r.title === 'string' ? r.title : '';
+      const description = typeof r.description === 'string' ? r.description : '';
+      if (!title && !description) continue;
+
+      const recText = `${title}\n${description}`;
+      const markers = this.agronomyRagService.parseCitationMarkers(recText);
+      const uniqueOrdinals = Array.from(new Set(markers.map((m) => m.ordinal)));
+
+      const categoryRaw = typeof r.category === 'string' ? r.category : 'general';
+      const priorityRaw = typeof r.priority === 'string' ? r.priority : 'medium';
+
+      const { data: insertedRec, error: recError } = await supabase
+        .from('ai_recommendations')
+        .insert({
+          parcel_id: parcelId,
+          organization_id: organizationId,
+          crop_type: cropType,
+          alert_code: `AI-REPORT-${reportType.toUpperCase()}`,
+          type: categoryToType[categoryRaw] ?? 'other',
+          recommendation_type:
+            reportType === AgromindReportType.ANNUAL_PLAN ? 'planned' : 'reactive',
+          priority: priorityMap[priorityRaw] ?? 'info',
+          status: 'proposed',
+          bloc_1_constat: { title },
+          bloc_3_action: {
+            description,
+            timing: typeof r.timing === 'string' ? r.timing : null,
+            estimated_cost: typeof r.estimatedCost === 'string' ? r.estimatedCost : null,
+            expected_roi: typeof r.expectedROI === 'string' ? r.expectedROI : null,
+          },
+        })
+        .select('id')
+        .single();
+
+      if (recError || !insertedRec) {
+        this.logger.warn(
+          `Failed to create ai_recommendation from report: ${recError?.message ?? 'no row returned'}`,
+        );
+        continue;
+      }
+
+      if (uniqueOrdinals.length === 0 || ragChunks.length === 0) continue;
+
+      const citationRows = uniqueOrdinals
+        .map((ordinal) => {
+          const chunk = ragChunks[ordinal - 1];
+          if (!chunk) return null;
+          return {
+            recommendation_id: insertedRec.id,
+            chunk_id: chunk.id,
+            excerpt: chunk.text.substring(0, 500),
+            source_ordinal: ordinal,
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null);
+
+      if (citationRows.length === 0) continue;
+
+      const { error: citationError } = await supabase
+        .from('ai_recommendation_citations')
+        .insert(citationRows);
+
+      if (citationError) {
+        this.logger.warn(
+          `Failed to persist citations for rec ${insertedRec.id}: ${citationError.message}`,
+        );
+      }
+    }
   }
 
   private async buildReportPayload(organizationId: string, dto: GenerateAIReportDto): Promise<{
@@ -3718,13 +3926,20 @@ export class AIReportsService {
       await updateProgress(50);
       const reportPayload = await this.buildReportPayload(organizationId, dto);
 
+      const { enrichedSystemPrompt, ragChunks } = await this.enrichWithRAGSources(
+        reportPayload.systemPrompt,
+        reportPayload.dataSnapshot,
+        reportPayload.reportType,
+        organizationId,
+      );
+
       await updateProgress(60);
       await updateProgress(70);
       const config: AIProviderConfig = { provider: dto.provider, model: dto.model, temperature: 0.7, maxTokens: 16384 };
       
       this.logger.log(`Job ${jobId}: Starting AI generation with ${dto.provider}`);
       const response = await provider.generate({
-        systemPrompt: reportPayload.systemPrompt,
+        systemPrompt: enrichedSystemPrompt,
         userPrompt: reportPayload.userPrompt,
         config,
       });
@@ -3747,6 +3962,19 @@ export class AIReportsService {
         reportPayload.dataSnapshot,
         reportPayload.reportType,
       );
+
+      await this.storeReportRecommendations(
+        organizationId,
+        dto.parcel_id,
+        reportSections,
+        reportPayload.dataSnapshot,
+        ragChunks,
+        reportPayload.reportType,
+      ).catch((err) => {
+        this.logger.warn(
+          `Job ${jobId}: Failed to store report recommendations: ${err instanceof Error ? err.message : err}`,
+        );
+      });
 
       const result = {
         success: true,

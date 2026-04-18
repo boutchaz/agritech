@@ -41,6 +41,11 @@ Pillow>=10.0.0
 # PDF Generation
 reportlab>=4.0.0
 
+# RAG / Agronomy Embeddings
+sentence-transformers>=2.2.0
+pypdf>=3.0.0
+pytesseract>=0.3.10
+
 # Supabase Integration
 supabase>=2.0.0
 
