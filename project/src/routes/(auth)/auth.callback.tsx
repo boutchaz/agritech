@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState, type FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
@@ -24,6 +26,7 @@ export const Route = createFileRoute('/(auth)/auth/callback')({
 });
 
 function AuthCallbackPage() {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [flowType, setFlowType] = useState<AuthFlowType>('unknown');
@@ -52,7 +55,7 @@ function AuthCallbackPage() {
 
     if (!code) {
       setStatus('error');
-      setError('Missing authentication code. Please request a new link.');
+      setError(t('auth.callbackPage.errorMissingCode', 'Missing authentication code. Please request a new link.'));
       return;
     }
 
@@ -60,7 +63,7 @@ function AuthCallbackPage() {
     let redirectTimer: number | undefined;
 
     const exchangeSession = async () => {
-      const exchangeResult = await exchangeCodeForSessionViaApi(code);
+      const exchangeResult = await exchangeCodeForSessionViaApi(code, t);
 
       if (isCancelled) return;
 
@@ -87,6 +90,7 @@ function AuthCallbackPage() {
         clearTimeout(redirectTimer);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -106,12 +110,12 @@ function AuthCallbackPage() {
     setPasswordError(null);
 
     if (password.length < 8) {
-      setPasswordError('Le mot de passe doit contenir au moins 8 caractères.');
+      setPasswordError(t('auth.callbackPage.errorPasswordMinLength', 'Password must be at least 8 characters.'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setPasswordError('Les mots de passe ne correspondent pas.');
+      setPasswordError(t('auth.callbackPage.errorPasswordMismatch', 'Passwords do not match.'));
       return;
     }
 
@@ -122,7 +126,7 @@ function AuthCallbackPage() {
       const token = getAccessToken();
 
       if (!token) {
-        throw new Error('Session expirée. Veuillez vous reconnecter.');
+        throw new Error(t('auth.callbackPage.errorSessionExpired', 'Session expired. Please log in again.'));
       }
 
       const response = await fetch(`${API_URL}/api/v1/auth/reset-password`, {
@@ -141,7 +145,7 @@ function AuthCallbackPage() {
 
       setPasswordUpdated(true);
     } catch (updateErr) {
-      const message = updateErr instanceof Error ? updateErr.message : 'Une erreur est survenue lors de la mise à jour du mot de passe.';
+      const message = updateErr instanceof Error ? updateErr.message : t('auth.callbackPage.errorPasswordUpdate', 'An error occurred while updating the password.');
       setPasswordError(message);
     } finally {
       setIsUpdatingPassword(false);
@@ -157,9 +161,9 @@ function AuthCallbackPage() {
               <Loader2 className="h-7 w-7 animate-spin text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Validation du lien…</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('auth.callbackPage.loadingTitle', 'Validating link…')}</h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Nous vérifions votre lien sécurisé Supabase. Merci de patienter.
+                {t('auth.callbackPage.loadingMessage', 'We are verifying your secure Supabase link. Please wait.')}
               </p>
             </div>
           </div>
@@ -171,9 +175,9 @@ function AuthCallbackPage() {
               <AlertCircle className="h-7 w-7 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Lien invalide ou expiré</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('auth.callbackPage.errorTitle', 'Invalid or expired link')}</h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                {error ?? 'Le lien n’est plus valide. Veuillez générer un nouvel e-mail depuis la page de connexion.'}
+                {error ?? t('auth.callbackPage.errorDefault', "The link is no longer valid. Please generate a new email from the login page.")}
               </p>
             </div>
             <Button
@@ -183,7 +187,7 @@ function AuthCallbackPage() {
                 window.location.href = '/login';
               }}
             >
-              Retour à la connexion
+              {t('auth.callbackPage.backToLogin', 'Return to login')}
             </Button>
           </div>
         )}
@@ -194,9 +198,9 @@ function AuthCallbackPage() {
               <CheckCircle className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Lien vérifié</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('auth.callbackPage.verifiedTitle', 'Link verified')}</h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Votre session est prête. Redirection en cours…
+                {t('auth.callbackPage.verifiedMessage', 'Your session is ready. Redirecting…')}
               </p>
             </div>
             <Button
@@ -207,7 +211,7 @@ function AuthCallbackPage() {
                 window.location.href = nextPath;
               }}
             >
-              Continuer
+              {t('auth.callbackPage.continueButton', 'Continue')}
             </Button>
           </div>
         )}
@@ -215,9 +219,9 @@ function AuthCallbackPage() {
         {status === 'ready' && flowType === 'recovery' && (
           <div className="space-y-6">
             <div className="text-center">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Créer un nouveau mot de passe</h1>
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t('auth.callbackPage.recoveryTitle', 'Create a new password')}</h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Choisissez un mot de passe sécurisé pour protéger votre compte.
+                {t('auth.callbackPage.recoveryMessage', 'Choose a secure password to protect your account.')}
               </p>
             </div>
 
@@ -233,9 +237,9 @@ function AuthCallbackPage() {
                   <CheckCircle className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Mot de passe mis à jour</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('auth.callbackPage.updatedTitle', 'Password updated')}</h2>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Vous allez être redirigé automatiquement. Si la page ne change pas, cliquez ci-dessous.
+                    {t('auth.callbackPage.updatedMessage', "You will be redirected automatically. If the page doesn't change, click below.")}
                   </p>
                 </div>
                 <Button
@@ -245,14 +249,14 @@ function AuthCallbackPage() {
                     window.location.href = nextPath;
                   }}
                 >
-                  Continuer
+                  {t('auth.callbackPage.continueButton', 'Continue')}
                 </Button>
               </div>
             ) : (
               <form className="space-y-5" onSubmit={handlePasswordUpdate}>
                 <div className="space-y-2">
                   <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nouveau mot de passe
+                    {t('auth.callbackPage.newPasswordLabel', 'New password')}
                   </label>
                   <Input
                     id="password"
@@ -269,7 +273,7 @@ function AuthCallbackPage() {
 
                 <div className="space-y-2">
                   <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Confirmez le mot de passe
+                    {t('auth.callbackPage.confirmPasswordLabel', 'Confirm password')}
                   </label>
                   <Input
                     id="confirmPassword"
@@ -287,10 +291,10 @@ function AuthCallbackPage() {
                   {isUpdatingPassword ? (
                     <span className="flex items-center justify-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Mise à jour…
+                      {t('auth.callbackPage.updating', 'Updating…')}
                     </span>
                   ) : (
-                    'Mettre à jour le mot de passe'
+                    t('auth.callbackPage.updateButton', 'Update password')
                   )}
                 </Button>
               </form>
@@ -302,14 +306,14 @@ function AuthCallbackPage() {
   );
 }
 
-async function exchangeCodeForSessionViaApi(code: string): Promise<{ ok: true } | { ok: false; message: string }> {
+async function exchangeCodeForSessionViaApi(code: string, t: TFunction): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
     const data = await apiClient.post<OAuthCallbackResponse>('/api/v1/auth/oauth/callback', { code });
 
     if (!data?.access_token || !data?.refresh_token || !data?.expires_in) {
       return {
         ok: false,
-        message: 'Réponse OAuth invalide. Veuillez réessayer depuis la page de connexion.',
+        message: t('auth.callbackPage.errorInvalidOAuth', 'Invalid OAuth response. Please try again from the login page.'),
       };
     }
 
@@ -331,7 +335,7 @@ async function exchangeCodeForSessionViaApi(code: string): Promise<{ ok: true } 
     const message = error instanceof Error ? error.message : 'Unable to verify the authentication link.';
     const fallbackMessage =
       message.includes('404') || message.includes('Not Found')
-        ? 'Le point d\'authentification OAuth NestJS est indisponible. Veuillez contacter le support ou réessayer plus tard.'
+        ? t('auth.callbackPage.errorOAuthUnavailable', 'The OAuth authentication endpoint is unavailable. Please contact support or try again later.')
         : message;
 
     try {
@@ -349,7 +353,7 @@ async function exchangeCodeForSessionViaApi(code: string): Promise<{ ok: true } 
         if (!data?.access_token || !data?.refresh_token || !data?.expires_in) {
           return {
             ok: false,
-            message: 'Réponse OAuth invalide. Veuillez réessayer depuis la page de connexion.',
+            message: t('auth.callbackPage.errorInvalidOAuth', 'Invalid OAuth response. Please try again from the login page.'),
           };
         }
 

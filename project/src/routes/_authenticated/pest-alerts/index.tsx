@@ -14,12 +14,14 @@ import {
 import { FilterBar, ListPageHeader, ListPageLayout } from '@/components/ui/data-table';
 import { Filter, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/_authenticated/pest-alerts/')({
   component: PestAlertsPage,
 });
 
 function PestAlertsPage() {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { data: reports, isLoading } = usePestReports(currentOrganization?.id || null);
   
@@ -58,42 +60,42 @@ function PestAlertsPage() {
             <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-orange-800 dark:text-orange-300">
-                  Alertes Actives
+                  {t('ai.pestAlerts.activeAlerts', 'Alertes Actives')}
                 </CardTitle>
                 <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">{activeAlertsCount}</div>
                 <p className="text-xs text-orange-700 dark:text-orange-400">
-                  Nécessitent une attention
+                  {t('ai.pestAlerts.needAttention', 'Nécessitent une attention')}
                 </p>
               </CardContent>
             </Card>
             <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-red-800 dark:text-red-300">
-                  Critiques
+                  {t('ai.pestAlerts.critical', 'Critiques')}
                 </CardTitle>
                 <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-900 dark:text-red-100">{criticalAlertsCount}</div>
                 <p className="text-xs text-red-700 dark:text-red-400">
-                  Priorité immédiate
+                  {t('ai.pestAlerts.immediatePriority', 'Priorité immédiate')}
                 </p>
               </CardContent>
             </Card>
             <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300">
-                  Résolus (30j)
+                  {t('ai.pestAlerts.resolved30d', 'Résolus (30j)')}
                 </CardTitle>
                 <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-900 dark:text-green-100">{resolvedCount}</div>
                 <p className="text-xs text-green-700 dark:text-green-400">
-                  Traités avec succès
+                  {t('ai.pestAlerts.treatedSuccessfully', 'Traités avec succès')}
                 </p>
               </CardContent>
             </Card>
@@ -105,7 +107,7 @@ function PestAlertsPage() {
               <FilterBar
                 searchValue={search}
                 onSearchChange={setSearch}
-                searchPlaceholder="Rechercher par ravageur, ferme, parcelle..."
+                searchPlaceholder={t('ai.pestAlerts.searchPlaceholder', 'Rechercher par ravageur, ferme, parcelle...')}
               />
             </div>
             <div className="flex gap-2 w-full md:w-auto">
@@ -113,28 +115,28 @@ function PestAlertsPage() {
                 <SelectTrigger className="w-[140px]">
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
-                    <SelectValue placeholder="Sévérité" />
+                    <SelectValue placeholder={t('ai.pestAlerts.severity', 'Sévérité')} />
                   </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes sévérités</SelectItem>
-                  <SelectItem value="low">Faible</SelectItem>
-                  <SelectItem value="medium">Moyenne</SelectItem>
-                  <SelectItem value="high">Élevée</SelectItem>
-                  <SelectItem value="critical">Critique</SelectItem>
+                  <SelectItem value="all">{t('ai.pestAlerts.allSeverities', 'Toutes sévérités')}</SelectItem>
+                  <SelectItem value="low">{t('ai.pestAlerts.low', 'Faible')}</SelectItem>
+                  <SelectItem value="medium">{t('ai.pestAlerts.medium', 'Moyenne')}</SelectItem>
+                  <SelectItem value="high">{t('ai.pestAlerts.high', 'Élevée')}</SelectItem>
+                  <SelectItem value="critical">{t('ai.pestAlerts.criticalSeverity', 'Critique')}</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Statut" />
+                  <SelectValue placeholder={t('ai.pestAlerts.status', 'Statut')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous statuts</SelectItem>
-                  <SelectItem value="pending">En attente</SelectItem>
-                  <SelectItem value="verified">Vérifié</SelectItem>
-                  <SelectItem value="treated">Traité</SelectItem>
-                  <SelectItem value="resolved">Résolu</SelectItem>
+                  <SelectItem value="all">{t('ai.pestAlerts.allStatuses', 'Tous statuts')}</SelectItem>
+                  <SelectItem value="pending">{t('ai.pestAlerts.pending', 'En attente')}</SelectItem>
+                  <SelectItem value="verified">{t('ai.pestAlerts.verified', 'Vérifié')}</SelectItem>
+                  <SelectItem value="treated">{t('ai.pestAlerts.treated', 'Traité')}</SelectItem>
+                  <SelectItem value="resolved">{t('ai.pestAlerts.resolved', 'Résolu')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

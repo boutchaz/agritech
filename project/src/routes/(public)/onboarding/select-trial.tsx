@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { BASE_MODULE_IDS, computeModularQuote } from '@/lib/polar'
 import { Check, Loader2 } from 'lucide-react'
@@ -22,18 +23,9 @@ export const Route = createFileRoute('/(public)/onboarding/select-trial')({
   component: SelectTrialPage,
 })
 
-const SETUP_STEPS = [
-  { id: 'auth', label: 'Checking authentication...' },
-  { id: 'organization', label: 'Creating organization...' },
-  { id: 'subscription', label: 'Activating trial...' },
-  { id: 'complete', label: 'Complete!' },
-] as const
-
-type SetupStepId = typeof SETUP_STEPS[number]['id']
-
 const pollUntil = async <T,>(
   fn: () => Promise<T | null>,
-  options: { interval?: number; maxAttempts?: number; _label?: string } = {}
+  options: { interval?: number; maxAttempts?: number } = {}
 ): Promise<T | null> => {
   const { interval = 200, maxAttempts = 25 } = options
 
@@ -47,7 +39,20 @@ const pollUntil = async <T,>(
    return null
 }
 
+function useSetupStepLabels() {
+  const { t } = useTranslation();
+  return useMemo(() => [
+    { id: 'auth' as const, label: t('onboarding.selectTrial.setupSteps.auth', 'Checking authentication...') },
+    { id: 'organization' as const, label: t('onboarding.selectTrial.setupSteps.organization', 'Creating organization...') },
+    { id: 'subscription' as const, label: t('onboarding.selectTrial.setupSteps.subscription', 'Activating trial...') },
+    { id: 'complete' as const, label: t('onboarding.selectTrial.setupSteps.complete', 'Complete!') },
+  ], [t]);
+}
+
+type SetupStepId = 'auth' | 'organization' | 'subscription' | 'complete'
+
 function SelectTrialPage() {
+  const { t } = useTranslation();
   const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,6 +65,8 @@ function SelectTrialPage() {
   const [selectedModules, setSelectedModules] = useState<string[]>(BASE_MODULE_IDS)
   const [modularHectares, setModularHectares] = useState<number>(50)
 
+  const SETUP_STEPS = useSetupStepLabels();
+
   const modularQuote = useMemo(
     () => computeModularQuote({
       selectedModules,
@@ -70,8 +77,9 @@ function SelectTrialPage() {
   )
 
   useEffect(() => {
-    trackPageView({ title: 'Start Your Free Trial' })
+    trackPageView({ title: t('onboarding.selectTrial.pageTitle', 'Start Your Free Trial') })
     trackOnboardingStart()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const hasOrganization = currentOrganization || (organizations && organizations.length > 0)
@@ -102,7 +110,7 @@ function SelectTrialPage() {
           )
 
           if (!accessToken) {
-            setError('Authentication required. Please try logging in again.')
+            setError(t('onboarding.selectTrial.errorAuthRequired', 'Authentication required. Please try logging in again.'))
             setupAttempted.current = false
             return
           }
@@ -125,7 +133,7 @@ function SelectTrialPage() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            setError(`Setup failed: ${errorData.message || `Error ${response.status}`}. Please try again or refresh the page.`)
+            setError(t('onboarding.selectTrial.errorSetupFailed', 'Setup failed: {{error}}. Please try again or refresh the page.', { error: errorData.message || `Error ${response.status}` }))
             setupAttempted.current = false
             return
           }
@@ -148,7 +156,7 @@ function SelectTrialPage() {
 
           setSetupStep('complete')
         } catch (error) {
-          setError(`Setup error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try refreshing the page.`)
+          setError(t('onboarding.selectTrial.errorSetupError', 'Setup error: {{error}}. Please try refreshing the page.', { error: error instanceof Error ? error.message : 'Unknown error' }))
           setupAttempted.current = false
         } finally {
           setIsSettingUp(false)
@@ -157,7 +165,7 @@ function SelectTrialPage() {
     }
 
     setupUserIfNeeded()
-  }, [loading, user, hasOrganization, isSettingUp, refreshUserData])
+  }, [loading, user, hasOrganization, isSettingUp, refreshUserData, t])
 
   if (loading || isSettingUp) {
     const currentStepIndex = SETUP_STEPS.findIndex(s => s.id === setupStep)
@@ -166,7 +174,7 @@ function SelectTrialPage() {
         <div className="text-center max-w-sm">
           <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-6" data-testid="loading-spinner" />
           <p className="text-gray-900 dark:text-white font-medium mb-4">
-            {isSettingUp ? 'Setting up your account...' : 'Loading your account...'}
+            {isSettingUp ? t('onboarding.selectTrial.settingUpAccount', 'Setting up your account...') : t('onboarding.selectTrial.loadingAccount', 'Loading your account...')}
           </p>
           {isSettingUp && (
             <div className="space-y-2">
@@ -210,39 +218,41 @@ function SelectTrialPage() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Confirm Your Email
+                {t('onboarding.selectTrial.confirmEmail.title', 'Confirm Your Email')}
               </h2>
               <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Your account has been created successfully, but you need to confirm your email address before you can activate your account.
+                {t('onboarding.selectTrial.confirmEmail.message', 'Your account has been created successfully, but you need to confirm your email address before you can activate your account.')}
               </p>
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
                 <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                  Check Your Email
+                  {t('onboarding.selectTrial.confirmEmail.checkEmail', 'Check Your Email')}
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-                  We've sent a confirmation email to <strong>{user.email}</strong>. Please click the link in the email to confirm your account.
+                  {t('onboarding.selectTrial.confirmEmail.sentTo', "We've sent a confirmation email to <strong>{{email}}</strong>. Please click the link in the email to confirm your account.", { email: user.email })}
                 </p>
                 <p className="text-sm text-blue-800 dark:text-blue-400">
-                  After confirming, visit{' '}
-                  <a
-                    href="/select-trial"
-                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.location.href = '/select-trial'
-                    }}
-                  >
-                    {typeof window !== 'undefined' ? window.location.origin : ''}/select-trial
-                  </a>
-                  {' '}to activate your account and select your free trial plan.
+                  {t('onboarding.selectTrial.confirmEmail.afterConfirm', 'After confirming, visit {{link}} to activate your account and select your free trial plan.', {
+                    link: (
+                      <a
+                        href="/select-trial"
+                        className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          window.location.href = '/select-trial'
+                        }}
+                      >
+                        {typeof window !== 'undefined' ? window.location.origin : ''}/select-trial
+                      </a>
+                    ),
+                  })}
                 </p>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                Make sure to check your spam folder if you don't see the email within a few minutes.
+                {t('onboarding.selectTrial.confirmEmail.spamNote', "Make sure to check your spam folder if you don't see the email within a few minutes.")}
               </p>
               {error && (
                 <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-yellow-700 dark:text-yellow-400 text-left">
-                  <strong>Note:</strong> {error}
+                  <strong>{t('onboarding.selectTrial.confirmEmail.noteLabel', 'Note:')}</strong> {error}
                 </div>
               )}
             </div>
@@ -251,13 +261,13 @@ function SelectTrialPage() {
                 onClick={() => window.location.href = '/register'}
                 className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
               >
-                Back to Registration
+                {t('onboarding.selectTrial.confirmEmail.backToRegistration', 'Back to Registration')}
               </Button>
               <Button
                 onClick={() => window.location.reload()}
                 className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
               >
-                Retry After Confirming Email
+                {t('onboarding.selectTrial.confirmEmail.retryAfterConfirm', 'Retry After Confirming Email')}
               </Button>
             </div>
           </div>
@@ -273,18 +283,18 @@ function SelectTrialPage() {
               <span className="text-3xl">!</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Account Setup Issue
+              {t('onboarding.selectTrial.accountSetupIssue.title', 'Account Setup Issue')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Your account or organization wasn't created properly. Please try registering again.
+              {t('onboarding.selectTrial.accountSetupIssue.message', "Your account or organization wasn't created properly. Please try registering again.")}
             </p>
             {error && (
               <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs text-red-700 dark:text-red-400 text-left">
-                <strong>Error:</strong> {error}
+                <strong>{t('onboarding.selectTrial.accountSetupIssue.errorLabel', 'Error:')}</strong> {error}
               </div>
             )}
             <div className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-              Check the browser console (F12) for detailed error messages.
+              {t('onboarding.selectTrial.accountSetupIssue.consoleHint', 'Check the browser console (F12) for detailed error messages.')}
             </div>
           </div>
           <div className="space-y-3">
@@ -292,13 +302,13 @@ function SelectTrialPage() {
               onClick={() => window.location.href = '/register'}
               className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
             >
-              Back to Registration
+              {t('onboarding.selectTrial.accountSetupIssue.backToRegistration', 'Back to Registration')}
             </Button>
             <Button
               onClick={() => window.location.reload()}
               className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
             >
-              Retry Setup
+              {t('onboarding.selectTrial.accountSetupIssue.retrySetup', 'Retry Setup')}
             </Button>
           </div>
         </div>
@@ -310,7 +320,7 @@ function SelectTrialPage() {
     const orgToUse = currentOrganization || (organizations && organizations.length > 0 ? organizations[0] : null)
 
     if (!orgToUse?.id || !user?.id) {
-      setError('Organization or user not found. Please try again.')
+      setError(t('onboarding.selectTrial.errorOrgNotFound', 'Organization or user not found. Please try again.'))
       return
     }
 
@@ -376,12 +386,10 @@ function SelectTrialPage() {
         type: 'active'
       })
 
-      // Modules were already selected, save them and skip the modules onboarding step
       if (selectedModules.length > 0) {
         const moduleMap: Record<string, boolean> = {}
         selectedModules.forEach((id) => { moduleMap[id] = true })
         useOnboardingStore.getState().updateModuleSelection(moduleMap)
-        // Skip to step 5 (complete) since modules were already picked
         useOnboardingStore.getState().setCurrentStep(5)
         window.location.href = '/onboarding/complete'
         return
@@ -389,7 +397,7 @@ function SelectTrialPage() {
 
       window.location.href = '/onboarding'
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create trial subscription'
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.selectTrial.errorTrialFailed', 'Failed to create trial subscription')
       setError(errorMessage)
       trackTrialStartFailure('standard', errorMessage)
       setIsCreating(false)
@@ -401,10 +409,10 @@ function SelectTrialPage() {
       <div className="max-w-6xl w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="trial-page-title">
-            Start Your Free Trial
+            {t('onboarding.selectTrial.pageTitle', 'Start Your Free Trial')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            14-day free trial. No credit card required.
+            {t('onboarding.selectTrial.pageSubtitle', '14-day free trial. No credit card required.')}
           </p>
         </div>
 
@@ -429,26 +437,26 @@ function SelectTrialPage() {
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                Your Trial Includes
+                {t('onboarding.selectTrial.trialIncludes', 'Your Trial Includes')}
               </h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Modules</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{selectedModules.length} selected</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('onboarding.selectTrial.modulesLabel', 'Modules')}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{t('onboarding.selectTrial.modulesSelected', '{{count}} selected', { count: selectedModules.length })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Hectares</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('onboarding.selectTrial.hectaresLabel', 'Hectares')}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{modularHectares} ha</span>
                 </div>
                 <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">After trial (monthly)</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('onboarding.selectTrial.afterTrialMonthly', 'After trial (monthly)')}</span>
                     <span className="font-semibold text-gray-900 dark:text-white">${modularQuote.cycleTtc.toLocaleString()} TTC</span>
                   </div>
                 </div>
               </div>
               <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-center">
-                <span className="text-sm font-bold text-green-700 dark:text-green-400">14-day FREE trial</span>
+                <span className="text-sm font-bold text-green-700 dark:text-green-400">{t('onboarding.selectTrial.freeTrialBadge', '14-day FREE trial')}</span>
               </div>
             </div>
           </div>
@@ -464,14 +472,14 @@ function SelectTrialPage() {
             {isCreating ? (
               <span className="flex items-center space-x-2" data-testid="trial-creating">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Starting your trial...</span>
+                <span>{t('onboarding.selectTrial.startingTrial', 'Starting your trial...')}</span>
               </span>
             ) : (
-              'Start Free 14-Day Trial'
+              t('onboarding.selectTrial.startButton', 'Start Free 14-Day Trial')
             )}
           </Button>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-            No credit card required. Cancel anytime.
+            {t('onboarding.selectTrial.noCreditCard', 'No credit card required. Cancel anytime.')}
           </p>
         </div>
       </div>
