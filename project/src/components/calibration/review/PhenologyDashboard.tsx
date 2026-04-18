@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import type { PhenologyDashboardData, SeasonTimelineEntry } from '@/types/calibration-review';
+import { ChillHoursGauge } from './ChillHoursGauge';
 
 interface PhenologyDashboardProps {
   data: PhenologyDashboardData;
@@ -343,6 +344,13 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
           )}
         </div>
       </div>
+
+      {/* Chill hours gauge — surfaces dormancy chill accumulation */}
+      {data.chill && (
+        <div className="mb-6">
+          <ChillHoursGauge data={data.chill} />
+        </div>
+      )}
 
       {/* Phase Summary Cards */}
       {data.timelines.length > 0 && (

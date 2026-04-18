@@ -9,6 +9,7 @@ import type {
   BlockDAmeliorer,
   BlockFAlternance,
   BlockGMetadonnees,
+  ChillHoursDisplay,
   HealthLabel,
   ConfidenceLevel,
   ConcernSeverity,
@@ -23,6 +24,17 @@ import type {
   AlternanceLabel,
   SeasonBadge,
 } from "./dto/calibration-review.dto";
+
+const CHILL_FALLBACK_BRACKET: [number, number] = [200, 400];
+const CHILL_CRITIQUE_THRESHOLD = 100;
+
+function normalizeVariety(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 type JsonRecord = Record<string, unknown>;
 
@@ -114,14 +126,17 @@ export class CalibrationReviewAdapter {
   transform(input: CalibrationSnapshotInput): CalibrationReviewView {
     this.logger.debug(`Transforming calibration snapshot ${input.calibration_id}`);
 
+    const output = this.getOutput(input);
+    const chill = this.buildChillDisplay(this.getStep(output, "step2"), input.crop_type, input.variety);
+
     return {
       calibration_id: input.calibration_id,
       parcel_id: input.parcel_id,
       generated_at: input.generated_at,
       planting_year: input.planting_year ?? null,
       status: input.status,
-      block_a: this.buildBlockA(input),
-      block_b: this.buildBlockB(input),
+      block_a: this.buildBlockA(input, chill),
+      block_b: this.buildBlockB(input, chill),
       block_c: this.buildBlockC(input),
       block_d: this.buildBlockD(input),
       block_f: this.buildBlockF(input),
@@ -136,7 +151,10 @@ export class CalibrationReviewAdapter {
 
   // ─── Block A: Synthese executive ────────────────────────────
 
-  private buildBlockA(input: CalibrationSnapshotInput): BlockASynthese {
+  private buildBlockA(
+    input: CalibrationSnapshotInput,
+    chill: ChillHoursDisplay | null = null,
+  ): BlockASynthese {
     const output = this.getOutput(input);
     const step6 = this.getStep(output, "step6");
     const step8 = this.getStep(output, "step8");
@@ -162,6 +180,20 @@ export class CalibrationReviewAdapter {
     // Strengths and concerns from health components
     const healthComponents = this.asRecord(healthScoreObj.components);
     const { strengths, concerns } = this.deriveStrengthsAndConcerns(healthComponents, confidenceNormalized);
+
+    // Chill-hours overlay: critique/red → concern, green → strength, yellow/null → no-op
+    if (chill) {
+      if ((chill.band === "critique" || chill.band === "red") && concerns.length < 3) {
+        concerns.push({
+          component: "Heures de froid",
+          phrase: chill.phrase,
+          severity: chill.band === "critique" ? "critique" : "vigilance",
+          target_block: "B",
+        });
+      } else if (chill.band === "green" && strengths.length < 3) {
+        strengths.push({ component: "Heures de froid", phrase: chill.phrase });
+      }
+    }
 
     return {
       health_score: Math.round(healthTotal),
@@ -323,7 +355,10 @@ export class CalibrationReviewAdapter {
 
   // ─── Block B: Analyse detaillee ────────────────────────────
 
-  private buildBlockB(input: CalibrationSnapshotInput): BlockBAnalyse {
+  private buildBlockB(
+    input: CalibrationSnapshotInput,
+    chill: ChillHoursDisplay | null = null,
+  ): BlockBAnalyse {
     const output = this.getOutput(input);
     const step1 = this.getStep(output, "step1");
     const step3 = this.getStep(output, "step3");
@@ -335,6 +370,9 @@ export class CalibrationReviewAdapter {
 
     const step5 = this.getStep(output, "step5");
 
+    const resolvedChill =
+      chill ?? this.buildChillDisplay(this.getStep(output, "step2"), input.crop_type, input.variety);
+
     return {
       vigor: this.buildVigorCard(percentiles),
       hydric: this.buildHydricCard(percentiles, inputs),
@@ -345,8 +383,74 @@ export class CalibrationReviewAdapter {
       heterogeneity_flag: this.checkHeterogeneity(step7),
       temporal_stability: this.buildTemporalStability(step4),
       history_depth: this.buildHistoryDepth(step1),
-      phenology_dashboard: this.buildPhenologyDashboard(step4, input.crop_type),
+      phenology_dashboard: this.buildPhenologyDashboard(step4, input.crop_type, resolvedChill),
     };
+  }
+
+  private buildChillDisplay(
+    step2: JsonRecord,
+    cropType?: string | null,
+    variety?: string | null,
+  ): ChillHoursDisplay | null {
+    if (cropType !== "olivier") return null;
+    const rawValue = step2?.chill_hours;
+    if (rawValue == null || typeof rawValue !== "number") return null;
+    const value = Math.round(rawValue);
+
+    const referentiel = getLocalCropReference("olivier");
+    const varietes = this.asArray(referentiel?.varietes ?? []);
+    const target = variety ? normalizeVariety(variety) : null;
+    const matched = target
+      ? varietes.find((v) => {
+          const rec = this.asRecord(v);
+          const nom = this.asString(rec.nom);
+          return nom != null && normalizeVariety(nom) === target;
+        })
+      : undefined;
+
+    const matchedRec = matched ? this.asRecord(matched) : null;
+    const bracketRaw = matchedRec ? this.asArray(matchedRec.heures_froid_requises) : [];
+    const bracket: [number, number] =
+      bracketRaw.length === 2
+        ? [this.asNumber(bracketRaw[0], CHILL_FALLBACK_BRACKET[0]), this.asNumber(bracketRaw[1], CHILL_FALLBACK_BRACKET[1])]
+        : CHILL_FALLBACK_BRACKET;
+    const source: ChillHoursDisplay["reference"]["source"] = matchedRec ? "variety" : "fallback";
+    const varietyLabel = matchedRec ? this.asString(matchedRec.nom) ?? null : null;
+
+    let band: ChillHoursDisplay["band"];
+    if (value < CHILL_CRITIQUE_THRESHOLD) band = "critique";
+    else if (value < bracket[0]) band = "red";
+    else if (value < bracket[1]) band = "yellow";
+    else band = "green";
+
+    const phrase = this.buildChillPhrase(value, bracket, band, varietyLabel);
+
+    return {
+      value,
+      reference: { min: bracket[0], max: bracket[1], source, variety_label: varietyLabel },
+      band,
+      phrase,
+    };
+  }
+
+  private buildChillPhrase(
+    value: number,
+    bracket: [number, number],
+    band: ChillHoursDisplay["band"],
+    varietyLabel: string | null,
+  ): string {
+    const varietySuffix = varietyLabel ? ` pour ${varietyLabel}` : "";
+    switch (band) {
+      case "critique":
+        return `Déficit critique de froid hivernal (${value}h). Dormance non satisfaite — risque majeur sur la floraison.`;
+      case "red":
+        return `Heures de froid insuffisantes (${value}h, requis ${bracket[0]}h${varietySuffix}). Dormance partiellement satisfaite.`;
+      case "yellow":
+        return `Heures de froid acceptables (${value}h, plage ${bracket[0]}–${bracket[1]}h${varietySuffix}). Suivi recommandé.`;
+      case "green":
+      default:
+        return `Besoin en froid hivernal satisfait (${value}h, plage ${bracket[0]}–${bracket[1]}h${varietySuffix}).`;
+    }
   }
 
   private buildVigorCard(percentiles: JsonRecord): IndexCard {
@@ -653,7 +757,11 @@ export class CalibrationReviewAdapter {
     return Object.keys(gddByPhase).length > 0 ? gddByPhase : null;
   }
 
-  private buildPhenologyDashboard(step4: JsonRecord, cropType?: string | null): BlockBAnalyse["phenology_dashboard"] {
+  private buildPhenologyDashboard(
+    step4: JsonRecord,
+    cropType?: string | null,
+    chill: ChillHoursDisplay | null = null,
+  ): BlockBAnalyse["phenology_dashboard"] {
     const phaseTimeline = this.asArray(step4.phase_timeline);
     const meanDates = this.asRecord(step4.mean_dates);
     const variability = this.asRecord(step4.inter_annual_variability_days ?? step4.inter_annual_variability);
@@ -730,6 +838,7 @@ export class CalibrationReviewAdapter {
       timelines,
       yearly_stages: yearlyStagesOut,
       referentiel_gdd: this.extractReferentielGdd(cropType),
+      chill,
     };
   }
 

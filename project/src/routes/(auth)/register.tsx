@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import React, { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -34,7 +34,7 @@ function RegisterPage() {
   const { user } = useAuth()
 
   useEffect(() => {
-    trackPageView({ title: t('auth.registerPage.title', 'Create your AgroGina account') })
+    trackPageView({ title: t('auth.register.title') })
   }, [t])
 
   useEffect(() => {
@@ -55,14 +55,14 @@ function RegisterPage() {
     trackRegisterAttempt()
 
     if (!tosAccepted) {
-      setError(t('auth.registerPage.errorTosRequired', "You must accept the Terms of Service and Privacy Policy"))
+      setError(t('auth.register.errorTosRequired'))
       setIsLoading(false)
       trackRegisterFailure('tos_not_accepted')
       return
     }
 
     if (password !== confirmPassword) {
-      setError(t('auth.registerPage.errorPasswordMismatch', 'Passwords do not match'))
+      setError(t('auth.register.errorPasswordMismatch'))
       setIsLoading(false)
       trackRegisterFailure('password_mismatch')
       return
@@ -98,13 +98,13 @@ function RegisterPage() {
       trackRegisterSuccess(includeDemoData)
       window.location.href = '/onboarding/select-trial'
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('auth.registerPage.errorGeneric', 'An error occurred during registration')
+      const message = error instanceof Error ? error.message : t('auth.register.errorGeneric')
       if (message.includes('already exists') || message.includes('already registered')) {
-        setError(t('auth.registerPage.errorEmailExists', 'A user with this email already exists'))
+        setError(t('auth.register.errorEmailExists'))
         trackRegisterFailure('email_already_exists')
       } else {
-        setError(message)
-        trackRegisterFailure(message)
+        setError(t('auth.register.errorGeneric'))
+        trackRegisterFailure('registration_failed')
       }
       setIsLoading(false)
     }
@@ -112,19 +112,19 @@ function RegisterPage() {
 
   return (
     <AuthLayout
-      title={t('auth.registerPage.title', 'Create your AgroGina account')}
-      subtitle={t('auth.registerPage.subtitle', 'Get started in minutes')}
-      helperText={t('auth.registerPage.helperText', "Set up a workspace for your organization and invite your team once you're inside.")}
-      switchLabel={t('auth.registerPage.switchLabel', 'Already have an account?')}
+      title={t('auth.register.title')}
+      subtitle={t('auth.register.subtitle')}
+      helperText={t('auth.register.helperText')}
+      switchLabel={t('auth.alreadyHaveAccount')}
       switchHref="/login"
-      switchCta={t('auth.registerPage.switchCta', 'Sign in')}
+      switchCta={t('auth.signIn.button')}
     >
       <form className="space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4">
           <FormField
-            label={t('auth.registerPage.organizationLabel', 'Organization name')}
+            label={t('auth.register.orgName')}
             htmlFor="organization"
-            helper={t('auth.registerPage.organizationHelper', 'Use the name your team recognizes (e.g. farm, cooperative, or agribusiness).')}
+            helper={t('auth.register.orgNameHelper')}
             required
           >
             <Input
@@ -132,7 +132,7 @@ function RegisterPage() {
               name="organization"
               type="text"
               required
-              placeholder={t('auth.registerPage.organizationPlaceholder', 'Green Acres Cooperative')}
+              placeholder={t('auth.register.orgNamePlaceholder')}
               value={organizationName}
               onChange={(e) => setOrganizationName(e.target.value)}
               data-testid="register-organization"
@@ -140,14 +140,14 @@ function RegisterPage() {
             />
           </FormField>
 
-          <FormField label={t('auth.emailAddress', 'Email address')} htmlFor="email-address" required>
+          <FormField label={t('auth.emailAddress')} htmlFor="email-address" required>
             <Input
               id="email-address"
               name="email"
               type="email"
               autoComplete="email"
               required
-              placeholder={t('auth.forgotPasswordPage.emailPlaceholder', 'you@farm.co')}
+              placeholder={t('auth.register.emailPlaceholder')}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               data-testid="register-email"
@@ -155,18 +155,18 @@ function RegisterPage() {
             />
           </FormField>
 
-          <FormField
-            label={t('auth.password', 'Password')}
-            htmlFor="password"
-            helper={t('auth.registerPage.passwordHelper', 'Use at least 8 characters with a mix of letters and numbers.')}
-            required
-          >
+            <FormField
+              label={t('auth.password')}
+              htmlFor="password"
+              helper={t('auth.register.passwordHelper')}
+              required
+            >
             <PasswordInput
               id="password"
               name="password"
               autoComplete="new-password"
               required
-              placeholder={t('auth.registerPage.passwordPlaceholder', 'Create a strong password')}
+              placeholder={t('auth.register.passwordPlaceholder')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               data-testid="register-password"
@@ -174,13 +174,13 @@ function RegisterPage() {
             />
           </FormField>
 
-          <FormField label={t('auth.registerPage.confirmPasswordLabel', 'Confirm password')} htmlFor="confirm-password" required>
+          <FormField label={t('auth.register.confirmPassword')} htmlFor="confirm-password" required>
             <PasswordInput
               id="confirm-password"
               name="confirm-password"
               autoComplete="new-password"
               required
-              placeholder={t('auth.registerPage.confirmPasswordPlaceholder', 'Re-enter your password')}
+              placeholder={t('auth.register.confirmPasswordPlaceholder')}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               data-testid="register-confirm-password"
@@ -200,10 +200,10 @@ function RegisterPage() {
                 htmlFor="demo-data"
                 className="text-sm font-medium text-slate-900 cursor-pointer"
               >
-                {t('auth.registerPage.demoDataLabel', 'Create with demo data to explore features')}
+                {t('auth.register.demoDataLabel')}
               </label>
               <p className="text-xs text-slate-600">
-                {t('auth.registerPage.demoDataHelper', 'Pre-populate your account with sample farms, parcels, tasks, and invoices to quickly see how the platform works.')}
+                {t('auth.register.demoDataDescription')}
               </p>
             </div>
           </div>
@@ -220,26 +220,25 @@ function RegisterPage() {
                 htmlFor="tos-accepted"
                 className="text-sm text-slate-700 cursor-pointer"
               >
-                {t('auth.registerPage.tosLabel', "I accept the {{terms}} and {{privacy}}", {
-                  terms: (
-                    <Link
-                      to="/terms-of-service"
-                      target="_blank"
-                      className="font-medium text-emerald-600 underline hover:text-emerald-700"
-                    >
-                      {t('auth.registerPage.termsLink', 'Terms of Service')}
-                    </Link>
-                  ),
-                  privacy: (
-                    <Link
-                      to="/privacy-policy"
-                      target="_blank"
-                      className="font-medium text-emerald-600 underline hover:text-emerald-700"
-                    >
-                      {t('auth.registerPage.privacyLink', 'Privacy Policy')}
-                    </Link>
-                  ),
-                })}
+                <Trans
+                  i18nKey="auth.register.tosLabel"
+                  components={{
+                    terms: (
+                      <Link
+                        to="/terms-of-service"
+                        target="_blank"
+                        className="font-medium text-emerald-600 underline hover:text-emerald-700"
+                      />
+                    ),
+                    privacy: (
+                      <Link
+                        to="/privacy-policy"
+                        target="_blank"
+                        className="font-medium text-emerald-600 underline hover:text-emerald-700"
+                      />
+                    ),
+                  }}
+                />
               </label>
             </div>
           </div>
@@ -257,7 +256,7 @@ function RegisterPage() {
           className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="register-submit"
         >
-          {isLoading ? t('auth.registerPage.submitting', 'Creating account...') : t('auth.registerPage.submitButton', 'Sign up')}
+          {isLoading ? t('auth.register.creating') : t('auth.register.submit')}
         </Button>
       </form>
     </AuthLayout>

@@ -550,7 +550,7 @@ const AppContent = () => {
                           {(entry.reference_type || entry.reference_number) && (
                             <div className="text-sm">
                               <span className="text-gray-500 dark:text-gray-400">
-                                {t('journal.reference', 'Réf.')}:{" "}
+                                {t('journal.referenceShort', 'Réf.')}:{" "}
                               </span>
                               <span className="text-gray-900 dark:text-white">
                                 {entry.reference_type || ""}
@@ -1004,7 +1004,7 @@ const AppContent = () => {
                 </Button>
               )}
               <Button variant="outline" onClick={closeDrawer}>
-                Fermer
+                {t('journal.close', 'Fermer')}
               </Button>
             </div>
           </DialogFooter>
@@ -1023,10 +1023,9 @@ const AppContent = () => {
         contentClassName="max-h-[90vh] overflow-y-auto"
       >
           <DialogHeader>
-            <DialogTitle>Nouvelle Écriture Comptable</DialogTitle>
+            <DialogTitle>{t('journal.newEntryTitle', 'Nouvelle Écriture Comptable')}</DialogTitle>
             <DialogDescription>
-              Créez une nouvelle écriture en partie double. Le total des débits
-              doit égaler le total des crédits.
+              {t('journal.newEntryDescription', 'Créez une nouvelle écriture en partie double. Le total des débits doit égaler le total des crédits.')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1040,7 +1039,7 @@ const AppContent = () => {
 
             {/* Header Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField label="Date *" htmlFor="entry_date">
+              <FormField label={t('journal.dateLabel', 'Date *')} htmlFor="entry_date">
                 <Input
                   id="entry_date"
                   type="date"
@@ -1054,7 +1053,7 @@ const AppContent = () => {
                   required
                 />
               </FormField>
-              <FormField label="Type de référence" htmlFor="reference_type">
+              <FormField label={t('journal.referenceType', 'Type de référence')} htmlFor="reference_type">
                 <Input
                   id="reference_type"
                   value={newEntry.reference_type}
@@ -1064,10 +1063,10 @@ const AppContent = () => {
                       reference_type: (e.target as HTMLInputElement).value,
                     })
                   }
-                  placeholder="Ex: Facture, Paiement, Ajustement..."
+                  placeholder={t('journal.referenceTypePlaceholder', 'Ex: Facture, Paiement, Ajustement...')}
                 />
               </FormField>
-              <FormField label="Numéro de référence" htmlFor="reference_number">
+              <FormField label={t('journal.referenceNumber', 'Numéro de référence')} htmlFor="reference_number">
                 <Input
                   id="reference_number"
                   value={newEntry.reference_number}
@@ -1077,10 +1076,10 @@ const AppContent = () => {
                       reference_number: (e.target as HTMLInputElement).value,
                     })
                   }
-                  placeholder="Ex: FAC-001"
+                  placeholder={t('journal.referenceNumberPlaceholder', 'Ex: FAC-001')}
                 />
               </FormField>
-              <FormField label="Remarques" htmlFor="remarks">
+              <FormField label={t('journal.remarksLabel', 'Remarques')} htmlFor="remarks">
                 <Textarea
                   id="remarks"
                   value={newEntry.remarks}
@@ -1090,7 +1089,7 @@ const AppContent = () => {
                       remarks: (e.target as HTMLTextAreaElement).value,
                     })
                   }
-                  placeholder="Description ou notes..."
+                  placeholder={t('journal.remarksPlaceholder', 'Description ou notes...')}
                   rows={1}
                 />
               </FormField>
@@ -1100,7 +1099,7 @@ const AppContent = () => {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  Lignes comptables
+                  {t('journal.linesTitle', 'Lignes comptables')}
                 </h3>
                 <Button
                   type="button"
@@ -1109,7 +1108,7 @@ const AppContent = () => {
                   onClick={addLine}
                 >
                   <Plus className="mr-1 h-4 w-4" />
-                  Ajouter
+                  {t('journal.addLine', 'Ajouter')}
                 </Button>
               </div>
 
@@ -1121,7 +1120,7 @@ const AppContent = () => {
                   >
                     <div className="col-span-5">
                       <label htmlFor={`line-account-${line.id}`} className="block text-xs text-gray-500 mb-1">
-                        Compte
+                        {t('journal.account', 'Compte')}
                       </label>
                       <select
                         id={`line-account-${line.id}`}
@@ -1131,7 +1130,7 @@ const AppContent = () => {
                         }
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
-                        <option value="">Sélectionner...</option>
+                         <option value="">{t('journal.selectAccount', 'Sélectionner...')}</option>
                         {activeAccounts.map((account) => (
                           <option key={account.id} value={account.id}>
                             {account.code} - {account.name}
@@ -1141,7 +1140,7 @@ const AppContent = () => {
                     </div>
                     <div className="col-span-2">
                       <label htmlFor={`line-debit-${line.id}`} className="block text-xs text-gray-500 mb-1">
-                        Débit
+                        {t('journal.debit', 'Débit')}
                       </label>
                       <input
                         id={`line-debit-${line.id}`}
@@ -1157,12 +1156,12 @@ const AppContent = () => {
                           )
                         }
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="0.00"
+                        placeholder={t('journal.amountPlaceholder', '0.00')}
                       />
                     </div>
                     <div className="col-span-2">
                       <label htmlFor={`line-credit-${line.id}`} className="block text-xs text-gray-500 mb-1">
-                        Crédit
+                        {t('journal.credit', 'Crédit')}
                       </label>
                       <input
                         id={`line-credit-${line.id}`}
@@ -1178,12 +1177,12 @@ const AppContent = () => {
                           )
                         }
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="0.00"
+                        placeholder={t('journal.amountPlaceholder', '0.00')}
                       />
                     </div>
                     <div className="col-span-2">
                       <label htmlFor={`line-description-${line.id}`} className="block text-xs text-gray-500 mb-1">
-                        Description
+                        {t('journal.description', 'Description')}
                       </label>
                       <input
                         id={`line-description-${line.id}`}
@@ -1193,7 +1192,7 @@ const AppContent = () => {
                           updateLine(index, "description", e.target.value)
                         }
                         className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Libellé..."
+                        placeholder={t('journal.descriptionPlaceholder', 'Libellé...')}
                       />
                     </div>
                     <div className="col-span-1 flex items-end pb-1">
@@ -1215,29 +1214,30 @@ const AppContent = () => {
               {/* Totals */}
               <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="font-medium">Totaux:</span>
+                  <span className="font-medium">{t('journal.totals', 'Totaux :')}</span>
                   <div className="flex gap-8">
                     <span
                       className={`font-semibold ${totalDebit > 0 ? "text-emerald-600" : "text-gray-400"}`}
                     >
-                      Débit: {formatAmount(totalDebit)}
+                      {t('journal.debitTotal', 'Débit : {{amount}}', { amount: formatAmount(totalDebit) })}
                     </span>
                     <span
                       className={`font-semibold ${totalCredit > 0 ? "text-sky-600" : "text-gray-400"}`}
                     >
-                      Crédit: {formatAmount(totalCredit)}
+                      {t('journal.creditTotal', 'Crédit : {{amount}}', { amount: formatAmount(totalCredit) })}
                     </span>
                   </div>
                 </div>
                 {!isBalanced && totalDebit + totalCredit > 0 && (
                   <p className="text-xs text-red-500 mt-2">
-                    L'écriture n'est pas équilibrée. Différence:{" "}
-                    {formatAmount(Math.abs(totalDebit - totalCredit))}
+                    {t('journal.notBalancedDifference', "L'écriture n'est pas équilibrée. Différence : {{amount}}", {
+                      amount: formatAmount(Math.abs(totalDebit - totalCredit)),
+                    })}
                   </p>
                 )}
                 {isBalanced && totalDebit > 0 && (
                   <p className="text-xs text-green-500 mt-2">
-                    ✓ L'écriture est équilibrée
+                    {t('journal.balanced', "✓ L'écriture est équilibrée")}
                   </p>
                 )}
               </div>
@@ -1252,7 +1252,7 @@ const AppContent = () => {
                 resetCreateForm();
               }}
             >
-              Annuler
+              {t('journal.cancelBtn', 'Annuler')}
             </Button>
             <Button
               onClick={handleCreateEntry}
@@ -1265,7 +1265,7 @@ const AppContent = () => {
               ) : (
                 <Plus className="mr-2 h-4 w-4" />
               )}
-              Créer l'écriture
+              {t('journal.createEntry', "Créer l'écriture")}
             </Button>
           </DialogFooter>
       </ResponsiveDialog>

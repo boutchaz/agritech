@@ -702,12 +702,12 @@ const AICalibrationPage = () => {
   const [lastCalibrationLaunchAt, setLastCalibrationLaunchAt] = useState<number | null>(null);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
-  const { data: calibration, isLoading: isCalibrationLoading, refetch: refetchCalibration } = useAICalibration(parcelId);
-  const { data: phase, refetch: refetchPhase } = useCalibrationPhase(parcelId);
+  const { data: calibration, isLoading: isCalibrationLoading, isFetching: isCalibrationFetching, refetch: refetchCalibration } = useAICalibration(parcelId);
+  const { data: phase, isFetching: isPhaseFetching, refetch: refetchPhase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
   const calibrationProgress = useCalibrationProgress(parcelId);
 
-  const { data: reportData, isLoading: isReportLoading, refetch: refetchReport } = useCalibrationReport(parcelId);
+  const { data: reportData, isLoading: isReportLoading, isFetching: isReportFetching, refetch: refetchReport } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { data: annualPlan } = useAIPlan(parcelId);
   const { data: aiRecommendations } = useAIRecommendations(parcelId);
@@ -731,7 +731,7 @@ const AICalibrationPage = () => {
   const isWizardPhase =
     phase === 'awaiting_data' ||
     phase === 'ready_calibration' ||
-    ((phase === 'unknown' || !phase) && !calibration && !hasV2Report);
+    ((phase === 'unknown' || !phase) && !hasV2Report && !calibrationActuallyRunning);
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && parcelData?.ai_observation_only === true;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
@@ -794,7 +794,14 @@ const AICalibrationPage = () => {
     refetchReport,
   ]);
 
-  if (isCalibrationLoading || isReportLoading) {
+  // Show loader during initial load OR during background refetch when the
+  // current (possibly stale) data would produce an empty page.
+  const wouldBeEmptyPage = !hasV2Report && !isCalibrating && !isFailed &&
+    (phase === 'unknown' || !phase) && !calibrationCompletedButPhaseStuck;
+  const isResolving = isCalibrationLoading || isReportLoading ||
+    (wouldBeEmptyPage && (isCalibrationFetching || isReportFetching || isPhaseFetching));
+
+  if (isResolving) {
     return <SectionLoader className="h-64 py-0" />;
   }
 
@@ -1120,8 +1127,25 @@ const AICalibrationPage = () => {
             )}
           </div>
         </div>
+       )}
+
+      {!isCalibrating && !isFailed && !isWizardPhase && !hasV2Report &&
+        (phase === 'unknown' || !phase) && !calibrationCompletedButPhaseStuck && (
+        <div className="flex flex-col items-center justify-center h-64 border rounded-lg border-dashed">
+          <AlertCircle className="w-8 h-8 text-gray-400 mb-3" />
+          <p className="text-muted-foreground text-sm">Unable to determine calibration state.</p>
+          <Button
+            variant="outline"
+            type="button"
+            onClick={() => { refetchCalibration(); refetchPhase(); refetchReport(); }}
+            className="mt-4"
+          >
+            Refresh
+          </Button>
+        </div>
       )}
-      <ConfirmDialog
+
+       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={confirmAction.title}

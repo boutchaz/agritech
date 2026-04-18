@@ -24,7 +24,7 @@ export const Route = createFileRoute('/(auth)/login')({
   beforeLoad: async ({ context, search }) => {
     await waitForHydration()
     
-    const contextUser = context.auth?.user
+    const contextUser = (context as { auth?: { user?: unknown } }).auth?.user
     const storeState = useAuthStore.getState()
     const storeUser = storeState.isAuthenticated ? storeState.user : null
     
@@ -198,7 +198,7 @@ function LoginPage() {
               to="/forgot-password"
               className="text-sm font-medium text-emerald-600 transition hover:text-emerald-500 sm:self-auto sm:shrink-0"
             >
-              {t('auth.forgotPassword')}
+              {t('auth.forgotPasswordLegacy')}
             </Link>
           </div>
 

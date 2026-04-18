@@ -2104,7 +2104,7 @@ export class CalibrationService {
 
     const { data: parcelRow, error: parcelError } = await supabase
       .from("parcels")
-      .select("planting_year, crop_type, boundary")
+      .select("planting_year, crop_type, variety, boundary")
       .eq("id", parcelId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -2122,6 +2122,10 @@ export class CalibrationService {
     const cropType =
       parcelRow && typeof (parcelRow as { crop_type?: unknown }).crop_type === "string"
         ? (parcelRow as { crop_type: string }).crop_type
+        : null;
+    const variety =
+      parcelRow && typeof (parcelRow as { variety?: unknown }).variety === "string"
+        ? (parcelRow as { variety: string }).variety
         : null;
 
     // Recalculate GDD for phase transitions from actual weather data
@@ -2161,6 +2165,7 @@ export class CalibrationService {
       organization_id: record.organization_id,
       crop_type: cropType,
       planting_year: plantingYear,
+      variety,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,

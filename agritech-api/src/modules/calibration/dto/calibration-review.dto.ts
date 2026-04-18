@@ -28,6 +28,8 @@ export interface CalibrationSnapshotInput {
   crop_type?: string | null;
   /** From parcels.planting_year — phenology year list filter */
   planting_year?: number | null;
+  /** From parcels.variety — used to look up chill-hour reference bracket */
+  variety?: string | null;
   /** Calibration history for this parcel */
   calibration_history: Array<{
     id: string;
@@ -166,6 +168,21 @@ export interface HistoryDepth {
   date_end: string;
 }
 
+export interface ChillHoursDisplay {
+  /** Cumulative season hours T<7.2°C from step2.chill_hours */
+  value: number;
+  reference: {
+    min: number;
+    max: number;
+    /** 'variety' = matched referentiel; 'fallback' = default bracket used */
+    source: 'variety' | 'fallback';
+    variety_label: string | null;
+  };
+  band: 'green' | 'yellow' | 'red' | 'critique';
+  /** Pre-localized French narrative (Hassan-grade) */
+  phrase: string;
+}
+
 export interface PhenologyDashboardData {
   available: boolean;
   mode: string | null;
@@ -192,6 +209,8 @@ export interface PhenologyDashboardData {
   yearly_stages: Record<string, Record<string, string>>;
   /** GDD entry thresholds from referentiel stades_bbch, keyed by phase_kc */
   referentiel_gdd: Record<string, number> | null;
+  /** Chill-hours summary (olive-only for v1; null when crop_type !== 'olivier' or chill_hours missing) */
+  chill: ChillHoursDisplay | null;
 }
 
 export interface BlockBAnalyse {
